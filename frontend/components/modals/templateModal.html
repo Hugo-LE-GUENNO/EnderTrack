@@ -1,0 +1,20 @@
+                        <!-- Modal Templates -->
+                        <div id="templateModal" class="modal" style="display: none;">
+                            <div class="modal-content template-modal">
+                                <div class="modal-header">
+                                    <h3>🎯 Bibliothèque de Profils</h3>
+                                    <button class="modal-close" onclick="closeTemplateModal()">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="template-search">
+                                        <input type="text" id="templateSearch" placeholder="Rechercher un profil..." oninput="window.PlateauTemplates.filterProfiles(this.value)">
+                                    </div>
+                                    <div id="templateList" class="template-list">
+                                        <!-- Profile list will be shown here -->
+                                    </div>
+                                    <div id="templateCard" class="template-card" style="display: none;">
+                                        <!-- Profil details will be shown here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>

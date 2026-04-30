@@ -1,0 +1,105 @@
+/* ============================================
+   EnderTrack - Thème Light
+   Seules les variables de couleurs (inversées)
+   ============================================ */
+
+:root {
+  /* ==========================================
+     COLORS - THEME LIGHT
+     ========================================== */
+  
+  /* Backgrounds */
+  --app-bg: #f5f5f5;
+  --column-bg: #ffffff;
+  --container-bg: #f8f9fa;
+  --panel-bg: #ffffff;
+  --panel-light: #f0f0f0;
+  --panel-dark: #e5e5e5;
+  --section-bg: #f8f9fa;
+  --toggle-bg: #e9ecef;
+  
+  /* Inputs & Buttons */
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --button-bg: #f3f4f6;
+  --button-hover: #e5e7eb;
+  
+  /* Text Colors */
+  --text: #1f2937;
+  --text-selected: #111827;
+  --text-general: #6b7280;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  
+  /* Accent Colors */
+  --coordinates-color: #f59e0b;
+  --primary: #3b82f6;
+  --primary-color: #2563eb;
+  --active-element: #dbeafe;
+  --danger: #dc2626;
+  --warning: #f59e0b;
+  --success: #10b981;
+  --secondary: #6b7280;
+  --secondary-hover: #4b5563;
+  
+  /* Borders */
+  --border: #d1d5db;
+  --border-light: #e5e7eb;
+  --border-dark: #9ca3af;
+  --border-darker: #6b7280;
+  --border-width: 1px;
+  --border-width-thin: 1px;
+  --border-width-base: 2px;
+  --border-width-thick: 3px;
+  
+  /* Overlays */
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+  --overlay-light: rgba(0, 0, 0, 0.15);
+  --overlay-lighter: rgba(0, 0, 0, 0.1);
+  --text-dark: #000;
+  
+  /* Special Colors */
+  --success-color: #10b981;
+  --coordinates-color-alpha: rgba(245, 158, 11, 0.1);
+  --gray-alpha: rgba(107, 114, 128, 0.1);
+  --active-element-alpha: rgba(59, 130, 246, 0.1);
+  --gray-500: #6b7280;
+  
+  /* Canvas specific */
+  --canvas-bg: #ffffff;
+  
+  /* ==========================================
+     SCENARIO COLORS - Type Scratch
+     Couleurs adaptées au thème Light
+     ========================================== */
+  
+  /* Boucles - Orange */
+  --scenario-loop: #ea580c;
+  --scenario-loop-bg: rgba(234, 88, 12, 0.1);
+  --scenario-loop-border: rgba(234, 88, 12, 0.3);
+  
+  /* Conditions - Vert */
+  --scenario-condition: #059669;
+  --scenario-condition-bg: rgba(5, 150, 105, 0.1);
+  --scenario-condition-border: rgba(5, 150, 105, 0.3);
+  
+  /* Actions Mouvement - Bleu */
+  --scenario-move: #2563eb;
+  --scenario-move-bg: rgba(37, 99, 235, 0.1);
+  --scenario-move-border: rgba(37, 99, 235, 0.3);
+  
+  /* Actions Attente - Violet */
+  --scenario-wait: #7c3aed;
+  --scenario-wait-bg: rgba(124, 58, 237, 0.1);
+  --scenario-wait-border: rgba(124, 58, 237, 0.3);
+  
+  /* Actions Log/LED - Vert émeraude */
+  --scenario-log: #047857;
+  --scenario-log-bg: rgba(4, 120, 87, 0.1);
+  --scenario-log-border: rgba(4, 120, 87, 0.3);
+  
+  /* Actions Stop - Rouge */
+  --scenario-stop: #b91c1c;
+  --scenario-stop-bg: rgba(185, 28, 28, 0.1);
+  --scenario-stop-border: rgba(185, 28, 28, 0.3);
+}

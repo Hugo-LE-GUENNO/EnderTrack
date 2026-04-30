@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="800" height="360" viewBox="57 135 500 50">
+
+  <!-- Fond transparent -->
+  <rect width="100%" height="100%" fill="none"/>
+
+  <defs>
+    <!-- Ombre portée pour l'hexagone -->
+    <filter id="hexShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6"
+                    flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+
+    <!-- Dégradé principal de l'hexagone (plus contrasté) -->
+    <linearGradient id="hexGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#ffe9a3"/>
+      <stop offset="45%"  stop-color="#ffc107"/>
+      <stop offset="100%" stop-color="#ff9f00"/>
+    </linearGradient>
+
+    <!-- Reflet en haut de l'hexagone -->
+    <linearGradient id="hexHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.75"/>
+      <stop offset="60%"  stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Dégradé pour ENDER avec plus de contraste -->
+    <linearGradient id="enderGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#5a5a5a"/>
+      <stop offset="100%" stop-color="#2f2f2f"/>
+    </linearGradient>
+
+    <!-- Léger dégradé pour TRACK -->
+    <linearGradient id="trackGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffd54f"/>
+      <stop offset="100%" stop-color="#ff9800"/>
+    </linearGradient>
+  </defs>
+
+  <!-- GROUPE HEXAGONE AVEC OMBRE -->
+  <g filter="url(#hexShadow)">
+    <!-- contour -->
+    <polygon
+      points="150,60 240,110 240,210 150,260 60,210 60,110"
+      fill="#ffb300"
+      stroke="#e09100"
+      stroke-width="4"/>
+
+    <!-- intérieur -->
+    <polygon
+      points="150,75 228,120 228,200 150,245 72,200 72,120"
+      fill="url(#hexGradient)"/>
+
+    <!-- reflet en haut (aspect brillant) -->
+    <path
+      d="M72,120
+         L228,120
+         L210,130
+         L90,130 Z"
+      fill="url(#hexHighlight)"
+      opacity="0.65"/>
+
+    <!-- losange jaune au-dessus de la double hélice -->
+    <rect x="143" y="95" width="14" height="14"
+          fill="#ffc107"
+          stroke="#ff9800"
+          stroke-width="2"
+          transform="rotate(45 150 102)"/>
+
+    <!-- ========================= -->
+    <!--   DOUBLE HÉLICE 2X CROISÉE -->
+    <!-- ========================= -->
+
+    <!-- ombre douce sous la branche gauche -->
+    <path d="M130 125
+             C 115 130 135 138 150 145
+             C 170 155 180 170 150 175
+             C 120 180 115 190 130 195"
+          fill="none"
+          stroke="#161616"
+          stroke-width="12"
+          stroke-linecap="round"
+          opacity="0.25"/>
+
+    <!-- ombre douce sous la branche droite -->
+    <path d="M170 125
+             C 185 130 165 138 150 145
+             C 130 155 120 170 150 175
+             C 180 180 185 190 170 195"
+          fill="none"
+          stroke="#161616"
+          stroke-width="12"
+          stroke-linecap="round"
+          opacity="0.25"/>
+
+    <!-- branche gauche principale -->
+    <path d="M130 125
+             C 115 130 135 138 150 145
+             C 170 155 180 170 150 175
+             C 120 180 115 190 130 195"
+          fill="none"
+          stroke="#2c2c2c"
+          stroke-width="10"
+          stroke-linecap="round"/>
+
+    <!-- branche droite principale -->
+    <path d="M170 125
+             C 185 130 165 138 150 145
+             C 130 155 120 170 150 175
+             C 180 180 185 190 170 195"
+          fill="none"
+          stroke="#2c2c2c"
+          stroke-width="10"
+          stroke-linecap="round"/>
+
+    <!-- highlights blancs sur les spirales -->
+    <path d="M132 128
+             C 118 133 138 140 151 147
+             C 169 156 177 168 149 173
+             C 123 177 118 188 131 193"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="3"
+          stroke-linecap="round"
+          opacity="0.35"/>
+
+    <path d="M168 128
+             C 182 133 162 140 149 147
+             C 131 156 123 168 151 173
+             C 177 177 182 188 169 193"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="3"
+          stroke-linecap="round"
+          opacity="0.35"/>
+
+    <!-- 4 ronds aux extrémités -->
+    <circle cx="130" cy="125" r="11" fill="#ffc107" stroke="#2c2c2c" stroke-width="4"/>
+    <circle cx="170" cy="125" r="11" fill="#ffc107" stroke="#2c2c2c" stroke-width="4"/>
+    <circle cx="130" cy="195" r="11" fill="#ffc107" stroke="#2c2c2c" stroke-width="4"/>
+    <circle cx="170" cy="195" r="11" fill="#ffc107" stroke="#2c2c2c" stroke-width="4"/>
+
+    <!-- petit rond central -->
+    <circle cx="150" cy="160" r="9"
+            fill="#ffecb3"
+            stroke="#2c2c2c"
+            stroke-width="4"/>
+  </g>
+
+  <!-- TEXTE avec léger effet 3D -->
+  <g font-family="Montserrat, Arial, sans-serif" font-weight="700">
+    <!-- ENDER : ombre subtile -->
+    <text x="320" y="168"
+          font-size="66"
+          fill="#000000"
+          opacity="0.25">
+      ENDER
+    </text>
+    <text x="320" y="165"
+          font-size="66"
+          fill="#888888"
+          letter-spacing="2">
+      ENDER
+    </text>
+
+    <!-- TRACK : ombre subtile -->
+    <text x="320" y="228"
+          font-size="66"
+          fill="#000000"
+          opacity="0.25">
+      TRACK
+    </text>
+    <text x="320" y="225"
+          font-size="66"
+          fill="url(#trackGradient)"
+          letter-spacing="2">
+      TRACK
+    </text>
+  </g>
+</svg>

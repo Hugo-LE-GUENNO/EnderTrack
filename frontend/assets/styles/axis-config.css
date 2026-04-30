@@ -1,0 +1,47 @@
+/* Styles pour la configuration des axes */
+
+.axis-config {
+    background: var(--overlay-lighter);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-base);
+    padding: var(--spacing-base);
+    margin: var(--spacing-base) var(--spacing-0);
+}
+
+.axis-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: var(--gap-md);
+    margin-top: var(--spacing-xs);
+}
+
+.axis-input {
+    display: flex;
+    flex-direction: column;
+}
+
+.axis-input label {
+    font-size: var(--font-xs);
+    color: var(--text-general);
+    margin-bottom: 2px;
+}
+
+.axis-input input,
+.axis-input select {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text-selected);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+}
+
+.axis-input select {
+    cursor: pointer;
+}
+
+.axis-input input:focus,
+.axis-input select:focus {
+    outline: none;
+    border-color: var(--active-element);
+}

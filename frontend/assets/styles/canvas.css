@@ -1,0 +1,348 @@
+/* Canvas & Visualization Styles */
+
+/* Canvas Container */
+.canvas-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Canvas Info Line */
+.canvas-info-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--app-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+  padding: var(--spacing-xs) var(--spacing-base);
+  font-size: var(--font-2xs);
+  color: var(--text-general);
+  box-shadow: var(--shadow-light);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.canvas-info-xy {
+  flex: 1;
+  text-align: left;
+}
+
+.canvas-info-z {
+  text-align: right;
+}
+
+/* Canvas Content Area */
+/* Canvas Content */
+.canvas-content {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+/* En mode grid, tous les enfants directs ont la même taille */
+.canvas-content[style*="grid"] > * {
+  height: 100%;
+  min-height: 0;
+}
+
+.main-canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  line-height: 0;
+  overflow: hidden;
+  border: var(--border-width-thick) solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+#mapCanvas {
+  background: var(--canvas-bg);
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  padding: 0;
+  margin: 0;
+  display: block;
+  box-sizing: border-box;
+}
+
+/* Custom cursor color for crosshair */
+#mapCanvas.crosshair-cursor {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21"><line x1="10.5" y1="0" x2="10.5" y2="8" stroke="%2300bcd4" stroke-width="1.5"/><line x1="10.5" y1="13" x2="10.5" y2="21" stroke="%2300bcd4" stroke-width="1.5"/><line x1="0" y1="10.5" x2="8" y2="10.5" stroke="%2300bcd4" stroke-width="1.5"/><line x1="13" y1="10.5" x2="21" y2="10.5" stroke="%2300bcd4" stroke-width="1.5"/></svg>') 10 10, crosshair;
+}
+
+#mapCanvas.crosshair-cursor-cyan {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21"><line x1="10.5" y1="0" x2="10.5" y2="8" stroke="%2300bcd4" stroke-width="2"/><line x1="10.5" y1="13" x2="10.5" y2="21" stroke="%2300bcd4" stroke-width="2"/><line x1="0" y1="10.5" x2="8" y2="10.5" stroke="%2300bcd4" stroke-width="2"/><line x1="13" y1="10.5" x2="21" y2="10.5" stroke="%2300bcd4" stroke-width="2"/><circle cx="10.5" cy="10.5" r="3" fill="none" stroke="%2300bcd4" stroke-width="1.5"/></svg>') 10 10, crosshair;
+}
+
+#mapCanvas.pointer-cursor-cyan {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" viewBox="0 0 20 24"><path d="M3 0 L3 14 L7 10 L9 16 L11 15 L9 9 L15 9 Z" fill="%2300bcd4" stroke="%23ffffff" stroke-width="0.5"/></svg>') 3 0, pointer;
+}
+
+#mapCanvas.crosshair-cursor-add {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21"><line x1="10.5" y1="0" x2="10.5" y2="8" stroke="%2300bcd4" stroke-width="2"/><line x1="10.5" y1="13" x2="10.5" y2="21" stroke="%2300bcd4" stroke-width="2"/><line x1="0" y1="10.5" x2="8" y2="10.5" stroke="%2300bcd4" stroke-width="2"/><line x1="13" y1="10.5" x2="21" y2="10.5" stroke="%2300bcd4" stroke-width="2"/><line x1="10.5" y1="6" x2="10.5" y2="15" stroke="%2300bcd4" stroke-width="2.5"/><line x1="6" y1="10.5" x2="15" y2="10.5" stroke="%2300bcd4" stroke-width="2.5"/></svg>') 10 10, crosshair;
+}
+
+/* === CANVAS INFO SYSTEM === */
+/* Styles de base communs */
+.canvas-info {
+  position: absolute;
+  background: var(--column-bg);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-base);
+  font-size: var(--font-2xs);
+  color: var(--text-general);
+  box-shadow: var(--shadow-light);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* === CANVAS XY INFO === */
+.xy-canvas-info {
+  /* Position */
+  bottom: 0;
+  left: 0;
+  /* Taille */
+  width: 60%;
+  /* Style */
+  text-align: left;
+  z-index: 100;
+}
+
+/* === CANVAS Z INFO === */
+.z-canvas-info {
+  /* Position */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  /* Style */
+  text-align: center;
+  z-index: 10;
+}
+
+/* Z Visualization Panel */
+.z-visualization-panel {
+  width: 80px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.z-header {
+  padding: var(--spacing-xs);
+  text-align: center;
+  font-size: var(--font-3xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-general);
+  border-bottom: var(--border-width) solid var(--border);
+  background: var(--container-bg);
+}
+
+.z-scale {
+  position: relative;
+  background: var(--container-bg);
+  border: var(--border-width-thick) solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  width: 100%;
+  flex: 1;
+  z-index: var(--z-base);
+}
+
+/* Custom cursor color for Z canvas crosshair */
+.z-scale canvas.crosshair-cursor {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21"><line x1="0" y1="10.5" x2="21" y2="10.5" stroke="%2300bcd4" stroke-width="1.5"/></svg>') 10 10, crosshair;
+}
+
+.z-markings {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.z-current-marker {
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+}
+
+.z-position-dot {
+  width: var(--spacing-lg);
+  height: var(--spacing-lg);
+  background: var(--primary);
+  border: var(--border-width-thick) solid white;
+  border-radius: var(--radius-round);
+  box-shadow: var(--shadow-light);
+}
+
+.z-position-label {
+  font-size: var(--font-3xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--primary);
+  background: var(--column-bg);
+  border: var(--border-width) solid var(--border);
+  padding: var(--spacing-2xs) var(--spacing-xs);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-light);
+}
+
+.z-preview {
+  position: absolute;
+  width: 100%;
+  height: var(--border-width-thick);
+  background: var(--warning);
+  opacity: var(--opacity-medium);
+  display: none;
+}
+
+/* Compatibilité ancienne classe z-info */
+.z-info {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  background: var(--column-bg) !important;
+  border-top: var(--border-width) solid var(--border) !important;
+  padding: var(--spacing-xs) var(--spacing-base) !important;
+  font-size: var(--font-2xs) !important;
+  color: var(--text-general) !important;
+  box-shadow: var(--shadow-light) !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  z-index: var(--z-dropdown) !important;
+}
+
+/* Wheel Gear Animation */
+.wheel-gear {
+  display: block;
+  transition: var(--transition-slow);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.gear-wheel {
+  transform-origin: 20px 20px;
+  transition: transform var(--transition-fast);
+}
+
+/* Wheel Zone Animation */
+.wheel-zone-active {
+  text-align: center;
+  padding: var(--spacing-xl);
+  border: var(--border-width-thick) dashed var(--active-element);
+  border-radius: var(--radius);
+  background: var(--active-element-alpha);
+  cursor: pointer;
+  transition: var(--transition-slow);
+}
+
+.wheel-zone-active:hover {
+  border-color: var(--coordinates-color);
+  background: var(--coordinates-color-alpha);
+}
+
+.wheel-animation {
+  position: relative;
+  display: inline-block;
+  margin-bottom: var(--spacing-base);
+}
+
+.wheel-icon {
+  font-size: var(--font-2xl);
+  display: block;
+  margin-bottom: var(--spacing-xs);
+}
+
+.wheel-arrows {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.wheel-arrow {
+  position: absolute;
+  font-size: var(--font-lg);
+  color: var(--coordinates-color);
+  opacity: 0;
+  transition: var(--transition-slow);
+}
+
+.wheel-arrow.up {
+  top: -20px;
+  left: -8px;
+}
+
+.wheel-arrow.down {
+  top: 10px;
+  left: -8px;
+}
+
+.wheel-arrow.animate-up {
+  opacity: 1;
+  transform: translateY(-10px);
+}
+
+.wheel-arrow.animate-down {
+  opacity: 1;
+  transform: translateY(10px);
+}
+
+.wheel-text {
+  font-size: var(--font-2xs);
+  color: var(--active-element);
+  font-weight: var(--font-weight-medium);
+}
+
+.wheel-zone-active:hover .wheel-text {
+  color: var(--coordinates-color);
+}
+
+
+/* Mode 2x2 - Tous les widgets ont la même taille */
+.canvas-content[style*="grid-template-columns: 1fr 1fr"][style*="grid-template-rows: 1fr 1fr"] {
+  display: grid !important;
+}
+
+.canvas-content[style*="grid-template-columns: 1fr 1fr"][style*="grid-template-rows: 1fr 1fr"] > * {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Center panel en mode grid */
+.center-panel[style*="height: 100%"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.center-panel[style*="height: 100%"] .canvas-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.center-panel[style*="height: 100%"] .canvas-content {
+  flex: 1;
+  min-height: 0;
+}

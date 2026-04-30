@@ -1,0 +1,38 @@
+{
+  "name": "endertrack",
+  "version": "2.7.0",
+  "description": "3D Position Simulator with AI Integration for Laboratory Equipment Control",
+  "main": "main.js",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{js,css,html,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,css,html,json,md}\"",
+    "test": "echo \"Tests coming soon\" && exit 0",
+    "docs": "jsdoc -c jsdoc.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/endertrack.git"
+  },
+  "keywords": [
+    "3d-positioning",
+    "laboratory",
+    "microscopy",
+    "automation",
+    "ai-assistant",
+    "gcode"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.50.0",
+    "prettier": "^3.0.3",
+    "jsdoc": "^4.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "python": ">=3.8.0"
+  }
+}

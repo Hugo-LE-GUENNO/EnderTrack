@@ -1,0 +1,110 @@
+/* Responsive Design & Media Queries */
+
+/* Large desktop (>1400px) — spacious */
+@media (min-width: 1401px) {
+  .app-container {
+    grid-template-columns: clamp(280px, 20vw, 380px) 1fr clamp(180px, 14vw, 280px);
+  }
+}
+
+/* Standard desktop (1000-1400px) */
+@media (max-width: 1400px) {
+  .app-container {
+    grid-template-columns: clamp(260px, 22vw, 360px) 1fr clamp(160px, 15vw, 250px);
+  }
+}
+
+/* Small desktop / RPi with monitor (800-1000px) */
+@media (max-width: 1000px) {
+  .app-container {
+    grid-template-columns: clamp(230px, 28vw, 320px) 1fr 180px;
+  }
+
+  .global-header { padding: 0 var(--spacing-sm); }
+  .tab-btn { padding: var(--spacing-xs) var(--spacing-base); font-size: var(--font-xs); }
+
+  .arrow-btn { width: 45px; height: 45px; font-size: var(--font-lg); }
+  .arrow-btn.diagonal { width: 38px; height: 38px; font-size: var(--font-base); }
+  .z-btn { width: 45px; height: 45px; font-size: var(--font-lg); }
+
+  .navigation-controls-container { padding: var(--spacing-md); }
+  .normal-mode { grid-template-columns: 1fr 65px; }
+
+  .status-widget .coordinate-value { font-size: var(--font-lg); }
+}
+
+/* RPi touchscreen / small screen (600-800px) */
+@media (max-width: 800px) {
+  .app-container {
+    grid-template-columns: minmax(220px, 280px) 1fr;
+  }
+
+  .right-panel { display: none; }
+
+  .arrow-btn { width: 40px; height: 40px; font-size: var(--font-base); }
+  .arrow-btn.diagonal { width: 34px; height: 34px; font-size: var(--font-sm); }
+  .z-btn { width: 40px; height: 40px; font-size: var(--font-base); }
+
+  .goto-section { padding: var(--spacing-sm); }
+  .goto-field input { font-size: var(--font-xs); padding: var(--spacing-xs); }
+  .action-btn { font-size: var(--font-xs); padding: var(--spacing-xs) var(--spacing-sm); }
+}
+
+/* Very small / RPi official 7" (480-600px) */
+@media (max-width: 600px) {
+  .app-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .left-panel { max-height: 45vh; overflow-y: auto; }
+  .right-panel { display: none; }
+
+  .tab-btn { padding: var(--spacing-xs); font-size: 10px; }
+
+  .navigation-controls-container { padding: var(--spacing-sm); }
+  .normal-mode { grid-template-columns: 1fr 55px; gap: var(--gap-sm); }
+  .arrow-btn { width: 36px; height: 36px; font-size: var(--font-sm); }
+  .arrow-btn.diagonal { width: 30px; height: 30px; font-size: var(--font-xs); }
+  .z-btn { width: 36px; height: 36px; font-size: var(--font-sm); }
+}
+
+/* Short screens (landscape RPi, etc) */
+@media (max-height: 600px) {
+  .app-container {
+    grid-template-columns: minmax(250px, 300px) 1fr 180px;
+  }
+
+  .global-header { padding: var(--spacing-xs) var(--spacing-sm); }
+  .global-header img { height: 28px; }
+  .tab-btn { padding: var(--spacing-xs) var(--spacing-sm); font-size: var(--font-xs); }
+
+  .navigation-controls-container { padding: var(--spacing-sm); }
+  .arrow-btn { width: 42px; height: 42px; }
+  .arrow-btn.diagonal { width: 36px; height: 36px; }
+  .z-btn { width: 42px; height: 42px; }
+
+  .step-controls { margin-top: var(--spacing-xs); }
+  .axis-control { margin-bottom: 0; }
+
+  .status-widget .coordinate-value { font-size: var(--font-base); }
+}
+
+/* High DPI */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  #mapCanvas { image-rendering: crisp-edges; }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print */
+@media print {
+  .left-panel, .right-panel, .global-header { display: none; }
+  .center-panel { width: 100%; }
+}

@@ -1,0 +1,181 @@
+/* ============================================
+   EnderTrack - Variables CSS Globales
+   Système de design unifié
+   ============================================ */
+
+:root {
+  /* ==========================================
+     SPACING SYSTEM
+     Utilisé pour: padding, margin, gap
+     ========================================== */
+  --spacing-0: 0;
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-base: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  
+  /* ==========================================
+     TYPOGRAPHY SYSTEM
+     Tailles de police
+     ========================================== */
+  --font-xs: 10px;
+  --font-sm: 11px;
+  --font-base: 12px;
+  --font-md: 13px;
+  --font-lg: 14px;
+  --font-xl: 16px;
+  --font-2xl: 18px;
+  --font-3xl: 24px;
+  --font-4xl: 32px;
+  
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Line heights */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.6;
+  
+  /* Font families */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  
+  /* ==========================================
+     BORDER RADIUS SYSTEM
+     ========================================== */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-base: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 50%;
+  
+  /* Alias pour compatibilité avec code existant */
+  --radius-small: var(--radius-base);  /* 4px */
+  --radius: var(--radius-lg);          /* 8px */
+  
+  /* ==========================================
+     GAP SYSTEM
+     Espacement entre éléments flex/grid
+     ========================================== */
+  --gap-0: 0;
+  --gap-xs: 2px;
+  --gap-sm: 4px;
+  --gap-base: 6px;
+  --gap-md: 8px;
+  --gap-lg: 12px;
+  --gap-xl: 16px;
+  --gap-2xl: 20px;
+  
+  /* ==========================================
+     SHADOWS
+     ========================================== */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.15);
+  --shadow-base: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  
+  /* Alias pour compatibilité */
+  --shadow-light: var(--shadow-base);
+  --shadow: var(--shadow-md);
+  
+  /* ==========================================
+     TRANSITIONS
+     ========================================== */
+  --transition-fast: 0.1s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+  
+  /* ==========================================
+     Z-INDEX SYSTEM
+     ========================================== */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 1000;
+  --z-modal: 1001;
+  --z-popover: 2000;
+  --z-tooltip: 3000;
+  --z-notification: 4000;
+  --z-emergency: 9999;
+  
+  /* ==========================================
+     DIMENSIONS
+     Tailles communes
+     ========================================== */
+  --size-xs: 16px;
+  --size-sm: 20px;
+  --size-base: 24px;
+  --size-md: 32px;
+  --size-lg: 40px;
+  --size-xl: 48px;
+  --size-2xl: 64px;
+  
+  /* ==========================================
+     OPACITY
+     ========================================== */
+  --opacity-disabled: 0.5;
+  --opacity-hover: 0.8;
+  --opacity-active: 1;
+  
+  /* ==========================================
+     COMPASS COLORS
+     ========================================== */
+  --compass-x-color: #888888;
+  --compass-y-color: #aaaaaa;
+  
+  /* ==========================================
+     POSITION COLORS
+     Système colorimétrique pour positions
+     ========================================== */
+  --pos-current: #ffffff;        /* Position actuelle - Blanc */
+  --pos-potential: #ffc107;      /* Position potentielle - Jaune */
+  --pos-cursor: #00bcd4;         /* Position curseur - Cyan */
+  --pos-min: #f44336;            /* Position min (xmin, ymin) - Rouge */
+  --pos-max: #4caf50;            /* Position max (xmax, ymax) - Vert */
+  --pos-origin: #2196f3;         /* Position origine - Bleu */
+  --pos-history: #888888;        /* Position historique - Gris discret */
+  --pos-viewport: #aaaaaa;       /* Visualisation plateau (pan/zoom) - Gris clair */
+  
+  /* ==========================================
+     LAYOUT
+     Largeurs de colonnes
+     ========================================== */
+  --panel-width-sm: 250px;
+  --panel-width-base: 300px;
+  --panel-width-md: 350px;
+  --panel-width-lg: 400px;
+}
+
+/* ============================================
+   NOTES D'UTILISATION
+   ============================================
+   
+   Spacing:
+   - padding: var(--spacing-base);
+   - margin: var(--spacing-md);
+   - gap: var(--gap-md);
+   
+   Typography:
+   - font-size: var(--font-base);
+   - font-weight: var(--font-weight-medium);
+   
+   Border Radius:
+   - border-radius: var(--radius-base);
+   
+   Shadows:
+   - box-shadow: var(--shadow-base);
+   
+   Transitions:
+   - transition: all var(--transition-base);
+   
+   ============================================ */

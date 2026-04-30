@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnderTrack</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/endertrack-logo_favicon.svg">
+    <!-- Initialize Enderscope theme immediately -->
+    <script src="assets/config/paths.js"></script>
+    <!-- CSS Variables (MUST be loaded first) -->
+    <link rel="stylesheet" href="frontend/assets/variables.css">
+    <!-- Theme CSS (loaded dynamically by script below) -->
+    <link rel="stylesheet" id="theme-stylesheet" href="frontend/assets/themes/endertrack-dark.css">
+    <script>
+      // Charger le thème sauvegardé immédiatement
+      (function() {
+        const savedTheme = localStorage.getItem('endertrack_theme') || 'endertrack-dark';
+        document.getElementById('theme-stylesheet').href = `frontend/assets/themes/${savedTheme}.css`;
+      })();
+    </script>
+    <link rel="stylesheet" href="frontend/assets/styles/utilities.css">
+    <link rel="stylesheet" href="frontend/assets/endertrack.css">
+    <link rel="stylesheet" href="frontend/assets/styles/global-header.css">
+    <link rel="stylesheet" href="frontend/assets/styles/canvas-overlays.css">
+    <link rel="stylesheet" href="frontend/assets/styles/viewport-empty.css">
+    <link rel="stylesheet" href="frontend/assets/styles/canvas-display.css">
+    <link rel="stylesheet" href="frontend/assets/styles/status-widget.css">
+    <link rel="stylesheet" href="frontend/assets/styles/plugin-shared.css">
+    <link rel="stylesheet" href="frontend/assets/styles/emergency-simple.css">
+    <link rel="stylesheet" href="frontend/assets/styles/axis-config.css">
+    <link rel="stylesheet" href="frontend/assets/styles/coordinate-config.css">
+    <link rel="stylesheet" href="frontend/assets/styles/template-modal.css">
+    <link rel="stylesheet" href="frontend/assets/styles/strategic-positions.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--app-bg); color: var(--text-selected); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; font-family: Arial, sans-serif;">
+        <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" style="height: 160px; margin-bottom: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+        <div style="font-size: 16px; opacity: 0.8; color: var(--text-general);">Initialisation...</div>
+        <div style="margin-top: 20px; width: 200px; height: 4px; background: var(--container-bg); border-radius: 2px; overflow: hidden;">
+            <div style="width: 100%; height: 100%; background: linear-gradient(90deg, var(--coordinates-color), var(--coordinates-color)); animation: loading 2s infinite;"></div>
+        </div>
+    </div>
+    
+    <!-- Main Application (hidden during loading) -->
+    <div class="app-container" style="visibility: hidden;" id="appContainer">
+        <!-- Global Header with Logo and Tabs -->
+        <div class="global-header">
+            <div class="tab-system">
+                <button class="tab-btn" id="settingsTab" onclick="switchTab('settings')">
+                    Réglages
+                </button>
+                <div style="width:1px; height:20px; background:var(--border); margin:0 4px; align-self:center;"></div>
+                <button class="tab-btn active" id="navigationTab" onclick="switchTab('navigation')">
+                    Navigation
+                </button>
+                <button class="tab-btn" id="listsTab" onclick="switchTab('lists')">
+                    Positions
+                </button>
+            </div>
+            <div style="flex:1"></div>
+            <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" onclick="showAboutModal()" style="height: 28px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7">
+        </div>
+        
+        <!-- Left Panel - Controls and Modes -->
+        <div class="left-panel">
+
+            <!-- Tab Content Areas -->
+            <div class="tab-content">
+                <!-- Navigation Panel (Default Active) -->
+                <div class="tab-panel active" id="navigationTabContent">
+
+                    <!-- Relative: Arrows + Sensitivity (unified block) -->
+                    <div class="navigation-controls-container" id="relativeControls">
+                        <div class="normal-mode" id="normalMode">
+                            <div class="arrow-pad" id="arrowPad">
+                                <div class="arrow-container">
+                                    <button class="arrow-btn" id="upLeft">↖</button>
+                                    <button class="arrow-btn" id="up">▲</button>
+                                    <button class="arrow-btn" id="upRight">↗</button>
+                                    <button class="arrow-btn" id="left">◄</button>
+                                    <div class="arrow-center" id="xyCenterLabel">XY</div>
+                                    <button class="arrow-btn" id="right">►</button>
+                                    <button class="arrow-btn" id="downLeft">↙</button>
+                                    <button class="arrow-btn" id="down">▼</button>
+                                    <button class="arrow-btn" id="downRight">↘</button>
+                                </div>
+                            </div>
+                            <div class="z-controls-right" id="controllerRight">
+                                <button class="z-btn" id="zUp">▲</button>
+                                <div class="z-center" id="zCenterLabel">Z</div>
+                                <button class="z-btn" id="zDown">▼</button>
+                            </div>
+                        </div>
+
+                        <!-- Sensitivity sliders (inside the controller block) -->
+                        <div class="step-controls" id="stepControls">
+                            <div class="axis-control xy-coupled" id="xyControl">
+                                <label class="axis-label" id="xyCoupling">XY</label>
+                                <input type="range" id="sensitivityXY" min="0.01" max="50" value="10" step="0.01">
+                                <input type="number" id="sensitivityXYInput" value="10" step="0.01" min="0.01">
+                            </div>
+                            <div class="axis-control individual-axis" id="xControl" style="display: none;">
+                                <label class="axis-label">X</label>
+                                <input type="range" id="sensitivityX" min="0.01" max="50" value="10" step="0.01">
+                                <input type="number" id="sensitivityXInput" value="10" step="0.01" min="0.01">
+                            </div>
+                            <div class="axis-control individual-axis" id="yControl" style="display: none;">
+                                <label class="axis-label">Y</label>
+                                <input type="range" id="sensitivityY" min="0.01" max="50" value="10" step="0.01">
+                                <input type="number" id="sensitivityYInput" value="10" step="0.01" min="0.01">
+                            </div>
+                            <div class="axis-control individual-axis" id="zControl">
+                                <label class="axis-label">Z</label>
+                                <input type="range" id="sensitivityZ" min="0.01" max="50" value="1" step="0.01">
+                                <input type="number" id="sensitivityZInput" value="1" step="0.01" min="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Absolute: Go to position -->
+                    <div class="goto-section">
+                        <div class="goto-inputs">
+                            <div class="goto-field" id="gotoFieldX">
+                                <label>X</label>
+                                <input type="number" id="inputX" value="0" step="0.1">
+                            </div>
+                            <div class="goto-field" id="gotoFieldY">
+                                <label>Y</label>
+                                <input type="number" id="inputY" value="0" step="0.1">
+                            </div>
+                            <div class="goto-field" id="gotoFieldZ">
+                                <label>Z</label>
+                                <input type="number" id="inputZ" value="0" step="0.1">
+                            </div>
+                            <button class="action-btn" id="goToPoint" onclick="goToAbsolute()">Go</button>
+                        </div>
+                        <div class="home-row">
+                            <button class="action-btn" id="homeXYBtn" onclick="goHome('xy')" oncontextmenu="event.preventDefault(); showHomeContextMenu(event)">🏠 Home</button>
+                        </div>
+                    </div>
+
+                    <!-- Plugin injection point -->
+                    <div id="navPluginZone"></div>
+                </div>
+
+                <!-- Settings Panel -->
+                <div class="tab-panel" id="settingsTabContent">
+
+                    <!-- Support XYZ - Connexion -->
+                    <details open>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 Support XYZ — Connexion</summary>
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
+                            
+                            <!-- Status + Connect -->
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div class="status-indicator" id="connectionStatus"></div>
+                                <span id="connectionText" style="font-size:11px; color:var(--text-general); flex:1;">Déconnecté</span>
+                                <button id="connectBtn" onclick="toggleConnection()" style="padding:4px 12px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected);">Connecter</button>
+                            </div>
+                            <div id="connectionProgress" class="progress-bar" style="display:none;">
+                                <div class="progress-fill"></div>
+                                <span class="progress-text">Connexion...</span>
+                            </div>
+
+                            <!-- Port -->
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <label style="font-size:11px; color:var(--text-general); width:40px;">Port</label>
+                                <select id="serialPort" style="flex:1; padding:4px 8px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--text-selected); font-size:11px;">
+                                    <option value="/dev/ttyUSB0" selected>/dev/ttyUSB0</option>
+                                </select>
+                                <button onclick="resetSerialPort()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);" title="Actualiser">↻</button>
+                            </div>
+                            <select id="baudRate" style="display:none;"><option value="115200" selected>115200</option></select>
+
+                            <!-- Vitesse -->
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <label style="font-size:11px; color:var(--text-general); width:40px;">Vitesse</label>
+                                <input type="range" id="feedrateSlider" min="100" max="10000" value="3000" step="100"
+                                    oninput="updateFeedrate(this.value)"
+                                    style="flex:1; height:4px; -webkit-appearance:none; background:#404040; border-radius:2px;">
+                                <input type="number" id="feedrateInput" value="3000" min="100" max="10000" step="100"
+                                    onchange="updateFeedrate(this.value)"
+                                    style="width:55px; padding:3px 4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); font-size:11px; text-align:center; font-family:monospace;">
+                                <span style="font-size:9px; color:var(--text-general);">mm/min</span>
+                            </div>
+
+                            <!-- G-code (visible si connecté) -->
+                            <div id="enderscopeControls" style="display:none;">
+                                <div style="border-top:1px solid #333; padding-top:8px; margin-top:4px; display:flex; flex-direction:column; gap:6px;">
+                                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                        <button onclick="sendBeep()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔊 Bip</button>
+                                        <button onclick="homeEnderscope()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🏠 Home</button>
+                                        <button onclick="getEnderscopeInfo()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">📝 Info</button>
+                                        <button onclick="resetEnderscope()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔄 Reset</button>
+                                    </div>
+                                    <div style="display:flex; gap:4px;">
+                                        <input type="text" id="gcodeInput" placeholder="G-code..." onkeypress="handleGcodeEnter(event)"
+                                            style="flex:1; padding:4px 8px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--text-selected); font-size:11px; font-family:monospace;">
+                                        <button onclick="sendGcode()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--active-element); color:var(--text-selected);">Envoyer</button>
+                                        <button onclick="showGcodeHelp()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="Aide G-code">?</button>
+                                    </div>
+                                    <textarea id="gcodeOutput" readonly rows="3"
+                                        style="width:100%; resize:vertical; background:var(--app-bg); color:var(--text-general); border:1px solid #333; border-radius:var(--radius-small); padding:6px 8px; font-family:monospace; font-size:10px; line-height:1.4;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Support XYZ - Zone de travail -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📐 Support XYZ — Zone de travail</summary>
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
+
+                            <!-- Hidden profile elements for compatibility -->
+                            <div id="selectedProfile" style="display:none;"><strong id="profileName"></strong><span id="profileDimensions"></span></div>
+
+                            <!-- Tableau Axe / Dim / Min / Max -->
+                            <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                                <thead>
+                                    <tr style="color:var(--text-general); font-size:10px;">
+                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
+                                        <th style="text-align:center; padding:2px 4px;">Dimension</th>
+                                        <th style="text-align:center; padding:2px 4px;">Min</th>
+                                        <th style="text-align:center; padding:2px 4px;">Max</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">X</td>
+                                        <td style="padding:2px;"><input type="number" id="plateauX" value="220" min="10" step="1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="xMin" value="0" step="0.1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="xMax" value="220" step="0.1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Y</td>
+                                        <td style="padding:2px;"><input type="number" id="plateauY" value="220" min="10" step="1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="yMin" value="0" step="0.1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="yMax" value="220" step="0.1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Z</td>
+                                        <td style="padding:2px;"><input type="number" id="plateauZ" value="250" min="10" step="1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="zMin" value="0" step="0.1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="zMax" value="250" step="0.1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Orientation -->
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <span style="font-size:10px; color:var(--text-general);">Orientation</span>
+                                <div style="display:flex; gap:3px;">
+                                    <button class="axis-btn" data-x="left" data-y="up" onclick="setAxisOrientation('left','up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↖</button>
+                                    <button class="axis-btn active" data-x="right" data-y="up" onclick="setAxisOrientation('right','up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↗</button>
+                                    <button class="axis-btn" data-x="left" data-y="down" onclick="setAxisOrientation('left','down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↙</button>
+                                    <button class="axis-btn" data-x="right" data-y="down" onclick="setAxisOrientation('right','down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↘</button>
+                                </div>
+                                
+                                <div style="display:flex; gap:3px;">
+                                    <button class="axis-btn active" data-z="up" onclick="setZOrientation('up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;">↑</button>
+                                    <button class="axis-btn" data-z="down" onclick="setZOrientation('down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;">↓</button>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Calques -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🗂 Calques</summary>
+                        <div id="overlaysTabContent" style="padding:8px;">
+                            <!-- Overlays interface will be loaded here -->
+                        </div>
+                    </details>
+
+                    <!-- Navigation -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🧭 Navigation</summary>
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
+
+                            <!-- Tableau Axe / Lock / Home XY / Home XYZ -->
+                            <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                                <thead>
+                                    <tr style="color:var(--text-general); font-size:10px;">
+                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
+                                        <th style="text-align:center; padding:2px 4px; width:36px;">Lock</th>
+                                        <th style="text-align:center; padding:2px 4px;">Home XY</th>
+                                        <th style="text-align:center; padding:2px 4px;">Home XYZ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">X</td>
+                                        <td style="padding:2px; text-align:center;"><button id="configLockX" onclick="toggleLock('X'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">X</button></td>
+                                        <td style="padding:2px;"><input type="number" id="homeXY_X" value="0" step="0.1" onchange="updateHomePosition('xy')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="homeXYZ_X" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Y</td>
+                                        <td style="padding:2px; text-align:center;"><button id="configLockY" onclick="toggleLock('Y'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Y</button></td>
+                                        <td style="padding:2px;"><input type="number" id="homeXY_Y" value="0" step="0.1" onchange="updateHomePosition('xy')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="homeXYZ_Y" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Z</td>
+                                        <td style="padding:2px; text-align:center;"><button id="configLockZ" onclick="toggleLock('Z'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Z</button></td>
+                                        <td style="padding:2px; text-align:center; color:var(--text-general); font-size:10px;">—</td>
+                                        <td style="padding:2px;"><input type="number" id="homeXYZ_Z" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Couplage XY -->
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button id="configCoupleXY" onclick="toggleCoupling(); updateConfigLocks()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔗 Coupler XY</button>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Stockage -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💾 Stockage</summary>
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:6px;">
+                            <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-general);">
+                                <div style="width:6px; height:6px; border-radius:50%; background:var(--success); flex-shrink:0;"></div>
+                                localStorage actif
+                                <span id="storageSizeLabel" style="margin-left:auto; opacity:0.5; font-family:monospace;"></span>
+                            </div>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                <button onclick="saveAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Exporter</button>
+                                <button onclick="loadStorageFromFile()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Importer</button>
+                                <button onclick="resetAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Réinitialiser</button>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div id="viewportConfigContainer" style="display:none;"></div>
+
+                    <!-- Séparateur avant plugins -->
+                    <div style="border-top:1px solid var(--border); margin:8px 0;"></div>
+
+                    <!-- Zone injection plugins -->
+                    <div id="configPluginZone"></div>
+
+                    <!-- Séparateur avant extensions -->
+                    <div style="border-top:1px solid var(--border); margin:8px 0;"></div>
+
+                    <!-- Extensions (toujours en dernier) -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 Extensions</summary>
+                        <div style="padding:8px;">
+                            <div id="pluginsList"></div>
+                        </div>
+                    </details>
+
+                </div>
+
+                <!-- Modals loaded dynamically via modal-loader.js -->
+
+
+                        
+                <!-- Autres Panel -->
+
+                <!-- Lists Panel -->
+                <div class="tab-panel" id="listsTabContent">
+                    <div id="listsContent"><!-- Lists renders here --></div>
+                    <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
+                    <div id="acquisitionTabContent" style="margin-top:8px; border-top:1px solid #333; padding-top:8px;">
+                        <!-- Scenario interface will be loaded here -->
+                    </div>
+                </div>
+                
+
+
+                
+
+            </div>
+        </div>
+
+        <!-- Center Panel - Canvas Display (All Widgets) -->
+        <div class="center-panel">
+            <!-- Canvas Display Container -->
+            <div class="canvas-display" id="canvasDisplay">
+                <!-- Empty State (shown when no widgets active) -->
+                <div class="viewport-empty-state" id="viewportEmptyState">
+                    <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" class="empty-state-logo">
+                    <div class="empty-state-text">Aucun widget actif</div>
+                    <div class="empty-state-hint">Activez un widget depuis Configs → Visualisation</div>
+                </div>
+                
+                <!-- Stage Widget (XY + Z) - Hidden by default, shown when activated -->
+                <div class="widget-container" id="widget-stage" style="display: none;">
+                    <div class="canvas-content">
+                        <div class="main-canvas">
+                            <canvas id="mapCanvas"></canvas>
+                        </div>
+                        <div class="z-visualization-panel" id="zVisualizationPanel">
+                            <div class="z-scale" id="zScale">
+                                <div class="z-markings" id="zMarkings"></div>
+                            </div>
+                            <div class="z-preview" id="zPreview"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel" style="display:flex; flex-direction:column;">
+
+            <!-- Plugin zone (right panel) - top -->
+            <div id="rightPluginZone"></div>
+
+            <!-- Widget Status - always at bottom -->
+            <div class="status-widget" style="margin-top:auto;">
+                <!-- Server status (parent) -->
+                <div id="statusHeader" style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <div id="statusMainLight" style="width:10px; height:10px; border-radius:50%; background:var(--coordinates-color); flex-shrink:0;"></div>
+                    <span id="statusMainLabel" style="font-size:12px; font-weight:500; color:var(--text-general);">Simulateur</span>
+                </div>
+
+                <!-- Children (indented under server) -->
+                <div style="padding-left:16px; display:flex; flex-direction:column; gap:4px;">
+                    <!-- Stage status (hidden in pure simulator) -->
+                    <div id="statusDeviceRow" style="display:none; align-items:center; gap:6px;">
+                        <div id="stageStatusLight" style="width:6px; height:6px; border-radius:50%; background:var(--text-general); flex-shrink:0;"></div>
+                        <span id="statusDeviceInfo" style="font-size:10px; color:var(--text-general);"></span>
+                    </div>
+
+                    <!-- Coordinates -->
+                    <div class="coordinates-display" id="statusCoordinates" style="padding-left:12px;">
+                        <div class="coordinate-item">
+                            <span class="coordinate-label">X:</span>
+                            <span class="coordinate-value" id="statusPosX" style="color:var(--coordinates-color);">0.00</span>
+                            <span class="coordinate-unit">mm</span>
+                        </div>
+                        <div class="coordinate-item">
+                            <span class="coordinate-label">Y:</span>
+                            <span class="coordinate-value" id="statusPosY" style="color:var(--coordinates-color);">0.00</span>
+                            <span class="coordinate-unit">mm</span>
+                        </div>
+                        <div class="coordinate-item">
+                            <span class="coordinate-label">Z:</span>
+                            <span class="coordinate-value" id="statusPosZ" style="color:var(--coordinates-color);">0.00</span>
+                            <span class="coordinate-unit">mm</span>
+                        </div>
+                    </div>
+
+                    <!-- Plugin peripherals zone -->
+                    <div id="statusPluginZone" style="display:none;"></div>
+                </div>
+
+                <button class="emergency-btn-widget" onclick="window.EnderTrack.App.emergencyStop()" style="margin-top:8px;">
+                    <img src="assets/icons/emergency-stop-button.svg" alt="Emergency Stop" class="emergency-icon-widget">
+                    EMERGENCY STOP
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay Emergency -->
+    <div class="emergency-overlay" id="emergencyOverlay"></div>
+
+    <!-- Audio Visualizer (Hidden by default) -->
+    <canvas id="audioVisualizer" width="300" height="100" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; border: 2px solid var(--border); border-radius: 8px; background: var(--container-bg);"></canvas>
+
+    <!-- Force Z Panel Visibility integrated in main.js -->
+    
+    <!-- Script Loading Order (Critical) -->
+    <!-- Core System -->
+    <script src="modules/state/state.js"></script>
+    <script src="modules/utils/math.js"></script>
+    <script src="modules/utils/graphics.js"></script>
+    <script src="modules/utils/events.js"></script>
+    <script src="modules/utils/validation.js"></script>
+    <script src="modules/utils/performance.js"></script>
+
+    <!-- Canvas System -->
+    <script src="modules/canvas/coordinates.js"></script>
+    <!-- Canvas Renderers -->
+    <script src="modules/canvas/renderers/background-renderer.js"></script>
+    <script src="modules/canvas/renderers/grid-renderer.js"></script>
+    <script src="modules/canvas/renderers/track-renderer.js"></script>
+    <script src="modules/canvas/renderers/position-renderer.js"></script>
+    <script src="modules/canvas/renderers/ui-renderer.js"></script>
+    <script src="modules/canvas/canvas-utils.js"></script>
+    <script src="modules/canvas/zoom-pan-modal.js"></script>
+    <script src="modules/canvas/xy-canvas.js"></script>
+    <!-- Z Canvas System -->
+    <script src="modules/canvas/z-renderers/z-grid-renderer.js"></script>
+    <script src="modules/canvas/z-renderers/z-position-renderer.js"></script>
+    <script src="modules/canvas/z-renderers/z-ui-renderer.js"></script>
+    <script src="modules/canvas/z-interactions.js"></script>
+    <script src="modules/canvas/z-canvas.js"></script>
+    <!-- Canvas Interactions Modules -->
+    <script src="modules/canvas/interactions/event-handlers.js"></script>
+    <script src="modules/canvas/interactions/click-handler.js"></script>
+    <script src="modules/canvas/interactions/zoom-pan-handler.js"></script>
+    <script src="modules/canvas/interactions/ui-helpers.js"></script>
+    <script src="modules/canvas/interactions.js"></script>
+
+    <!-- Navigation System -->
+    <script src="modules/navigation/movement.js"></script>
+    <script src="modules/navigation/controls-helpers.js"></script>
+    <script src="modules/navigation/controls.js"></script>
+    <!-- Keyboard Mode System -->
+
+
+    <!-- Theme System -->
+    <script src="modules/themes/theme-manager.js"></script>
+    
+    <!-- UI System -->
+    <script src="modules/ui/notifications.js"></script>
+    <script src="modules/ui/modals.js"></script>
+    <script src="modules/ui/panels.js"></script>
+    <script src="modules/ui/tabs.js"></script>
+    <script src="modules/ui/ui.js"></script>
+    <script src="modules/ui/history-ui.js"></script>
+    <script src="modules/ui/ui-settings.js"></script>
+    <script src="modules/ui/appearance.js?v=2"></script>
+    <script src="modules/ui/storage-manager.js"></script>
+    <script src="modules/ui/coordinate-config.js"></script>
+    <script src="modules/ui/strategic-positions.js"></script>
+    <script src="modules/ui/safety-limits.js"></script>
+    <script src="modules/ui/auto-save-config.js"></script>
+    <script src="config/templates/profiles-data.js"></script>
+    <script src="config/templates/profile-custom1.js"></script>
+    <script src="modules/ui/plateau-templates.js"></script>
+    <script src="modules/ui/color-manager.js"></script>
+
+    <!-- Hardware Bridges -->
+    <script src="hardware-bridges/enderscope/enderscope-connection.js"></script>
+
+    <!-- Overlays -->
+    <script src="modules/overlays.js"></script>
+    <script src="modules/lists.js"></script>
+    <script src="modules/scenario.js"></script>
+
+    <!-- Plugin Registry -->
+    <script src="plugins/registry.js"></script>
+
+    <!-- Core Application -->
+    <script src="core/plugin-manager.js"></script>
+    <script src="core/renderer.js"></script>
+    <script src="core/coordinator.js"></script>
+    <script src="core/api.js"></script>
+    <script src="core/app.js"></script>
+
+    <!-- External Controller Modules -->
+
+    
+    <!-- Overlays Module -->
+
+    
+    <!-- Lists Module -->
+
+    
+    <!-- Scenario Module -->
+
+    
+    <!-- Viewport & Widgets System -->
+    
+
+    
+    <!-- State Management -->
+    <script src="modules/state/persistence.js"></script>
+    
+    <!-- UI Handlers (externalized) -->
+    <script src="frontend/scripts/modal-loader.js"></script>
+    <script src="frontend/scripts/theme-loader.js"></script>
+    <script src="frontend/scripts/ui-handlers.js"></script>
+    
+    <!-- Bootstrap -->
+    <script>
+    // Minimal bootstrap - most functions moved to ui-handlers.js
+    window.updateScaleBarMultiplier = function() {
+        const select = document.getElementById('scaleBarMultiplierSelect');
+        if (select) {
+            const multiplier = parseFloat(select.value);
+            
+            if (window.EnderTrack?.State) {
+                window.EnderTrack.State.update({ scaleBarMultiplier: multiplier });
+            }
+            
+            if (window.EnderTrack?.Canvas?.requestRender) {
+                window.EnderTrack.Canvas.requestRender();
+            }
+        }
+    };
+    
+    // Fonction pour valider les limites contre les dimensions du plateau
+    window.validateLimitsAgainstPlateau = function() {
+      // Cette fonction peut être étendue pour valider les limites
+      // Pour l'instant, elle ne fait rien pour éviter les erreurs
+    };
+    
+    // Validation des plages de coordonnées
+    window.validateCoordinateRange = function(axis) {
+      // Protection contre les appels multiples
+      if (window.validatingCoordinates) return;
+      window.validatingCoordinates = true;
+      
+      const minInput = document.getElementById(`${axis}Min`);
+      const maxInput = document.getElementById(`${axis}Max`);
+      const dimensionInput = document.getElementById(`plateau${axis.toUpperCase()}`);
+      
+      if (!minInput || !maxInput || !dimensionInput) {
+        window.validatingCoordinates = false;
+        return;
+      }
+      
+      const min = parseFloat(minInput.value);
+      const max = parseFloat(maxInput.value);
+      const dimension = parseFloat(dimensionInput.value);
+      
+      // Valider les limites de sécurité après changement de dimensions
+      if (event.target === dimensionInput) {
+        validateLimitsAgainstPlateau();
+      }
+      
+      // Si les dimensions changent, adapter les plages de coordonnées
+      if (event.target === dimensionInput) {
+        const currentMin = parseFloat(minInput.value);
+        const currentMax = parseFloat(maxInput.value);
+        
+        // Détecter le mode actuel
+        const isZeroMode = currentMin === 0;
+        const isCenteredMode = Math.abs(currentMin + currentMax) < 0.1; // min + max ≈ 0
+        
+        if (isZeroMode) {
+          // Mode 0 : ajuster max pour correspondre à la nouvelle dimension
+          maxInput.value = dimension;
+        } else if (isCenteredMode) {
+          // Mode centré : ajuster pour garder le centrage
+          minInput.value = -dimension / 2;
+          maxInput.value = dimension / 2;
+        } else {
+          // Mode personnalisé : basculer vers mode 0 par défaut
+          minInput.value = 0;
+          maxInput.value = dimension;
+        }
+        
+        // Mettre à jour l'état et appeler resetLimitsToPlateauSize
+        if (window.EnderTrack?.State) {
+          const currentState = window.EnderTrack.State.get();
+          const newPlateauDimensions = {
+            ...currentState.plateauDimensions,
+            [axis]: dimension
+          };
+          const newCoordinateBounds = {
+            ...currentState.coordinateBounds,
+            [axis]: {
+              min: parseFloat(minInput.value),
+              max: parseFloat(maxInput.value)
+            }
+          };
+          
+          window.EnderTrack.State.update({
+            plateauDimensions: newPlateauDimensions,
+            coordinateBounds: newCoordinateBounds
+          });
+          
+          if (localStorage.getItem('endertrack_plateau_dimensions_enabled') === 'true') {
+            localStorage.setItem('endertrack_plateau_dimensions', JSON.stringify(newPlateauDimensions));
+          }
+          if (localStorage.getItem('endertrack_coordinate_bounds_enabled') === 'true') {
+            localStorage.setItem('endertrack_coordinate_bounds', JSON.stringify(newCoordinateBounds));
+          }
+          
+          // Appeler resetLimitsToPlateauSize
+          if (typeof resetLimitsToPlateauSize === 'function') {
+            resetLimitsToPlateauSize();
+          }
+        }
+        
+        validateLimitsAgainstPlateau();
+        window.validatingCoordinates = false;
+        return;
+      }
+      
+      // Validation: min ne peut jamais être supérieur à max ET max ne peut jamais être inférieur à min
+    if (!isNaN(min) && !isNaN(max) && min > max) {
+      alert(`Erreur: ${axis.toUpperCase()}min (${min}) ne peut pas être supérieur à ${axis.toUpperCase()}max (${max})`);
+      // Restaurer la valeur précédente ou ajuster
+      if (event.target === minInput) {
+        minInput.value = max;
+      } else {
+        maxInput.value = min;
+      }
+      window.validatingCoordinates = false;
+      return;
+    }
+    
+    // Si min change, ajuster max pour maintenir |min| + max = dimension
+      if (event.target === minInput) {
+        if (min < -dimension) {
+          alert(`Erreur: Min ne peut pas être inférieur à -${dimension}mm`);
+          minInput.value = -dimension;
+          window.validatingCoordinates = false;
+          return;
+        }
+        if (min > 0 && axis !== 'z') {
+          alert(`Erreur: Min ne peut pas être supérieur à 0 pour l'axe ${axis.toUpperCase()}`);
+          minInput.value = 0;
+          window.validatingCoordinates = false;
+          return;
+        }
+        // Condition spéciale pour Z: Zmin ne peut pas être supérieur à 0
+        if (axis === 'z' && min > 0) {
+          alert('Erreur: Zmin ne peut pas être supérieur à 0');
+          minInput.value = 0;
+          window.validatingCoordinates = false;
+          return;
+        }
+        // Ajuster max: |min| + max = dimension
+        const newMax = dimension - Math.abs(parseFloat(minInput.value));
+        maxInput.value = newMax;
+      }
+      
+      // Si max change, ajuster min pour maintenir |min| + max = dimension
+      if (event.target === maxInput) {
+        if (max > dimension) {
+          alert(`Erreur: Max ne peut pas être supérieur à ${dimension}mm`);
+          maxInput.value = dimension;
+          window.validatingCoordinates = false;
+          return;
+        }
+        if (max < 0 && axis !== 'z') {
+          alert(`Erreur: Max ne peut pas être inférieur à 0 pour l'axe ${axis.toUpperCase()}`);
+          maxInput.value = 0;
+          window.validatingCoordinates = false;
+          return;
+        }
+        // Condition spéciale pour Z: Zmax ne peut pas descendre en dessous de 0
+        if (axis === 'z' && max < 0) {
+          alert('Erreur: Zmax ne peut pas descendre en dessous de 0');
+          maxInput.value = 0;
+          window.validatingCoordinates = false;
+          return;
+        }
+        // Ajuster min: |min| + max = dimension
+        const newMin = -(dimension - parseFloat(maxInput.value));
+        minInput.value = newMin;
+      }
+      
+      // Sauvegarder les nouvelles valeurs dans l'état
+      if (window.EnderTrack?.State) {
+        const currentState = window.EnderTrack.State.get();
+        const newPlateauDimensions = {
+          ...currentState.plateauDimensions,
+          [axis]: parseFloat(dimensionInput.value)
+        };
+        const newCoordinateBounds = {
+          ...currentState.coordinateBounds,
+          [axis]: {
+            min: parseFloat(minInput.value),
+            max: parseFloat(maxInput.value)
+          }
+        };
+        
+        window.EnderTrack.State.update({
+          plateauDimensions: newPlateauDimensions,
+          coordinateBounds: newCoordinateBounds
+        });
+        
+        // Sauvegarder dans localStorage si activé
+        if (localStorage.getItem('endertrack_plateau_dimensions_enabled') === 'true') {
+          localStorage.setItem('endertrack_plateau_dimensions', JSON.stringify(newPlateauDimensions));
+        }
+        if (localStorage.getItem('endertrack_coordinate_bounds_enabled') === 'true') {
+          localStorage.setItem('endertrack_coordinate_bounds', JSON.stringify(newCoordinateBounds));
+        }
+        
+        // Mettre à jour automatiquement les limites de sécurité
+        if (typeof resetLimitsToPlateauSize === 'function') {
+          resetLimitsToPlateauSize();
+        }
+      }
+      
+      window.validatingCoordinates = false;
+      window.validatingCoordinates = false;
+    };
+    </script>
+
+    <script src="main.js"></script>
+    <script src="frontend/scripts/init-display.js"></script>
+
+</body>
+</html>

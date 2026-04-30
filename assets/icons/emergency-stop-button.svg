@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <defs>
+    <!-- Ombre portée -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    
+    <!-- Dégradé rouge du bouton -->
+    <radialGradient id="redGradient" cx="30%" cy="30%">
+      <stop offset="0%" stop-color="#ff6b6b"/>
+      <stop offset="70%" stop-color="#e53e3e"/>
+      <stop offset="100%" stop-color="#c53030"/>
+    </radialGradient>
+    
+    <!-- Reflet sur le bouton -->
+    <radialGradient id="highlight" cx="25%" cy="25%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Définition des pointes de flèches -->
+    <marker id="arrowhead" markerWidth="4" markerHeight="3" refX="3" refY="1.5" orient="auto">
+      <polygon points="0 0, 4 1.5, 0 3" fill="white"/>
+    </marker>
+  </defs>
+  
+  <!-- Disque jaune de base -->
+  <circle cx="40" cy="40" r="38" fill="#ffc107" stroke="#e6ac00" stroke-width="2"/>
+  
+  <!-- Texte EMERGENCY STOP courbé le long du disque -->
+  <defs>
+    <path id="topCircle" d="M 10,40 A 30,30 0 0,1 70,40"/>
+    <path id="bottomCircle" d="M 70,40 A 30,30 0 0,1 10,40"/>
+  </defs>
+  
+  <text font-family="Arial, sans-serif" font-size="7" font-weight="bold" fill="#c53030">
+    <textPath href="#topCircle" startOffset="50%" text-anchor="middle">EMERGENCY</textPath>
+  </text>
+  <text font-family="Arial, sans-serif" font-size="7" font-weight="bold" fill="#c53030">
+    <textPath href="#bottomCircle" startOffset="50%" text-anchor="middle">STOP</textPath>
+  </text>
+  
+  <!-- Bouton rouge principal -->
+  <circle cx="40" cy="40" r="26" fill="url(#redGradient)" stroke="#c53030" stroke-width="2"/>
+  
+  <!-- Reflet sur le bouton -->
+  <ellipse cx="35" cy="35" rx="12" ry="8" fill="url(#highlight)"/>
+  
+
+  
+  <!-- Texte STOP -->
+  <text x="40" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">STOP</text>
+</svg>

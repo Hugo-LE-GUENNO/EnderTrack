@@ -1,0 +1,24 @@
+/* Bouton inutile dans la barre de navigation */
+#random-button-nav-btn {
+  background-color: var(--column-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  font-size: 1.2em;
+  padding: 0 10px;
+}
+
+#random-button-nav-btn:hover {
+  background-color: var(--active-element);
+  transform: scale(1.1);
+}
+
+/* Animation quand le bouton change */
+@keyframes uselessPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+#random-button-nav-btn.animated {
+  animation: uselessPulse 0.3s ease;
+}

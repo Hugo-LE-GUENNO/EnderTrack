@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="256" height="256" viewBox="0 0 256 256">
+
+  <!-- Fond transparent -->
+  <rect width="100%" height="100%" fill="none"/>
+
+  <defs>
+    <!-- Ombre portée pour l'hexagone -->
+    <filter id="hexShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4"
+                    flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+
+    <!-- Dégradé principal de l'hexagone -->
+    <linearGradient id="hexGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#ffe9a3"/>
+      <stop offset="45%"  stop-color="#ffc107"/>
+      <stop offset="100%" stop-color="#ff9f00"/>
+    </linearGradient>
+
+    <!-- Reflet en haut de l'hexagone -->
+    <linearGradient id="hexHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.75"/>
+      <stop offset="60%"  stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- GROUPE HEXAGONE AVEC OMBRE -->
+  <g filter="url(#hexShadow)" transform="translate(0, 12)">
+    <!-- Hexagone régulier (contour) -->
+    <polygon
+      points="128,24 200,67 200,185 128,228 56,185 56,67"
+      fill="#ffb300"
+      stroke="#e09100"
+      stroke-width="3"/>
+
+    <!-- Intérieur -->
+    <polygon
+      points="128,40 190,80 190,170 128,210 66,170 66,80"
+      fill="url(#hexGradient)"/>
+
+    <!-- Reflet en haut -->
+    <path
+      d="M66,80
+         L190,80
+         L180,90
+         L80,90 Z"
+      fill="url(#hexHighlight)"
+      opacity="0.65"/>
+
+    <!-- Losange jaune -->
+    <rect x="121" y="60" width="14" height="14"
+          fill="#ffc107"
+          stroke="#ff9800"
+          stroke-width="2"
+          transform="rotate(45 128 67)"/>
+
+    <!-- DOUBLE HÉLICE (ajustée pour l'hexagone régulier) -->
+    <path d="M80 90
+             C 68 95 100 105 128 115
+             C 156 125 170 140 128 150
+             C 86 160 70 170 80 180"
+          fill="none"
+          stroke="#161616"
+          stroke-width="10"
+          stroke-linecap="round"
+          opacity="0.25"/>
+
+    <path d="M176 90
+             C 188 95 156 105 128 115
+             C 100 125 86 140 128 150
+             C 170 160 186 170 176 180"
+          fill="none"
+          stroke="#161616"
+          stroke-width="10"
+          stroke-linecap="round"
+          opacity="0.25"/>
+
+    <path d="M80 90
+             C 68 95 100 105 128 115
+             C 156 125 170 140 128 150
+             C 86 160 70 170 80 180"
+          fill="none"
+          stroke="#2c2c2c"
+          stroke-width="8"
+          stroke-linecap="round"/>
+
+    <path d="M176 90
+             C 188 95 156 105 128 115
+             C 100 125 86 140 128 150
+             C 170 160 186 170 176 180"
+          fill="none"
+          stroke="#2c2c2c"
+          stroke-width="8"
+          stroke-linecap="round"/>
+
+    <!-- Highlights -->
+    <path d="M82 93
+             C 70 98 98 108 128 118
+             C 158 128 174 140 128 148
+             C 82 156 68 166 80 176"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.35"/>
+
+    <path d="M174 93
+             C 186 98 158 108 128 118
+             C 98 128 82 140 128 148
+             C 174 156 188 166 176 176"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.35"/>
+
+    <!-- Cercles aux extrémités -->
+    <circle cx="80" cy="90" r="9" fill="#ffc107" stroke="#2c2c2c" stroke-width="3"/>
+    <circle cx="176" cy="90" r="9" fill="#ffc107" stroke="#2c2c2c" stroke-width="3"/>
+    <circle cx="80" cy="180" r="9" fill="#ffc107" stroke="#2c2c2c" stroke-width="3"/>
+    <circle cx="176" cy="180" r="9" fill="#ffc107" stroke="#2c2c2c" stroke-width="3"/>
+
+    <!-- Petit rond central -->
+    <circle cx="128" cy="130" r="7"
+            fill="#ffecb3"
+            stroke="#2c2c2c"
+            stroke-width="3"/>
+  </g>
+</svg>
+
