@@ -191,12 +191,20 @@ class UIHelpers {
         action: () => {
           window.EnderTrack._followCursor = !window.EnderTrack._followCursor;
           if (window.EnderTrack._followCursor) {
-            EnderTrack.Events?.on?.('position:changed', window.EnderTrack._followCursorFn = () => {
+            window.EnderTrack._followCursorFn = () => {
               const pos = EnderTrack.State.get().pos;
-              this.interactions.zoomPanHandler.centerOnPosition(pos.x, pos.y);
-            });
-          } else if (window.EnderTrack._followCursorFn) {
-            EnderTrack.Events?.off?.('position:changed', window.EnderTrack._followCursorFn);
+              if (pos) this.interactions.zoomPanHandler.centerOnPosition(pos.x, pos.y);
+            };
+            EnderTrack.Events?.on?.('position:changed', window.EnderTrack._followCursorFn);
+            // Center immediately
+            window.EnderTrack._followCursorFn();
+            console.log('[Follow] ON');
+          } else {
+            if (window.EnderTrack._followCursorFn) {
+              EnderTrack.Events?.off?.('position:changed', window.EnderTrack._followCursorFn);
+              window.EnderTrack._followCursorFn = null;
+            }
+            console.log('[Follow] OFF');
           }
         }
       }

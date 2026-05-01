@@ -51,12 +51,17 @@ class ZInteractions {
     item.addEventListener('click', () => {
       window.EnderTrack._followCursor = !window.EnderTrack._followCursor;
       if (window.EnderTrack._followCursor) {
-        EnderTrack.Events?.on?.('position:changed', window.EnderTrack._followCursorFn = () => {
+        window.EnderTrack._followCursorFn = () => {
           const pos = EnderTrack.State.get().pos;
-          window.EnderTrack.Canvas?.interactions?.zoomPanHandler?.centerOnPosition(pos.x, pos.y);
-        });
-      } else if (window.EnderTrack._followCursorFn) {
-        EnderTrack.Events?.off?.('position:changed', window.EnderTrack._followCursorFn);
+          if (pos) window.EnderTrack.Canvas?.interactions?.zoomPanHandler?.centerOnPosition(pos.x, pos.y);
+        };
+        EnderTrack.Events?.on?.('position:changed', window.EnderTrack._followCursorFn);
+        window.EnderTrack._followCursorFn();
+      } else {
+        if (window.EnderTrack._followCursorFn) {
+          EnderTrack.Events?.off?.('position:changed', window.EnderTrack._followCursorFn);
+          window.EnderTrack._followCursorFn = null;
+        }
       }
       menu.remove();
     });

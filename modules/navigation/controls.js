@@ -120,6 +120,13 @@ class NavigationControls {
     const input = document.getElementById(`sensitivity${axis.toUpperCase()}Input`);
     if (slider && parseFloat(slider.value) !== value) slider.value = value;
     if (input && parseFloat(input.value) !== value) input.value = value.toFixed(2);
+    // Also update coupled XY slider if X or Y changed
+    if (axis === 'x' || axis === 'y') {
+      const xySlider = document.getElementById('sensitivityXY');
+      const xyInput = document.getElementById('sensitivityXYInput');
+      if (xySlider) xySlider.value = value;
+      if (xyInput) xyInput.value = value.toFixed(2);
+    }
   }
 
   // === CONTEXT MENU ===
