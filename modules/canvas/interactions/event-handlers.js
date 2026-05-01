@@ -30,13 +30,22 @@ class EventHandlers {
       this.interactions.handlePointerEnd(e.clientX, e.clientY, e);
     });
     
+    // Delayed click to distinguish from double-click
+    let _clickTimer = null;
     canvas.addEventListener('click', (e) => {
       if (e._overlayHandled || e._listHandled) return;
       if (this.interactions._dragMoved) { this.interactions._dragMoved = false; return; }
-      this.interactions.handleClick(e.clientX, e.clientY, e);
+      if (_clickTimer) { clearTimeout(_clickTimer); _clickTimer = null; return; }
+      const cx = e.clientX, cy = e.clientY, ev = e;
+      _clickTimer = setTimeout(() => {
+        _clickTimer = null;
+        this.interactions.handleClick(cx, cy, ev);
+      }, 250);
     });
     
     canvas.addEventListener('dblclick', (e) => {
+      if (_clickTimer) { clearTimeout(_clickTimer); _clickTimer = null; }
+      this.interactions._dblClickPan = true;
       this.interactions.handleDoubleClick(e.clientX, e.clientY, e);
     });
     

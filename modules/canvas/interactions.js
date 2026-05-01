@@ -37,10 +37,11 @@ class CanvasInteractions {
     const canvasPos = this.screenToCanvas(screenX, screenY);
     
     this.isDragging = true;
-    this.isPanning = false;
+    this.isPanning = !!this._dblClickPan;
     this._dragMoved = false;
     this.lastMousePos = { x: screenX, y: screenY };
     this.dragStartPos = { x: screenX, y: screenY };
+    if (this.isPanning) this.canvas.style.cursor = 'grabbing';
     
     EnderTrack.State.update({
       isDragging: true,
@@ -73,6 +74,7 @@ class CanvasInteractions {
         this.isPanning = true;
         this._dragMoved = true;
         this.canvas.style.cursor = 'grabbing';
+        if (this._dblClickCenterTimeout) { clearTimeout(this._dblClickCenterTimeout); this._dblClickCenterTimeout = null; }
       }
       if (this.isPanning) {
         this.zoomPanHandler.handlePan(deltaX, deltaY);
@@ -199,6 +201,7 @@ class CanvasInteractions {
     if (this.isPanning) this.canvas.style.cursor = '';
     this.isDragging = false;
     this.isPanning = false;
+    this._dblClickPan = false;
     
     EnderTrack.State.update({
       isDragging: false,
@@ -221,7 +224,10 @@ class CanvasInteractions {
     const canvasPos = this.screenToCanvas(screenX, screenY);
     const mapPos = EnderTrack.Coordinates.canvasToMap(canvasPos.cx, canvasPos.cy);
     
-    this.zoomPanHandler.centerOnPosition(mapPos.x, mapPos.y);
+    // Don't center immediately — wait to see if user drags
+    this._dblClickCenterTimeout = setTimeout(() => {
+      if (!this._dragMoved) this.zoomPanHandler.centerOnPosition(mapPos.x, mapPos.y);
+    }, 200);
     
     EnderTrack.Events.emit('canvas:double_clicked', {
       screen: { x: screenX, y: screenY },
