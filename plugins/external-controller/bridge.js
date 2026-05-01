@@ -1,7 +1,7 @@
 // plugins/pilote-moi-plus/bridge.js
 // PiloteMoi+ — PiloteMoi with customizable button mapping & action system
 
-class PiloteMoiPlusBridge {
+class ExternalControllerBridge {
   constructor() {
     this.isActive = false;
     this.mode = 'step';
@@ -457,4 +457,4 @@ class PiloteMoiPlusBridge {
   }
 }
 
-window.PiloteMoiPlusBridge = PiloteMoiPlusBridge;
+window.ExternalControllerBridge = ExternalControllerBridge;

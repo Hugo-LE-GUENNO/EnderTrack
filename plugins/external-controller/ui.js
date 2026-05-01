@@ -1,6 +1,6 @@
 // plugins/controller-v2/ui.js
 
-class PiloteMoiPlusPluginUI {
+class ExternalControllerPluginUI {
   constructor(manifest, bridge) {
     this.manifest = manifest;
     this.bridge = bridge;
@@ -59,23 +59,23 @@ class PiloteMoiPlusPluginUI {
       <div id="cv2StepPresets" class="cv2-presets-section">
         <div class="home-row">
           <button class="action-btn cv2-preset-btn" id="cv2PresetFine"
-            onclick="window.PiloteMoiPlusPlugin?.ui?.setStepPreset('fine')">Fine</button>
+            onclick="window.ExternalControllerPlugin?.ui?.setStepPreset('fine')">Fine</button>
           <button class="action-btn cv2-preset-btn" id="cv2PresetCoarse"
-            onclick="window.PiloteMoiPlusPlugin?.ui?.setStepPreset('coarse')">Coarse</button>
+            onclick="window.ExternalControllerPlugin?.ui?.setStepPreset('coarse')">Coarse</button>
         </div>
       </div>
       <div class="axis-control">
         <label class="axis-label">F</label>
         <input type="range" id="cv2FeedrateSlider" min="100" max="10000" value="3000" step="100"
-          oninput="window.PiloteMoiPlusPlugin?.ui?.onFeedrateChange(this.value, true)">
+          oninput="window.ExternalControllerPlugin?.ui?.onFeedrateChange(this.value, true)">
         <input type="number" id="cv2FeedrateInput" value="3000" min="100" max="10000" step="100"
-          style="width:50px" onchange="window.PiloteMoiPlusPlugin?.ui?.onFeedrateChange(this.value, true)">
+          style="width:50px" onchange="window.ExternalControllerPlugin?.ui?.onFeedrateChange(this.value, true)">
       </div>
       <div class="home-row">
         <button class="action-btn cv2-preset-btn" id="cv2PresetSlow"
-          onclick="window.PiloteMoiPlusPlugin?.ui?.setFeedrate(window.PiloteMoiPlusPlugin?.ui?.getSlow())">Slow</button>
+          onclick="window.ExternalControllerPlugin?.ui?.setFeedrate(window.ExternalControllerPlugin?.ui?.getSlow())">Slow</button>
         <button class="action-btn cv2-preset-btn" id="cv2PresetFast"
-          onclick="window.PiloteMoiPlusPlugin?.ui?.setFeedrate(window.PiloteMoiPlusPlugin?.ui?.getFast())">Fast</button>
+          onclick="window.ExternalControllerPlugin?.ui?.setFeedrate(window.ExternalControllerPlugin?.ui?.getFast())">Fast</button>
       </div>
     `;
     stepControls.after(panel);
@@ -97,48 +97,48 @@ class PiloteMoiPlusPluginUI {
           <span class="cv2-label">Paramètres</span>
           <div class="cv2-mode-switch">
             <button class="cv2-mode-btn active" id="cv2CfgTabStep"
-              onclick="window.PiloteMoiPlusPlugin?.ui?.showCfgTab('step')">Step</button>
+              onclick="window.ExternalControllerPlugin?.ui?.showCfgTab('step')">Step</button>
             <button class="cv2-mode-btn" id="cv2CfgTabCont"
-              onclick="window.PiloteMoiPlusPlugin?.ui?.showCfgTab('continuous')">Continu</button>
+              onclick="window.ExternalControllerPlugin?.ui?.showCfgTab('continuous')">Continu</button>
           </div>
         </div>
         <div id="cv2CfgStep">
           <div class="cv2-config-row">
             <span class="cv2-label">Fine XY (mm)</span>
             <input type="number" id="cv2FineXYCfg" class="cv2-input" value="0.5" min="0.01" max="5" step="0.1"
-              onchange="window.PiloteMoiPlusPlugin?.ui?.setConfigVal('_fineXY', this.value)">
+              onchange="window.ExternalControllerPlugin?.ui?.setConfigVal('_fineXY', this.value)">
           </div>
           <div class="cv2-config-row">
             <span class="cv2-label">Coarse XY (mm)</span>
             <input type="number" id="cv2CoarseXYCfg" class="cv2-input" value="10" min="1" max="50" step="1"
-              onchange="window.PiloteMoiPlusPlugin?.ui?.setConfigVal('_coarseXY', this.value)">
+              onchange="window.ExternalControllerPlugin?.ui?.setConfigVal('_coarseXY', this.value)">
           </div>
           <div class="cv2-config-row">
             <span class="cv2-label">Fine Z (mm)</span>
             <input type="number" id="cv2FineZCfg" class="cv2-input" value="0.1" min="0.01" max="2" step="0.01"
-              onchange="window.PiloteMoiPlusPlugin?.ui?.setConfigVal('_fineZ', this.value)">
+              onchange="window.ExternalControllerPlugin?.ui?.setConfigVal('_fineZ', this.value)">
           </div>
           <div class="cv2-config-row">
             <span class="cv2-label">Coarse Z (mm)</span>
             <input type="number" id="cv2CoarseZCfg" class="cv2-input" value="2" min="0.1" max="20" step="0.1"
-              onchange="window.PiloteMoiPlusPlugin?.ui?.setConfigVal('_coarseZ', this.value)">
+              onchange="window.ExternalControllerPlugin?.ui?.setConfigVal('_coarseZ', this.value)">
           </div>
           <div class="cv2-config-row">
             <span class="cv2-label">Repeat (ms)</span>
             <input type="number" id="cv2RepeatCfg" class="cv2-input" value="500" min="100" max="2000" step="50"
-              onchange="window.PiloteMoiPlusPlugin?.ui?.setRepeatInterval(this.value)">
+              onchange="window.ExternalControllerPlugin?.ui?.setRepeatInterval(this.value)">
           </div>
         </div>
         <div id="cv2CfgCont" style="display:none">
           <div class="cv2-config-row">
             <span class="cv2-label">Slow (mm/min)</span>
             <input type="number" id="cv2SlowCfg" class="cv2-input" value="500" min="100" max="3000" step="100"
-              onchange="window.PiloteMoiPlusPlugin?.ui?.setConfigVal('_slowSpeed', this.value)">
+              onchange="window.ExternalControllerPlugin?.ui?.setConfigVal('_slowSpeed', this.value)">
           </div>
           <div class="cv2-config-row">
             <span class="cv2-label">Fast (mm/min)</span>
             <input type="number" id="cv2FastCfg" class="cv2-input" value="6000" min="1000" max="10000" step="500"
-              onchange="window.PiloteMoiPlusPlugin?.ui?.setConfigVal('_fastSpeed', this.value)">
+              onchange="window.ExternalControllerPlugin?.ui?.setConfigVal('_fastSpeed', this.value)">
           </div>
         </div>
         <div class="cv2-help">
@@ -709,4 +709,4 @@ class PiloteMoiPlusPluginUI {
   }
 }
 
-window.PiloteMoiPlusPluginUI = PiloteMoiPlusPluginUI;
+window.ExternalControllerPluginUI = ExternalControllerPluginUI;
