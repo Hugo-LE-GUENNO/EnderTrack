@@ -208,15 +208,15 @@ class UIHelpers {
     menuItems.forEach(item => {
       if (item.separator) {
         const separator = document.createElement('div');
-        separator.style.cssText = 'height: 1px; background: #eee; margin: 4px 0;';
+        separator.style.cssText = 'height: 1px; background: #444; margin: 4px 0;';
         menu.appendChild(separator);
       } else {
         const menuItem = document.createElement('div');
         menuItem.textContent = item.label;
-        menuItem.style.cssText = 'padding: 8px 12px; cursor: pointer; font-size: 12px;';
+        menuItem.style.cssText = 'padding: 8px 12px; cursor: pointer; font-size: 12px; color: var(--text-selected, #fff);';
         
-        menuItem.addEventListener('mouseenter', () => menuItem.style.background = '#f0f0f0');
-        menuItem.addEventListener('mouseleave', () => menuItem.style.background = '');
+        menuItem.addEventListener('mouseenter', () => { menuItem.style.background = 'var(--active-element, #4a5568)'; });
+        menuItem.addEventListener('mouseleave', () => { menuItem.style.background = ''; });
         menuItem.addEventListener('click', () => {
           item.action();
           menu.remove();
