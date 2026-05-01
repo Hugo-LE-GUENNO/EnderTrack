@@ -1,1 +1,0 @@
-# server/ — EnderTrack backend package

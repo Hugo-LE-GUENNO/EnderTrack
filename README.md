@@ -1,68 +1,72 @@
 # EnderTrack
 
-3D position controller for 3D printers and microscopes.
+**Contrôleur de position 3D pour imprimantes 3D et microscopes.**
 
-Web interface + Python Flask server. Built-in simulator, USB serial connection (G-code), position lists, automation, and a plugin system.
+Interface web + serveur Python Flask. Simulateur intégré, connexion USB série (G-code), listes de positions, automatisation et système de plugins.
 
-![EnderTrack Screenshot](assets/icons/endertrack-logo_header.svg)
+---
 
-## Quick Start
+## Versions
+
+| Branche | Description | Télécharger |
+|---------|-------------|-------------|
+| [`basic`](../../tree/basic) | Version minimale — simulateur, navigation, listes, connexion série | `git clone -b basic` |
+| `imagerie` | *(à venir)* — Scenario Builder, Python Notebook, acquisition multi-dimensionnelle | `git clone -b imagerie` |
+| [`plugins`](../../tree/plugins) | Collection de plugins compatibles toutes versions | `git clone -b plugins` |
+
+## Démarrage rapide
 
 ```bash
+# Télécharger la version basic
+git clone -b basic https://github.com/Hugo-LE-GUENNO/endertrack.git
+cd endertrack
+
+# Lancer
 python3 endertrack-server.py
 ```
 
-Open http://localhost:5000 — that's it. All dependencies are bundled in `vendor/`.
+Ouvrir http://localhost:5000 — c'est tout. Zéro installation, les dépendances sont incluses.
 
-## Features
+## Ajouter des plugins
 
-- **XY + Z canvas** — real-time visualization with zoom/pan
-- **Simulator** — works without hardware
-- **USB serial** — connects to any G-code compatible stage (Ender-3, etc.)
-- **Position lists** — click-to-add, save/load JSON, automation
-- **Keyboard navigation** — arrow keys with diagonal detection
-- **Plugin system** — drop a folder in `plugins/`, auto-discovered
-
-## Tabs
-
-| Tab | Description |
-|-----|-------------|
-| **Réglages** | Connection, workspace, layers, navigation, storage, extensions |
-| **Navigation** | Arrow pad, sensitivity, absolute go-to, home |
-| **Positions** | Lists, scenarios, click-on-canvas |
-
-## Connect Hardware
-
-In Réglages → Support XYZ — Connexion:
-1. Select port (`/dev/ttyUSB0`)
-2. Click "Connecter"
-3. Device name auto-detected via M115
-
-## Plugins
-
-Drop a plugin folder in `plugins/` with a `plugin.json`:
-
-```json
-{
-  "id": "myPlugin",
-  "folder": "my-plugin",
-  "name": "My Plugin",
-  "version": "1.0.0",
-  "description": "Does something",
-  "icon": "🔌"
-}
+```bash
+# Depuis la branche plugins, copier un plugin dans votre EnderTrack
+git clone -b plugins https://github.com/Hugo-LE-GUENNO/endertrack.git endertrack-plugins
+cp -r endertrack-plugins/plugins/scenario-builder/ mon-endertrack/plugins/
 ```
 
-Activate in Réglages → Extensions. See `plugins/random-button/` for an example.
+Puis activer dans Réglages → Extensions.
 
-## Links
+## Plugins disponibles
 
-- [enderscope.py](https://github.com/mutterer/enderscopy) ([paper](https://dx.doi.org/10.1016/j.softx.2025.102210))
-- [EnderScope](https://github.com/Pickering-Lab/EnderScope) ([paper](http://doi.org/10.1098/rsta.2023.0214))
+| Plugin | Description |
+|--------|-------------|
+| 🎬 Scenario Builder | Builder visuel : boucles, conditions, macros, variables, code Python |
+| 🐍 Python Notebook | Mini-Jupyter intégré avec CodeMirror et kernel persistant |
+| 🕹️ PiloteMoi | Contrôle directionnel clavier + gamepad |
+| 🎮 PiloteMoi+ | Mapping personnalisable clavier + gamepad |
+| 🔩 Extruder | Contrôle moteur extrudeur |
+| 🌡️ TempoBed | Température plateau chauffant |
+| 📋 Lists+ | Patterns avancés, exécution séquentielle |
+| 🎲 Random Button | Exemple/démo de plugin |
+
+## Fonctionnalités
+
+- **Canvas XY + Z** — visualisation temps réel avec zoom/pan
+- **Simulateur** — fonctionne sans matériel
+- **Connexion USB** — compatible tout stage G-code (Ender-3, etc.)
+- **Listes de positions** — clic sur canvas, sauvegarde JSON, automatisation
+- **Navigation clavier** — flèches avec détection diagonale
+- **Système de plugins** — déposer un dossier dans `plugins/`, auto-découvert
+
+## Liens
+
+- [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
+- [EnderScope](https://github.com/Pickering-Lab/EnderScope) ([publication](http://doi.org/10.1098/rsta.2023.0214))
 - [diy.microscopie.org](https://diy.microscopie.org/explore.html)
 
-## License
+## Licence
 
 GPLv3 — Hugo Le Guenno, 2025
 
-*Born at CNRS from MIFOBIO 2025, carried by the EnderTeam.*
+*Né au CNRS suite à l'école thématique MIFOBIO 2025, porté par l'EnderTeam.*
