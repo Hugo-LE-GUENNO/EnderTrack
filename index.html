@@ -350,6 +350,8 @@
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 Extensions</summary>
                         <div style="padding:8px;">
                             <div id="pluginsList"></div>
+                            <button onclick="window._openPluginCatalog()" style="width:100%; margin-top:8px; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">📦 Catalogue de plugins</button>
+                            <div id="pluginCatalog" style="display:none; margin-top:8px;"></div>
                         </div>
                     </details>
 

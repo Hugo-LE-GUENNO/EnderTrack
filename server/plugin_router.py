@@ -152,4 +152,81 @@ def register_routes(app):
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @app.route('/api/plugins/catalog', methods=['GET'])
+    def _catalog():
+        """Fetch available plugins from GitHub."""
+        import urllib.request, json as _json
+        repo = 'Hugo-LE-GUENNO/EnderTrack'
+        branch = 'plugins'
+        url = f'https://api.github.com/repos/{repo}/contents/plugins?ref={branch}'
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'EnderTrack'})
+            resp = urllib.request.urlopen(req, timeout=10)
+            items = _json.loads(resp.read())
+            catalog = []
+            for item in items:
+                if item['type'] != 'dir':
+                    continue
+                # Fetch plugin.json
+                pj_url = f'https://raw.githubusercontent.com/{repo}/{branch}/plugins/{item["name"]}/plugin.json'
+                try:
+                    pj_resp = urllib.request.urlopen(urllib.request.Request(pj_url, headers={'User-Agent': 'EnderTrack'}), timeout=5)
+                    manifest = _json.loads(pj_resp.read())
+                    manifest['_folder'] = item['name']
+                    manifest['_installed'] = os.path.isdir(os.path.join(get_plugins_dir(), item['name']))
+                    catalog.append(manifest)
+                except:
+                    catalog.append({'name': item['name'], '_folder': item['name'], '_installed': os.path.isdir(os.path.join(get_plugins_dir(), item['name']))})
+            return jsonify({'success': True, 'catalog': catalog})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)})
+
+    @app.route('/api/plugins/install', methods=['POST'])
+    def _install():
+        """Download a plugin from GitHub and install it."""
+        import urllib.request, json as _json
+        data = request.get_json() or {}
+        folder = data.get('folder')
+        if not folder:
+            return jsonify({'success': False, 'error': 'folder required'})
+        repo = 'Hugo-LE-GUENNO/EnderTrack'
+        branch = 'plugins'
+        dest = os.path.join(get_plugins_dir(), folder)
+        os.makedirs(dest, exist_ok=True)
+        # List files in the plugin folder
+        url = f'https://api.github.com/repos/{repo}/contents/plugins/{folder}?ref={branch}'
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'EnderTrack'})
+            resp = urllib.request.urlopen(req, timeout=10)
+            items = _json.loads(resp.read())
+            installed = []
+            for item in items:
+                if item['type'] != 'file':
+                    continue
+                file_url = item['download_url']
+                file_resp = urllib.request.urlopen(urllib.request.Request(file_url, headers={'User-Agent': 'EnderTrack'}), timeout=10)
+                file_path = os.path.join(dest, item['name'])
+                with open(file_path, 'wb') as f:
+                    f.write(file_resp.read())
+                installed.append(item['name'])
+            print(f"  📦 Plugin installé: {folder} ({len(installed)} fichiers)")
+            return jsonify({'success': True, 'folder': folder, 'files': installed})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)})
+
+    @app.route('/api/plugins/uninstall', methods=['POST'])
+    def _uninstall():
+        """Remove a plugin folder."""
+        import shutil
+        data = request.get_json() or {}
+        folder = data.get('folder')
+        if not folder:
+            return jsonify({'success': False, 'error': 'folder required'})
+        dest = os.path.join(get_plugins_dir(), folder)
+        if not os.path.isdir(dest):
+            return jsonify({'success': False, 'error': 'Plugin non trouvé'})
+        shutil.rmtree(dest)
+        print(f"  🗑️ Plugin supprimé: {folder}")
+        return jsonify({'success': True})
+
     print("  🔌 plugin_router: routes /api/plugins/*")

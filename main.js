@@ -764,3 +764,67 @@ window.openSequences = () => {};
 window.openDrivers = () => {};
 window.openEnderman = () => {};
 
+// Plugin Catalog
+window._openPluginCatalog = async function() {
+  const el = document.getElementById('pluginCatalog');
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">Chargement...</div>';
+  const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  try {
+    const resp = await fetch(serverUrl + '/api/plugins/catalog', { signal: AbortSignal.timeout(10000) });
+    const data = await resp.json();
+    if (!data.success) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:#ef4444;">' + (data.error || 'Erreur') + '</div>'; return; }
+    if (!data.catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">Aucun plugin disponible</div>'; return; }
+    el.innerHTML = data.catalog.map(p => {
+      const installed = p._installed;
+      const name = p.name || p._folder;
+      const icon = p.icon || '🔌';
+      const desc = p.description || '';
+      const btn = installed
+        ? '<button onclick="window._uninstallPlugin(\'' + p._folder + '\')" style="padding:3px 8px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Supprimer</button>'
+        : '<button onclick="window._installPlugin(\'' + p._folder + '\')" style="padding:3px 8px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Installer</button>';
+      return '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
+        '<div><span style="font-size:12px;">' + icon + ' ' + name + '</span>' +
+        (desc ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6;">' + desc + '</div>' : '') +
+        '</div>' + btn + '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:8px; font-size:11px; color:#ef4444;">Impossible de contacter GitHub: ' + e.message + '</div>';
+  }
+};
+
+window._installPlugin = async function(folder) {
+  const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  try {
+    const resp = await fetch(serverUrl + '/api/plugins/install', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ folder })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      EnderTrack.UI?.showNotification?.('Plugin ' + folder + ' installé (' + data.files.length + ' fichiers)', 'success');
+      window._openPluginCatalog(); // Refresh
+    } else {
+      EnderTrack.UI?.showNotification?.('Erreur: ' + data.error, 'error');
+    }
+  } catch(e) { EnderTrack.UI?.showNotification?.('Erreur: ' + e.message, 'error'); }
+};
+
+window._uninstallPlugin = async function(folder) {
+  if (!confirm('Supprimer le plugin ' + folder + ' ?')) return;
+  const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  try {
+    const resp = await fetch(serverUrl + '/api/plugins/uninstall', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ folder })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      EnderTrack.UI?.showNotification?.('Plugin ' + folder + ' supprimé', 'success');
+      window._openPluginCatalog(); // Refresh
+    }
+  } catch(e) { EnderTrack.UI?.showNotification?.('Erreur: ' + e.message, 'error'); }
+};
+
