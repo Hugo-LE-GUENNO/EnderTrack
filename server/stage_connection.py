@@ -26,15 +26,28 @@ class Stage:
         self.port = port
         self.baudrate = baudrate
         self.position = {'X': 0.0, 'Y': 0.0, 'Z': 0.0}
+        self.firmware_name = None
 
         self.ser = serial.Serial(port, baudrate, timeout=2)
         time.sleep(2)
         self.ser.reset_input_buffer()
-        self.send_gcode("G21", wait_ok=True)
-        self.send_gcode("G90", wait_ok=True)
-        if homing:
-            self.home()
-        print(f"  ✅ Stage connecté: {port} @ {baudrate}")
+
+        # Verify this is a G-code device via M115
+        lines = self.send_gcode("M115", wait_ok=True, timeout=5)
+        response = ' '.join(lines)
+        if 'FIRMWARE_NAME' in response or 'ok' in response.lower():
+            for line in lines:
+                if 'FIRMWARE_NAME:' in line:
+                    self.firmware_name = line.split('FIRMWARE_NAME:')[1].split(' ')[0].strip()
+            self.send_gcode("G21", wait_ok=True)
+            self.send_gcode("G90", wait_ok=True)
+            if homing:
+                self.home()
+            name = self.firmware_name or 'G-code device'
+            print(f"  ✅ Stage connecté: {port} @ {baudrate} ({name})")
+        else:
+            self.ser.close()
+            raise Exception(f"Le device sur {port} ne répond pas au G-code (pas de réponse à M115)")
 
     def send_gcode(self, command, wait_ok=False, timeout=10):
         if not self.ser.is_open:
@@ -153,7 +166,7 @@ def register_routes(app):
             return jsonify({'success': False, 'error': 'pyserial non installé (pip install pyserial)'})
         try:
             stage = Stage(port, baud, homing=False)
-            return jsonify({'success': True, 'message': f'Connecté à {port}'})
+            return jsonify({'success': True, 'message': f'Connecté à {port}', 'firmware': stage.firmware_name})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)})
 
