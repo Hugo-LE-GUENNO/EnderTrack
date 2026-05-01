@@ -35,17 +35,12 @@ class CanvasInteractions {
   // Pointer event handlers (delegated to sub-modules)
   handlePointerStart(screenX, screenY, event) {
     const canvasPos = this.screenToCanvas(screenX, screenY);
-    const isPanOperation = event.button === 1; // Only middle mouse button for pan
     
     this.isDragging = true;
-    this.isPanning = isPanOperation;
+    this.isPanning = false;
+    this._dragMoved = false;
     this.lastMousePos = { x: screenX, y: screenY };
     this.dragStartPos = { x: screenX, y: screenY };
-    
-    if (this.isPanning) {
-      this.canvas.style.cursor = 'grabbing';
-      event.preventDefault();
-    }
     
     EnderTrack.State.update({
       isDragging: true,
@@ -69,10 +64,19 @@ class CanvasInteractions {
     this.checkStrategicPositionHover(canvasPos);
     this.uiHelpers.updateMouseCoordinates(canvasPos, event);
     
-    if (this.isDragging && this.isPanning) {
+    if (this.isDragging) {
       const deltaX = screenX - this.lastMousePos.x;
       const deltaY = screenY - this.lastMousePos.y;
-      this.zoomPanHandler.handlePan(deltaX, deltaY);
+      const totalDist = Math.hypot(screenX - this.dragStartPos.x, screenY - this.dragStartPos.y);
+      // Start panning after 3px of movement (distinguish from click)
+      if (!this.isPanning && totalDist > 3) {
+        this.isPanning = true;
+        this._dragMoved = true;
+        this.canvas.style.cursor = 'grabbing';
+      }
+      if (this.isPanning) {
+        this.zoomPanHandler.handlePan(deltaX, deltaY);
+      }
     }
     
     this.lastMousePos = { x: screenX, y: screenY };
@@ -192,6 +196,7 @@ class CanvasInteractions {
   handlePointerEnd(screenX, screenY, event) {
     const canvasPos = this.screenToCanvas(screenX, screenY);
     
+    if (this.isPanning) this.canvas.style.cursor = '';
     this.isDragging = false;
     this.isPanning = false;
     

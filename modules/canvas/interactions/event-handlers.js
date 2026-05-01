@@ -32,6 +32,7 @@ class EventHandlers {
     
     canvas.addEventListener('click', (e) => {
       if (e._overlayHandled || e._listHandled) return;
+      if (this.interactions._dragMoved) { this.interactions._dragMoved = false; return; }
       this.interactions.handleClick(e.clientX, e.clientY, e);
     });
     
