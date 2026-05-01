@@ -72,7 +72,7 @@ class ZInteractions {
     const controls = window.EnderTrack?.Navigation;
     if (controls?.setSensitivity) {
       const baseZ = 50 / 3;
-      const zSens = Math.max(0.1, Math.min(50, baseZ / (newZoom / minZoom)));
+      const zSens = Math.max(0.01, Math.min(50, baseZ / (newZoom / minZoom)));
       controls.setSensitivity('z', parseFloat(zSens.toFixed(2)));
     }
   }

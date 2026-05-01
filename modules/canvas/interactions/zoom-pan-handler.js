@@ -259,7 +259,7 @@ class ZoomPanHandler {
     if (!controls?.setSensitivity) return;
     // Target: 1/3 of slider range (50/3 ≈ 16.7) at zoom=1, scales with zoom
     const baseXY = 50 / 3;
-    const xySens = Math.max(0.1, Math.min(50, baseXY / zoom));
+    const xySens = Math.max(0.01, Math.min(50, baseXY / zoom));
     controls.setSensitivity('x', parseFloat(xySens.toFixed(2)));
     controls.setSensitivity('y', parseFloat(xySens.toFixed(2)));
   }
