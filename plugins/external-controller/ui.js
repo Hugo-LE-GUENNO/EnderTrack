@@ -1,4 +1,4 @@
-// plugins/controller-v2/ui.js
+// plugins/external-controller/ui.js
 
 class ExternalControllerPluginUI {
   constructor(manifest, bridge) {
@@ -175,7 +175,7 @@ class ExternalControllerPluginUI {
     if (!mapper) {
       // Load script manually if not yet loaded
       const s = document.createElement('script');
-      s.src = 'plugins/pilote-moi-plus/action-mapper.js';
+      s.src = 'plugins/external-controller/action-mapper.js';
       s.onload = () => {
         this.bridge._mapper = new window.ActionMapper();
         if (this.bridge._gp) this.bridge._gp._btnActions = this.bridge._mapper.getMapping();
