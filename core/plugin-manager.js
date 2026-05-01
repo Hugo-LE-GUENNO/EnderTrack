@@ -262,7 +262,8 @@ class PluginManager {
     discovered.sort((a, b) => a.name.localeCompare(b.name));
     this._discoveredPlugins = discovered;
 
-    container.innerHTML = `<div id="pluginsCards"></div>
+    container.innerHTML = `<input type="text" id="pluginSearchInput" placeholder="🔍 Rechercher un plugin..." oninput="EnderTrack.PluginManager.filterPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
+      <div id="pluginsCards"></div>
       <div style="display:flex; gap:4px; margin-top:6px;">
         <button onclick="EnderTrack.PluginManager.loadPluginFromFolder()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Importer</button>
         <button onclick="EnderTrack.PluginManager.openCreateGuide()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="Guide de création de plugin">?</button>
@@ -717,12 +718,19 @@ Ne PAS modifier index.html ni registry.js — l'utilisateur charge le plugin via
    */
   static async togglePlugin(pluginId) {
     const plugin = this.plugins.get(pluginId);
-    if (plugin?.isActive) {
-      await this.deactivate(pluginId);
-    } else {
-      await this.activate(pluginId);
+    const wasActive = plugin?.isActive;
+    try {
+      if (wasActive) {
+        await this.deactivate(pluginId);
+        EnderTrack.UI?.showNotification?.('Plugin ' + pluginId + ' désactivé', 'info');
+      } else {
+        await this.activate(pluginId);
+        EnderTrack.UI?.showNotification?.('Plugin ' + pluginId + ' activé ✅', 'success');
+      }
+    } catch(e) {
+      EnderTrack.UI?.showNotification?.('Erreur plugin ' + pluginId + ': ' + e.message, 'error');
+      console.error('[PluginManager] Toggle error:', e);
     }
-    // Re-render the list to update button states
     this.renderPluginList();
   }
 
