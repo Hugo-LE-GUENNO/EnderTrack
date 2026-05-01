@@ -58,7 +58,7 @@ class ZoomPanHandler {
       EnderTrack.State.update({ zoom: clampedZoom });
       window.EnderTrack.Canvas.updateCoordinateSystem();
       window.EnderTrack.Canvas.requestRender();
-      // this.updateSensitivity(clampedZoom); // Désactivé
+      this.updateSensitivity(clampedZoom);
     }
   }
 
@@ -228,7 +228,7 @@ class ZoomPanHandler {
       x: (touch1.clientX + touch2.clientX) / 2,
       y: (touch1.clientY + touch2.clientY) / 2
     });
-    // this.updateSensitivity(newZoom); // Désactivé
+    this.updateSensitivity(newZoom);
   }
 
   // Raccourcis clavier avec facteur adaptatif
@@ -253,13 +253,22 @@ class ZoomPanHandler {
     return false;
   }
 
-  // Mise à jour automatique de la sensibilité - DÉSACTIVÉE
   updateSensitivity(zoom) {
-    // Désactivé pour éviter les interférences avec les modifications manuelles
-    // const controls = window.EnderTrack?.Navigation;
-    // if (controls && controls.updateSensitivityForZoom) {
-    //   controls.updateSensitivityForZoom(zoom);
-    // }
+    const controls = window.EnderTrack?.Navigation;
+    if (!controls?.setSensitivity) return;
+    // Sensitivity inversely proportional to zoom: more zoomed = finer movement
+    // Base: at zoom=1, sensitivity=5mm. At zoom=10, sensitivity=0.5mm.
+    const state = window.EnderTrack.State.get();
+    const dims = state.plateauDimensions || { x: 200, y: 200, z: 100 };
+    const xyBase = Math.max(dims.x, dims.y) * 0.025; // 2.5% of plateau
+    const zBase = dims.z * 0.025;
+    const xySens = Math.max(0.01, Math.min(50, xyBase / zoom));
+    const zSens = Math.max(0.01, Math.min(50, zBase / (state.zZoom || zoom)));
+    if (state.lockXY !== false) {
+      controls.setSensitivity('x', parseFloat(xySens.toFixed(3)));
+      controls.setSensitivity('y', parseFloat(xySens.toFixed(3)));
+    }
+    controls.setSensitivity('z', parseFloat(zSens.toFixed(3)));
   }
 
   // Alias pour compatibilité

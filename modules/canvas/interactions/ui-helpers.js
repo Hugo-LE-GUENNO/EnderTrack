@@ -178,8 +178,8 @@ class UIHelpers {
     menu.className = 'canvas-context-menu';
     menu.style.cssText = `
       position: fixed; left: ${screenX}px; top: ${screenY}px;
-      background: white; border: 1px solid #ccc; border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 10000; min-width: 150px;
+      background: var(--container-bg, #2c2c2c); border: 1px solid #444; border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5); z-index: 10000; min-width: 150px;
     `;
     
     const menuItems = [
@@ -196,6 +196,20 @@ class UIHelpers {
         action: () => this.addPositionAtLocation(mapPos)
       },
       { separator: true },
+      {
+        label: window.EnderTrack._followCursor ? '🔓 Libérer la vue' : '🎯 Suivre le curseur',
+        action: () => {
+          window.EnderTrack._followCursor = !window.EnderTrack._followCursor;
+          if (window.EnderTrack._followCursor) {
+            EnderTrack.Events?.on?.('position:changed', window.EnderTrack._followCursorFn = () => {
+              const pos = EnderTrack.State.get().pos;
+              this.interactions.zoomPanHandler.centerOnPosition(pos.x, pos.y);
+            });
+          } else if (window.EnderTrack._followCursorFn) {
+            EnderTrack.Events?.off?.('position:changed', window.EnderTrack._followCursorFn);
+          }
+        }
+      },
       {
         label: 'Zoom 100%',
         action: () => this.interactions.zoomPanHandler.handleZoom(1)
