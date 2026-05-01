@@ -1,68 +1,42 @@
-# EnderTrack
+# EnderTrack — Basic
 
-3D position controller for 3D printers and microscopes.
+Contrôleur de position 3D pour platines XYZ motorisées. Simulateur intégré ou pilotage réel via G-code (USB série).
 
-Web interface + Python Flask server. Built-in simulator, USB serial connection (G-code), position lists, automation, and a plugin system.
-
-![EnderTrack Screenshot](assets/icons/endertrack-logo_header.svg)
-
-## Quick Start
+## Démarrage
 
 ```bash
 python3 endertrack-server.py
 ```
 
-Open http://localhost:5000 — that's it. All dependencies are bundled in `vendor/`.
+Ouvrir http://localhost:5000 — c'est tout. Les dépendances sont incluses dans `vendor/`.
 
-## Features
+## Fonctionnalités
 
-- **XY + Z canvas** — real-time visualization with zoom/pan
-- **Simulator** — works without hardware
-- **USB serial** — connects to any G-code compatible stage (Ender-3, etc.)
-- **Position lists** — click-to-add, save/load JSON, automation
-- **Keyboard navigation** — arrow keys with diagonal detection
-- **Plugin system** — drop a folder in `plugins/`, auto-discovered
+- **Canvas XY + Z** — visualisation temps réel avec zoom/pan
+- **Simulateur intégré** — fonctionne sans matériel
+- **Connexion USB** — compatible tout équipement G-code (Ender-3, platines microscope, etc.)
+- **Listes de positions** — clic sur canvas, sauvegarde JSON, automatisation
+- **Navigation clavier** — flèches avec détection diagonale
+- **Système de plugins** — déposer un dossier dans `plugins/`, auto-découvert
 
-## Tabs
+## Onglets
 
-| Tab | Description |
-|-----|-------------|
-| **Réglages** | Connection, workspace, layers, navigation, storage, extensions |
-| **Navigation** | Arrow pad, sensitivity, absolute go-to, home |
-| **Positions** | Lists, scenarios, click-on-canvas |
-
-## Connect Hardware
-
-In Réglages → Support XYZ — Connexion:
-1. Select port (`/dev/ttyUSB0`)
-2. Click "Connecter"
-3. Device name auto-detected via M115
+| Onglet | Description |
+|--------|-------------|
+| **Réglages** | Connexion, espace de travail, calques, navigation, stockage, extensions |
+| **Navigation** | Flèches directionnelles, sensibilité, positionnement absolu, home |
+| **Positions** | Listes, scénarios, clic sur canvas |
 
 ## Plugins
 
-Drop a plugin folder in `plugins/` with a `plugin.json`:
+Voir la branche [`plugins`](../../tree/plugins) pour les plugins disponibles. Copiez un dossier plugin dans `plugins/` et activez-le dans Réglages → Extensions.
 
-```json
-{
-  "id": "myPlugin",
-  "folder": "my-plugin",
-  "name": "My Plugin",
-  "version": "1.0.0",
-  "description": "Does something",
-  "icon": "🔌"
-}
-```
+## Liens
 
-Activate in Réglages → Extensions. See `plugins/random-button/` for an example.
-
-## Links
-
-- [enderscope.py](https://github.com/mutterer/enderscopy) ([paper](https://dx.doi.org/10.1016/j.softx.2025.102210))
-- [EnderScope](https://github.com/Pickering-Lab/EnderScope) ([paper](http://doi.org/10.1098/rsta.2023.0214))
+- [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
+- [EnderScope](https://github.com/Pickering-Lab/EnderScope) ([publication](http://doi.org/10.1098/rsta.2023.0214))
 - [diy.microscopie.org](https://diy.microscopie.org/explore.html)
 
-## License
+## Licence
 
 GPLv3 — Hugo Le Guenno, 2025
-
-*Born at CNRS from MIFOBIO 2025, carried by the EnderTeam.*

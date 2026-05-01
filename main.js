@@ -619,7 +619,7 @@ window.emergencyStop = () => EnderTrack.App.emergencyStop();
             if (stageLight) { stageLight.style.background = 'var(--success)'; stageLight.style.boxShadow = '0 0 4px var(--success)'; stageLight.style.animation = ''; }
             if (deviceRow) deviceRow.style.display = 'flex';
             if (deviceInfo) {
-              const name = enderscope?.deviceName || status.printer_name || 'Support XYZ';
+              const name = enderscope?.deviceName || status.printer_name || 'Platine XYZ';
               deviceInfo.textContent = name + ' \u2014 ' + (status.port || 'USB');
             }
           }
@@ -627,14 +627,14 @@ window.emergencyStop = () => EnderTrack.App.emergencyStop();
           // Was connected before, now lost → red blink stays
           if (stageLight) { stageLight.style.background = 'var(--danger)'; stageLight.style.boxShadow = '0 0 6px var(--danger)'; stageLight.style.animation = 'statusBlink 1s ease-in-out infinite'; }
           if (deviceRow) deviceRow.style.display = 'flex';
-          if (deviceInfo) deviceInfo.textContent = 'Support XYZ d\u00e9connect\u00e9';
+          if (deviceInfo) deviceInfo.textContent = 'Platine XYZ d\u00e9connect\u00e9';
           coordColor('var(--coordinates-color)');
           previousStageConnected = false;
         } else {
           // Server up, never had stage → orange
           if (stageLight) { stageLight.style.background = 'var(--coordinates-color)'; stageLight.style.boxShadow = '0 0 4px var(--coordinates-color)'; stageLight.style.animation = ''; }
           if (deviceRow) deviceRow.style.display = 'flex';
-          if (deviceInfo) deviceInfo.textContent = 'Support XYZ non connect\u00e9';
+          if (deviceInfo) deviceInfo.textContent = 'Platine XYZ non connect\u00e9';
           coordColor('var(--coordinates-color)');
         }
       })
