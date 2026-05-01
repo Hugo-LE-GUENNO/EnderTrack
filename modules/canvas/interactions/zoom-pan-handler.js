@@ -256,19 +256,14 @@ class ZoomPanHandler {
 
   updateSensitivity(zoom) {
     const controls = window.EnderTrack?.Navigation;
-    if (!controls?.setSensitivity) return;
-    // Sensitivity inversely proportional to zoom: more zoomed = finer movement
-    // Base: at zoom=1, sensitivity=5mm. At zoom=10, sensitivity=0.5mm.
+    if (!controls?.setSensitivity) { console.warn('[Zoom] No Navigation.setSensitivity'); return; }
     const state = window.EnderTrack.State.get();
     const dims = state.plateauDimensions || { x: 200, y: 200, z: 100 };
-    const xyBase = Math.max(dims.x, dims.y) * 0.025; // 2.5% of plateau
-    const zBase = dims.z * 0.025;
-    const xySens = Math.max(0.01, Math.min(50, xyBase / zoom));
-    const zSens = Math.max(0.01, Math.min(50, zBase / (state.zZoom || zoom)));
-    if (state.lockXY !== false) {
-      controls.setSensitivity('x', parseFloat(xySens.toFixed(3)));
-      controls.setSensitivity('y', parseFloat(xySens.toFixed(3)));
-    }
+    const xySens = Math.max(0.01, Math.min(50, Math.max(dims.x, dims.y) * 0.025 / zoom));
+    const zSens = Math.max(0.01, Math.min(50, dims.z * 0.025 / (state.zZoom || zoom)));
+    console.log('[Zoom] sensitivity update:', { zoom, xySens: xySens.toFixed(3), zSens: zSens.toFixed(3) });
+    controls.setSensitivity('x', parseFloat(xySens.toFixed(3)));
+    controls.setSensitivity('y', parseFloat(xySens.toFixed(3)));
     controls.setSensitivity('z', parseFloat(zSens.toFixed(3)));
   }
 

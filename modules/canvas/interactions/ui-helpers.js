@@ -182,6 +182,8 @@ class UIHelpers {
       box-shadow: 0 4px 16px rgba(0,0,0,0.5); z-index: 10000; min-width: 150px;
     `;
     
+    // Remove any existing context menu
+    document.querySelectorAll('.canvas-context-menu').forEach(m => m.remove());
     const isFollowing = window.EnderTrack._followCursor;
     const menuItems = [
       {
