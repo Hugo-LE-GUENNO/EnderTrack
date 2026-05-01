@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>Contrôleur et simulateur de position 3D pour stages XYZ motorisés.</strong><br>
-  Interface web + serveur Python Flask. Simulateur intégré, connexion USB série (G-code) et système de plugins.
+  <strong>Contrôleur de position 3D pour platines XYZ motorisées.</strong><br>
+  Interface web légère avec serveur Python intégré. Fonctionne avec ou sans matériel.
 </p>
 
 ---
@@ -15,7 +15,7 @@
 
 | Branche | Description | Commande |
 |---------|-------------|----------|
-| [`basic`](../../tree/basic) | Version minimale — simulateur, navigation, listes, connexion série | `git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
+| [`basic`](../../tree/basic) | Version minimale — navigation, listes de positions, connexion série | `git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
 | [`plugins`](../../tree/plugins) | Plugins additionnels compatibles | `git clone -b plugins https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
 
 ## Démarrage rapide
@@ -31,8 +31,8 @@ Ouvrir http://localhost:5000 — c'est tout. Zéro installation, les dépendance
 ## Fonctionnalités
 
 - **Canvas XY + Z** — visualisation temps réel avec zoom/pan
-- **Simulateur** — fonctionne sans matériel
-- **Connexion USB** — compatible tout stage G-code (Ender-3, stages microscope, etc.)
+- **Simulateur intégré** — fonctionne sans matériel
+- **Connexion USB** — compatible tout équipement G-code (Ender-3, platines microscope, etc.)
 - **Listes de positions** — clic sur canvas, sauvegarde JSON, automatisation
 - **Navigation clavier** — flèches avec détection diagonale
 - **Système de plugins** — déposer un dossier dans `plugins/`, auto-découvert
@@ -47,7 +47,7 @@ Ouvrir http://localhost:5000 — c'est tout. Zéro installation, les dépendance
 
 Pour installer un plugin : copiez son dossier dans `plugins/` puis activez-le dans Réglages → Extensions.
 
-## Connecter un stage
+## Connecter une platine
 
 Dans Réglages → Support XYZ — Connexion :
 1. Sélectionner le port (`/dev/ttyUSB0`, `COM3`, etc.)
