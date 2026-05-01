@@ -765,37 +765,52 @@ window.openDrivers = () => {};
 window.openEnderman = () => {};
 
 // Plugin Catalog
+// Plugin Catalog with install log and auto-refresh
 window._openPluginCatalog = async function() {
   const el = document.getElementById('pluginCatalog');
   if (!el) return;
   if (el.style.display !== 'none') { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">Chargement...</div>';
+  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">⏳ Chargement du catalogue...</div>';
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
   try {
     const resp = await fetch(serverUrl + '/api/plugins/catalog', { signal: AbortSignal.timeout(10000) });
     const data = await resp.json();
     if (!data.success) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:#ef4444;">' + (data.error || 'Erreur') + '</div>'; return; }
     if (!data.catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">Aucun plugin disponible</div>'; return; }
-    el.innerHTML = data.catalog.map(p => {
+    el.innerHTML = '<div id="catalogLog" style="display:none; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px; font-size:10px; font-family:monospace; color:var(--coordinates-color); max-height:80px; overflow-y:auto;"></div>' +
+      data.catalog.map(p => {
       const installed = p._installed;
       const name = p.name || p._folder;
       const icon = p.icon || '🔌';
       const desc = p.description || '';
+      const statusDot = installed ? '🟢' : '⚫';
       const btn = installed
-        ? '<button onclick="window._uninstallPlugin(\'' + p._folder + '\')" style="padding:3px 8px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Supprimer</button>'
-        : '<button onclick="window._installPlugin(\'' + p._folder + '\')" style="padding:3px 8px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Installer</button>';
-      return '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
-        '<div><span style="font-size:12px;">' + icon + ' ' + name + '</span>' +
+        ? '<button id="catBtn_' + p._folder + '" onclick="window._uninstallPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Supprimer</button>'
+        : '<button id="catBtn_' + p._folder + '" onclick="window._installPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Installer</button>';
+      return '<div id="catRow_' + p._folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
+        '<div style="display:flex; align-items:center; gap:6px;"><span style="font-size:8px;">' + statusDot + '</span><div><span style="font-size:12px;">' + icon + ' ' + name + '</span>' +
         (desc ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6;">' + desc + '</div>' : '') +
-        '</div>' + btn + '</div>';
+        '</div></div>' + btn + '</div>';
     }).join('');
   } catch(e) {
     el.innerHTML = '<div style="padding:8px; font-size:11px; color:#ef4444;">Impossible de contacter GitHub: ' + e.message + '</div>';
   }
 };
 
+window._catalogLog = function(msg, type) {
+  const log = document.getElementById('catalogLog');
+  if (!log) return;
+  log.style.display = 'block';
+  const color = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : 'var(--coordinates-color)';
+  log.innerHTML += '<div style="color:' + color + ';">' + msg + '</div>';
+  log.scrollTop = log.scrollHeight;
+};
+
 window._installPlugin = async function(folder) {
+  const btn = document.getElementById('catBtn_' + folder);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  window._catalogLog('📦 Installation de ' + folder + '...');
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
   try {
     const resp = await fetch(serverUrl + '/api/plugins/install', {
@@ -804,16 +819,30 @@ window._installPlugin = async function(folder) {
     });
     const data = await resp.json();
     if (data.success) {
-      EnderTrack.UI?.showNotification?.('Plugin ' + folder + ' installé (' + data.files.length + ' fichiers). Rechargez la page pour l\'activer.', 'success');
-      window._openPluginCatalog();
+      window._catalogLog('✅ ' + folder + ' installé (' + data.files.length + ' fichiers: ' + data.files.join(', ') + ')', 'success');
+      // Update row visually
+      const row = document.getElementById('catRow_' + folder);
+      if (row) {
+        row.querySelector('span[style*="font-size:8px"]').textContent = '🟢';
+      }
+      if (btn) { btn.textContent = 'Supprimer'; btn.style.background = '#ef4444'; btn.style.color = '#fff'; btn.disabled = false; btn.onclick = function() { window._uninstallPlugin(folder); }; }
+      // Refresh local plugin list
+      if (EnderTrack.PluginManager?.renderPluginList) await EnderTrack.PluginManager.renderPluginList();
     } else {
-      EnderTrack.UI?.showNotification?.('Erreur: ' + data.error, 'error');
+      window._catalogLog('❌ Erreur: ' + data.error, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Installer'; }
     }
-  } catch(e) { EnderTrack.UI?.showNotification?.('Erreur: ' + e.message, 'error'); }
+  } catch(e) {
+    window._catalogLog('❌ ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Installer'; }
+  }
 };
 
 window._uninstallPlugin = async function(folder) {
   if (!confirm('Supprimer le plugin ' + folder + ' ?')) return;
+  const btn = document.getElementById('catBtn_' + folder);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  window._catalogLog('🗑️ Suppression de ' + folder + '...');
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
   try {
     const resp = await fetch(serverUrl + '/api/plugins/uninstall', {
@@ -822,9 +851,18 @@ window._uninstallPlugin = async function(folder) {
     });
     const data = await resp.json();
     if (data.success) {
-      EnderTrack.UI?.showNotification?.('Plugin ' + folder + ' supprimé. Rechargez la page.', 'success');
-      window._openPluginCatalog();
+      window._catalogLog('✅ ' + folder + ' supprimé', 'success');
+      const row = document.getElementById('catRow_' + folder);
+      if (row) {
+        row.querySelector('span[style*="font-size:8px"]').textContent = '⚫';
+      }
+      if (btn) { btn.textContent = 'Installer'; btn.style.background = '#22c55e'; btn.style.color = '#000'; btn.disabled = false; btn.onclick = function() { window._installPlugin(folder); }; }
+      // Refresh local plugin list
+      if (EnderTrack.PluginManager?.renderPluginList) await EnderTrack.PluginManager.renderPluginList();
     }
-  } catch(e) { EnderTrack.UI?.showNotification?.('Erreur: ' + e.message, 'error'); }
+  } catch(e) {
+    window._catalogLog('❌ ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Supprimer'; }
+  }
 };
 
