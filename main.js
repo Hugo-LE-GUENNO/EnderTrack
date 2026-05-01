@@ -804,8 +804,8 @@ window._installPlugin = async function(folder) {
     });
     const data = await resp.json();
     if (data.success) {
-      EnderTrack.UI?.showNotification?.('Plugin ' + folder + ' installé (' + data.files.length + ' fichiers)', 'success');
-      window._openPluginCatalog(); // Refresh
+      EnderTrack.UI?.showNotification?.('Plugin ' + folder + ' installé (' + data.files.length + ' fichiers). Rechargez la page pour l\'activer.', 'success');
+      window._openPluginCatalog();
     } else {
       EnderTrack.UI?.showNotification?.('Erreur: ' + data.error, 'error');
     }
@@ -822,8 +822,8 @@ window._uninstallPlugin = async function(folder) {
     });
     const data = await resp.json();
     if (data.success) {
-      EnderTrack.UI?.showNotification?.('Plugin ' + folder + ' supprimé', 'success');
-      window._openPluginCatalog(); // Refresh
+      EnderTrack.UI?.showNotification?.('Plugin ' + folder + ' supprimé. Rechargez la page.', 'success');
+      window._openPluginCatalog();
     }
   } catch(e) { EnderTrack.UI?.showNotification?.('Erreur: ' + e.message, 'error'); }
 };
