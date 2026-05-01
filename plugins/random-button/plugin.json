@@ -1,6 +1,5 @@
 {
   "id": "randomButton",
-  "folder": "random-button",
   "name": "Bouton Inutile",
   "version": "1.0.0",
   "description": "Un bouton qui ne sert à rien (mais qui est amusant)",

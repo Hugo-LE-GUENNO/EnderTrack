@@ -1,0 +1,11 @@
+{
+  "id": "listsPlus",
+  "name": "Lists+",
+  "folder": "lists-plus",
+  "version": "1.0.0",
+  "description": "Patterns, exécution séquentielle, import/export de listes avancées",
+  "icon": "📋",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

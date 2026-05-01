@@ -1,0 +1,11 @@
+{
+  "id": "piloteMoi",
+  "name": "PiloteMoi",
+  "folder": "controller-v2",
+  "version": "1.0.0",
+  "description": "Contrôle directionnel clavier + gamepad — step & continu",
+  "icon": "🕹️",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

@@ -1,0 +1,11 @@
+{
+  "id": "extruder",
+  "name": "Extruder",
+  "folder": "extruder",
+  "version": "1.0.0",
+  "description": "Contrôle moteur extrudeur — avance/recul avec vitesse réglable",
+  "icon": "🔩",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

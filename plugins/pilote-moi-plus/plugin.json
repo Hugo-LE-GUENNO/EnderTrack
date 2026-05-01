@@ -1,0 +1,11 @@
+{
+  "id": "piloteMoiPlus",
+  "name": "PiloteMoi+",
+  "folder": "pilote-moi-plus",
+  "version": "1.0.0",
+  "description": "Contrôle directionnel avancé — mapping personnalisable, profils, actions gamepad",
+  "icon": "🎮",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

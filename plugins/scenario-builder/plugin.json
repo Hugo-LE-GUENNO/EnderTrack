@@ -1,0 +1,11 @@
+{
+  "id": "scenarioBuilder",
+  "name": "Scenario Builder",
+  "folder": "scenario-builder",
+  "version": "2.0.0",
+  "description": "Builder visuel de scénarios : boucles, conditions, actions, macros collapse",
+  "icon": "🎬",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

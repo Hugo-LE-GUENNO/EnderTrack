@@ -1,9 +1,0 @@
-<svg width="80" height="70" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="30" cy="35" r="22" fill="rgba(0,0,0,0.7)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-  <line x1="30" y1="35" x2="52" y2="35" stroke="var(--axis-x-color, #ff4444)" stroke-width="2"/>
-  <polygon points="52,35 48,32 48,38" fill="var(--axis-x-color, #ff4444)"/>
-  <line x1="30" y1="35" x2="30" y2="13" stroke="var(--axis-y-color, #44ff44)" stroke-width="2"/>
-  <polygon points="30,13 27,17 33,17" fill="var(--axis-y-color, #44ff44)"/>
-  <text x="65" y="39" font-family="Arial" font-size="11" fill="#888888" text-anchor="middle" font-weight="normal">X+</text>
-  <text x="30" y="8" font-family="Arial" font-size="11" fill="#888888" text-anchor="middle" font-weight="normal">Y+</text>
-</svg>
