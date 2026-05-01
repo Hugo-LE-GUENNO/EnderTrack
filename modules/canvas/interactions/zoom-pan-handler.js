@@ -94,6 +94,7 @@ class ZoomPanHandler {
     // Force update
     window.EnderTrack.Canvas.updateCoordinateSystem();
     window.EnderTrack.Canvas.requestRender();
+    this.updateSensitivity(newZoom);
   }
 
   // Molette de la souris avec facteur adaptatif

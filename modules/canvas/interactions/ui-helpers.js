@@ -182,22 +182,10 @@ class UIHelpers {
       box-shadow: 0 4px 16px rgba(0,0,0,0.5); z-index: 10000; min-width: 150px;
     `;
     
+    const isFollowing = window.EnderTrack._followCursor;
     const menuItems = [
       {
-        label: `Aller à (${mapPos.x.toFixed(1)}, ${mapPos.y.toFixed(1)})`,
-        action: () => this.handleClickToMove(mapPos)
-      },
-      {
-        label: 'Centrer ici',
-        action: () => this.interactions.zoomPanHandler.centerOnPosition(mapPos.x, mapPos.y)
-      },
-      {
-        label: 'Ajouter position',
-        action: () => this.addPositionAtLocation(mapPos)
-      },
-      { separator: true },
-      {
-        label: window.EnderTrack._followCursor ? '🔓 Libérer la vue' : '🎯 Suivre le curseur',
+        label: isFollowing ? '🔓 Libérer la vue' : '🎯 Suivre le curseur',
         action: () => {
           window.EnderTrack._followCursor = !window.EnderTrack._followCursor;
           if (window.EnderTrack._followCursor) {
@@ -209,27 +197,8 @@ class UIHelpers {
             EnderTrack.Events?.off?.('position:changed', window.EnderTrack._followCursorFn);
           }
         }
-      },
-      {
-        label: 'Zoom 100%',
-        action: () => this.interactions.zoomPanHandler.handleZoom(1)
-      },
-      {
-        label: 'Ajuster à la vue',
-        action: () => this.interactions.zoomPanHandler.fitToView()
       }
     ];
-    
-    // Viewport layout options
-    const vm = window.EnderTrack?.ViewportManager;
-    if (vm) {
-      menuItems.push({ separator: true });
-      if (vm.currentLayout === 'single') {
-        menuItems.push({ label: '⊞ Diviser en 2', action: () => vm.toggleSplit() });
-      } else {
-        menuItems.push({ label: '⊡ Plein écran', action: () => vm.setLayout('single') });
-      }
-    }
     
     this.buildContextMenu(menu, menuItems);
     this.setupContextMenuHandlers(menu);
