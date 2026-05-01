@@ -324,10 +324,11 @@ class EnhancedEventBus extends EventEmitter {
 
   // Debug information
   debug() {
+    return {
       events: this.eventNames(),
       stats: this.getStats(),
       totalListeners: this.eventNames().reduce((sum, event) => sum + this.listenerCount(event), 0)
-    });
+    };
   }
 }
 

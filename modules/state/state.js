@@ -699,6 +699,7 @@ class StateManager {
 
   // Debug helpers
   debug() {
+    return {
       inputMode: this.state.inputMode,
       sensitivity: {
         x: this.state.sensitivityX,
@@ -711,7 +712,7 @@ class StateManager {
         z: this.state.lockZ,
         xy: this.state.lockXY
       }
-    });
+    };
   }
 
 
