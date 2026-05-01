@@ -1,63 +1,58 @@
 # EnderTrack
 
-**Contrôleur de position 3D pour imprimantes 3D et microscopes.**
+<p align="center">
+  <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" height="64">
+</p>
 
-Interface web + serveur Python Flask. Simulateur intégré, connexion USB série (G-code), listes de positions, automatisation et système de plugins.
+<p align="center">
+  <strong>Contrôleur et simulateur de position 3D pour stages XYZ motorisés.</strong><br>
+  Interface web + serveur Python Flask. Simulateur intégré, connexion USB série (G-code) et système de plugins.
+</p>
 
 ---
 
 ## Versions
 
-| Branche | Description | Télécharger |
-|---------|-------------|-------------|
-| [`basic`](../../tree/basic) | Version minimale — simulateur, navigation, listes, connexion série | `git clone -b basic` |
-| `imagerie` | *(à venir)* — Scenario Builder, Python Notebook, acquisition multi-dimensionnelle | `git clone -b imagerie` |
-| [`plugins`](../../tree/plugins) | Collection de plugins compatibles toutes versions | `git clone -b plugins` |
+| Branche | Description | Commande |
+|---------|-------------|----------|
+| [`basic`](../../tree/basic) | Version minimale — simulateur, navigation, listes, connexion série | `git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
+| [`plugins`](../../tree/plugins) | Plugins additionnels compatibles | `git clone -b plugins https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
 
 ## Démarrage rapide
 
 ```bash
-# Télécharger la version basic
-git clone -b basic https://github.com/Hugo-LE-GUENNO/endertrack.git
-cd endertrack
-
-# Lancer
+git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+cd EnderTrack
 python3 endertrack-server.py
 ```
 
 Ouvrir http://localhost:5000 — c'est tout. Zéro installation, les dépendances sont incluses.
 
-## Ajouter des plugins
-
-```bash
-# Depuis la branche plugins, copier un plugin dans votre EnderTrack
-git clone -b plugins https://github.com/Hugo-LE-GUENNO/endertrack.git endertrack-plugins
-cp -r endertrack-plugins/plugins/scenario-builder/ mon-endertrack/plugins/
-```
-
-Puis activer dans Réglages → Extensions.
-
-## Plugins disponibles
-
-| Plugin | Description |
-|--------|-------------|
-| 🎬 Scenario Builder | Builder visuel : boucles, conditions, macros, variables, code Python |
-| 🐍 Python Notebook | Mini-Jupyter intégré avec CodeMirror et kernel persistant |
-| 🕹️ PiloteMoi | Contrôle directionnel clavier + gamepad |
-| 🎮 PiloteMoi+ | Mapping personnalisable clavier + gamepad |
-| 🔩 Extruder | Contrôle moteur extrudeur |
-| 🌡️ TempoBed | Température plateau chauffant |
-| 📋 Lists+ | Patterns avancés, exécution séquentielle |
-| 🎲 Random Button | Exemple/démo de plugin |
-
 ## Fonctionnalités
 
 - **Canvas XY + Z** — visualisation temps réel avec zoom/pan
 - **Simulateur** — fonctionne sans matériel
-- **Connexion USB** — compatible tout stage G-code (Ender-3, etc.)
+- **Connexion USB** — compatible tout stage G-code (Ender-3, stages microscope, etc.)
 - **Listes de positions** — clic sur canvas, sauvegarde JSON, automatisation
 - **Navigation clavier** — flèches avec détection diagonale
 - **Système de plugins** — déposer un dossier dans `plugins/`, auto-découvert
+
+## Plugins
+
+| Plugin | Description |
+|--------|-------------|
+| 🎮 Contrôleur Externe | Mapping personnalisable clavier + gamepad |
+| 🔩 Extruder | Contrôle moteur extrudeur |
+| 🌡️ TempoBed | Contrôle température plateau chauffant |
+
+Pour installer un plugin : copiez son dossier dans `plugins/` puis activez-le dans Réglages → Extensions.
+
+## Connecter un stage
+
+Dans Réglages → Support XYZ — Connexion :
+1. Sélectionner le port (`/dev/ttyUSB0`, `COM3`, etc.)
+2. Cliquer "Connecter"
+3. Le nom du device est auto-détecté via M115
 
 ## Liens
 
