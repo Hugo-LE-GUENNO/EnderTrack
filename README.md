@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Contrôleur de position 3D pour platines XYZ motorisées.</strong><br>
-  Interface web légère avec serveur Python intégré. Fonctionne avec ou sans matériel.
+  Simulateur intégré ou pilotage réel via G-code (USB série). Interface web légère avec serveur Python.
 </p>
 
 ---
