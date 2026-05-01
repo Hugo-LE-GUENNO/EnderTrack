@@ -30,12 +30,10 @@ Ouvrir http://localhost:5000 — c'est tout. Zéro installation, les dépendance
 
 ## Fonctionnalités
 
-- **Canvas XY + Z** — visualisation temps réel avec zoom/pan
-- **Simulateur intégré** — fonctionne sans matériel
-- **Connexion USB** — compatible tout équipement G-code (Ender-3, platines microscope, etc.)
-- **Listes de positions** — clic sur canvas, sauvegarde JSON, automatisation
-- **Navigation clavier** — flèches avec détection diagonale
-- **Système de plugins** — déposer un dossier dans `plugins/`, auto-découvert
+- **Visualisation XY + Z** — temps réel si connecté, simulateur sinon
+- **Navigation** — pas à pas (flèches clavier) ou positionnement absolu (clic sur canvas)
+- **Listes de positions** — sauvegarde, chargement, automatisation simple
+- **Plugins** — système extensible, déposer un dossier dans `plugins/`
 
 ## Plugins
 
