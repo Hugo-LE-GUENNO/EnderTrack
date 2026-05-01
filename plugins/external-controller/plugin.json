@@ -1,0 +1,11 @@
+{
+  "id": "externalController",
+  "name": "Contrôleur Externe",
+  "folder": "external-controller",
+  "version": "1.0.0",
+  "description": "Mapping personnalisable clavier + gamepad — profils, actions remappables",
+  "icon": "🎮",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

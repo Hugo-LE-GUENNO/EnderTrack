@@ -1,6 +1,6 @@
 # EnderTrack Plugins
 
-Plugins compatibles avec toutes les versions d'EnderTrack (basic, imagerie, etc.).
+Plugins compatibles avec toutes les versions d'EnderTrack.
 
 ## Installation
 
@@ -8,16 +8,11 @@ Copiez le dossier d'un plugin dans le `plugins/` de votre EnderTrack, puis activ
 
 ## Plugins disponibles
 
-| Plugin | Description | Catégorie |
-|--------|-------------|-----------|
-| 🎲 random-button | Bouton position aléatoire (exemple/démo) | Démo |
-| 🎬 scenario-builder | Builder visuel de scénarios : boucles, conditions, macros | Automatisation |
-| 🐍 python-notebook | Mini-Jupyter intégré avec CodeMirror | Développement |
-| 🕹️ controller-v2 (PiloteMoi) | Contrôle directionnel clavier + gamepad | Navigation |
-| 🎮 pilote-moi-plus | Mapping personnalisable clavier + gamepad | Navigation |
-| 🔩 extruder | Contrôle moteur extrudeur | Matériel |
-| 🌡️ tempo-bed | Température plateau chauffant | Matériel |
-| 📋 lists-plus | Patterns, exécution séquentielle avancée | Listes |
+| Plugin | Description |
+|--------|-------------|
+| 🎮 Contrôleur Externe | Mapping personnalisable clavier + gamepad, profils, actions remappables |
+| 🔩 Extruder | Contrôle moteur extrudeur — avance/recul avec vitesse réglable |
+| 🌡️ TempoBed | Température plateau chauffant — on/off, consigne, monitoring temps réel |
 
 ## Créer un plugin
 
@@ -28,8 +23,6 @@ mon-plugin/
 ├── ui.js          # Interface (obligatoire)
 └── ui.css         # Styles (optionnel)
 ```
-
-Voir `random-button/` pour un exemple minimal.
 
 ## Licence
 
