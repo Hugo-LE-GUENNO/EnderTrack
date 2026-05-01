@@ -262,8 +262,7 @@ class PluginManager {
     discovered.sort((a, b) => a.name.localeCompare(b.name));
     this._discoveredPlugins = discovered;
 
-    container.innerHTML = `<input type="text" id="pluginSearchInput" placeholder="🔍 Rechercher un plugin..." oninput="EnderTrack.PluginManager.filterPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
-      <div id="pluginsCards"></div>
+    container.innerHTML = `<div id="pluginsCards"></div>
       <div style="display:flex; gap:4px; margin-top:6px;">
         <button onclick="EnderTrack.PluginManager.loadPluginFromFolder()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Importer</button>
         <button onclick="EnderTrack.PluginManager.openCreateGuide()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="Guide de création de plugin">?</button>
@@ -716,19 +715,30 @@ Ne PAS modifier index.html ni registry.js — l'utilisateur charge le plugin via
   /**
    * Toggle a plugin on/off from the Plugins tab
    */
+  static _notify(msg, type) {
+    if (EnderTrack.UI?.showNotification) { EnderTrack.UI.showNotification(msg, type); return; }
+    // Fallback: inline toast
+    const toast = document.createElement('div');
+    const bg = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : 'var(--active-element)';
+    toast.style.cssText = 'position:fixed; top:12px; right:12px; z-index:10000; padding:10px 16px; border-radius:6px; font-size:12px; color:#fff; background:' + bg + '; box-shadow:0 4px 12px rgba(0,0,0,0.4); transition:opacity 0.3s;';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+  }
+
   static async togglePlugin(pluginId) {
     const plugin = this.plugins.get(pluginId);
     const wasActive = plugin?.isActive;
     try {
       if (wasActive) {
         await this.deactivate(pluginId);
-        EnderTrack.UI?.showNotification?.('Plugin ' + pluginId + ' désactivé', 'info');
+        this._notify('Plugin ' + pluginId + ' désactivé', 'info');
       } else {
         await this.activate(pluginId);
-        EnderTrack.UI?.showNotification?.('Plugin ' + pluginId + ' activé ✅', 'success');
+        this._notify('✅ Plugin ' + pluginId + ' activé', 'success');
       }
     } catch(e) {
-      EnderTrack.UI?.showNotification?.('Erreur plugin ' + pluginId + ': ' + e.message, 'error');
+      this._notify('❌ Plugin ' + pluginId + ': ' + e.message, 'error');
       console.error('[PluginManager] Toggle error:', e);
     }
     this.renderPluginList();

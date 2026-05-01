@@ -765,6 +765,21 @@ window.openDrivers = () => {};
 window.openEnderman = () => {};
 
 // Plugin Catalog
+// Unified plugin search (local + catalog)
+window._filterAllPlugins = function(query) {
+  // Filter local plugins
+  if (EnderTrack.PluginManager?.filterPlugins) EnderTrack.PluginManager.filterPlugins(query);
+  // Filter catalog items if visible
+  const catalog = document.getElementById('pluginCatalog');
+  if (catalog && catalog.style.display !== 'none') {
+    const q = (query || '').toLowerCase();
+    catalog.querySelectorAll('[id^="catRow_"]').forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+    });
+  }
+};
+
 // Plugin Catalog with install log and auto-refresh
 window._openPluginCatalog = async function() {
   const el = document.getElementById('pluginCatalog');
