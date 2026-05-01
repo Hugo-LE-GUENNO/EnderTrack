@@ -20,7 +20,14 @@ class ZInteractions {
     this.zVis.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
     this.zVis.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
     this.zVis.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
-    this.zVis.canvas.addEventListener('click', (e) => this.handleClick(e));
+    let _zClickTimer = null;
+    this.zVis.canvas.addEventListener('click', (e) => {
+      if (_zClickTimer) { clearTimeout(_zClickTimer); _zClickTimer = null; return; }
+      _zClickTimer = setTimeout(() => { _zClickTimer = null; this.handleClick(e); }, 250);
+    });
+    this.zVis.canvas.addEventListener('dblclick', (e) => {
+      if (_zClickTimer) { clearTimeout(_zClickTimer); _zClickTimer = null; }
+    });
     
     // console.log('✅ Z-canvas event listeners configured');
   }
@@ -28,6 +35,14 @@ class ZInteractions {
   handleWheel(e) {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Trackpad 2-finger scroll → pan Z
+    if (!e.ctrlKey && !e.metaKey && e.deltaMode === 0 && Math.abs(e.deltaY) < 50 && !Number.isInteger(e.deltaY)) {
+      this.zVis.zPan -= e.deltaY * 0.1;
+      window.EnderTrack.State.update({ zPan: this.zVis.zPan });
+      this.zVis.render();
+      return;
+    }
     
     const state = window.EnderTrack.State.get();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -58,12 +73,11 @@ class ZInteractions {
   }
 
   handleMouseDown(e) {
-    if (e.button === 1) {
-      e.preventDefault();
-      this.isDragging = true;
-      this.lastMouseY = e.clientY;
-      this.zVis.canvas.style.cursor = 'grabbing';
-    }
+    this.isDragging = true;
+    this._zDragMoved = false;
+    this._zPanning = false;
+    this.lastMouseY = e.clientY;
+    this.dragStartY = e.clientY;
   }
 
   handleMouseMove(e) {
@@ -79,18 +93,22 @@ class ZInteractions {
     this.updateZCursor(canvasY);
     
     if (this.isDragging) {
-      this.handlePan(e);
+      const totalDist = Math.abs(e.clientY - this.dragStartY);
+      if (!this._zPanning && totalDist > 3) {
+        this._zPanning = true;
+        this._zDragMoved = true;
+        this.zVis.canvas.style.cursor = 'grabbing';
+      }
+      if (this._zPanning) this.handlePan(e);
     } else {
       this.zVis.updateZInfo(window.EnderTrack.State.get());
     }
   }
 
   handleMouseUp(e) {
-    if (e.button === 1) {
-      this.isDragging = false;
-      this.zVis.canvas.style.cursor = '';
-      this.zVis.canvas.classList.add('crosshair-cursor');
-    }
+    if (this._zPanning) this.zVis.canvas.style.cursor = '';
+    this.isDragging = false;
+    this._zPanning = false;
   }
 
   handleMouseLeave() {
@@ -102,6 +120,7 @@ class ZInteractions {
   }
 
   handleClick(e) {
+    if (this._zDragMoved) { this._zDragMoved = false; return; }
     if (e.button === 0) {
       const rect = this.zVis.canvas.getBoundingClientRect();
       const canvasX = e.clientX - rect.left;
