@@ -68,13 +68,7 @@ class ZInteractions {
     window.EnderTrack.State.update({ zZoom: newZoom, zPan: this.zVis.zPan });
     this.zVis.zRange = newRange;
     this.zVis.render();
-    // Update Z sensitivity based on Z zoom
-    const controls = window.EnderTrack?.Navigation;
-    if (controls?.setSensitivity) {
-      const baseZ = 50 / 3;
-      const zSens = Math.max(0.01, Math.min(50, baseZ / (newZoom / minZoom)));
-      controls.setSensitivity('z', parseFloat(zSens.toFixed(2)));
-    }
+    // Z sensitivity handled by NavigationControls.updateSliderRanges via state:changed
   }
 
   handleMouseDown(e) {

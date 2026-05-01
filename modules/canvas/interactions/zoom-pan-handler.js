@@ -58,8 +58,7 @@ class ZoomPanHandler {
       EnderTrack.State.update({ zoom: clampedZoom });
       window.EnderTrack.Canvas.updateCoordinateSystem();
       window.EnderTrack.Canvas.requestRender();
-      this.updateSensitivity(clampedZoom);
-    }
+      }
   }
 
   // Zoom précis au niveau de la souris
@@ -94,7 +93,6 @@ class ZoomPanHandler {
     // Force update
     window.EnderTrack.Canvas.updateCoordinateSystem();
     window.EnderTrack.Canvas.requestRender();
-    this.updateSensitivity(newZoom);
   }
 
   // Molette de la souris avec facteur adaptatif
@@ -229,7 +227,6 @@ class ZoomPanHandler {
       x: (touch1.clientX + touch2.clientX) / 2,
       y: (touch1.clientY + touch2.clientY) / 2
     });
-    this.updateSensitivity(newZoom);
   }
 
   // Raccourcis clavier avec facteur adaptatif
@@ -255,13 +252,7 @@ class ZoomPanHandler {
   }
 
   updateSensitivity(zoom) {
-    const controls = window.EnderTrack?.Navigation;
-    if (!controls?.setSensitivity) return;
-    // Target: 1/3 of slider range (50/3 ≈ 16.7) at zoom=1, scales with zoom
-    const baseXY = 50 / 3;
-    const xySens = Math.max(0.01, Math.min(50, baseXY / zoom));
-    controls.setSensitivity('x', parseFloat(xySens.toFixed(2)));
-    controls.setSensitivity('y', parseFloat(xySens.toFixed(2)));
+    // Handled by NavigationControls.updateSliderRanges via state:changed event
   }
 
   // Alias pour compatibilité
