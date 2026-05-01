@@ -735,7 +735,7 @@ window.showAboutModal = function() {
       <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" style="height:48px; margin-bottom:16px;">
       <div style="font-size:14px; font-weight:600; color:var(--text-selected); margin-bottom:2px;">EnderTrack Minimal v1</div>
       <div style="font-size:9px; color:var(--text-general); margin-bottom:10px; opacity:0.5;">2025</div>
-      <a href="https://github.com/Hugo-LE-GUENNO/endertrack" target="_blank" rel="noopener noreferrer"
+      <a href="https://github.com/Hugo-LE-GUENNO/EnderTrack" target="_blank" rel="noopener noreferrer"
         style="display:inline-block; padding:5px 14px; background:var(--active-element); color:var(--text-selected); border-radius:4px; text-decoration:none; font-size:11px; font-weight:500; margin-bottom:14px; transition:all 0.15s;"
         onmouseenter="this.style.background='var(--coordinates-color)'; this.style.color='#000'"
         onmouseleave="this.style.background='var(--active-element)'; this.style.color='var(--text-selected)'"
