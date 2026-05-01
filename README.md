@@ -47,13 +47,6 @@ Ouvrir http://localhost:5000 — c'est tout. Zéro installation, les dépendance
 
 Pour installer un plugin : copiez son dossier dans `plugins/` puis activez-le dans Réglages → Extensions.
 
-## Connecter une platine
-
-Dans Réglages → Support XYZ — Connexion :
-1. Sélectionner le port (`/dev/ttyUSB0`, `COM3`, etc.)
-2. Cliquer "Connecter"
-3. Le nom du device est auto-détecté via M115
-
 ## Liens
 
 - [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
