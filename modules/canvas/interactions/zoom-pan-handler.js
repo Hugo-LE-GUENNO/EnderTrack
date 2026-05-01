@@ -256,15 +256,12 @@ class ZoomPanHandler {
 
   updateSensitivity(zoom) {
     const controls = window.EnderTrack?.Navigation;
-    if (!controls?.setSensitivity) { console.warn('[Zoom] No Navigation.setSensitivity'); return; }
-    const state = window.EnderTrack.State.get();
-    const dims = state.plateauDimensions || { x: 200, y: 200, z: 100 };
-    const xySens = Math.max(0.01, Math.min(50, Math.max(dims.x, dims.y) * 0.025 / zoom));
-    const zSens = Math.max(0.01, Math.min(50, dims.z * 0.025 / (state.zZoom || zoom)));
-    console.log('[Zoom] sensitivity update:', { zoom, xySens: xySens.toFixed(3), zSens: zSens.toFixed(3) });
-    controls.setSensitivity('x', parseFloat(xySens.toFixed(3)));
-    controls.setSensitivity('y', parseFloat(xySens.toFixed(3)));
-    controls.setSensitivity('z', parseFloat(zSens.toFixed(3)));
+    if (!controls?.setSensitivity) return;
+    // Target: 1/3 of slider range (50/3 ≈ 16.7) at zoom=1, scales with zoom
+    const baseXY = 50 / 3;
+    const xySens = Math.max(0.1, Math.min(50, baseXY / zoom));
+    controls.setSensitivity('x', parseFloat(xySens.toFixed(2)));
+    controls.setSensitivity('y', parseFloat(xySens.toFixed(2)));
   }
 
   // Alias pour compatibilité

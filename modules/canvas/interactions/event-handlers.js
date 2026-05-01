@@ -51,7 +51,6 @@ class EventHandlers {
     
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      this.interactions.handleRightClick(e.clientX, e.clientY, e);
     });
   }
 

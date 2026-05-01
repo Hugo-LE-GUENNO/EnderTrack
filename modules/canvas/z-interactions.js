@@ -31,44 +31,9 @@ class ZInteractions {
     
     this.zVis.canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      this.showZContextMenu(e);
     });
     
     // console.log('✅ Z-canvas event listeners configured');
-  }
-
-  showZContextMenu(e) {
-    document.querySelectorAll('.canvas-context-menu').forEach(m => m.remove());
-    const isFollowing = window.EnderTrack._followCursor;
-    const menu = document.createElement('div');
-    menu.className = 'canvas-context-menu';
-    menu.style.cssText = 'position:fixed; left:' + e.clientX + 'px; top:' + e.clientY + 'px; background:var(--container-bg, #2c2c2c); border:1px solid #444; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,0.5); z-index:10000; min-width:150px; padding:4px 0;';
-    const item = document.createElement('div');
-    item.textContent = isFollowing ? '🔓 Libérer la vue' : '🎯 Suivre le curseur';
-    item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:12px; color:var(--text-selected, #fff);';
-    item.addEventListener('mouseenter', () => { item.style.background = 'var(--active-element, #4a5568)'; });
-    item.addEventListener('mouseleave', () => { item.style.background = ''; });
-    item.addEventListener('click', () => {
-      window.EnderTrack._followCursor = !window.EnderTrack._followCursor;
-      if (window.EnderTrack._followCursor) {
-        window.EnderTrack._followCursorFn = () => {
-          const pos = EnderTrack.State.get().pos;
-          if (pos) window.EnderTrack.Canvas?.interactions?.zoomPanHandler?.centerOnPosition(pos.x, pos.y);
-        };
-        EnderTrack.Events?.on?.('position:changed', window.EnderTrack._followCursorFn);
-        window.EnderTrack._followCursorFn();
-      } else {
-        if (window.EnderTrack._followCursorFn) {
-          EnderTrack.Events?.off?.('position:changed', window.EnderTrack._followCursorFn);
-          window.EnderTrack._followCursorFn = null;
-        }
-      }
-      menu.remove();
-    });
-    menu.appendChild(item);
-    document.body.appendChild(menu);
-    const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
-    setTimeout(() => document.addEventListener('mousedown', close), 0);
   }
 
   handleWheel(e) {
@@ -91,20 +56,14 @@ class ZInteractions {
     const currentZoom = state.zZoom || minZoom;
     const newZoom = Math.max(minZoom, Math.min(1000, currentZoom * delta));
     
-    // Get mouse position in Z coordinates before zoom
-    const rect = this.zVis.canvas.getBoundingClientRect();
-    const mouseY = e.clientY - rect.top;
-    const zOrientation = state.axisOrientation?.z || 'up';
-    const zInverted = zOrientation === 'down' ? -1 : 1;
-    const mouseZBefore = this.zVis.zPan + zInverted * (0.5 - mouseY / this.zVis.canvas.height) * this.zVis.zRange;
+    // Center zoom on current Z position (cursor), not mouse
+    const cursorZ = state.pos?.z || 0;
     
     // Update zoom and range
     const newRange = this.zVis.canvas.height / newZoom;
     
-    // Adjust pan so mouse stays at same Z coordinate
-    const mouseZAfter = this.zVis.zPan + zInverted * (0.5 - mouseY / this.zVis.canvas.height) * newRange;
-    const panAdjustment = mouseZBefore - mouseZAfter;
-    this.zVis.zPan += panAdjustment;
+    // Adjust pan so cursor Z stays centered
+    this.zVis.zPan = cursorZ;
     
     window.EnderTrack.State.update({ zZoom: newZoom, zPan: this.zVis.zPan });
     this.zVis.zRange = newRange;

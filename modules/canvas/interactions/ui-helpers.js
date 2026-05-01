@@ -182,33 +182,9 @@ class UIHelpers {
       box-shadow: 0 4px 16px rgba(0,0,0,0.5); z-index: 10000; min-width: 150px;
     `;
     
-    // Remove any existing context menu
-    document.querySelectorAll('.canvas-context-menu').forEach(m => m.remove());
-    const isFollowing = window.EnderTrack._followCursor;
-    const menuItems = [
-      {
-        label: isFollowing ? '🔓 Libérer la vue' : '🎯 Suivre le curseur',
-        action: () => {
-          window.EnderTrack._followCursor = !window.EnderTrack._followCursor;
-          if (window.EnderTrack._followCursor) {
-            window.EnderTrack._followCursorFn = () => {
-              const pos = EnderTrack.State.get().pos;
-              if (pos) this.interactions.zoomPanHandler.centerOnPosition(pos.x, pos.y);
-            };
-            EnderTrack.Events?.on?.('position:changed', window.EnderTrack._followCursorFn);
-            // Center immediately
-            window.EnderTrack._followCursorFn();
-            console.log('[Follow] ON');
-          } else {
-            if (window.EnderTrack._followCursorFn) {
-              EnderTrack.Events?.off?.('position:changed', window.EnderTrack._followCursorFn);
-              window.EnderTrack._followCursorFn = null;
-            }
-            console.log('[Follow] OFF');
-          }
-        }
-      }
-    ];
+    // No context menu in basic version
+    return;
+    const menuItems = [];
     
     this.buildContextMenu(menu, menuItems);
     this.setupContextMenuHandlers(menu);
