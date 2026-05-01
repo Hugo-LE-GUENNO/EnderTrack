@@ -716,14 +716,13 @@ Ne PAS modifier index.html ni registry.js — l'utilisateur charge le plugin via
    * Toggle a plugin on/off from the Plugins tab
    */
   static _notify(msg, type) {
-    if (EnderTrack.UI?.showNotification) { EnderTrack.UI.showNotification(msg, type); return; }
-    // Fallback: inline toast
+    // Always use visible toast
     const toast = document.createElement('div');
-    const bg = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : 'var(--active-element)';
-    toast.style.cssText = 'position:fixed; top:12px; right:12px; z-index:10000; padding:10px 16px; border-radius:6px; font-size:12px; color:#fff; background:' + bg + '; box-shadow:0 4px 12px rgba(0,0,0,0.4); transition:opacity 0.3s;';
+    const bg = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : '#4a5568';
+    toast.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10001; padding:10px 20px; border-radius:6px; font-size:12px; color:#fff; background:' + bg + '; box-shadow:0 4px 16px rgba(0,0,0,0.5); transition:opacity 0.3s; pointer-events:none;';
     toast.textContent = msg;
     document.body.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
   }
 
   static async togglePlugin(pluginId) {
