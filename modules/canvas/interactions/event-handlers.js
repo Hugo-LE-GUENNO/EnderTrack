@@ -91,8 +91,23 @@ class EventHandlers {
   setupWheelEvents(canvas) {
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.interactions.handleWheel(e);
-    });
+      if (e.ctrlKey) {
+        // Pinch-to-zoom on trackpad (or Ctrl+scroll)
+        this.interactions.handleWheel(e);
+      } else if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.5 || !e.deltaMode) {
+        // Two-finger scroll on trackpad → pan
+        // deltaMode 0 = pixels (trackpad), 1 = lines (mouse wheel)
+        if (Math.abs(e.deltaX) > 2 || Math.abs(e.deltaY) > 2) {
+          this.interactions.zoomPanHandler.handlePan(-e.deltaX * 0.5, -e.deltaY * 0.5);
+          window.EnderTrack.Canvas?.requestRender?.();
+        } else {
+          this.interactions.handleWheel(e);
+        }
+      } else {
+        // Mouse wheel → zoom
+        this.interactions.handleWheel(e);
+      }
+    }, { passive: false });
   }
 }
 

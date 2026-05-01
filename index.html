@@ -394,8 +394,13 @@
                 <!-- Stage Widget (XY + Z) - Hidden by default, shown when activated -->
                 <div class="widget-container" id="widget-stage" style="display: none;">
                     <div class="canvas-content">
-                        <div class="main-canvas">
+                        <div class="main-canvas" style="position:relative;">
                             <canvas id="mapCanvas"></canvas>
+                            <div id="canvasZoomBtns" style="position:absolute; bottom:12px; right:12px; display:flex; flex-direction:column; gap:4px; z-index:100;">
+                                <button onclick="EnderTrack.Canvas?.interactions?.zoomPanHandler?.handleZoom((EnderTrack.State.get().zoom||1)*1.3)" style="width:32px; height:32px; border:none; border-radius:4px; background:var(--container-bg); color:var(--text-selected); font-size:16px; cursor:pointer; opacity:0.7; transition:opacity 0.15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">+</button>
+                                <button onclick="EnderTrack.Canvas?.interactions?.zoomPanHandler?.handleZoom((EnderTrack.State.get().zoom||1)/1.3)" style="width:32px; height:32px; border:none; border-radius:4px; background:var(--container-bg); color:var(--text-selected); font-size:16px; cursor:pointer; opacity:0.7; transition:opacity 0.15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">−</button>
+                                <button onclick="EnderTrack.Canvas?.interactions?.zoomPanHandler?.fitToView()" style="width:32px; height:32px; border:none; border-radius:4px; background:var(--container-bg); color:var(--text-selected); font-size:12px; cursor:pointer; opacity:0.7; transition:opacity 0.15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Fit to view">⊡</button>
+                            </div>
                         </div>
                         <div class="z-visualization-panel" id="zVisualizationPanel">
                             <div class="z-scale" id="zScale">
