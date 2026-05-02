@@ -80,6 +80,7 @@ class CanvasInteractions {
       }
       if (this.isPanning) {
         this.zoomPanHandler.handlePan(deltaX, deltaY);
+        this._lastPanTime = Date.now();
       }
     }
     

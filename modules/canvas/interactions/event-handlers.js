@@ -35,6 +35,7 @@ class EventHandlers {
     canvas.addEventListener('click', (e) => {
       if (e._overlayHandled || e._listHandled) return;
       if (this.interactions._dragMoved) { this.interactions._dragMoved = false; return; }
+      if (Date.now() - (this.interactions._lastPanTime || 0) < 300) return;
       if (_clickTimer) { clearTimeout(_clickTimer); _clickTimer = null; return; }
       const cx = e.clientX, cy = e.clientY, ev = e;
       _clickTimer = setTimeout(() => {
@@ -114,14 +115,12 @@ class EventHandlers {
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        // Pinch or Ctrl+scroll → always zoom
         this.interactions.handleWheel(e);
       } else if (e.deltaMode === 1) {
-        // Mouse wheel (line mode) → zoom
         this.interactions.handleWheel(e);
       } else {
-        // Pixel mode (trackpad or high-res mouse) → pan
         this.interactions.zoomPanHandler.handlePan(-e.deltaX, -e.deltaY);
+        this.interactions._lastPanTime = Date.now();
         window.EnderTrack.Canvas?.requestRender?.();
       }
     }, { passive: false });
