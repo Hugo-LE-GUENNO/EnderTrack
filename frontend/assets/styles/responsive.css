@@ -70,112 +70,141 @@
 }
 
 /* ══════════════════════════════════════════════════════════════ */
-/* ── Mobile portrait (≤500px) — single screen, no scroll ───── */
+/* ── Mobile (≤500px) ─────────────────────────────────────────  */
+/*                                                               */
+/*  ┌───────────────────────────────┐                            */
+/*  │ ⚙️ Réglages │ 🧭 Nav │ 📍 Pos │  header + tabs            */
+/*  ├──────────────────────┬────────┤                            */
+/*  │                      │        │                            */
+/*  │     Canvas XY        │ Z      │  flex: 1                   */
+/*  │                      │        │                            */
+/*  ├──────────────────────┴────────┤                            */
+/*  │  Tab content (scrollable)     │  max 35vh                  */
+/*  ├───────────┬───────────────────┤                            */
+/*  │ X Y Z     │     🔴 STOP       │  status bar                */
+/*  └───────────┴───────────────────┘                            */
+/*                                                               */
 /* ══════════════════════════════════════════════════════════════ */
 @media (max-width: 500px) {
-  html, body {
-    overflow: hidden !important;
-    height: 100% !important;
-  }
+  html, body { overflow: hidden !important; height: 100% !important; }
 
+  /* Vertical flex layout, fills viewport */
   .app-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto 1fr auto;
+    display: flex;
+    flex-direction: column;
     height: 100vh;
     overflow: hidden;
+    gap: 0;
   }
 
-  /* Row 1: header hidden or minimal */
-  .global-header { grid-row: 1; padding: 0 8px; }
+  .right-panel { display: none !important; }
+
+  /* ── Header + tabs ── */
+  .global-header {
+    flex-shrink: 0;
+    padding: 2px 6px;
+  }
   .global-header img { height: 18px; }
+  .global-header > div[style*="flex:1"] { display: none; }
 
-  /* Row 2: tabs */
-  .tab-system { padding: 2px 4px; gap: 2px; flex-wrap: nowrap; }
-  .tab-btn { flex: 1; padding: 4px 2px; font-size: 10px; text-align: center; white-space: nowrap; }
+  .tab-system { padding: 2px; gap: 2px; flex-wrap: nowrap; }
+  .tab-btn { flex: 1; padding: 5px 2px; font-size: 10px; text-align: center; }
   .tab-system > div[style*="width:1px"] { display: none; }
-  .tab-system > img { display: none; }
 
-  /* Row 3: canvas (takes remaining space) */
+  /* ── Canvas (takes available space) ── */
   .center-panel {
-    grid-row: 3;
+    flex: 1;
     min-height: 0;
     overflow: hidden;
   }
   .canvas-header { display: none; }
-  .canvas-content { min-height: 0; }
-  .z-visualization-panel { min-width: 50px; max-width: 60px; width: 55px; }
+  .canvas-content { min-height: 0; gap: 2px; }
+  .z-visualization-panel { width: 55px; min-width: 45px; max-width: 65px; }
 
-  /* Row 4: left-panel = controls zone */
+  /* ── Left panel = tab content area ── */
   .left-panel {
-    grid-row: 4;
+    flex-shrink: 0;
+    max-height: 35vh;
     overflow: hidden;
-    display: grid;
-    grid-template-rows: auto;
-    grid-template-columns: auto 1fr;
-    gap: 0;
-    padding: 0;
-  }
-
-  /* Hide tab system inside left-panel (already in row 2 via global-header area) */
-  .left-panel .tab-system { display: none; }
-
-  /* Status: left column */
-  .status-widget.relocated {
-    grid-column: 1;
-    grid-row: 1;
-    margin: 0;
-    border: none;
-    border-right: 1px solid var(--border, #444);
-    padding: 6px;
-    min-width: 75px;
-    align-self: stretch;
     display: flex;
     flex-direction: column;
-    gap: 4px;
   }
-  .status-widget.relocated .coordinates-display { flex-direction: column; padding: 2px; gap: 1px; margin-bottom: 2px; }
-  .status-widget.relocated .coordinate-value { font-size: 12px; }
-  .status-widget.relocated .coordinate-label { font-size: 10px; min-width: 12px; }
-  .status-widget.relocated .coordinate-unit { display: none; }
-  .status-widget.relocated .emergency-btn-widget { padding: 4px; font-size: 8px; margin-top: auto; }
-  .status-widget.relocated .emergency-icon-widget { width: 14px; height: 14px; }
-  .status-widget.relocated #statusHeader { font-size: 10px; }
-  .status-widget.relocated #statusHeader span { font-size: 9px; }
 
-  /* Tab content: right column (nav buttons, lists, settings) */
+  /* Hide the tab-system duplicate inside left-panel */
+  .left-panel > .tab-system,
+  .left-panel .tab-system { display: none; }
+
   .left-panel .tab-content {
-    grid-column: 2;
-    grid-row: 1;
+    flex: 1;
     overflow-y: auto;
-    padding: 4px;
-    max-height: 40vh;
+    padding: 4px 6px;
   }
 
-  /* Compact navigation */
+  /* ── Status bar (fixed at bottom) ── */
+  .status-widget.relocated {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 4px 8px;
+    border-top: 1px solid var(--border, #444);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-widget.relocated .coordinates-display {
+    flex-direction: row;
+    gap: 6px;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+  }
+
+  .status-widget.relocated .coordinate-item { gap: 2px; }
+  .status-widget.relocated .coordinate-value { font-size: 12px; font-weight: 600; }
+  .status-widget.relocated .coordinate-label { font-size: 10px; }
+  .status-widget.relocated .coordinate-unit { display: none; }
+
+  .status-widget.relocated #statusHeader { display: none; }
+
+  .status-widget.relocated .emergency-btn-widget {
+    padding: 4px 10px;
+    font-size: 9px;
+    flex-shrink: 0;
+    margin: 0;
+  }
+  .status-widget.relocated .emergency-icon-widget { width: 14px; height: 14px; }
+
+  /* Hide plugin/device rows in compact status */
+  .status-widget.relocated #statusDeviceRow,
+  .status-widget.relocated #statusPluginZone,
+  .status-widget.relocated > div[style*="padding-left:16px"] > :not(.coordinates-display) { display: none; }
+  /* Flatten the indented container */
+  .status-widget.relocated > div[style*="padding-left:16px"] { padding-left: 0 !important; }
+
+  /* ── Compact navigation controls ── */
   .navigation-controls-container { padding: 4px; gap: 2px; margin-bottom: 2px; }
-  .normal-mode { gap: 6px; }
-  .arrow-container { width: min(110px, 100%); }
+  .normal-mode { gap: 4px; }
+  .arrow-container { width: min(105px, 100%); }
   .arrow-pad { padding: 6px; }
-  .z-controls-right { width: 34px; padding: 4px 0; }
-  .z-btn { width: 28px; height: 28px; font-size: 12px; }
+  .z-controls-right { width: 32px; padding: 3px 0; }
+  .z-btn { width: 26px; height: 26px; font-size: 11px; }
+
   .step-controls { margin-top: 2px; }
   .axis-control { gap: 2px; margin-bottom: 0; }
-  .axis-control input[type="number"] { width: 38px; font-size: 10px; padding: 2px; }
+  .axis-control input[type="number"] { width: 36px; font-size: 10px; padding: 1px 2px; }
   .axis-label { font-size: 9px; }
 
-  /* Compact goto */
-  .goto-section { padding: 4px; }
+  .goto-section { padding: 3px; }
   .goto-inputs { gap: 2px; }
-  .goto-field input { font-size: 10px; padding: 2px; width: 48px; }
+  .goto-field input { font-size: 10px; padding: 2px; width: 46px; }
   .goto-field label { font-size: 9px; }
-  .action-btn { font-size: 9px; padding: 3px 6px; }
+  .action-btn { font-size: 9px; padding: 2px 6px; }
   .home-row { margin-top: 2px; }
-  .home-row .action-btn { font-size: 9px; padding: 2px 6px; }
 
-  /* Compact settings/lists */
+  /* ── Compact settings/lists ── */
   details summary { font-size: 10px; padding: 2px 0; }
-  details > div { padding: 4px; }
+  details > div { padding: 3px; }
 }
 
 /* ── Short screens (landscape RPi, etc) ─────────────────────── */
