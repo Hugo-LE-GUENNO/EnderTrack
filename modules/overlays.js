@@ -176,10 +176,29 @@ class OverlayManager {
     this._onMove = (e) => this._handleMove(e);
     this._onUp = () => this._handleUp();
     this._onHover = (e) => this._handleHover(e);
+    // Mouse
     canvas.addEventListener('mousedown', this._onDown, true);
     canvas.addEventListener('mousemove', this._onHover);
     window.addEventListener('mousemove', this._onMove);
     window.addEventListener('mouseup', this._onUp);
+    // Touch → convert to mouse-like events
+    this._onTouchStart = (e) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const fake = { clientX: t.clientX, clientY: t.clientY, button: 0, preventDefault: () => e.preventDefault(), stopImmediatePropagation: () => e.stopImmediatePropagation() };
+      this._handleDown(fake);
+      if (this._dragging) e.preventDefault();
+    };
+    this._onTouchMove = (e) => {
+      if (!this._dragging || e.touches.length !== 1) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      this._handleMove({ clientX: t.clientX, clientY: t.clientY });
+    };
+    this._onTouchEnd = () => this._handleUp();
+    canvas.addEventListener('touchstart', this._onTouchStart, { passive: false });
+    window.addEventListener('touchmove', this._onTouchMove, { passive: false });
+    window.addEventListener('touchend', this._onTouchEnd);
   }
 
   _removeCanvasListeners() {
@@ -188,6 +207,9 @@ class OverlayManager {
     if (canvas && this._onHover) canvas.removeEventListener('mousemove', this._onHover);
     if (this._onMove) window.removeEventListener('mousemove', this._onMove);
     if (this._onUp) window.removeEventListener('mouseup', this._onUp);
+    if (canvas && this._onTouchStart) canvas.removeEventListener('touchstart', this._onTouchStart);
+    if (this._onTouchMove) window.removeEventListener('touchmove', this._onTouchMove);
+    if (this._onTouchEnd) window.removeEventListener('touchend', this._onTouchEnd);
     if (canvas) canvas.style.cursor = '';
   }
 
