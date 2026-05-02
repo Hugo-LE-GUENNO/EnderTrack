@@ -393,7 +393,7 @@ window.xyFitToView = function() {
 };
 
 window.zFitToView = function() {
-  if (window.EnderTrack.ZVisualization?.interactions?.zFitToView) {
-    window.EnderTrack.ZVisualization.interactions.zFitToView();
+  if (window.EnderTrack.ZVisualization?.interactions?.fitToView) {
+    window.EnderTrack.ZVisualization.interactions.fitToView();
   }
 };

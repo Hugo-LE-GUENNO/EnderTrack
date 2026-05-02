@@ -64,8 +64,8 @@ class CompassZOverlay {
     
     const borderFactor = borderFactors[activeLayout] || 0.8;
     
-    if (window.EnderTrack?.ZVisualization?.interactions?.zFitToView) {
-      window.EnderTrack.ZVisualization.interactions.zFitToView(borderFactor);
+    if (window.EnderTrack?.ZVisualization?.interactions?.fitToView) {
+      window.EnderTrack.ZVisualization.interactions.fitToView(borderFactor);
     }
   }
 }

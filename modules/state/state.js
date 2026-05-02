@@ -324,8 +324,8 @@ class StateManager {
     }
     
     setTimeout(() => {
-      if (window.EnderTrack?.ZVisualization?.interactions?.zFitToView) {
-        window.EnderTrack.ZVisualization.interactions.zFitToView();
+      if (window.EnderTrack?.ZVisualization?.interactions?.fitToView) {
+        window.EnderTrack.ZVisualization.interactions.fitToView();
       }
       
       // 2. THEN initialize sensitivity based on NEW zoom values
