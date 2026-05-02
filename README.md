@@ -186,6 +186,32 @@ EnderTrack.Canvas.requestRender()
 
 Voir `plugins/random-button/` pour un exemple complet.
 
+<details>
+<summary>📋 Prompt IA — Générer un plugin</summary>
+
+Copier-coller ce prompt dans un agent IA (ChatGPT, Claude, etc.) :
+
+```
+Crée un plugin EnderTrack avec les fichiers suivants :
+- plugin.json (manifeste avec id en camelCase, folder = nom du dossier)
+- bridge.js (classe [Id]Bridge avec activate/deactivate/getStatus, exposée sur window)
+- ui.js (classe [Id]PluginUI avec init/destroy, injecte l'UI dans document.getElementById('navPluginZone'))
+- ui.css (styles optionnels)
+
+Convention de nommage : si id = "monPlugin", les classes sont MonPluginBridge et MonPluginPluginUI.
+
+API disponible :
+- EnderTrack.State.get().pos → {x, y, z} position actuelle
+- EnderTrack.Movement.moveAbsolute(x, y, z) / moveRelative(dx, dy, dz)
+- EnderTrack.UI.showNotification(message, type) — type: 'success', 'error', 'info'
+- EnderTrack.State.on('state:changed', (newState, oldState) => {})
+- EnderTrack.Canvas.requestRender()
+
+Le plugin doit : [DÉCRIRE CE QUE LE PLUGIN DOIT FAIRE]
+```
+
+</details>
+
 ## Créer un module (nouvelle version)
 
 Un module va plus loin qu'un plugin : il ajoute un onglet, un panneau, ou modifie le comportement du core. Créer un module = créer une nouvelle version d'EnderTrack.
@@ -265,6 +291,42 @@ git push origin ma-version
 ```
 
 Puis ajouter la branche dans le tableau des versions du README principal.
+
+<details>
+<summary>📋 Prompt IA — Générer un module</summary>
+
+Copier-coller ce prompt dans un agent IA :
+
+```
+Crée un module EnderTrack à partir de la version basic (https://github.com/Hugo-LE-GUENNO/EnderTrack/tree/basic).
+
+Structure du projet :
+- index.html : interface principale avec onglets (tab-btn + tab-panel), panneau gauche (400px), canvas central, panneau droit (250px)
+- main.js : bootstrap, switchTab() gère l'activation/désactivation des modules
+- modules/ : un fichier JS par module, exposé sur window.EnderTrack.[NomModule]
+- server/ : modules Python Flask (basic_functions, stage_connection, plugin_router)
+- endertrack-server.py : point d'entrée serveur, assemble les modules server/
+
+Pour ajouter un module :
+1. Créer modules/mon-module.js avec classe ayant activate()/deactivate()/createUI()
+2. Ajouter un onglet dans index.html (tab-btn + tab-panel)
+3. Charger le script dans index.html
+4. Ajouter le cas dans switchTab() de main.js
+5. Si backend nécessaire : créer server/mon_module.py avec register_routes(app) et l'importer dans endertrack-server.py
+
+API disponible :
+- EnderTrack.State.get() → état complet (pos, zoom, plateauDimensions, etc.)
+- EnderTrack.State.update(changes) → met à jour l'état
+- EnderTrack.State.on('state:changed', callback) → écouter les changements
+- EnderTrack.Movement.moveAbsolute(x, y, z) / moveRelative(dx, dy, dz)
+- EnderTrack.Canvas.requestRender() → forcer un rendu
+- EnderTrack.UI.showNotification(message, type)
+- EnderTrack.Navigation.setSensitivity(axis, value)
+
+Le module doit : [DÉCRIRE CE QUE LE MODULE DOIT FAIRE]
+```
+
+</details>
 
 ## Liens
 
