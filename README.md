@@ -45,6 +45,17 @@ Ouvrir http://localhost:5000 — c'est tout. Zéro installation, les dépendance
 
 Pour installer un plugin : copiez son dossier dans `plugins/` puis activez-le dans Réglages → Extensions.
 
+## Accès réseau
+
+```bash
+python3 endertrack-server.py                # local uniquement (défaut)
+python3 endertrack-server.py --lan           # accès réseau local
+python3 endertrack-server.py --port 8080     # port personnalisé
+python3 endertrack-server.py --lan --port 3000
+```
+
+Avec `--lan`, ouvrir l'adresse affichée depuis n'importe quel appareil du même réseau (tablette, téléphone, autre PC).
+
 ## Liens
 
 - [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
