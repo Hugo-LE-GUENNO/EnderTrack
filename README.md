@@ -56,6 +56,16 @@ python3 endertrack-server.py --lan --port 3000
 
 Avec `--lan`, ouvrir l'adresse affichée depuis n'importe quel appareil du même réseau (tablette, téléphone, autre PC).
 
+## Raspberry Pi
+
+```bash
+git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+cd EnderTrack
+python3 endertrack-server.py --lan
+```
+
+Ouvrir `http://<IP_DU_PI>:5000` depuis n'importe quel appareil du réseau. Voir le [README basic](../../tree/basic) pour le démarrage automatique au boot.
+
 ## Liens
 
 - [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
