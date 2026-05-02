@@ -15,7 +15,7 @@
 
 | Branche | Description | Commande |
 |---------|-------------|----------|
-| [`basic`](../../tree/basic) | Version minimale — navigation, listes de positions, connexion série | `git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
+| [`basic`](../../tree/basic) | v1.0 — navigation, listes de positions, connexion série | `git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
 | [`plugins`](../../tree/plugins) | Plugins additionnels compatibles | `git clone -b plugins https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
 
 ## Démarrage rapide
