@@ -130,12 +130,16 @@ class ZInteractions {
       if (this.handleHistoryClick(canvasY)) return;
       
       // Hit test list points on Z canvas
-      const hitPos = this._hitTestListPoint(canvasX, canvasY);
-      if (hitPos) {
-        if (window.EnderTrack?.Lists?.isActive && window.EnderTrack.Lists.currentMode === 'click') {
-          return; // Don't navigate in click-to-add mode
+      const hit = this._hitTestListPointFull(canvasX, canvasY);
+      if (hit) {
+        const Lists = window.EnderTrack?.Lists;
+        if (Lists?.isActive && Lists.currentMode === 'click') {
+          // List click mode: select the point
+          Lists.selectPoint(hit.idx);
+          return;
         }
-        window.EnderTrack?.Movement?.moveAbsolute?.(hitPos.x, hitPos.y, hitPos.z);
+        // Navigation mode: show dialog
+        this._showPointDialog(hit, e.clientX, e.clientY);
         return;
       }
       
@@ -155,6 +159,67 @@ class ZInteractions {
       this.handleZClickAndGo(e);
     }
   }
+
+  _hitTestListPointFull(canvasX, canvasY) {
+    const Lists = window.EnderTrack?.Lists;
+    if (!Lists) return null;
+    const canvas = this.zVis.canvas;
+    const zOrientation = window.EnderTrack.State.get().axisOrientation?.z || 'up';
+    const zInverted = zOrientation === 'down' ? -1 : 1;
+    const halfRange = this.zVis.zRange / 2;
+    const tab = window.EnderTrack?.State?.get()?.activeTab;
+    
+    for (const g of Lists.groups) {
+      if (!g.positions?.length) continue;
+      const isActive = g.id === Lists.activeGroupId;
+      let show = (tab === 'lists') ? isActive : g.pinned;
+      if (!show) continue;
+      
+      const byZ = new Map();
+      g.positions.forEach((p, idx) => {
+        const zKey = Math.round(p.z * 100);
+        if (!byZ.has(zKey)) byZ.set(zKey, []);
+        byZ.get(zKey).push({ p, idx });
+      });
+      for (const [zKey, points] of byZ) {
+        const z = zKey / 100;
+        const y = canvas.height / 2 - (zInverted * (z - this.zVis.zPan) / halfRange) * (canvas.height / 2);
+        const spacing = Math.min(12.5, (canvas.width - 20) / Math.max(points.length, 1));
+        const startX = canvas.width / 2 - ((points.length - 1) * spacing) / 2;
+        for (let i = 0; i < points.length; i++) {
+          const cx = startX + i * spacing;
+          if (Math.hypot(canvasX - cx, canvasY - y) <= 10) {
+            return { ...points[i].p, idx: points[i].idx, group: g };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  _showPointDialog(hit, screenX, screenY) {
+    document.querySelector('.click-and-go-dialog')?.remove();
+    const dialog = document.createElement('div');
+    dialog.className = 'click-and-go-dialog';
+    dialog.style.cssText = `position:fixed; left:${screenX + 10}px; top:${screenY - 60}px; z-index:10000; background:var(--container-bg); border:1px solid #444; border-radius:6px; padding:10px; box-shadow:0 4px 16px rgba(0,0,0,0.5); min-width:120px;`;
+    dialog.innerHTML = `
+      <div style="margin-bottom:6px; font-weight:600; font-size:12px; color:var(--text-selected);">\ud83d\udccd ${hit.group?.name || 'Position'} #${hit.idx + 1}</div>
+      <div style="font-family:monospace; font-size:11px; color:var(--coordinates-color); margin-bottom:8px;">
+        X ${hit.x.toFixed(2)} &nbsp; Y ${hit.y.toFixed(2)} &nbsp; Z ${hit.z.toFixed(2)}
+      </div>
+      <button id="zDialogGo" style="width:100%; padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); font-weight:500;">Go</button>`;
+    document.body.appendChild(dialog);
+    dialog.querySelector('#zDialogGo').onclick = () => {
+      window.EnderTrack?.Movement?.moveAbsolute?.(hit.x, hit.y, hit.z);
+      dialog.remove();
+    };
+    const close = (ev) => {
+      if ((ev.type === 'keydown' && ev.key === 'Escape') || (ev.type === 'click' && !dialog.contains(ev.target))) {
+        dialog.remove(); document.removeEventListener('keydown', close); document.removeEventListener('click', close);
+      }
+    };
+    setTimeout(() => { document.addEventListener('keydown', close); document.addEventListener('click', close); }, 100);
+  }  }
 
   _hitTestListPoint(canvasX, canvasY) {
     const Lists = window.EnderTrack?.Lists;
