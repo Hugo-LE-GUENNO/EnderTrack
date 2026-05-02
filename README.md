@@ -50,25 +50,57 @@ Pour installer un plugin : copiez son dossier dans `plugins/` puis activez-le da
 ```bash
 python3 endertrack-server.py                # local uniquement (défaut)
 python3 endertrack-server.py --lan           # accès réseau local
-python3 endertrack-server.py --port 8080     # port personnalisé
 python3 endertrack-server.py --lan --port 3000
 ```
 
-Avec `--lan`, ouvrir l'adresse affichée depuis n'importe quel appareil du même réseau (tablette, téléphone, autre PC).
+Avec `--lan`, le serveur affiche l'adresse à ouvrir depuis un autre appareil (tablette, téléphone).
 
-## Raspberry Pi
+### 📶 Hotspot WiFi — la solution universelle
 
+En formation ou en labo, le WiFi existant (eduroam, réseau entreprise) **isole souvent les appareils** entre eux. La solution : créer son propre réseau WiFi.
+
+> **Comment ça marche ?** La carte WiFi du PC (ou du Pi) passe en mode **Access Point** — elle émet un signal WiFi comme une box internet. Les appareils connectés se voient entre eux, même sans internet.
+
+#### Hotspot depuis un PC
+
+**Linux (GNOME)** : Paramètres → WiFi → ⋮ → *Activer le point d'accès Wi-Fi*
+
+**Linux (terminal)** :
 ```bash
-git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
-cd EnderTrack
+nmcli device wifi hotspot ifname wlan0 ssid EnderTrack password endertrack123
+# IP du hotspot : généralement 10.42.0.1
 python3 endertrack-server.py --lan
 ```
 
-Ouvrir `http://<IP_DU_PI>:5000` depuis n'importe quel appareil du réseau (`hostname -I` pour trouver l'IP).
+**Windows** : Paramètres → Réseau → *Point d'accès sans fil mobile* → Activer
 
-### Démarrage automatique au boot
+**macOS** : Préférences Système → Partage → *Partage Internet* (Ethernet → WiFi)
+
+Puis connecter le smartphone/tablette au hotspot et ouvrir l'adresse affichée.
+
+#### Hotspot depuis un Raspberry Pi
+
+Le Pi crée son propre WiFi — idéal pour les formations : brancher le Pi sur la platine, et chaque participant se connecte avec son téléphone.
 
 ```bash
+# 1. Installer
+git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+cd EnderTrack
+
+# 2. Créer le hotspot
+sudo nmcli device wifi hotspot ifname wlan0 ssid EnderTrack password endertrack123
+
+# 3. Lancer
+python3 endertrack-server.py --lan
+# → http://10.42.0.1:5000
+```
+
+Pour que le hotspot + EnderTrack démarrent au boot :
+```bash
+# Hotspot persistant
+sudo nmcli connection modify Hotspot connection.autoconnect yes
+
+# Service EnderTrack
 sudo tee /etc/systemd/system/endertrack.service << EOF
 [Unit]
 Description=EnderTrack Server
@@ -87,6 +119,17 @@ EOF
 sudo systemctl enable endertrack
 sudo systemctl start endertrack
 ```
+
+> Résultat : le Pi démarre → crée le WiFi "EnderTrack" → lance le serveur. Il suffit de se connecter au WiFi et d'ouvrir `http://10.42.0.1:5000`.
+
+#### Partage de connexion 4G/5G
+
+Le smartphone partage sa connexion mobile, le PC s'y connecte :
+
+1. **Smartphone** : Paramètres → Partage de connexion → Activer
+2. **PC** : Se connecter au WiFi du smartphone
+3. `python3 endertrack-server.py --lan`
+4. **Smartphone** : ouvrir l'adresse affichée (`192.168.43.x:5000` Android, `172.20.10.x:5000` iPhone)
 
 ## Créer un plugin
 
