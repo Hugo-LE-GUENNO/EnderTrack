@@ -4,9 +4,9 @@ endertrack-server.py — Point d'entrée du serveur EnderTrack.
 Assemble les modules : basic_functions, stage_connection, plugin_router, network_config.
 
 Usage:
-    python endertrack-server.py
-    ENDERTRACK_PORT=8080 python endertrack-server.py
-    ENDERTRACK_HOST=0.0.0.0 python endertrack-server.py   # accès LAN
+    python3 endertrack-server.py
+    python3 endertrack-server.py --port 8080
+    python3 endertrack-server.py --lan              # accès réseau local
 """
 
 import sys

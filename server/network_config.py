@@ -13,11 +13,26 @@ DEFAULT_PORT = 5000
 
 # ─── Config (overridable via env vars) ───────────────────────────────────────
 
-HOST = os.environ.get('ENDERTRACK_HOST', DEFAULT_HOST)
-PORT = int(os.environ.get('ENDERTRACK_PORT', DEFAULT_PORT))
+# Priority: CLI args > env vars > defaults
+import sys as _sys
 
-# Future: allow LAN access with ENDERTRACK_HOST=0.0.0.0
-# Future: authentication token via ENDERTRACK_TOKEN
+def _parse_args():
+    host = os.environ.get('ENDERTRACK_HOST', DEFAULT_HOST)
+    port = int(os.environ.get('ENDERTRACK_PORT', DEFAULT_PORT))
+    args = _sys.argv[1:]
+    i = 0
+    while i < len(args):
+        if args[i] in ('--host', '-h') and i + 1 < len(args):
+            host = args[i + 1]; i += 2
+        elif args[i] in ('--port', '-p') and i + 1 < len(args):
+            port = int(args[i + 1]); i += 2
+        elif args[i] == '--lan':
+            host = '0.0.0.0'; i += 1
+        else:
+            i += 1
+    return host, port
+
+HOST, PORT = _parse_args()
 
 
 def get_local_ip():
