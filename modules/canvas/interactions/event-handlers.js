@@ -60,9 +60,6 @@ class EventHandlers {
       if (window.EnderTrack?.Overlays?._dragging) return;
       if (e.touches.length === 1) {
         const touch = e.touches[0];
-        _touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
-        _touchMoved = false;
-        this._lastZoomDelta = 0;
         this.interactions.handlePointerStart(touch.clientX, touch.clientY, e);
       } else if (e.touches.length === 2) {
         _touchStart = null;
@@ -70,8 +67,6 @@ class EventHandlers {
         this.interactions.handlePinchStart(e);
       }
     });
-
-    const _isMobile = window.matchMedia('(max-width: 500px)');
 
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
@@ -82,16 +77,7 @@ class EventHandlers {
         if (_touchStart && Math.hypot(touch.clientX - _touchStart.x, touch.clientY - _touchStart.y) > 15) {
           _touchMoved = true;
         }
-        // Mobile: 1-finger drag = zoom (up=in, down=out)
-        if (_isMobile.matches && _touchMoved) {
-          const deltaY = _touchStart.y - touch.clientY;
-          const curZoom = window.EnderTrack?.State?.get()?.zoom || 1;
-          const factor = 1 + (deltaY - (this._lastZoomDelta || 0)) * 0.005;
-          this._lastZoomDelta = deltaY;
-          this.interactions.zoomPanHandler.handleZoom(curZoom * factor, { x: _touchStart.x, y: _touchStart.y });
-        } else {
-          this.interactions.handlePointerMove(touch.clientX, touch.clientY, e);
-        }
+        this.interactions.handlePointerMove(touch.clientX, touch.clientY, e);
       } else if (e.touches.length === 2) {
         this.interactions.handlePinchMove(e);
       }
