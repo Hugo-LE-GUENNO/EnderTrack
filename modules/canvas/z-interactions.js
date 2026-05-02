@@ -58,7 +58,7 @@ class ZInteractions {
       e.preventDefault();
       if (e.touches.length === 1) {
         const t = e.touches[0];
-        if (_zTouchStart && Math.abs(t.clientY - _zTouchStart.y) > 5) _zTouchMoved = true;
+        if (_zTouchStart && Math.abs(t.clientY - _zTouchStart.y) > 15) _zTouchMoved = true;
         if (_zTouchMoved) {
           this._zDragMoved = true;
           // On small screens: 1-finger drag = zoom (up=in, down=out)
@@ -99,8 +99,7 @@ class ZInteractions {
       this.isDragging = false;
       this._zPanning = false;
       if (e.touches.length === 0 && _zTouchStart && !_zTouchMoved) {
-        // Tap: pass real coordinates
-        const rect = c.getBoundingClientRect();
+        this._zDragMoved = false;
         this._onClick({ button: 0, clientX: _zTouchStart.x, clientY: _zTouchStart.y });
       }
       _zTouchStart = null;
