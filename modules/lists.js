@@ -103,7 +103,7 @@ class ListManager {
     if (!g) return;
     g.positions.push({ x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, z: Math.round(z * 100) / 100, name: name || '' });
     this.selectedIdx = g.positions.length - 1;
-    this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.();
+    this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.(); EnderTrack.ZVisualization?.requestRender?.();
   }
 
   addCurrentPosition() {
@@ -117,7 +117,7 @@ class ListManager {
     g.positions.splice(idx, 1);
     if (this.selectedIdx === idx) this.selectedIdx = null;
     else if (this.selectedIdx > idx) this.selectedIdx--;
-    this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.();
+    this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.(); EnderTrack.ZVisualization?.requestRender?.();
   }
 
   updatePosition(idx, props) {
