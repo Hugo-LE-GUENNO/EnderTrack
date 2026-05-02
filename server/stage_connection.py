@@ -154,6 +154,8 @@ def register_routes(app):
     def _ports():
         return jsonify(serial_ports())
 
+    _last_fail = {}
+
     @app.route('/api/connect', methods=['POST'])
     def _connect():
         global stage
@@ -166,10 +168,13 @@ def register_routes(app):
             return jsonify({'success': False, 'error': 'pyserial non installé (pip install pyserial)'})
         try:
             stage = Stage(port, baud, homing=False)
+            _last_fail.pop(port, None)
             print(f'  + Connecte: {port} @ {baud}')
             return jsonify({'success': True, 'message': f'Connecté à {port}', 'firmware': stage.firmware_name})
         except Exception as e:
-            print(f'  x Connexion echouee: {port} - {e}')
+            if _last_fail.get(port) != str(e):
+                print(f'  x Connexion echouee: {port} - {e}')
+                _last_fail[port] = str(e)
             return jsonify({'success': False, 'error': str(e)})
 
     @app.route('/api/disconnect', methods=['POST'])
