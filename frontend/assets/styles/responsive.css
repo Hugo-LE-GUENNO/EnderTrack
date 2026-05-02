@@ -5,10 +5,10 @@
   .app-container {
     grid-template-columns: 340px 1fr clamp(200px, 15vw, 300px);
   }
-  .arrow-container { width: 200px; }
-  .arrow-pad { padding: 22px; }
-  .z-controls-right { width: 70px; padding: 16px 0; }
-  .z-btn { width: 50px; height: 50px; font-size: 22px; }
+  .arrow-container { width: 175px; }
+  .arrow-pad { padding: 18px; }
+  .z-controls-right { width: 65px; padding: 14px 0; }
+  .z-btn { width: 46px; height: 46px; font-size: 20px; }
 }
 
 /* ── Large desktop (1400-1700px) ────────────────────────────── */
@@ -165,9 +165,9 @@
     border-left: 1px solid var(--border, #444);
     padding: 6px;
     min-width: 80px;
-    max-width: 110px;
+    max-width: 120px;
     overflow-y: auto;
-    flex-shrink: 0;
+    align-self: stretch;
   }
 
   .status-widget.relocated .coordinates-display {
@@ -246,4 +246,42 @@
 @media print {
   .left-panel, .right-panel, .global-header { display: none; }
   .center-panel { width: 100%; }
+}
+
+/* Touch zoom buttons: hidden on desktop, visible on touch devices */
+.touch-zoom-btns {
+  display: none;
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 100;
+}
+
+.touch-zoom-btns button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border, #444);
+  border-radius: var(--radius-small, 4px);
+  background: var(--container-bg, #2c2c2c);
+  color: var(--text-selected, #fff);
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0.8;
+  touch-action: manipulation;
+}
+
+.touch-zoom-btns button:active {
+  opacity: 1;
+  background: var(--active-element, #4a5568);
+}
+
+@media (pointer: coarse) {
+  .touch-zoom-btns { display: flex; }
+}
+
+@media (max-width: 700px) {
+  .touch-zoom-btns { display: flex; }
 }

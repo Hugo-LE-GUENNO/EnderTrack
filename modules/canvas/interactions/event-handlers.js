@@ -52,6 +52,7 @@ class EventHandlers {
   setupTouchEvents(canvas) {
     let _touchStart = null;
     let _touchMoved = false;
+    let _lastTapTime = 0;
 
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -84,9 +85,23 @@ class EventHandlers {
       if (e.touches.length === 0 && _touchStart) {
         const dt = Date.now() - _touchStart.time;
         this.interactions.handlePointerEnd(_touchStart.x, _touchStart.y, e);
-        // Tap: short touch without movement → trigger click
+
         if (!_touchMoved && !this.interactions._dragMoved && dt < 300) {
-          this.interactions.handleClick(_touchStart.x, _touchStart.y, e);
+          const now = Date.now();
+          // Double-tap → zoom in
+          if (now - _lastTapTime < 350) {
+            _lastTapTime = 0;
+            document.querySelector('.click-and-go-dialog')?.remove();
+            const zoom = window.EnderTrack?.State?.get()?.zoom || 1;
+            this.interactions.zoomPanHandler.handleZoom(zoom * 2, { x: _touchStart.x, y: _touchStart.y });
+          } else {
+            _lastTapTime = now;
+            // Single tap → click (delayed to detect double-tap)
+            const ts = { ..._touchStart };
+            setTimeout(() => {
+              if (_lastTapTime === now) this.interactions.handleClick(ts.x, ts.y, e);
+            }, 350);
+          }
         }
         _touchStart = null;
       }
