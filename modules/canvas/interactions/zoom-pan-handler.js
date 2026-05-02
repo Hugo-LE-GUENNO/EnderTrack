@@ -25,31 +25,21 @@ class ZoomPanHandler {
     const coords = window.EnderTrack?.Coordinates;
     if (!coords) return;
     
-    // Limites de zoom ergonomiques basées sur la taille du plateau
     const bounds = coords.getCoordinateBounds();
     const plateauSizeX = bounds.maxX - bounds.minX;
     const plateauSizeY = bounds.maxY - bounds.minY;
-    const canvasWidth = this.interactions.canvas.width;
-    const canvasHeight = this.interactions.canvas.height;
+    const rect = this.interactions.canvas.getBoundingClientRect();
+    const canvasWidth = rect.width;
+    const canvasHeight = rect.height;
     
-    // Adapter la bordure selon le layout viewport
-    const viewportManager = window.EnderTrack?.Viewport?.Manager;
-    const currentLayout = viewportManager?.activeLayout || 'single';
-    let borderFactor = 0.9;
+    // Allow zooming out further on small screens
+    const isSmall = canvasWidth < 500 || canvasHeight < 400;
+    const borderFactor = isSmall ? 0.95 : 0.8;
     
-    if (currentLayout === 'single') {
-      borderFactor = 0.8;
-    } else if (currentLayout === '50-50') {
-      borderFactor = 0.6;
-    } else if (currentLayout === '2x2') {
-      borderFactor = 0.4;
-    }
-    
-    // Zoom min = plateau entier visible avec bordure adaptative
     const minZoomX = (canvasWidth * borderFactor) / (plateauSizeX * coords.pxPerMm());
     const minZoomY = (canvasHeight * borderFactor) / (plateauSizeY * coords.pxPerMm());
-    const minZoom = Math.min(minZoomX, minZoomY);
-    const maxZoom = 100000; // Zoom max pour précision microscopique (1 µm)
+    const minZoom = Math.min(minZoomX, minZoomY) * 0.5; // Allow 2x more dezoom
+    const maxZoom = 100000;
     const clampedZoom = EnderTrack.Math.clamp(newZoom, minZoom, maxZoom);
     
     if (mousePos) {
