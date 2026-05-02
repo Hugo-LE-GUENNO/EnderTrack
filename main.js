@@ -56,6 +56,33 @@
   
 })();
 
+// Responsive: relocate status widget when right panel is hidden
+(function() {
+  const MQ = window.matchMedia('(max-width: 1100px)');
+  function relocateStatus(e) {
+    const widget = document.querySelector('.status-widget');
+    const leftPanel = document.querySelector('.left-panel .tab-content') || document.querySelector('.left-panel');
+    const rightPanel = document.querySelector('.right-panel');
+    if (!widget || !leftPanel || !rightPanel) return;
+    if (e.matches) {
+      // Small screen: move widget into left panel
+      leftPanel.appendChild(widget);
+      widget.classList.add('relocated');
+    } else {
+      // Large screen: move back to right panel
+      rightPanel.appendChild(widget);
+      widget.classList.remove('relocated');
+    }
+  }
+  MQ.addEventListener('change', relocateStatus);
+  // Initial check after DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => relocateStatus(MQ));
+  } else {
+    setTimeout(() => relocateStatus(MQ), 100);
+  }
+})();
+
 class EnderTrackBootstrap {
   static async init() {
     const startTime = performance.now();
