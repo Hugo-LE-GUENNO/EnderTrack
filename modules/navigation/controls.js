@@ -58,16 +58,18 @@ class NavigationControls {
       }
     });
 
-    EnderTrack.Events?.on?.('state:changed', (newState, oldState) => {
-      if ((newState.zoom !== oldState.zoom || newState.zZoom !== oldState.zZoom) && !this.userModifying) {
-        console.log('[Nav] zoom changed:', newState.zoom?.toFixed(2), 'zZoom:', newState.zZoom?.toFixed?.(2));
-        this.updateSliderRanges(newState);
-      }
-    });
-
-    setTimeout(() => {
-      if (!this.userModifying) this.updateSliderRanges(EnderTrack.State.get());
-    }, 1000);
+    // Listen for zoom changes via State directly (Events = State alias may not be ready)
+    const bindZoomListener = () => {
+      const target = window.EnderTrack?.State;
+      if (!target?.on) { setTimeout(bindZoomListener, 200); return; }
+      target.on('state:changed', (newState, oldState) => {
+        if ((newState.zoom !== oldState.zoom || newState.zZoom !== oldState.zZoom) && !this.userModifying) {
+          this.updateSliderRanges(newState);
+        }
+      });
+      this.updateSliderRanges(target.get());
+    };
+    setTimeout(bindZoomListener, 500);
   }
 
   setupXYCoupledControl() {

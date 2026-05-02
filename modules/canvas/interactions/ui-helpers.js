@@ -183,11 +183,6 @@ class UIHelpers {
     `;
     
     // No context menu in basic version
-    return;
-    const menuItems = [];
-    
-    this.buildContextMenu(menu, menuItems);
-    this.setupContextMenuHandlers(menu);
   }
 
   buildContextMenu(menu, menuItems) {
