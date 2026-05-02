@@ -90,7 +90,7 @@ class EventHandlers {
         const dt = Date.now() - _touchStart.time;
         this.interactions.handlePointerEnd(_touchStart.x, _touchStart.y, e);
         // Tap: short touch without movement → trigger click
-        if (!_touchMoved && dt < 300) {
+        if (!_touchMoved && !this.interactions._dragMoved && dt < 300) {
           this.interactions.handleClick(_touchStart.x, _touchStart.y, e);
         }
         _touchStart = null;

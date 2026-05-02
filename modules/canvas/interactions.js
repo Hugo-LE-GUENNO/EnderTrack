@@ -61,9 +61,11 @@ class CanvasInteractions {
   handlePointerMove(screenX, screenY, event) {
     const canvasPos = this.screenToCanvas(screenX, screenY);
     
-    this.uiHelpers.checkCompassHover(canvasPos);
-    this.checkStrategicPositionHover(canvasPos);
-    this.uiHelpers.updateMouseCoordinates(canvasPos, event);
+    if (!this.isPanning) {
+      this.uiHelpers.checkCompassHover(canvasPos);
+      this.checkStrategicPositionHover(canvasPos);
+      this.uiHelpers.updateMouseCoordinates(canvasPos, event);
+    }
     
     if (this.isDragging) {
       const deltaX = screenX - this.lastMousePos.x;
