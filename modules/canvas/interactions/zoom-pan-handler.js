@@ -234,14 +234,7 @@ class ZoomPanHandler {
     return false;
   }
 
-  updateSensitivity(zoom) {
-    // Handled by NavigationControls.updateSliderRanges via state:changed event
-  }
-
-  // Alias pour compatibilité
-  xyFitToView() {
-    this.fitToView();
-  }
+  xyFitToView() { this.fitToView(); }
 }
 
 window.EnderTrack = window.EnderTrack || {};

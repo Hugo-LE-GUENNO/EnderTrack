@@ -101,101 +101,54 @@ class CanvasInteractions {
   }
 
   checkStrategicPositionHover(canvasPos) {
-    if (!window.EnderTrack?.StrategicPositions) return;
-    
-    const sp = window.EnderTrack.StrategicPositions;
+    const sp = window.EnderTrack?.StrategicPositions;
     const coords = window.EnderTrack?.Coordinates;
-    if (!coords) return;
-    
-    // Check if on plateau
+    if (!sp || !coords) return;
+
     const mapPos = coords.canvasToMap(canvasPos.cx, canvasPos.cy);
     const bounds = coords.getCoordinateBounds();
-    const isOnPlateau = mapPos.x >= bounds.minX && mapPos.x <= bounds.maxX &&
-                        mapPos.y >= bounds.minY && mapPos.y <= bounds.maxY;
-    
-    const hoverRadius = 15;
-    let isOverPosition = false;
+    const onPlateau = mapPos.x >= bounds.minX && mapPos.x <= bounds.maxX &&
+                      mapPos.y >= bounds.minY && mapPos.y <= bounds.maxY;
+
     let hoveredPosition = null;
-    
-    if (isOnPlateau) {
-      // Check custom positions
-      for (const pos of sp.customPositions) {
-        if (!pos || !pos.show) continue;
-        
-        const posCanvas = coords.mapToCanvas(pos.x, pos.y);
-        const distance = Math.sqrt(
-          Math.pow(canvasPos.cx - posCanvas.cx, 2) + 
-          Math.pow(canvasPos.cy - posCanvas.cy, 2)
-        );
-        
-        if (distance <= hoverRadius) {
-          isOverPosition = true;
-          hoveredPosition = { type: 'custom', data: pos };
-          break;
-        }
-      }
-      
-      // Check HOME positions
-      if (!isOverPosition) {
-        const homeXY_X = parseFloat(document.getElementById('homeXY_X')?.value || 0);
-        const homeXY_Y = parseFloat(document.getElementById('homeXY_Y')?.value || 0);
-        const homeXYZ_X = parseFloat(document.getElementById('homeXYZ_X')?.value || 0);
-        const homeXYZ_Y = parseFloat(document.getElementById('homeXYZ_Y')?.value || 0);
-        
-        const homePositions = [
-          { x: homeXY_X, y: homeXY_Y, type: 'homeXY' },
-          { x: homeXYZ_X, y: homeXYZ_Y, type: 'homeXYZ' }
-        ];
-        
-        for (const pos of homePositions) {
-          const posCanvas = coords.mapToCanvas(pos.x, pos.y);
-          const distance = Math.sqrt(
-            Math.pow(canvasPos.cx - posCanvas.cx, 2) + 
-            Math.pow(canvasPos.cy - posCanvas.cy, 2)
-          );
-          
-          if (distance <= hoverRadius) {
-            isOverPosition = true;
-            hoveredPosition = { type: 'home', data: pos };
-            break;
-          }
-        }
-      }
-      
-      // Check list points (only if showOnNavigation is enabled)
-      if (!isOverPosition && window.EnderTrack?.Lists) {
-        const Lists = window.EnderTrack.Lists;
-        const allLists = Lists.manager?.getAllLists?.() || [];
-        
-        for (const list of allLists) {
-          if (list.showOnNavigation !== false && list.positions) {
-            for (let i = 0; i < list.positions.length; i++) {
-              const point = list.positions[i];
-              const posCanvas = coords.mapToCanvas(point.x, point.y);
-              const distance = Math.sqrt(
-                Math.pow(canvasPos.cx - posCanvas.cx, 2) + 
-                Math.pow(canvasPos.cy - posCanvas.cy, 2)
-              );
-              
-              if (distance <= hoverRadius) {
-                isOverPosition = true;
-                hoveredPosition = { type: 'list', data: { ...point, index: i, listId: list.id } };
-                break;
-              }
-            }
-            if (isOverPosition) break;
-          }
-        }
-      }
-    }
-    
-    // Store hovered position in state
+    if (onPlateau) hoveredPosition = this._findHoveredPosition(canvasPos, coords, sp);
+
     EnderTrack.State.update({ hoveredPosition });
-    
-    // Request render to show hover effect
-    if (EnderTrack.Canvas) {
-      EnderTrack.Canvas.requestRender();
+    EnderTrack.Canvas?.requestRender();
+  }
+
+  _findHoveredPosition(canvasPos, coords, sp) {
+    const R = 15;
+    const dist = (cx, cy, pos) => {
+      const p = coords.mapToCanvas(pos.x, pos.y);
+      return Math.hypot(canvasPos.cx - p.cx, canvasPos.cy - p.cy);
+    };
+
+    // Custom positions
+    for (const pos of sp.customPositions) {
+      if (pos?.show && dist(0, 0, pos) <= R) return { type: 'custom', data: pos };
     }
+
+    // HOME positions
+    const homes = [
+      { x: parseFloat(document.getElementById('homeXY_X')?.value || 0), y: parseFloat(document.getElementById('homeXY_Y')?.value || 0), type: 'homeXY' },
+      { x: parseFloat(document.getElementById('homeXYZ_X')?.value || 0), y: parseFloat(document.getElementById('homeXYZ_Y')?.value || 0), type: 'homeXYZ' }
+    ];
+    for (const pos of homes) {
+      if (dist(0, 0, pos) <= R) return { type: 'home', data: pos };
+    }
+
+    // List points
+    const lists = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+    for (const list of lists) {
+      if (list.showOnNavigation === false || !list.positions) continue;
+      for (let i = 0; i < list.positions.length; i++) {
+        if (dist(0, 0, list.positions[i]) <= R) {
+          return { type: 'list', data: { ...list.positions[i], index: i, listId: list.id } };
+        }
+      }
+    }
+    return null;
   }
 
   handlePointerEnd(screenX, screenY, event) {
