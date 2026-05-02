@@ -55,33 +55,45 @@ class EventHandlers {
   }
 
   setupTouchEvents(canvas) {
+    let _touchStart = null;
+    let _touchMoved = false;
+
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      
       if (e.touches.length === 1) {
         const touch = e.touches[0];
+        _touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+        _touchMoved = false;
         this.interactions.handlePointerStart(touch.clientX, touch.clientY, e);
       } else if (e.touches.length === 2) {
+        _touchStart = null;
         this.interactions.handlePinchStart(e);
       }
     });
-    
+
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
-      
       if (e.touches.length === 1) {
         const touch = e.touches[0];
+        if (_touchStart && Math.hypot(touch.clientX - _touchStart.x, touch.clientY - _touchStart.y) > 5) {
+          _touchMoved = true;
+        }
         this.interactions.handlePointerMove(touch.clientX, touch.clientY, e);
       } else if (e.touches.length === 2) {
         this.interactions.handlePinchMove(e);
       }
     });
-    
+
     canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
-      
-      if (e.touches.length === 0) {
-        this.interactions.handlePointerEnd(0, 0, e);
+      if (e.touches.length === 0 && _touchStart) {
+        const dt = Date.now() - _touchStart.time;
+        this.interactions.handlePointerEnd(_touchStart.x, _touchStart.y, e);
+        // Tap: short touch without movement → trigger click
+        if (!_touchMoved && dt < 300) {
+          this.interactions.handleClick(_touchStart.x, _touchStart.y, e);
+        }
+        _touchStart = null;
       }
     });
   }
