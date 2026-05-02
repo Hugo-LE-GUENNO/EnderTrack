@@ -96,21 +96,21 @@ class EnderTrackBootstrap {
       // Start application
       EnderTrack.App.start();
       
-      // Apply initial zoom after everything is ready
+      // Wait for layout to be ready, then show app and fit to view
       setTimeout(() => {
-        if (EnderTrack.State?.applyInitialZoom) {
-          EnderTrack.State.applyInitialZoom();
-        }
+        const loadingScreen = document.getElementById('loadingScreen');
+        const appContainer = document.getElementById('appContainer');
         
-        // Wait longer to ensure all initialization is complete
-        setTimeout(() => {
-          const loadingScreen = document.getElementById('loadingScreen');
-          const appContainer = document.getElementById('appContainer');
-          
-          if (loadingScreen) loadingScreen.style.display = 'none';
-          if (appContainer) appContainer.style.visibility = 'visible';
-        }, 800);
-      }, 300);
+        if (loadingScreen) loadingScreen.style.display = 'none';
+        if (appContainer) appContainer.style.visibility = 'visible';
+        
+        // Apply initial zoom AFTER container is visible and laid out
+        requestAnimationFrame(() => {
+          if (EnderTrack.State?.applyInitialZoom) {
+            EnderTrack.State.applyInitialZoom();
+          }
+        });
+      }, 500);
       
       const endTime = performance.now();
       const initTime = Math.round(endTime - startTime);
