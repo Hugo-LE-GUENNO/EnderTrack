@@ -25,13 +25,9 @@ class ZInteractions {
     c.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // Delayed click to distinguish single-click from double-click
-    let clickTimer = null;
-    c.addEventListener('click', (e) => {
-      if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; return; }
-      clickTimer = setTimeout(() => { clickTimer = null; this._onClick(e); }, 120);
-    });
+    c.addEventListener('click', (e) => this._onClick(e));
     c.addEventListener('dblclick', () => {
-      if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+      document.querySelector('.click-and-go-dialog')?.remove();
     });
   }
 

@@ -30,22 +30,16 @@ class EventHandlers {
       this.interactions.handlePointerEnd(e.clientX, e.clientY, e);
     });
     
-    // Delayed click to distinguish from double-click
-    let _clickTimer = null;
+    // Immediate click — dblclick cleans up any dialog
     canvas.addEventListener('click', (e) => {
       if (e._overlayHandled || e._listHandled) return;
       if (this.interactions._dragMoved) { this.interactions._dragMoved = false; return; }
       if (Date.now() - (this.interactions._lastPanTime || 0) < 300) return;
-      if (_clickTimer) { clearTimeout(_clickTimer); _clickTimer = null; return; }
-      const cx = e.clientX, cy = e.clientY, ev = e;
-      _clickTimer = setTimeout(() => {
-        _clickTimer = null;
-        this.interactions.handleClick(cx, cy, ev);
-      }, 120);
+      this.interactions.handleClick(e.clientX, e.clientY, e);
     });
     
     canvas.addEventListener('dblclick', (e) => {
-      if (_clickTimer) { clearTimeout(_clickTimer); _clickTimer = null; }
+      document.querySelector('.click-and-go-dialog')?.remove();
       this.interactions._dblClickPan = true;
       this.interactions.handleDoubleClick(e.clientX, e.clientY, e);
     });
