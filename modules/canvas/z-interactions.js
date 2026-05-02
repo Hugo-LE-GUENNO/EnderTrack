@@ -219,7 +219,7 @@ class ZInteractions {
       }
     };
     setTimeout(() => { document.addEventListener('keydown', close); document.addEventListener('click', close); }, 100);
-  }  }
+  }
 
   _hitTestListPoint(canvasX, canvasY) {
     const Lists = window.EnderTrack?.Lists;
