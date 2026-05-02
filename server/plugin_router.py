@@ -229,4 +229,3 @@ def register_routes(app):
         print(f"  🗑️ Plugin supprimé: {folder}")
         return jsonify({'success': True})
 
-    print("  🔌 plugin_router: routes /api/plugins/*")

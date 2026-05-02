@@ -166,8 +166,10 @@ def register_routes(app):
             return jsonify({'success': False, 'error': 'pyserial non installé (pip install pyserial)'})
         try:
             stage = Stage(port, baud, homing=False)
+            print(f'  + Connecte: {port} @ {baud}')
             return jsonify({'success': True, 'message': f'Connecté à {port}', 'firmware': stage.firmware_name})
         except Exception as e:
+            print(f'  x Connexion echouee: {port} - {e}')
             return jsonify({'success': False, 'error': str(e)})
 
     @app.route('/api/disconnect', methods=['POST'])
@@ -176,6 +178,7 @@ def register_routes(app):
         if stage:
             stage.close()
         stage = None
+        print('  - Deconnecte')
         return jsonify({'success': True})
 
     @app.route('/api/status', methods=['GET'])
@@ -205,6 +208,7 @@ def register_routes(app):
             t0 = time.time()
             stage.finish_moves()
             dt = time.time() - t0
+            print(f'  > Move X{x} Y{y} Z{z} F{feedrate} ({round(dt*1000)}ms)')
             return jsonify({'success': True, 'm400_duration': round(dt, 3)})
         return jsonify({'success': True, 'simulation': True})
 
@@ -218,6 +222,7 @@ def register_routes(app):
             t0 = time.time()
             stage.finish_moves()
             dt = time.time() - t0
+            print(f'  > Rel dX{dx} dY{dy} dZ{dz} F{feedrate} ({round(dt*1000)}ms)')
             return jsonify({'success': True, 'm400_duration': round(dt, 3)})
         return jsonify({'success': True, 'simulation': True})
 
@@ -225,6 +230,7 @@ def register_routes(app):
     def _home():
         if stage:
             stage.home()
+            print('  > Home')
         return jsonify({'success': True})
 
     @app.route('/api/gcode', methods=['POST'])
@@ -238,6 +244,7 @@ def register_routes(app):
             return jsonify({'success': False, 'error': f'Commande bloquée: {command.split()[0]}'})
         if stage:
             lines = stage.send_gcode(command, wait_ok=True)
+            print(f'  > G-code: {command}')
             return jsonify({'success': True, 'response': lines})
         return jsonify({'success': True, 'response': [f'[SIM] {command}', 'ok']})
 
@@ -246,10 +253,10 @@ def register_routes(app):
         global stage
         if stage:
             try:
-                stage.send_gcode("M410")  # Quick stop (doesn't kill firmware)
+                stage.send_gcode("M410")
                 time.sleep(0.1)
-                # Verify firmware still responds
                 stage.send_gcode("M114")
+                print('  ! Emergency stop')
             except:
                 pass
         return jsonify({'success': True})
@@ -328,5 +335,3 @@ def register_routes(app):
             stage.send_gcode("M300")
         return jsonify({'success': True})
 
-    sim = "SIMULATION" if not HAS_SERIAL else "hardware"
-    print(f"  🔧 stage_connection: routes /api/connect, /api/move/*, /api/gcode... ({sim})")

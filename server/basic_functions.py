@@ -319,4 +319,3 @@ def register_routes(app):
     def _system_info():
         return jsonify(get_system_info())
 
-    print("  📁 basic_functions: routes /api/browse, /api/fs/*, /api/system")
