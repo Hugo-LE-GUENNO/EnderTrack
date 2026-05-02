@@ -126,33 +126,16 @@ class ZoomPanHandler {
     const plateauSizeX = bounds.maxX - bounds.minX;
     const plateauSizeY = bounds.maxY - bounds.minY;
     
-    // Obtenir les dimensions réelles du canvas actif
-    const viewportManager = window.EnderTrack?.Viewport?.Manager;
-    const dimensions = viewportManager?.getActiveWidgetDimensions();
+    // Obtenir les dimensions du canvas
+    const canvas = this.interactions?.canvas || document.getElementById('mapCanvas');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
     
-    if (!dimensions) {
-      console.warn('Cannot get canvas dimensions for fitToView');
-      return;
-    }
+    const canvasWidth = rect.width;
+    const canvasHeight = rect.height;
     
-    const canvasWidth = dimensions.width;
-    const canvasHeight = dimensions.height;
-    
-    // Utiliser le borderFactor personnalisé ou calculer selon le layout
-    let borderFactor = customBorderFactor;
-    if (borderFactor === null) {
-      const currentLayout = viewportManager?.activeLayout || 'single';
-      
-      if (currentLayout === 'single') {
-        borderFactor = 0.8;
-      } else if (currentLayout === '50-50') {
-        borderFactor = 0.6;
-      } else if (currentLayout === '2x2') {
-        borderFactor = 0.4;
-      } else {
-        borderFactor = 0.8;
-      }
-    }
+    let borderFactor = customBorderFactor || 0.8;
     
     // Calculer le zoom pour que le plateau soit visible avec la bordure
     const zoomX = (canvasWidth * borderFactor) / (plateauSizeX * coords.pxPerMm());
