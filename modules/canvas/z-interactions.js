@@ -166,8 +166,15 @@ class ZInteractions {
     const halfRange = this.zVis.zRange / 2;
     const r = 10; // hit radius
     
+    const tab = window.EnderTrack?.State?.get()?.activeTab;
     for (const g of Lists.groups) {
       if (!g.positions?.length) continue;
+      // Same visibility logic as z-position-renderer
+      const isActive = g.id === Lists.activeGroupId;
+      let show;
+      if (tab === 'lists') show = isActive;
+      else show = g.pinned;
+      if (!show) continue;
       const byZ = new Map();
       g.positions.forEach((p, idx) => {
         const zKey = Math.round(p.z * 100);
