@@ -153,7 +153,7 @@
                         <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
                             
                             <!-- Status + Connect -->
-                            <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                 <div class="status-indicator" id="connectionStatus"></div>
                                 <span id="connectionText" style="font-size:11px; color:var(--text-general); flex:1;">Déconnecté</span>
                                 <button id="connectBtn" onclick="toggleConnection()" style="padding:4px 12px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected);">Connecter</button>
@@ -164,7 +164,7 @@
                             </div>
 
                             <!-- Port -->
-                            <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                 <label style="font-size:11px; color:var(--text-general); width:40px;">Port</label>
                                 <select id="serialPort" style="flex:1; padding:4px 8px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--text-selected); font-size:11px;">
                                     <option value="/dev/ttyUSB0" selected>/dev/ttyUSB0</option>
@@ -174,15 +174,14 @@
                             <select id="baudRate" style="display:none;"><option value="115200" selected>115200</option></select>
 
                             <!-- Vitesse -->
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <label style="font-size:11px; color:var(--text-general); width:40px;">Vitesse</label>
+                            <div class="config-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <label style="font-size:11px; color:var(--text-general); min-width:40px;">Vitesse</label>
                                 <input type="range" id="feedrateSlider" min="100" max="10000" value="3000" step="100"
                                     oninput="updateFeedrate(this.value)"
-                                    style="flex:1; height:4px; -webkit-appearance:none; background:#404040; border-radius:2px;">
+                                    style="flex:1; min-width:60px; height:4px; -webkit-appearance:none; background:#404040; border-radius:2px;">
                                 <input type="number" id="feedrateInput" value="3000" min="100" max="10000" step="100"
                                     onchange="updateFeedrate(this.value)"
                                     style="width:55px; padding:3px 4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); font-size:11px; text-align:center; font-family:monospace;">
-                                <span style="font-size:9px; color:var(--text-general);">mm/min</span>
                             </div>
 
                             <!-- G-code (visible si connecté) -->
