@@ -25,6 +25,29 @@ Ouvrir http://localhost:5000 — c'est tout. Les dépendances sont incluses dans
 | **Navigation** | Flèches directionnelles, sensibilité, positionnement absolu, home |
 | **Positions** | Listes, scénarios, clic sur canvas |
 
+## Accès réseau
+
+Par défaut le serveur écoute sur `localhost:5000` (accès local uniquement).
+
+```bash
+# Accès depuis le réseau local (tablette, téléphone, autre PC)
+python3 endertrack-server.py --lan
+
+# Port personnalisé
+python3 endertrack-server.py --port 8080
+
+# Les deux
+python3 endertrack-server.py --lan --port 3000
+```
+
+Avec `--lan`, le serveur affiche l'adresse à utiliser depuis les autres appareils :
+```
+🌐 Écoute sur http://0.0.0.0:5000
+🌐 Accès LAN: http://192.168.1.8:5000
+```
+
+Ouvrir cette adresse depuis n'importe quel navigateur sur le même réseau.
+
 ## Plugins
 
 Voir la branche [`plugins`](../../tree/plugins) pour les plugins disponibles. Copiez un dossier plugin dans `plugins/` et activez-le dans Réglages → Extensions.
