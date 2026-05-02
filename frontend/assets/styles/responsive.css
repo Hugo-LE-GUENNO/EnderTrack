@@ -98,64 +98,41 @@
   .action-btn { font-size: var(--font-xs); padding: var(--spacing-xs) var(--spacing-sm); }
 }
 
+
 /* ── Mobile portrait (≤500px) ───────────────────────────────── */
 @media (max-width: 500px) {
   .app-container {
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(30vh, 1fr) auto;
-    overflow: hidden;
+    grid-template-rows: auto 1fr;
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
   }
 
   .global-header { grid-row: 1; padding: 2px 8px; }
   .global-header img { height: 22px; }
 
-  .center-panel { grid-row: 2; min-height: 0; }
+  .center-panel { grid-row: 2; min-height: 45vh; }
   .canvas-header { padding: 2px 8px; }
   .canvas-header .app-title { font-size: 11px; }
 
-  /* Left panel = bottom section, 2-column: tab-content | status */
-  .left-panel {
-    grid-row: 3;
-    max-height: 60vh;
-    overflow-y: auto;
-    border-radius: var(--radius) var(--radius) 0 0;
-    display: flex;
-    flex-direction: column;
-  }
+  .left-panel { grid-row: 3; overflow-y: visible; }
 
-  /* Tabs: fill full width, no scroll */
-  .tab-system {
-    padding: 3px 4px;
-    gap: 2px;
-    flex-wrap: nowrap;
-  }
+  .tab-system { padding: 3px 4px; gap: 2px; flex-wrap: nowrap; }
   .tab-btn { flex: 1; padding: 4px 2px; font-size: 10px; text-align: center; white-space: nowrap; }
-  .tab-system > div[style*="width:1px"] { display: none; } /* hide separator */
-  .tab-system > img { display: none; } /* hide logo in tabs on mobile */
+  .tab-system > div[style*="width:1px"] { display: none; }
+  .tab-system > img { display: none; }
 
-  /* Content area: side by side with status */
-  .tab-content {
-    flex: 1;
-    min-height: 0;
-  }
+  .tab-content { min-height: 0; }
 
-  /* Status widget: right column, always visible */
   .left-panel {
     display: grid;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto;
     grid-template-columns: 1fr auto;
   }
 
-  .left-panel .tab-system {
-    grid-column: 1 / -1;
-    grid-row: 1;
-  }
-
-  .left-panel .tab-content {
-    grid-column: 1;
-    grid-row: 2;
-    overflow-y: auto;
-  }
+  .left-panel .tab-system { grid-column: 1 / -1; grid-row: 1; }
+  .left-panel .tab-content { grid-column: 1; grid-row: 2; }
 
   .status-widget.relocated {
     grid-column: 2;
@@ -166,23 +143,16 @@
     padding: 6px;
     min-width: 80px;
     max-width: 120px;
-    overflow-y: auto;
-    align-self: stretch;
+    align-self: start;
   }
 
-  .status-widget.relocated .coordinates-display {
-    flex-direction: column;
-    padding: 4px;
-    gap: 2px;
-  }
-
+  .status-widget.relocated .coordinates-display { flex-direction: column; padding: 4px; gap: 2px; }
   .status-widget.relocated .coordinate-value { font-size: 11px; }
   .status-widget.relocated .coordinate-label { font-size: 10px; min-width: 12px; }
   .status-widget.relocated .coordinate-unit { display: none; }
   .status-widget.relocated .emergency-btn-widget { padding: 3px 4px; font-size: 8px; }
   .status-widget.relocated .emergency-icon-widget { width: 14px; height: 14px; }
 
-  /* Compact controls */
   .navigation-controls-container { padding: 6px; gap: 2px; margin-bottom: 4px; }
   .arrow-container { width: min(100px, 100%); }
   .arrow-pad { padding: 8px; }
@@ -203,7 +173,8 @@
   details summary { font-size: 10px; padding: 3px 0; }
   details > div { padding: 4px; }
 
-  .z-visualization-panel { min-width: 50px; max-width: 70px; width: 60px; }
+  .z-visualization-panel { min-width: 40px; max-width: 50px; width: 45px; }
+  .canvas-resize-handle { display: none; }
 }
 
 /* ── Short screens (landscape RPi, etc) ─────────────────────── */
