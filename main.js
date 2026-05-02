@@ -83,27 +83,64 @@
   else setTimeout(init, 200);
 })();
 
-// Responsive: relocate status widget when right panel is hidden
+// Responsive: relocate status widget + tabs on small screens
 (function() {
-  const MQ = window.matchMedia('(max-width: 1100px)');
-  function relocateStatus(e) {
+  const MQ_DESKTOP = window.matchMedia('(max-width: 1100px)');
+  const MQ_MOBILE = window.matchMedia('(max-width: 500px)');
+  let _tabsOrigParent = null;
+  let _tabsNextSibling = null;
+
+  function relocate() {
     const widget = document.querySelector('.status-widget');
     const leftPanel = document.querySelector('.left-panel');
     const rightPanel = document.querySelector('.right-panel');
-    if (!widget || !rightPanel) return;
-    if (e.matches) {
-      // Small screen: append to left-panel (after tab-content, always visible)
-      if (leftPanel) { leftPanel.appendChild(widget); widget.classList.add('relocated'); }
+    const tabSystem = document.querySelector('.tab-system');
+    const appContainer = document.querySelector('.app-container');
+    if (!widget || !rightPanel || !leftPanel) return;
+
+    // Save original tab position on first call
+    if (!_tabsOrigParent && tabSystem) {
+      _tabsOrigParent = tabSystem.parentElement;
+      _tabsNextSibling = tabSystem.nextElementSibling;
+    }
+
+    if (MQ_MOBILE.matches) {
+      // Mobile: tabs → app-container row 2, status → left-panel first child
+      if (tabSystem && appContainer && tabSystem.parentElement !== appContainer) {
+        appContainer.insertBefore(tabSystem, leftPanel.parentElement === appContainer ? leftPanel : appContainer.children[1]);
+        tabSystem.style.gridRow = '2';
+      }
+      if (widget.parentElement !== leftPanel) {
+        leftPanel.prepend(widget);
+      }
+      widget.classList.add('relocated');
+    } else if (MQ_DESKTOP.matches) {
+      // Tablet/half-screen: tabs back in left-panel, status in left-panel
+      if (tabSystem && _tabsOrigParent && tabSystem.parentElement !== _tabsOrigParent) {
+        _tabsOrigParent.insertBefore(tabSystem, _tabsNextSibling);
+        tabSystem.style.gridRow = '';
+      }
+      if (widget.parentElement !== leftPanel) {
+        leftPanel.appendChild(widget);
+      }
+      widget.classList.add('relocated');
     } else {
+      // Desktop: everything back to normal
+      if (tabSystem && _tabsOrigParent && tabSystem.parentElement !== _tabsOrigParent) {
+        _tabsOrigParent.insertBefore(tabSystem, _tabsNextSibling);
+        tabSystem.style.gridRow = '';
+      }
       rightPanel.appendChild(widget);
       widget.classList.remove('relocated');
     }
   }
-  MQ.addEventListener('change', relocateStatus);
+
+  MQ_DESKTOP.addEventListener('change', relocate);
+  MQ_MOBILE.addEventListener('change', relocate);
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => relocateStatus(MQ));
+    document.addEventListener('DOMContentLoaded', () => relocate());
   } else {
-    setTimeout(() => relocateStatus(MQ), 100);
+    setTimeout(relocate, 100);
   }
 })();
 

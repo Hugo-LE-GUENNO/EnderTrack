@@ -2,9 +2,7 @@
 
 /* ── Wide desktop (≥1700px) ─────────────────────────────────── */
 @media (min-width: 1700px) {
-  .app-container {
-    grid-template-columns: 340px 1fr clamp(200px, 15vw, 300px);
-  }
+  .app-container { grid-template-columns: 340px 1fr clamp(200px, 15vw, 300px); }
   .arrow-container { width: 175px; }
   .arrow-pad { padding: 18px; }
   .z-controls-right { width: 65px; padding: 14px 0; }
@@ -13,17 +11,13 @@
 
 /* ── Large desktop (1400-1700px) ────────────────────────────── */
 @media (min-width: 1401px) and (max-width: 1699px) {
-  .app-container {
-    grid-template-columns: 300px 1fr clamp(180px, 14vw, 280px);
-  }
+  .app-container { grid-template-columns: 300px 1fr clamp(180px, 14vw, 280px); }
   .arrow-container { width: min(180px, 100%); }
 }
 
 /* ── Standard desktop (1100-1400px) ─────────────────────────── */
 @media (max-width: 1400px) {
-  .app-container {
-    grid-template-columns: 300px 1fr clamp(160px, 15vw, 240px);
-  }
+  .app-container { grid-template-columns: 300px 1fr clamp(160px, 15vw, 240px); }
   .arrow-container { width: min(160px, 100%); }
   .status-widget .coordinate-value { font-size: var(--font-lg); }
   .status-widget .coordinate-unit { display: none; }
@@ -33,7 +27,6 @@
 @media (max-width: 1100px) {
   .app-container { grid-template-columns: 300px 1fr; }
   .right-panel { display: none !important; }
-
   .arrow-container { width: min(150px, 100%); }
   .z-controls-right { width: 50px; }
   .z-btn { width: 38px; height: 38px; font-size: 16px; }
@@ -76,83 +69,113 @@
   .action-btn { font-size: var(--font-xs); padding: var(--spacing-xs) var(--spacing-sm); }
 }
 
-/* ── Mobile portrait (≤500px) ───────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════ */
+/* ── Mobile portrait (≤500px) — single screen, no scroll ───── */
+/* ══════════════════════════════════════════════════════════════ */
 @media (max-width: 500px) {
-  /* Override base overflow:hidden to allow scrolling */
-  html, body { overflow: auto !important; height: auto !important; }
-
-  .app-container {
-    display: flex;
-    flex-direction: column;
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
+  html, body {
+    overflow: hidden !important;
+    height: 100% !important;
   }
 
-  .global-header { padding: 2px 8px; flex-shrink: 0; }
-  .global-header img { height: 22px; }
+  .app-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    height: 100vh;
+    overflow: hidden;
+  }
 
-  /* Canvas: square-ish, Z panel wider */
-  .center-panel { flex-shrink: 0; }
-  .canvas-content { min-height: 0; }
-  .main-canvas { aspect-ratio: 1; max-height: 50vh; }
-  .z-visualization-panel { min-width: 55px; max-width: 65px; width: 60px; }
-  .canvas-resize-handle { display: none; }
-  .canvas-header { padding: 2px 8px; }
-  .canvas-header .app-title { font-size: 11px; }
+  /* Row 1: header hidden or minimal */
+  .global-header { grid-row: 1; padding: 0 8px; }
+  .global-header img { height: 18px; }
 
-  /* Left panel: no fixed height, content flows */
-  .left-panel { flex: 0 0 auto; overflow: visible; }
-
-  /* Tabs: fill full width, equal size */
-  .tab-system { padding: 3px 4px; gap: 2px; flex-wrap: nowrap; }
+  /* Row 2: tabs */
+  .tab-system { padding: 2px 4px; gap: 2px; flex-wrap: nowrap; }
   .tab-btn { flex: 1; padding: 4px 2px; font-size: 10px; text-align: center; white-space: nowrap; }
   .tab-system > div[style*="width:1px"] { display: none; }
   .tab-system > img { display: none; }
 
-  /* Left panel grid: tabs row, then content | status */
-  .left-panel {
-    display: grid;
-    grid-template-rows: auto auto;
-    grid-template-columns: 1fr auto;
+  /* Row 3: canvas (takes remaining space) */
+  .center-panel {
+    grid-row: 3;
+    min-height: 0;
+    overflow: hidden;
   }
-  .left-panel .tab-system { grid-column: 1 / -1; grid-row: 1; }
-  .left-panel .tab-content { grid-column: 1; grid-row: 2; overflow: visible; padding: 6px; }
+  .canvas-header { display: none; }
+  .canvas-content { min-height: 0; }
+  .z-visualization-panel { min-width: 50px; max-width: 60px; width: 55px; }
+  .canvas-resize-handle { display: none; }
 
-  .status-widget.relocated {
-    grid-column: 2;
-    grid-row: 2;
-    margin: 0;
-    border-top: none;
-    border-left: 1px solid var(--border, #444);
-    padding: 6px;
-    min-width: 80px;
-    max-width: 120px;
-    align-self: start;
+  /* Row 4: left-panel = controls zone */
+  .left-panel {
+    grid-row: 4;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: auto;
+    grid-template-columns: auto 1fr;
+    gap: 0;
+    padding: 0;
   }
-  .status-widget.relocated .coordinates-display { flex-direction: column; padding: 4px; gap: 2px; }
-  .status-widget.relocated .coordinate-value { font-size: 11px; }
+
+  /* Hide tab system inside left-panel (already in row 2 via global-header area) */
+  .left-panel .tab-system { display: none; }
+
+  /* Status: left column */
+  .status-widget.relocated {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    border: none;
+    border-right: 1px solid var(--border, #444);
+    padding: 6px;
+    min-width: 75px;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .status-widget.relocated .coordinates-display { flex-direction: column; padding: 2px; gap: 1px; margin-bottom: 2px; }
+  .status-widget.relocated .coordinate-value { font-size: 12px; }
   .status-widget.relocated .coordinate-label { font-size: 10px; min-width: 12px; }
   .status-widget.relocated .coordinate-unit { display: none; }
-  .status-widget.relocated .emergency-btn-widget { padding: 3px 4px; font-size: 8px; }
+  .status-widget.relocated .emergency-btn-widget { padding: 4px; font-size: 8px; margin-top: auto; }
   .status-widget.relocated .emergency-icon-widget { width: 14px; height: 14px; }
+  .status-widget.relocated #statusHeader { font-size: 10px; }
+  .status-widget.relocated #statusHeader span { font-size: 9px; }
 
-  /* Compact controls */
-  .navigation-controls-container { padding: 6px; gap: 2px; margin-bottom: 4px; }
-  .arrow-container { width: min(100px, 100%); }
-  .arrow-pad { padding: 8px; }
-  .z-controls-right { width: 36px; padding: 4px 0; }
-  .z-btn { width: 26px; height: 26px; font-size: 11px; }
+  /* Tab content: right column (nav buttons, lists, settings) */
+  .left-panel .tab-content {
+    grid-column: 2;
+    grid-row: 1;
+    overflow-y: auto;
+    padding: 4px;
+    max-height: 40vh;
+  }
+
+  /* Compact navigation */
+  .navigation-controls-container { padding: 4px; gap: 2px; margin-bottom: 2px; }
+  .normal-mode { gap: 6px; }
+  .arrow-container { width: min(110px, 100%); }
+  .arrow-pad { padding: 6px; }
+  .z-controls-right { width: 34px; padding: 4px 0; }
+  .z-btn { width: 28px; height: 28px; font-size: 12px; }
   .step-controls { margin-top: 2px; }
-  .axis-control { gap: 3px; margin-bottom: 0; }
-  .axis-control input[type="number"] { width: 40px; font-size: 10px; }
-  .axis-label { font-size: 10px; }
+  .axis-control { gap: 2px; margin-bottom: 0; }
+  .axis-control input[type="number"] { width: 38px; font-size: 10px; padding: 2px; }
+  .axis-label { font-size: 9px; }
+
+  /* Compact goto */
   .goto-section { padding: 4px; }
-  .goto-inputs { gap: 3px; }
-  .goto-field input { font-size: 10px; padding: 3px; width: 50px; }
+  .goto-inputs { gap: 2px; }
+  .goto-field input { font-size: 10px; padding: 2px; width: 48px; }
   .goto-field label { font-size: 9px; }
-  .action-btn { font-size: 9px; padding: 3px 8px; }
-  details summary { font-size: 10px; padding: 3px 0; }
+  .action-btn { font-size: 9px; padding: 3px 6px; }
+  .home-row { margin-top: 2px; }
+  .home-row .action-btn { font-size: 9px; padding: 2px 6px; }
+
+  /* Compact settings/lists */
+  details summary { font-size: 10px; padding: 2px 0; }
   details > div { padding: 4px; }
 }
 
