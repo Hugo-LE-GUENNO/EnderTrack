@@ -186,6 +186,86 @@ EnderTrack.Canvas.requestRender()
 
 Voir `plugins/random-button/` pour un exemple complet.
 
+## Créer un module (nouvelle version)
+
+Un module va plus loin qu'un plugin : il ajoute un onglet, un panneau, ou modifie le comportement du core. Créer un module = créer une nouvelle version d'EnderTrack.
+
+### Étapes
+
+1. **Forker la branche `basic`**
+```bash
+git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git endertrack-maversion
+cd endertrack-maversion
+```
+
+2. **Ajouter un onglet** dans `index.html`
+```html
+<!-- Bouton onglet -->
+<button class="tab-btn" id="monModuleTab" onclick="switchTab('monModule')">
+    🔬 Mon Module
+</button>
+
+<!-- Contenu onglet -->
+<div class="tab-panel" id="monModuleTabContent">
+    <!-- Interface du module -->
+</div>
+```
+
+3. **Créer le module** dans `modules/mon-module.js`
+```javascript
+class MonModule {
+  constructor() { this.isActive = false; }
+
+  activate() {
+    this.isActive = true;
+    this.createUI();
+  }
+
+  deactivate() { this.isActive = false; }
+
+  createUI() {
+    const container = document.getElementById('monModuleTabContent');
+    if (!container) return;
+    container.innerHTML = '<div>Mon interface</div>';
+  }
+}
+
+window.EnderTrack = window.EnderTrack || {};
+window.EnderTrack.MonModule = new MonModule();
+```
+
+4. **Charger le module** dans `index.html`
+```html
+<script src="modules/mon-module.js"></script>
+```
+
+5. **Activer sur le bon onglet** dans `main.js` (dans `switchTab`)
+```javascript
+} else if (tabId === 'monModule' && window.EnderTrack?.MonModule) {
+    window.EnderTrack.MonModule.activate();
+}
+```
+
+### Points d'extension
+
+| Zone | Comment |
+|------|---------|
+| **Onglet gauche** | Ajouter `tab-btn` + `tab-panel` dans `index.html` |
+| **Panneau droit** | Ajouter un `div` dans `.right-panel` de `index.html` |
+| **Canvas overlay** | Ajouter un renderer dans `modules/canvas/renderers/` |
+| **Routes serveur** | Ajouter un module Python dans `server/` |
+| **Panneau Z** | Étendre `modules/canvas/z-interactions.js` |
+
+### Publier comme nouvelle version
+
+Créer une nouvelle branche sur le repo :
+```bash
+git checkout -b ma-version
+git push origin ma-version
+```
+
+Puis ajouter la branche dans le tableau des versions du README principal.
+
 ## Liens
 
 - [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
