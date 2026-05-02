@@ -64,7 +64,29 @@ cd EnderTrack
 python3 endertrack-server.py --lan
 ```
 
-Ouvrir `http://<IP_DU_PI>:5000` depuis n'importe quel appareil du réseau. Voir le [README basic](../../tree/basic) pour le démarrage automatique au boot.
+Ouvrir `http://<IP_DU_PI>:5000` depuis n'importe quel appareil du réseau (`hostname -I` pour trouver l'IP).
+
+### Démarrage automatique au boot
+
+```bash
+sudo tee /etc/systemd/system/endertrack.service << EOF
+[Unit]
+Description=EnderTrack Server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 $(pwd)/endertrack-server.py --lan
+WorkingDirectory=$(pwd)
+User=$USER
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable endertrack
+sudo systemctl start endertrack
+```
 
 ## Liens
 
