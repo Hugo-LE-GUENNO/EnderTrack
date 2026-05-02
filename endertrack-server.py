@@ -71,8 +71,8 @@ if __name__ == '__main__':
     print()
     import logging
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
-    import cli as _cli
-    _cli = type('', (), {'show_server_banner': lambda *a: None})()
-    import flask.cli
-    flask.cli.show_server_banner = lambda *a, **k: None
+    try:
+        import flask.cli
+        flask.cli.show_server_banner = lambda *a, **k: None
+    except: pass
     app.run(host=network_config.HOST, port=network_config.PORT, debug=False, threaded=True)
