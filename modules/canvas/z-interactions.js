@@ -29,6 +29,63 @@ class ZInteractions {
     c.addEventListener('dblclick', () => {
       document.querySelector('.click-and-go-dialog')?.remove();
     });
+
+    // Touch events for Z canvas
+    let _zTouchStart = null;
+    let _zTouchMoved = false;
+    let _zPinchDist = 0;
+    let _zPinchZoom = 1;
+
+    c.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        _zTouchStart = { y: t.clientY };
+        _zTouchMoved = false;
+        this.isDragging = true;
+        this._zDragMoved = false;
+        this._zPanning = false;
+        this.lastMouseY = t.clientY;
+        this.dragStartY = t.clientY;
+      } else if (e.touches.length === 2) {
+        _zTouchStart = null;
+        _zPinchDist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+        _zPinchZoom = window.EnderTrack.State.get().zZoom || 1;
+      }
+    }, { passive: false });
+
+    c.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        if (_zTouchStart && Math.abs(t.clientY - _zTouchStart.y) > 5) _zTouchMoved = true;
+        if (_zTouchMoved) {
+          this._zPanning = true;
+          this._zDragMoved = true;
+          this._pan({ clientY: t.clientY });
+          this.lastMouseY = t.clientY;
+        }
+      } else if (e.touches.length === 2 && _zPinchDist > 0) {
+        const dist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+        const dims = window.EnderTrack.State.get().plateauDimensions || { z: 100 };
+        const minZ = this.zVis.canvas.height / dims.z;
+        const nz = Math.max(minZ, Math.min(1000, _zPinchZoom * (dist / _zPinchDist)));
+        this.zVis.zRange = this.zVis.canvas.height / nz;
+        window.EnderTrack.State.update({ zZoom: nz });
+        this.zVis.render();
+      }
+    }, { passive: false });
+
+    c.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.isDragging = false;
+      this._zPanning = false;
+      if (e.touches.length === 0 && _zTouchStart && !_zTouchMoved) {
+        this._onClick({ button: 0, clientX: 0, clientY: _zTouchStart.y });
+      }
+      _zTouchStart = null;
+      _zPinchDist = 0;
+    }, { passive: false });
   }
 
   // ── Coordinate helpers ─────────────────────────────────────

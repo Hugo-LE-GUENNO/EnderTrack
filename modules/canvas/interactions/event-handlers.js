@@ -96,10 +96,19 @@ class EventHandlers {
             this.interactions.zoomPanHandler.handleZoom(zoom * 2, { x: _touchStart.x, y: _touchStart.y });
           } else {
             _lastTapTime = now;
-            // Single tap → click (delayed to detect double-tap)
             const ts = { ..._touchStart };
+            // Dispatch real DOM click so Lists module picks it up
+            const canvas = this.interactions.canvas;
+            const rect = canvas.getBoundingClientRect();
+            const clickEvt = new MouseEvent('click', {
+              clientX: ts.x, clientY: ts.y, bubbles: true, cancelable: true
+            });
+            // Also call handleClick for click-and-go
             setTimeout(() => {
-              if (_lastTapTime === now) this.interactions.handleClick(ts.x, ts.y, e);
+              if (_lastTapTime === now) {
+                canvas.dispatchEvent(clickEvt);
+                this.interactions.handleClick(ts.x, ts.y, clickEvt);
+              }
             }, 350);
           }
         }
