@@ -203,7 +203,7 @@
   details summary { font-size: 10px; padding: 3px 0; }
   details > div { padding: 4px; }
 
-  .z-visualization-panel { min-width: 35px; max-width: 45px; }
+  .z-visualization-panel { min-width: 50px; max-width: 70px; width: 60px; }
 }
 
 /* ── Short screens (landscape RPi, etc) ─────────────────────── */
@@ -250,5 +250,5 @@
 
 /* Touch devices: wider Z panel for finger interaction */
 @media (pointer: coarse) {
-  .z-visualization-panel { width: 100px; }
+  .z-visualization-panel { width: 110px; }
 }

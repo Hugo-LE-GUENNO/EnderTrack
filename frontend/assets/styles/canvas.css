@@ -40,9 +40,31 @@
 .canvas-content {
   flex: 1;
   display: flex;
-  gap: 8px;
+  gap: 0;
   align-items: stretch;
   min-height: 0;
+}
+
+.canvas-resize-handle {
+  width: 6px;
+  cursor: col-resize;
+  background: var(--border, #444);
+  opacity: 0;
+  transition: opacity 0.2s;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.canvas-resize-handle:hover,
+.canvas-resize-handle.active {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .canvas-resize-handle {
+    width: 10px;
+    opacity: 0.4;
+  }
 }
 
 /* En mode grid, tous les enfants directs ont la même taille */

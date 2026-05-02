@@ -56,6 +56,33 @@
   
 })();
 
+// Canvas resize handle: drag to adjust XY/Z split
+(function() {
+  function init() {
+    const handle = document.getElementById('canvasResizeHandle');
+    const zPanel = document.getElementById('zVisualizationPanel');
+    if (!handle || !zPanel) return;
+    let startX, startW;
+    const onStart = (x) => { startX = x; startW = zPanel.offsetWidth; handle.classList.add('active'); };
+    const onMove = (x) => {
+      if (startX == null) return;
+      const newW = Math.max(40, Math.min(200, startW - (x - startX)));
+      zPanel.style.width = newW + 'px';
+      window.EnderTrack?.Canvas?.handleResize?.();
+      window.EnderTrack?.ZVisualization?.resize?.();
+    };
+    const onEnd = () => { startX = null; handle.classList.remove('active'); };
+    handle.addEventListener('mousedown', (e) => { e.preventDefault(); onStart(e.clientX); });
+    document.addEventListener('mousemove', (e) => onMove(e.clientX));
+    document.addEventListener('mouseup', onEnd);
+    handle.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(e.touches[0].clientX); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (startX != null) onMove(e.touches[0].clientX); }, { passive: true });
+    document.addEventListener('touchend', onEnd);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else setTimeout(init, 200);
+})();
+
 // Responsive: relocate status widget when right panel is hidden
 (function() {
   const MQ = window.matchMedia('(max-width: 1100px)');

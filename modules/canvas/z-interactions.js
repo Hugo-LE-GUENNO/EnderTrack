@@ -67,11 +67,14 @@ class ZInteractions {
         }
       } else if (e.touches.length === 2 && _zPinchDist > 0) {
         const dist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
-        const dims = window.EnderTrack.State.get().plateauDimensions || { z: 100 };
+        const state = window.EnderTrack.State.get();
+        const dims = state.plateauDimensions || { z: 100 };
         const minZ = this.zVis.canvas.height / dims.z;
         const nz = Math.max(minZ, Math.min(1000, _zPinchZoom * (dist / _zPinchDist)));
+        // Center zoom on current Z position
+        this.zVis.zPan = state.pos?.z || 0;
         this.zVis.zRange = this.zVis.canvas.height / nz;
-        window.EnderTrack.State.update({ zZoom: nz });
+        window.EnderTrack.State.update({ zZoom: nz, zPan: this.zVis.zPan });
         this.zVis.render();
       }
     }, { passive: false });
