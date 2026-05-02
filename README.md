@@ -88,6 +88,104 @@ sudo systemctl enable endertrack
 sudo systemctl start endertrack
 ```
 
+## Créer un plugin
+
+Un plugin = un dossier dans `plugins/` avec 4 fichiers :
+
+```
+plugins/mon-plugin/
+├── plugin.json    # Manifeste
+├── bridge.js      # Logique métier
+├── ui.js          # Interface
+└── ui.css         # Styles (optionnel)
+```
+
+### plugin.json
+
+```json
+{
+  "id": "monPlugin",
+  "folder": "mon-plugin",
+  "name": "Mon Plugin",
+  "version": "1.0.0",
+  "description": "Description courte",
+  "icon": "🔌"
+}
+```
+
+> **Important** : `id` en camelCase. Le plugin manager cherche les classes `MonPluginBridge` et `MonPluginPluginUI` (première lettre de l'id en majuscule).
+
+### bridge.js — Logique
+
+```javascript
+class MonPluginBridge {
+  activate() {
+    // Appelé quand le plugin est activé
+  }
+
+  deactivate() {
+    // Appelé quand le plugin est désactivé
+  }
+
+  getStatus() {
+    return { connected: true };
+  }
+}
+
+window.MonPluginBridge = MonPluginBridge;
+```
+
+### ui.js — Interface
+
+```javascript
+class MonPluginPluginUI {
+  constructor(manifest, bridge) {
+    this.manifest = manifest;
+    this.bridge = bridge;
+    this._el = null;
+  }
+
+  init() {
+    this.bridge.activate();
+    // Injecter l'UI dans le panneau plugins
+    const zone = document.getElementById('navPluginZone');
+    if (!zone) return;
+    this._el = document.createElement('div');
+    this._el.innerHTML = '<button onclick="alert(\'Hello\')">Mon Bouton</button>';
+    zone.appendChild(this._el);
+  }
+
+  destroy() {
+    this.bridge.deactivate();
+    this._el?.remove();
+  }
+}
+
+window.MonPluginPluginUI = MonPluginPluginUI;
+```
+
+### API disponible
+
+```javascript
+// Position
+EnderTrack.State.get().pos              // {x, y, z}
+
+// Mouvement
+EnderTrack.Movement.moveAbsolute(x, y, z)
+EnderTrack.Movement.moveRelative(dx, dy, dz)
+
+// Notifications
+EnderTrack.UI.showNotification('Message', 'success')
+
+// Events
+EnderTrack.State.on('state:changed', (newState, oldState) => { })
+
+// Canvas
+EnderTrack.Canvas.requestRender()
+```
+
+Voir `plugins/random-button/` pour un exemple complet.
+
 ## Liens
 
 - [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
