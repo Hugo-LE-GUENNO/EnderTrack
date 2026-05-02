@@ -54,4 +54,5 @@ def print_startup_info():
     if HOST == '0.0.0.0':
         print(f"  🌐 Accès LAN: http://{local_ip}:{PORT}")
     elif HOST == '127.0.0.1':
-        print(f"  🌐 Accès local uniquement (ENDERTRACK_HOST=0.0.0.0 pour LAN)")
+        print(f"  🌐 Accès local uniquement")
+        print(f"  💡 Réseau local ? → python3 endertrack-server.py --lan")
