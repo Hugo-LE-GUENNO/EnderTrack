@@ -28,7 +28,7 @@ class ZInteractions {
     let clickTimer = null;
     c.addEventListener('click', (e) => {
       if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; return; }
-      clickTimer = setTimeout(() => { clickTimer = null; this._onClick(e); }, 250);
+      clickTimer = setTimeout(() => { clickTimer = null; this._onClick(e); }, 120);
     });
     c.addEventListener('dblclick', () => {
       if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }

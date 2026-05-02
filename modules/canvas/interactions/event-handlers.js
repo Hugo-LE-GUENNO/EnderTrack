@@ -41,7 +41,7 @@ class EventHandlers {
       _clickTimer = setTimeout(() => {
         _clickTimer = null;
         this.interactions.handleClick(cx, cy, ev);
-      }, 250);
+      }, 120);
     });
     
     canvas.addEventListener('dblclick', (e) => {
