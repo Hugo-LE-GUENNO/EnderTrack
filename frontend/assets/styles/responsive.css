@@ -105,7 +105,6 @@
   .canvas-header { display: none; }
   .canvas-content { min-height: 0; }
   .z-visualization-panel { min-width: 50px; max-width: 60px; width: 55px; }
-  .canvas-resize-handle { display: none; }
 
   /* Row 4: left-panel = controls zone */
   .left-panel {

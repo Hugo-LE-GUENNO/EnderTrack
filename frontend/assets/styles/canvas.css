@@ -45,45 +45,6 @@
   min-height: 0;
 }
 
-.canvas-resize-handle {
-  width: 8px;
-  cursor: col-resize;
-  background: var(--border, #444);
-  opacity: 0;
-  transition: opacity 0.2s;
-  touch-action: none;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.canvas-resize-handle::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 4px;
-  height: 30px;
-  border-radius: 2px;
-  background: var(--text-general, #888);
-  opacity: 0.5;
-}
-
-.canvas-resize-handle:hover,
-.canvas-resize-handle.active {
-  opacity: 1;
-}
-
-@media (pointer: coarse) {
-  .canvas-resize-handle {
-    width: 20px;
-    opacity: 0.6;
-  }
-  .canvas-resize-handle::after {
-    width: 4px;
-    height: 40px;
-  }
-}
 
 /* En mode grid, tous les enfants directs ont la même taille */
 .canvas-content[style*="grid"] > * {
