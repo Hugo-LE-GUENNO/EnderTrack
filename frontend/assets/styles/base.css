@@ -28,7 +28,7 @@ body {
 /* Main Layout - 3 Column Grid with Global Header */
 .app-container {
   display: grid;
-  grid-template-columns: clamp(250px, 22vw, 380px) 1fr clamp(160px, 15vw, 280px);
+  grid-template-columns: 300px 1fr clamp(160px, 15vw, 280px);
   grid-template-rows: auto 1fr;
   width: 100vw;
   height: 100vh;

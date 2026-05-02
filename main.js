@@ -61,13 +61,12 @@
   const MQ = window.matchMedia('(max-width: 1100px)');
   function relocateStatus(e) {
     const widget = document.querySelector('.status-widget');
-    const navTab = document.getElementById('navigationTabContent');
+    const leftPanel = document.querySelector('.left-panel');
     const rightPanel = document.querySelector('.right-panel');
     if (!widget || !rightPanel) return;
     if (e.matches) {
-      // Small screen: move widget into navigation tab content
-      const target = navTab || document.querySelector('.left-panel .tab-content') || document.querySelector('.left-panel');
-      if (target) { target.appendChild(widget); widget.classList.add('relocated'); }
+      // Small screen: append to left-panel (after tab-content, always visible)
+      if (leftPanel) { leftPanel.appendChild(widget); widget.classList.add('relocated'); }
     } else {
       rightPanel.appendChild(widget);
       widget.classList.remove('relocated');
