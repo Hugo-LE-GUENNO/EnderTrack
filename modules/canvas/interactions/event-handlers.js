@@ -33,8 +33,10 @@ class EventHandlers {
     // Immediate click — dblclick cleans up any dialog
     canvas.addEventListener('click', (e) => {
       if (e._overlayHandled || e._listHandled) return;
-      if (this.interactions._dragMoved) { this.interactions._dragMoved = false; return; }
-      if (Date.now() - (this.interactions._lastPanTime || 0) < 300) return;
+      if (!e._fromTouch) {
+        if (this.interactions._dragMoved) { this.interactions._dragMoved = false; return; }
+        if (Date.now() - (this.interactions._lastPanTime || 0) < 300) return;
+      }
       this.interactions.handleClick(e.clientX, e.clientY, e);
     });
     
@@ -87,28 +89,28 @@ class EventHandlers {
       if (this._isPinching) {
         if (e.touches.length === 0) {
           this._isPinching = false;
-          this.interactions._lastPanTime = Date.now();
         }
         return;
       }
       if (e.touches.length === 0 && _touchStart) {
         const dt = Date.now() - _touchStart.time;
-        this.interactions.handlePointerEnd(_touchStart.x, _touchStart.y, e);
 
-        // Tap: short touch, small movement
-        const dist = Math.hypot(
-          (e.changedTouches?.[0]?.clientX || _touchStart.x) - _touchStart.x,
-          (e.changedTouches?.[0]?.clientY || _touchStart.y) - _touchStart.y
-        );
-        if (!this.interactions._dragMoved && dist < 20 && dt < 400) {
-          const ts = { ..._touchStart };
-          const canvas = this.interactions.canvas;
-          // Dispatch real DOM click for Lists module
+        // Reset drag state without triggering _lastPanTime
+        this.interactions.isDragging = false;
+        this.interactions.isPanning = false;
+        this.interactions.canvas.style.cursor = '';
+
+        // Tap detection: small movement + short duration
+        const endTouch = e.changedTouches?.[0];
+        const dist = endTouch ? Math.hypot(endTouch.clientX - _touchStart.x, endTouch.clientY - _touchStart.y) : 0;
+
+        if (dist < 20 && dt < 400 && !this.interactions._dragMoved) {
+          // Dispatch DOM click for Lists module, then handleClick for click-and-go
           const clickEvt = new MouseEvent('click', {
-            clientX: ts.x, clientY: ts.y, bubbles: true, cancelable: true
+            clientX: _touchStart.x, clientY: _touchStart.y, bubbles: true, cancelable: true
           });
-          canvas.dispatchEvent(clickEvt);
-          this.interactions.handleClick(ts.x, ts.y, clickEvt);
+          clickEvt._fromTouch = true;
+          this.interactions.canvas.dispatchEvent(clickEvt);
         }
         _touchStart = null;
       }
