@@ -1,4 +1,4 @@
-// main.js - Ultra-minimal bootstrap entry point
+// main.js - Bootstrap entry point
 // EnderTrack 3D Position Simulator
 
 // Force Z panel visibility - Execute immediately
@@ -733,7 +733,7 @@ window.showAboutModal = function() {
   overlay.innerHTML = `
     <div style="background:var(--container-bg); border:1px solid #555; border-radius:12px; padding:28px 32px; max-width:440px; width:90%; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.5); max-height:85vh; overflow-y:auto;">
       <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" style="height:48px; margin-bottom:16px;">
-      <div style="font-size:14px; font-weight:600; color:var(--text-selected); margin-bottom:2px;">EnderTrack Minimal v1</div>
+      <div style="font-size:14px; font-weight:600; color:var(--text-selected); margin-bottom:2px;">EnderTrack Basic</div>
       <div style="font-size:9px; color:var(--text-general); margin-bottom:10px; opacity:0.5;">2025</div>
       <a href="https://github.com/Hugo-LE-GUENNO/EnderTrack" target="_blank" rel="noopener noreferrer"
         style="display:inline-block; padding:5px 14px; background:var(--active-element); color:var(--text-selected); border-radius:4px; text-decoration:none; font-size:11px; font-weight:500; margin-bottom:14px; transition:all 0.15s;"
