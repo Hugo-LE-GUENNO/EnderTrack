@@ -38,6 +38,7 @@ class ZInteractions {
 
     c.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      let d = document.getElementById('_dbg'); if (!d) { d = document.createElement('div'); d.id = '_dbg'; d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#000;color:#0f0;font:11px monospace;padding:4px;max-height:30vh;overflow:auto;'; document.body.appendChild(d); } d.innerHTML = 'Z touchstart touches=' + e.touches.length + '<br>' + d.innerHTML;
       if (e.touches.length === 1) {
         const t = e.touches[0];
         _zTouchStart = { x: t.clientX, y: t.clientY };
@@ -96,6 +97,7 @@ class ZInteractions {
 
     c.addEventListener('touchend', (e) => {
       e.preventDefault();
+      let d = document.getElementById('_dbg'); if (!d) { d = document.createElement('div'); d.id = '_dbg'; d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#000;color:#0f0;font:11px monospace;padding:4px;max-height:30vh;overflow:auto;'; document.body.appendChild(d); } d.innerHTML = 'Z touchend remaining=' + e.touches.length + ' start=' + !!_zTouchStart + ' moved=' + _zTouchMoved + ' dragMoved=' + this._zDragMoved + '<br>' + d.innerHTML;
       this.isDragging = false;
       this._zPanning = false;
       if (e.touches.length === 0 && _zTouchStart && !_zTouchMoved) {
