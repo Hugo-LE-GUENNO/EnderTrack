@@ -65,6 +65,7 @@ class EventHandlers {
         this.interactions.handlePointerStart(touch.clientX, touch.clientY, e);
       } else if (e.touches.length === 2) {
         _touchStart = null;
+        this._isPinching = true;
         this.interactions.handlePinchStart(e);
       }
     });
@@ -73,6 +74,7 @@ class EventHandlers {
       e.preventDefault();
       if (window.EnderTrack?.Overlays?._dragging) return;
       if (e.touches.length === 1) {
+        if (this._isPinching) return;
         const touch = e.touches[0];
         if (_touchStart && Math.hypot(touch.clientX - _touchStart.x, touch.clientY - _touchStart.y) > 15) {
           _touchMoved = true;
@@ -85,6 +87,13 @@ class EventHandlers {
 
     canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
+      if (this._isPinching) {
+        if (e.touches.length === 0) {
+          this._isPinching = false;
+          this.interactions._lastPanTime = Date.now();
+        }
+        return;
+      }
       if (e.touches.length === 0 && _touchStart) {
         const dt = Date.now() - _touchStart.time;
         this.interactions.handlePointerEnd(_touchStart.x, _touchStart.y, e);
