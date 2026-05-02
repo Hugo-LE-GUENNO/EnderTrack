@@ -60,6 +60,7 @@ class NavigationControls {
 
     EnderTrack.Events?.on?.('state:changed', (newState, oldState) => {
       if ((newState.zoom !== oldState.zoom || newState.zZoom !== oldState.zZoom) && !this.userModifying) {
+        console.log('[Nav] zoom changed:', newState.zoom?.toFixed(2), 'zZoom:', newState.zZoom?.toFixed?.(2));
         this.updateSliderRanges(newState);
       }
     });
