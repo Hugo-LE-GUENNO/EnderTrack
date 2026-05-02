@@ -248,6 +248,9 @@ class ZInteractions {
 
     const { x, y } = this._canvasCoords(e);
 
+    // Update mouseZ from click position (needed for touch where mousemove doesn't fire)
+    this._updateMouseZ(y);
+
     // Priority 1: compass
     if (this._isOverCompass(x, y)) { this.fitToView(); return; }
 
