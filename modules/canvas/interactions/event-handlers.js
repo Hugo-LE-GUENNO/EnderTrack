@@ -75,7 +75,7 @@ class EventHandlers {
       e.preventDefault();
       if (e.touches.length === 1) {
         const touch = e.touches[0];
-        if (_touchStart && Math.hypot(touch.clientX - _touchStart.x, touch.clientY - _touchStart.y) > 5) {
+        if (_touchStart && Math.hypot(touch.clientX - _touchStart.x, touch.clientY - _touchStart.y) > 15) {
           _touchMoved = true;
         }
         this.interactions.handlePointerMove(touch.clientX, touch.clientY, e);
@@ -114,19 +114,15 @@ class EventHandlers {
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        // Pinch-to-zoom on trackpad or Ctrl+scroll → zoom
+        // Pinch or Ctrl+scroll → always zoom
         this.interactions.handleWheel(e);
-      } else if (e.deltaMode === 0 && Math.abs(e.deltaX) > 1) {
-        // Trackpad 2-finger scroll (has horizontal component, pixel mode) → pan
+      } else if (e.deltaMode === 1) {
+        // Mouse wheel (line mode) → zoom
+        this.interactions.handleWheel(e);
+      } else {
+        // Pixel mode (trackpad or high-res mouse) → pan
         this.interactions.zoomPanHandler.handlePan(-e.deltaX, -e.deltaY);
         window.EnderTrack.Canvas?.requestRender?.();
-      } else if (e.deltaMode === 0 && Math.abs(e.deltaY) < 50 && !Number.isInteger(e.deltaY)) {
-        // Trackpad vertical scroll (small fractional deltas) → pan
-        this.interactions.zoomPanHandler.handlePan(0, -e.deltaY);
-        window.EnderTrack.Canvas?.requestRender?.();
-      } else {
-        // Mouse wheel (deltaMode 1 = lines, or large integer deltas) → zoom
-        this.interactions.handleWheel(e);
       }
     }, { passive: false });
   }
