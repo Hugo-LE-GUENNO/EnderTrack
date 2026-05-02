@@ -56,6 +56,8 @@ class EventHandlers {
 
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      // Skip if overlay is handling this touch
+      if (window.EnderTrack?.Overlays?._dragging) return;
       if (e.touches.length === 1) {
         const touch = e.touches[0];
         _touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
@@ -69,6 +71,7 @@ class EventHandlers {
 
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
+      if (window.EnderTrack?.Overlays?._dragging) return;
       if (e.touches.length === 1) {
         const touch = e.touches[0];
         if (_touchStart && Math.hypot(touch.clientX - _touchStart.x, touch.clientY - _touchStart.y) > 15) {

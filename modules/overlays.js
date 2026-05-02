@@ -187,7 +187,10 @@ class OverlayManager {
       const t = e.touches[0];
       const fake = { clientX: t.clientX, clientY: t.clientY, button: 0, preventDefault: () => e.preventDefault(), stopImmediatePropagation: () => e.stopImmediatePropagation() };
       this._handleDown(fake);
-      if (this._dragging) e.preventDefault();
+      if (this._dragging) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
     };
     this._onTouchMove = (e) => {
       if (!this._dragging || e.touches.length !== 1) return;
