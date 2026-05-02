@@ -244,7 +244,7 @@
   .center-panel { width: 100%; }
 }
 
-/* Touch devices: wider Z panel */
+/* Touch devices: slightly wider Z panel */
 @media (pointer: coarse) {
-  .z-visualization-panel { width: 110px; }
+  .z-visualization-panel { width: 90px; }
 }
