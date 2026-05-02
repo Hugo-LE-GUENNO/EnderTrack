@@ -128,8 +128,20 @@ class ZInteractions {
       if (this.handleCompassClick(canvasX, canvasY)) return;
       if (this.handleHistoryClick(canvasY)) return;
       
+      // Hit test list points on Z canvas
+      const hitPos = this._hitTestListPoint(canvasX, canvasY);
+      if (hitPos) {
+        if (window.EnderTrack?.Lists?.isActive && window.EnderTrack.Lists.currentMode === 'click') {
+          return; // Don't navigate in click-to-add mode
+        }
+        window.EnderTrack?.Movement?.moveAbsolute?.(hitPos.x, hitPos.y, hitPos.z);
+        return;
+      }
+      
       // Lists mode: add point with current XY + clicked Z
       if (window.EnderTrack?.Lists?.isActive && window.EnderTrack.Lists.currentMode === 'click') {
+        const ci = window.EnderTrack?.CanvasInteractions;
+        if (ci?._dragMoved || Date.now() - (ci?._lastPanTime || 0) < 500) return;
         if (this.zVis.mouseZ !== null && this.isMouseZValid()) {
           const pos = window.EnderTrack.State.get().pos;
           window.EnderTrack.Lists.addPosition(pos.x, pos.y, this.zVis.mouseZ);
@@ -137,11 +149,44 @@ class ZInteractions {
         return;
       }
       
-      // Block during scenario
       if (window.EnderTrack?.Scenario?.isExecuting) return;
       
       this.handleZClickAndGo(e);
     }
+  }
+
+  _hitTestListPoint(canvasX, canvasY) {
+    const Lists = window.EnderTrack?.Lists;
+    if (!Lists) return null;
+    const canvas = this.zVis.canvas;
+    const state = window.EnderTrack.State.get();
+    const zOrientation = state.axisOrientation?.z || 'up';
+    const zInverted = zOrientation === 'down' ? -1 : 1;
+    const halfRange = this.zVis.zRange / 2;
+    const r = 10; // hit radius
+    
+    for (const g of Lists.groups) {
+      if (!g.positions?.length) continue;
+      const byZ = new Map();
+      g.positions.forEach((p, idx) => {
+        const zKey = Math.round(p.z * 100);
+        if (!byZ.has(zKey)) byZ.set(zKey, []);
+        byZ.get(zKey).push({ p, idx });
+      });
+      for (const [zKey, points] of byZ) {
+        const z = zKey / 100;
+        const y = canvas.height / 2 - (zInverted * (z - this.zVis.zPan) / halfRange) * (canvas.height / 2);
+        const spacing = Math.min(12.5, (canvas.width - 20) / Math.max(points.length, 1));
+        const startX = canvas.width / 2 - ((points.length - 1) * spacing) / 2;
+        for (let i = 0; i < points.length; i++) {
+          const cx = startX + i * spacing;
+          if (Math.hypot(canvasX - cx, canvasY - y) <= r) {
+            return points[i].p;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   updateMouseZ(canvasY) {
