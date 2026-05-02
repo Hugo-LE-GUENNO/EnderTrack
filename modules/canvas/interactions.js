@@ -201,7 +201,10 @@ class CanvasInteractions {
   handlePointerEnd(screenX, screenY, event) {
     const canvasPos = this.screenToCanvas(screenX, screenY);
     
-    if (this.isPanning) this.canvas.style.cursor = '';
+    if (this.isPanning) {
+      this.canvas.style.cursor = '';
+      this._lastPanTime = Date.now();
+    }
     this.isDragging = false;
     this.isPanning = false;
     this._dblClickPan = false;
