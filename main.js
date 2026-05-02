@@ -61,21 +61,19 @@
   const MQ = window.matchMedia('(max-width: 1100px)');
   function relocateStatus(e) {
     const widget = document.querySelector('.status-widget');
-    const leftPanel = document.querySelector('.left-panel .tab-content') || document.querySelector('.left-panel');
+    const navTab = document.getElementById('navigationTabContent');
     const rightPanel = document.querySelector('.right-panel');
-    if (!widget || !leftPanel || !rightPanel) return;
+    if (!widget || !rightPanel) return;
     if (e.matches) {
-      // Small screen: move widget into left panel
-      leftPanel.appendChild(widget);
-      widget.classList.add('relocated');
+      // Small screen: move widget into navigation tab content
+      const target = navTab || document.querySelector('.left-panel .tab-content') || document.querySelector('.left-panel');
+      if (target) { target.appendChild(widget); widget.classList.add('relocated'); }
     } else {
-      // Large screen: move back to right panel
       rightPanel.appendChild(widget);
       widget.classList.remove('relocated');
     }
   }
   MQ.addEventListener('change', relocateStatus);
-  // Initial check after DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => relocateStatus(MQ));
   } else {

@@ -5,23 +5,32 @@
   .app-container {
     grid-template-columns: clamp(280px, 20vw, 380px) 1fr clamp(180px, 14vw, 280px);
   }
+  .arrow-container { width: min(180px, 100%); }
 }
 
 /* ── Standard desktop (1100-1400px) ─────────────────────────── */
 @media (max-width: 1400px) {
   .app-container {
-    grid-template-columns: clamp(260px, 22vw, 360px) 1fr clamp(160px, 15vw, 250px);
+    grid-template-columns: clamp(260px, 22vw, 360px) 1fr clamp(160px, 15vw, 240px);
   }
+  .arrow-container { width: min(160px, 100%); }
+
+  /* Compact status coordinates */
+  .status-widget .coordinate-value { font-size: var(--font-lg); }
+  .status-widget .coordinate-unit { display: none; }
 }
 
 /* ── Half-screen / small desktop (≤1100px) ──────────────────── */
-/* Right panel hidden, status moves under navigation controls   */
 @media (max-width: 1100px) {
   .app-container {
     grid-template-columns: clamp(240px, 30vw, 340px) 1fr;
   }
 
   .right-panel { display: none !important; }
+
+  .arrow-container { width: min(150px, 100%); }
+  .z-controls-right { width: 50px; }
+  .z-btn { width: 38px; height: 38px; font-size: 16px; }
 
   /* Status widget compact when relocated into left panel */
   .status-widget.relocated {
@@ -38,38 +47,13 @@
     margin-bottom: 4px;
   }
 
-  .status-widget.relocated .coordinate-item {
-    gap: 4px;
-  }
-
-  .status-widget.relocated .coordinate-value {
-    font-size: var(--font-base);
-    text-align: left;
-  }
-
-  .status-widget.relocated .coordinate-unit {
-    display: none;
-  }
-
-  .status-widget.relocated .emergency-btn-widget {
-    padding: 4px 8px;
-    font-size: 10px;
-  }
-
-  .arrow-container {
-    grid-template-columns: 44px 54px 44px;
-    grid-template-rows: 44px 54px 44px;
-    gap: 3px;
-  }
-
-  .arrow-pad { padding: 16px; }
-  .z-controls-right { width: 60px; padding: 12px 0; }
-  .z-btn { width: 44px; height: 44px; font-size: 18px; }
+  .status-widget.relocated .coordinate-item { gap: 4px; }
+  .status-widget.relocated .coordinate-value { font-size: var(--font-base); text-align: left; }
+  .status-widget.relocated .coordinate-unit { display: none; }
+  .status-widget.relocated .emergency-btn-widget { padding: 4px 8px; font-size: 10px; }
 
   /* Config rows: allow wrapping */
-  .tab-panel details div[style*="display:flex"] {
-    flex-wrap: wrap;
-  }
+  .tab-panel details div[style*="display:flex"] { flex-wrap: wrap; }
 }
 
 /* ── Narrow (≤900px) ────────────────────────────────────────── */
@@ -81,15 +65,10 @@
   .global-header { padding: 0 var(--spacing-sm); }
   .tab-btn { padding: var(--spacing-xs) var(--spacing-base); font-size: var(--font-xs); }
 
-  .arrow-container {
-    grid-template-columns: 38px 48px 38px;
-    grid-template-rows: 38px 48px 38px;
-    gap: 2px;
-  }
-
-  .arrow-pad { padding: 14px; }
-  .z-controls-right { width: 54px; padding: 10px 0; }
-  .z-btn { width: 40px; height: 40px; font-size: 16px; }
+  .arrow-container { width: min(130px, 100%); }
+  .arrow-pad { padding: 12px; }
+  .z-controls-right { width: 46px; padding: 8px 0; }
+  .z-btn { width: 34px; height: 34px; font-size: 14px; }
 
   .navigation-controls-container { padding: var(--spacing-md); }
 }
@@ -100,98 +79,115 @@
     grid-template-columns: minmax(200px, 260px) 1fr;
   }
 
-  .arrow-container {
-    grid-template-columns: 34px 42px 34px;
-    grid-template-rows: 34px 42px 34px;
-    gap: 2px;
-  }
-
-  .arrow-pad { padding: 12px; }
-  .z-controls-right { width: 48px; padding: 8px 0; }
-  .z-btn { width: 36px; height: 36px; font-size: 14px; }
+  .arrow-container { width: min(115px, 100%); }
+  .arrow-pad { padding: 10px; }
+  .z-controls-right { width: 42px; padding: 6px 0; }
+  .z-btn { width: 30px; height: 30px; font-size: 13px; }
 
   .goto-section { padding: var(--spacing-sm); }
   .goto-field input { font-size: var(--font-xs); padding: var(--spacing-xs); }
   .action-btn { font-size: var(--font-xs); padding: var(--spacing-xs) var(--spacing-sm); }
 }
 
-/* ── Mobile / RPi 7" (≤500px) — portrait stacked ────────────── */
+/* ── Mobile portrait (≤500px) ───────────────────────────────── */
+/* Canvas on top, tabs + 2-column (nav left, status right) below */
 @media (max-width: 500px) {
   .app-container {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto minmax(35vh, 1fr) auto;
+    overflow: hidden;
   }
 
-  /* Canvas on top, full width */
-  .center-panel {
+  .global-header {
     grid-row: 1;
-    min-height: 40vh;
+    grid-column: 1;
+    padding: 2px 8px;
+  }
+  .global-header img { height: 22px; }
+
+  /* Canvas takes middle */
+  .center-panel {
+    grid-row: 2;
+    grid-column: 1;
+    min-height: 0;
   }
 
-  /* Controls below, scrollable */
+  .canvas-header { padding: 2px 8px; }
+  .canvas-header .app-title { font-size: 11px; }
+
+  /* Left panel becomes bottom section */
   .left-panel {
-    grid-row: 2;
+    grid-row: 3;
+    grid-column: 1;
     max-height: 55vh;
     overflow-y: auto;
     border-radius: var(--radius) var(--radius) 0 0;
   }
 
-  .global-header {
-    grid-column: 1;
-    padding: 2px 8px;
+  .tab-system { padding: 4px; gap: 2px; flex-wrap: wrap; }
+  .tab-btn { padding: 3px 6px; font-size: 9px; }
+
+  /* Navigation tab: 2-column layout (controls left, status right) */
+  .status-widget.relocated {
+    order: 0;
+    margin-top: 0;
+    border-top: none;
+    padding: 6px;
   }
 
-  .global-header img { height: 24px; }
-
-  .tab-btn { padding: 4px 8px; font-size: 10px; }
-  .tab-system { padding: 6px; gap: 2px; flex-wrap: wrap; }
-
-  .navigation-controls-container { padding: 8px; }
-
-  /* Compact arrow pad */
-  .arrow-container {
-    grid-template-columns: 30px 38px 30px;
-    grid-template-rows: 30px 38px 30px;
-    gap: 2px;
-  }
-
-  .arrow-pad { padding: 10px; }
-  .z-controls-right { width: 44px; padding: 6px 0; }
-  .z-btn { width: 32px; height: 32px; font-size: 13px; }
-
-  /* Compact goto section */
-  .goto-section { padding: 6px; }
-  .goto-inputs { flex-wrap: wrap; gap: 4px; }
-  .goto-field { min-width: 0; }
-  .goto-field input { font-size: 11px; padding: 4px; width: 60px; }
-  .goto-field label { font-size: 10px; }
-  .action-btn { font-size: 10px; padding: 4px 10px; }
-
-  /* Compact sensitivity sliders */
-  .axis-control { gap: 4px; }
-  .axis-control input[type="number"] { width: 45px; font-size: 10px; }
-
-  /* Status widget inline */
-  .status-widget.relocated .coordinates-display {
-    flex-direction: row;
-    padding: 4px 6px;
+  #navigationTabContent {
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
   }
 
-  .status-widget.relocated .coordinate-value {
-    font-size: 12px;
+  #navigationTabContent .navigation-controls-container {
+    flex: 1;
+    min-width: 150px;
+    padding: 6px;
+    margin-bottom: 0;
   }
 
-  /* Config details compact */
-  details summary { font-size: 11px; padding: 4px 0; }
-  details > div { padding: 6px; }
+  #navigationTabContent .status-widget.relocated {
+    flex: 0 0 auto;
+    min-width: 100px;
+    max-width: 140px;
+  }
 
-  /* Z visualization thinner on mobile */
-  .z-visualization-panel { min-width: 40px; max-width: 50px; }
+  .status-widget.relocated .coordinates-display {
+    flex-direction: column;
+    padding: 4px;
+    gap: 2px;
+  }
 
-  /* Canvas header compact */
-  .canvas-header { padding: 4px 8px; }
-  .canvas-header .app-title { font-size: 12px; }
+  .status-widget.relocated .coordinate-value { font-size: 11px; }
+  .status-widget.relocated .coordinate-label { font-size: 10px; min-width: 12px; }
+
+  /* Compact controls */
+  .navigation-controls-container { padding: 6px; gap: 2px; }
+  .arrow-container { width: min(100px, 100%); }
+  .arrow-pad { padding: 8px; }
+  .z-controls-right { width: 36px; padding: 4px 0; }
+  .z-btn { width: 26px; height: 26px; font-size: 11px; }
+
+  .step-controls { margin-top: 2px; }
+  .axis-control { gap: 3px; margin-bottom: 0; }
+  .axis-control input[type="number"] { width: 40px; font-size: 10px; }
+  .axis-label { font-size: 10px; }
+
+  /* Compact goto */
+  .goto-section { padding: 4px; }
+  .goto-inputs { flex-wrap: wrap; gap: 3px; }
+  .goto-field input { font-size: 10px; padding: 3px; width: 55px; }
+  .goto-field label { font-size: 9px; }
+  .action-btn { font-size: 9px; padding: 3px 8px; }
+
+  /* Config compact */
+  details summary { font-size: 10px; padding: 3px 0; }
+  details > div { padding: 4px; }
+
+  /* Z visualization thinner */
+  .z-visualization-panel { min-width: 35px; max-width: 45px; }
 }
 
 /* ── Short screens (landscape RPi, etc) ─────────────────────── */
@@ -204,38 +200,26 @@
   .step-controls { margin-top: var(--spacing-xs); }
   .axis-control { margin-bottom: 0; }
 
-  .arrow-container {
-    grid-template-columns: 38px 46px 38px;
-    grid-template-rows: 38px 46px 38px;
-    gap: 2px;
-  }
-
-  .arrow-pad { padding: 12px; }
-  .z-controls-right { width: 54px; padding: 8px 0; }
-  .z-btn { width: 38px; height: 38px; }
+  .arrow-container { width: min(140px, 100%); }
+  .arrow-pad { padding: 10px; }
+  .z-controls-right { width: 48px; padding: 6px 0; }
+  .z-btn { width: 36px; height: 36px; }
 }
 
 /* ── Short + narrow (half-screen on laptop) ─────────────────── */
 @media (max-width: 1100px) and (max-height: 700px) {
-  .arrow-container {
-    grid-template-columns: 36px 44px 36px;
-    grid-template-rows: 36px 44px 36px;
-    gap: 2px;
-  }
-
-  .arrow-pad { padding: 12px; }
-  .z-controls-right { width: 50px; padding: 8px 0; }
-  .z-btn { width: 38px; height: 38px; font-size: 16px; }
+  .arrow-container { width: min(125px, 100%); }
+  .arrow-pad { padding: 10px; }
+  .z-controls-right { width: 44px; padding: 6px 0; }
+  .z-btn { width: 34px; height: 34px; font-size: 14px; }
 }
 
 /* ── Utility ────────────────────────────────────────────────── */
 
-/* High DPI */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   #mapCanvas { image-rendering: crisp-edges; }
 }
 
-/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
@@ -243,7 +227,6 @@
   }
 }
 
-/* Print */
 @media print {
   .left-panel, .right-panel, .global-header { display: none; }
   .center-panel { width: 100%; }
