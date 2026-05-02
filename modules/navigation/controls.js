@@ -455,13 +455,11 @@ class NavigationControls {
 
     const rescale = (el, aMin, aMax) => {
       if (!el) return;
-      el.max = aMax.toFixed(3);
-      el.min = aMin.toFixed(3);
-      el.step = aMax > 1 ? '0.01' : '0.001';
-      // Clamp current value to new range without changing it otherwise
-      const val = parseFloat(el.value);
-      if (val > aMax) el.value = aMax.toFixed(3);
-      if (val < aMin) el.value = aMin.toFixed(3);
+      const oldMin = parseFloat(el.min) || 0.01, oldMax = parseFloat(el.max) || 50, oldVal = parseFloat(el.value);
+      if (oldVal <= min) { el.max = aMax.toFixed(3); el.min = aMin.toFixed(3); el.value = aMin.toFixed(3); return; }
+      const pct = (oldMax > oldMin) ? (oldVal - oldMin) / (oldMax - oldMin) : 0.33;
+      el.max = aMax.toFixed(3); el.min = aMin.toFixed(3); el.step = aMax > 1 ? '0.01' : '0.001';
+      el.value = Math.max(min, aMin + pct * (aMax - aMin)).toFixed(3);
     };
 
     const maxXY = Math.max(min, viewXY), minXY = Math.max(min, viewXY / 100);
