@@ -48,6 +48,50 @@ Avec `--lan`, le serveur affiche l'adresse à utiliser depuis les autres apparei
 
 Ouvrir cette adresse depuis n'importe quel navigateur sur le même réseau.
 
+## Installation sur Raspberry Pi
+
+```bash
+# 1. Cloner
+git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+cd EnderTrack
+
+# 2. Lancer (accès réseau pour piloter depuis un autre appareil)
+python3 endertrack-server.py --lan
+```
+
+Ouvrir `http://<IP_DU_PI>:5000` depuis un navigateur sur le même réseau.
+
+Pour trouver l'IP du Pi : `hostname -I`
+
+### Démarrage automatique au boot (optionnel)
+
+```bash
+# Créer un service systemd
+sudo tee /etc/systemd/system/endertrack.service << EOF
+[Unit]
+Description=EnderTrack Server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 $(pwd)/endertrack-server.py --lan
+WorkingDirectory=$(pwd)
+User=$USER
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Activer
+sudo systemctl enable endertrack
+sudo systemctl start endertrack
+
+# Vérifier
+sudo systemctl status endertrack
+```
+
+Le serveur démarre automatiquement à chaque boot du Pi. La platine USB est détectée dans Réglages → Platine XYZ.
+
 ## Plugins
 
 Voir la branche [`plugins`](../../tree/plugins) pour les plugins disponibles. Copiez un dossier plugin dans `plugins/` et activez-le dans Réglages → Extensions.
