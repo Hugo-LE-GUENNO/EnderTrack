@@ -62,6 +62,8 @@ class EventHandlers {
       if (window.EnderTrack?.Overlays?._dragging) return;
       if (e.touches.length === 1) {
         const touch = e.touches[0];
+        _touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+        _touchMoved = false;
         this.interactions.handlePointerStart(touch.clientX, touch.clientY, e);
       } else if (e.touches.length === 2) {
         _touchStart = null;
