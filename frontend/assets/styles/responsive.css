@@ -248,40 +248,7 @@
   .center-panel { width: 100%; }
 }
 
-/* Touch zoom buttons: hidden on desktop, visible on touch devices */
-.touch-zoom-btns {
-  display: none;
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  flex-direction: column;
-  gap: 4px;
-  z-index: 100;
-}
-
-.touch-zoom-btns button {
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--border, #444);
-  border-radius: var(--radius-small, 4px);
-  background: var(--container-bg, #2c2c2c);
-  color: var(--text-selected, #fff);
-  font-size: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  opacity: 0.8;
-  touch-action: manipulation;
-}
-
-.touch-zoom-btns button:active {
-  opacity: 1;
-  background: var(--active-element, #4a5568);
-}
-
+/* Touch devices: wider Z panel for finger interaction */
 @media (pointer: coarse) {
-  .touch-zoom-btns { display: flex; }
-}
-
-@media (max-width: 700px) {
-  .touch-zoom-btns { display: flex; }
+  .z-visualization-panel { width: 100px; }
 }

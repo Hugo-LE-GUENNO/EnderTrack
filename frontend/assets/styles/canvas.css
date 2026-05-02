@@ -74,6 +74,7 @@
   margin: 0;
   display: block;
   box-sizing: border-box;
+  touch-action: none;
 }
 
 /* Custom cursor color for crosshair */
@@ -160,6 +161,7 @@
   width: 100%;
   flex: 1;
   z-index: var(--z-base);
+  touch-action: none;
 }
 
 /* Custom cursor color for Z canvas crosshair */
