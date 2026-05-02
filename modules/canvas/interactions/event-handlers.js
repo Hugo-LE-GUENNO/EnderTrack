@@ -52,7 +52,6 @@ class EventHandlers {
   setupTouchEvents(canvas) {
     let _touchStart = null;
     let _touchMoved = false;
-    let _lastTapTime = 0;
 
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -96,31 +95,20 @@ class EventHandlers {
         const dt = Date.now() - _touchStart.time;
         this.interactions.handlePointerEnd(_touchStart.x, _touchStart.y, e);
 
-        if (!_touchMoved && !this.interactions._dragMoved && dt < 300) {
-          const now = Date.now();
-          // Double-tap → zoom in
-          if (now - _lastTapTime < 350) {
-            _lastTapTime = 0;
-            document.querySelector('.click-and-go-dialog')?.remove();
-            const zoom = window.EnderTrack?.State?.get()?.zoom || 1;
-            this.interactions.zoomPanHandler.handleZoom(zoom * 2, { x: _touchStart.x, y: _touchStart.y });
-          } else {
-            _lastTapTime = now;
-            const ts = { ..._touchStart };
-            // Dispatch real DOM click so Lists module picks it up
-            const canvas = this.interactions.canvas;
-            const rect = canvas.getBoundingClientRect();
-            const clickEvt = new MouseEvent('click', {
-              clientX: ts.x, clientY: ts.y, bubbles: true, cancelable: true
-            });
-            // Also call handleClick for click-and-go
-            setTimeout(() => {
-              if (_lastTapTime === now) {
-                canvas.dispatchEvent(clickEvt);
-                this.interactions.handleClick(ts.x, ts.y, clickEvt);
-              }
-            }, 350);
-          }
+        // Tap: short touch, small movement
+        const dist = Math.hypot(
+          (e.changedTouches?.[0]?.clientX || _touchStart.x) - _touchStart.x,
+          (e.changedTouches?.[0]?.clientY || _touchStart.y) - _touchStart.y
+        );
+        if (!this.interactions._dragMoved && dist < 20 && dt < 400) {
+          const ts = { ..._touchStart };
+          const canvas = this.interactions.canvas;
+          // Dispatch real DOM click for Lists module
+          const clickEvt = new MouseEvent('click', {
+            clientX: ts.x, clientY: ts.y, bubbles: true, cancelable: true
+          });
+          canvas.dispatchEvent(clickEvt);
+          this.interactions.handleClick(ts.x, ts.y, clickEvt);
         }
         _touchStart = null;
       }
