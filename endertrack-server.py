@@ -40,11 +40,17 @@ CORS(app)
 def serve_index():
     return send_from_directory(PROJECT_ROOT, 'index.html')
 
-# ─── Banner ──────────────────────────────────────────────────────────────────
+@app.route('/api/version')
+def get_version():
+    return {'version': VERSION}
 
-print()
-print("  🔬 EnderTrack Server")
-print()
+# ─── Version ─────────────────────────────────────────────────────────────────
+
+import json as _json
+_pkg = os.path.join(PROJECT_ROOT, 'package.json')
+try:
+    with open(_pkg) as _f: VERSION = _json.load(_f)['version']
+except: VERSION = '?'
 
 # ─── Enregistrement des modules ──────────────────────────────────────────────
 
@@ -67,7 +73,15 @@ from server import network_config
 
 if __name__ == '__main__':
     print()
-    network_config.print_startup_info()
+    print(f"  🔬 Bienvenue sur EnderTrack v{VERSION}")
+    print()
+    print(f"  🌐 {network_config.HOST}:{network_config.PORT}")
+    if network_config.HOST == '0.0.0.0':
+        print(f"  🌐 LAN: http://{network_config.get_local_ip()}:{network_config.PORT}")
+    elif network_config.HOST == '127.0.0.1':
+        print(f"  💡 Accès réseau ? → python3 endertrack-server.py --lan")
+    print()
+    print(f"  📖 https://github.com/Hugo-LE-GUENNO/EnderTrack")
     print()
     import logging
     logging.getLogger('werkzeug').setLevel(logging.ERROR)

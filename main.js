@@ -94,7 +94,7 @@ class EnderTrackBootstrap {
       const initTime = Math.round(endTime - startTime);
       
 
-      EnderTrack.UI.showNotification(`EnderTrack prêt ! (${initTime}ms)`, 'success');
+      EnderTrack.UI.showNotification(`EnderTrack v2.0 prêt ! (${initTime}ms)`, 'success');
       
     } catch (error) {
 
@@ -721,9 +721,21 @@ window.openLists = () => {
 };
 
 
-window.showAboutModal = function() {
+window.showAboutModal = async function() {
   const existing = document.querySelector('.about-modal-overlay');
   if (existing) { existing.remove(); return; }
+
+  // Fetch version: try server, fallback to package.json, fallback to '?'
+  let version = '?';
+  try {
+    const r = await fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/version', { signal: AbortSignal.timeout(1000) });
+    version = (await r.json()).version;
+  } catch {
+    try {
+      const r = await fetch('package.json');
+      version = (await r.json()).version;
+    } catch {}
+  }
 
   const overlay = document.createElement('div');
   overlay.className = 'about-modal-overlay';
@@ -733,7 +745,7 @@ window.showAboutModal = function() {
   overlay.innerHTML = `
     <div style="background:var(--container-bg); border:1px solid #555; border-radius:12px; padding:28px 32px; max-width:440px; width:90%; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.5); max-height:85vh; overflow-y:auto;">
       <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" style="height:48px; margin-bottom:16px;">
-      <div style="font-size:14px; font-weight:600; color:var(--text-selected); margin-bottom:2px;">EnderTrack Basic v1.0</div>
+      <div style="font-size:14px; font-weight:600; color:var(--text-selected); margin-bottom:2px;">EnderTrack v${version}</div>
       <div style="font-size:9px; color:var(--text-general); margin-bottom:10px; opacity:0.5;">2025</div>
       <a href="https://github.com/Hugo-LE-GUENNO/EnderTrack" target="_blank" rel="noopener noreferrer"
         style="display:inline-block; padding:5px 14px; background:var(--active-element); color:var(--text-selected); border-radius:4px; text-decoration:none; font-size:11px; font-weight:500; margin-bottom:14px; transition:all 0.15s;"
