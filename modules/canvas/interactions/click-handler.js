@@ -283,7 +283,7 @@ class ClickHandler {
                 if (window.EnderTrack?.Canvas?.requestRender) {
                   window.EnderTrack.Canvas.requestRender();
                 }
-              }, 50);
+              }, 0);
               
               const listPos = {
                 x: point.x,
@@ -352,7 +352,7 @@ class ClickHandler {
     setTimeout(() => {
       document.addEventListener('keydown', closeDialog);
       document.addEventListener('click', closeDialog);
-    }, 100);
+    }, 0);
     
     goBtn.focus();
   }
@@ -559,7 +559,7 @@ class ClickHandler {
     setTimeout(() => {
       document.addEventListener('keydown', closeDialog);
       document.addEventListener('click', closeDialog);
-    }, 100);
+    }, 0);
     
     goBtn.focus();
   }

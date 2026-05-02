@@ -43,13 +43,6 @@ class CanvasInteractions {
     this.dragStartPos = { x: screenX, y: screenY };
     if (this.isPanning) this.canvas.style.cursor = 'grabbing';
     
-    EnderTrack.State.update({
-      isDragging: true,
-      isPanning: this.isPanning,
-      lastMouseX: screenX,
-      lastMouseY: screenY
-    });
-    
     EnderTrack.Events.emit('canvas:pointer:start', {
       screen: { x: screenX, y: screenY },
       canvas: canvasPos,
@@ -85,11 +78,6 @@ class CanvasInteractions {
     }
     
     this.lastMousePos = { x: screenX, y: screenY };
-    
-    EnderTrack.State.update({
-      lastMouseX: screenX,
-      lastMouseY: screenY
-    });
     
     EnderTrack.Events.emit('canvas:pointer:move', {
       screen: { x: screenX, y: screenY },
@@ -161,11 +149,6 @@ class CanvasInteractions {
     this.isDragging = false;
     this.isPanning = false;
     this._dblClickPan = false;
-    
-    EnderTrack.State.update({
-      isDragging: false,
-      isPanning: false
-    });
     
     EnderTrack.Events.emit('canvas:pointer:end', {
       screen: { x: screenX, y: screenY },

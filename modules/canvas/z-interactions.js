@@ -324,7 +324,7 @@ class ZInteractions {
         document.removeEventListener('click', close);
       }
     };
-    setTimeout(() => { document.addEventListener('keydown', close); document.addEventListener('click', close); }, 100);
+    setTimeout(() => { document.addEventListener('keydown', close); document.addEventListener('click', close); }, 0);
   }
 
   // ── Compass ────────────────────────────────────────────────
