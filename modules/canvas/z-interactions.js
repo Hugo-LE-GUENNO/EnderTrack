@@ -40,7 +40,7 @@ class ZInteractions {
       e.preventDefault();
       if (e.touches.length === 1) {
         const t = e.touches[0];
-        _zTouchStart = { y: t.clientY };
+        _zTouchStart = { x: t.clientX, y: t.clientY };
         _zTouchMoved = false;
         this.isDragging = true;
         this._zDragMoved = false;
@@ -60,9 +60,25 @@ class ZInteractions {
         const t = e.touches[0];
         if (_zTouchStart && Math.abs(t.clientY - _zTouchStart.y) > 5) _zTouchMoved = true;
         if (_zTouchMoved) {
-          this._zPanning = true;
           this._zDragMoved = true;
-          this._pan({ clientY: t.clientY });
+          // On small screens: 1-finger drag = zoom (up=in, down=out)
+          const isMobile = window.matchMedia('(max-width: 500px)').matches;
+          if (isMobile) {
+            const deltaY = this.lastMouseY - t.clientY;
+            const state = window.EnderTrack.State.get();
+            const dims = state.plateauDimensions || { z: 100 };
+            const minZ = this.zVis.canvas.height / dims.z;
+            const factor = 1 + deltaY * 0.01;
+            const curZoom = state.zZoom || minZ;
+            const nz = Math.max(minZ * 0.5, Math.min(1000, curZoom * factor));
+            this.zVis.zPan = state.pos?.z || 0;
+            this.zVis.zRange = this.zVis.canvas.height / nz;
+            window.EnderTrack.State.update({ zZoom: nz, zPan: this.zVis.zPan });
+            this.zVis.render();
+          } else {
+            this._zPanning = true;
+            this._pan({ clientY: t.clientY });
+          }
           this.lastMouseY = t.clientY;
         }
       } else if (e.touches.length === 2 && _zPinchDist > 0) {
@@ -71,7 +87,6 @@ class ZInteractions {
         const dims = state.plateauDimensions || { z: 100 };
         const minZ = this.zVis.canvas.height / dims.z;
         const nz = Math.max(minZ, Math.min(1000, _zPinchZoom * (dist / _zPinchDist)));
-        // Center zoom on current Z position
         this.zVis.zPan = state.pos?.z || 0;
         this.zVis.zRange = this.zVis.canvas.height / nz;
         window.EnderTrack.State.update({ zZoom: nz, zPan: this.zVis.zPan });
@@ -84,7 +99,9 @@ class ZInteractions {
       this.isDragging = false;
       this._zPanning = false;
       if (e.touches.length === 0 && _zTouchStart && !_zTouchMoved) {
-        this._onClick({ button: 0, clientX: 0, clientY: _zTouchStart.y });
+        // Tap: pass real coordinates
+        const rect = c.getBoundingClientRect();
+        this._onClick({ button: 0, clientX: _zTouchStart.x, clientY: _zTouchStart.y });
       }
       _zTouchStart = null;
       _zPinchDist = 0;
