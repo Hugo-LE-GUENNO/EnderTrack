@@ -61,7 +61,7 @@
   function init() {
     const handle = document.getElementById('canvasResizeHandle');
     const zPanel = document.getElementById('zVisualizationPanel');
-    if (!handle || !zPanel) return;
+    if (!handle || !zPanel) { setTimeout(init, 500); return; }
     let startX, startW;
     const onStart = (x) => { startX = x; startW = zPanel.offsetWidth; handle.classList.add('active'); };
     const onMove = (x) => {
@@ -76,7 +76,7 @@
     document.addEventListener('mousemove', (e) => onMove(e.clientX));
     document.addEventListener('mouseup', onEnd);
     handle.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(e.touches[0].clientX); }, { passive: false });
-    document.addEventListener('touchmove', (e) => { if (startX != null) onMove(e.touches[0].clientX); }, { passive: true });
+    document.addEventListener('touchmove', (e) => { if (startX != null) { e.preventDefault(); onMove(e.touches[0].clientX); } }, { passive: false });
     document.addEventListener('touchend', onEnd);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
