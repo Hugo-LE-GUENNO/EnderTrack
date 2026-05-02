@@ -43,9 +43,7 @@ def serve_index():
 # ─── Banner ──────────────────────────────────────────────────────────────────
 
 print()
-print("╔══════════════════════════════════════════╗")
-print("║     🔬 EnderTrack Server v2.0            ║")
-print("╚══════════════════════════════════════════╝")
+print("  🔬 EnderTrack Server")
 print()
 
 # ─── Enregistrement des modules ──────────────────────────────────────────────
@@ -71,4 +69,7 @@ if __name__ == '__main__':
     print()
     network_config.print_startup_info()
     print()
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
     app.run(host=network_config.HOST, port=network_config.PORT, debug=False, threaded=True)
