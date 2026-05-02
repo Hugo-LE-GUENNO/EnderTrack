@@ -89,6 +89,7 @@ class ZInteractions {
     }
     
     this.checkZCompassHover(canvasX, canvasY);
+    this._checkListPointHover(canvasX, canvasY);
     this.updateZCursor(canvasY);
     
     if (this.isDragging) {
@@ -189,6 +190,23 @@ class ZInteractions {
     return null;
   }
 
+  _checkListPointHover(canvasX, canvasY) {
+    const hit = this._hitTestListPoint(canvasX, canvasY);
+    this._hoveredListPoint = hit;
+    // Update Lists hoveredIdx for visual feedback
+    const Lists = window.EnderTrack?.Lists;
+    if (Lists && hit) {
+      const g = Lists._activeGroup?.();
+      if (g) {
+        const idx = g.positions.findIndex(p => p.x === hit.x && p.y === hit.y && p.z === hit.z);
+        if (idx >= 0) Lists.hoverPoint(idx);
+      }
+    } else if (Lists) {
+      Lists.hoverPoint(null);
+    }
+    this.zVis.render();
+  }
+
   updateMouseZ(canvasY) {
     const state = window.EnderTrack.State.get();
     const zOrientation = state.axisOrientation?.z || 'up';
@@ -218,25 +236,27 @@ class ZInteractions {
     const canvas = this.zVis.canvas;
     const state = window.EnderTrack.State.get();
     
-    // Blocked during scenario
     if (window.EnderTrack?.Scenario?.isExecuting) {
       canvas.style.cursor = 'not-allowed';
-      canvas.classList.remove('crosshair-cursor');
       return;
     }
     
     if (this.zVis.zCompassHovered) {
       canvas.style.cursor = 'pointer';
-      canvas.classList.remove('crosshair-cursor');
       return;
     }
     
-    // Lists click mode: copy cursor like XY canvas
+    // Hover on list point → pointer
+    if (this._hoveredListPoint) {
+      canvas.style.cursor = 'pointer';
+      return;
+    }
+    
+    // Lists click mode
     if (window.EnderTrack?.Lists?.isActive && window.EnderTrack.Lists.currentMode === 'click') {
       const isValid = this.isMouseZValid();
       if (isValid) {
         canvas.style.cursor = 'copy';
-        canvas.classList.remove('crosshair-cursor');
       } else {
         canvas.style.cursor = 'not-allowed';
         canvas.classList.remove('crosshair-cursor');
