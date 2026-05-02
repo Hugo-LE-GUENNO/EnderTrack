@@ -252,6 +252,10 @@ class ListManager {
 
   _handleClick(e) {
     if (!this.isActive || !this._clickMode) return;
+    // Block during pan (mouse drag or trackpad scroll)
+    const interactions = window.EnderTrack?.Canvas?.interactions;
+    if (interactions?.isPanning || interactions?._dragMoved) return;
+    if (Date.now() - (interactions?._lastPanTime || 0) < 500) return;
     const coords = window.EnderTrack?.Coordinates;
     const canvas = document.getElementById('mapCanvas');
     if (!coords || !canvas) return;
