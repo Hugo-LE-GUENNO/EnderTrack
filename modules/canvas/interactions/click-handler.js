@@ -6,9 +6,10 @@ class ClickHandler {
   }
 
   handleClick(screenX, screenY, event) {
-    // Block everything during scenario execution
+    console.log('[CLICK] handleClick called', { screenX: Math.round(screenX), screenY: Math.round(screenY), fromTouch: !!event?._fromTouch });
+    
     if (window.EnderTrack?.Scenario?.isExecuting) {
-      return;
+      console.log('[CLICK] blocked: scenario executing'); return;
     }
     
     // Auto-switch to Navigation tab if clicking canvas from a passive tab
@@ -32,12 +33,11 @@ class ClickHandler {
     
     // Block click-and-go if Overlays module is active
     if (window.EnderTrack?.Overlays?.isActive) {
-      return;
+      console.log('[CLICK] blocked: overlays active'); return;
     }
     
-    // Block click-and-go if disabled
     if (window.EnderTrack?.Canvas?.clickAndGoEnabled === false) {
-      return;
+      console.log('[CLICK] blocked: clickAndGo disabled'); return;
     }
     
 
@@ -50,7 +50,7 @@ class ClickHandler {
       Math.pow(screenY - this.interactions.dragStartPos.y, 2)
     );
     
-    if (dragDistance > 5) return; // This was a drag, not a click
+    if (dragDistance > 5) { console.log('[CLICK] blocked: drag distance', dragDistance); return; }
     
     // Check compass click
     if (this.checkCompassClick(canvasPos)) return;
@@ -65,10 +65,10 @@ class ClickHandler {
     const mapPos = this.calculateMapPosition(canvasPos);
     
     // Check if on plateau
-    if (!this.isOnPlateau(mapPos)) return;
+    if (!this.isOnPlateau(mapPos)) { console.log('[CLICK] blocked: not on plateau', mapPos); return; }
     
     // Handle different click modes
-    if (this.handleSpecialModes(mapPos, canvasPos, screenX, screenY)) return;
+    if (this.handleSpecialModes(mapPos, canvasPos, screenX, screenY)) { console.log('[CLICK] handled by special mode'); return; }
     
     // Handle normal click-to-move
     this.handleNormalClick(mapPos, screenX, screenY);
