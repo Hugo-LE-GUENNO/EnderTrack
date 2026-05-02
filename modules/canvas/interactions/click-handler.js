@@ -6,10 +6,11 @@ class ClickHandler {
   }
 
   handleClick(screenX, screenY, event) {
-    console.log('[CLICK] handleClick called', { screenX: Math.round(screenX), screenY: Math.round(screenY), fromTouch: !!event?._fromTouch });
+    const _dbg = (msg) => { let d = document.getElementById('_dbg'); if (!d) { d = document.createElement('div'); d.id = '_dbg'; d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#000;color:#0f0;font:11px monospace;padding:4px;max-height:30vh;overflow:auto;'; document.body.appendChild(d); } d.innerHTML = msg + '<br>' + d.innerHTML; };
+    _dbg('handleClick ' + Math.round(screenX) + ',' + Math.round(screenY) + ' touch=' + !!event?._fromTouch);
     
     if (window.EnderTrack?.Scenario?.isExecuting) {
-      console.log('[CLICK] blocked: scenario executing'); return;
+      _dbg('BLOCKED: scenario'); return;
     }
     
     // Auto-switch to Navigation tab if clicking canvas from a passive tab
@@ -33,11 +34,11 @@ class ClickHandler {
     
     // Block click-and-go if Overlays module is active
     if (window.EnderTrack?.Overlays?.isActive) {
-      console.log('[CLICK] blocked: overlays active'); return;
+      _dbg('BLOCKED: overlays'); return;
     }
     
     if (window.EnderTrack?.Canvas?.clickAndGoEnabled === false) {
-      console.log('[CLICK] blocked: clickAndGo disabled'); return;
+      _dbg('BLOCKED: clickAndGo disabled, tab=' + window.EnderTrack?.State?.get()?.activeTab); return;
     }
     
 
@@ -50,7 +51,7 @@ class ClickHandler {
       Math.pow(screenY - this.interactions.dragStartPos.y, 2)
     );
     
-    if (dragDistance > 5) { console.log('[CLICK] blocked: drag distance', dragDistance); return; }
+    if (dragDistance > 5) { _dbg('BLOCKED: drag ' + Math.round(dragDistance)); return; }
     
     // Check compass click
     if (this.checkCompassClick(canvasPos)) return;
@@ -65,10 +66,11 @@ class ClickHandler {
     const mapPos = this.calculateMapPosition(canvasPos);
     
     // Check if on plateau
-    if (!this.isOnPlateau(mapPos)) { console.log('[CLICK] blocked: not on plateau', mapPos); return; }
+    if (!this.isOnPlateau(mapPos)) { _dbg('BLOCKED: off plateau ' + JSON.stringify(mapPos)); return; }
     
     // Handle different click modes
-    if (this.handleSpecialModes(mapPos, canvasPos, screenX, screenY)) { console.log('[CLICK] handled by special mode'); return; }
+    if (this.handleSpecialModes(mapPos, canvasPos, screenX, screenY)) { _dbg('handled: special mode'); return; }
+    _dbg('OK: normal click ' + mapPos.x.toFixed(1) + ',' + mapPos.y.toFixed(1));
     
     // Handle normal click-to-move
     this.handleNormalClick(mapPos, screenX, screenY);

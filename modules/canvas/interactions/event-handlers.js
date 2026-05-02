@@ -32,7 +32,7 @@ class EventHandlers {
     
     // Immediate click — dblclick cleans up any dialog
     canvas.addEventListener('click', (e) => {
-      console.log('[EVENT] click', { fromTouch: !!e._fromTouch, dragMoved: this.interactions._dragMoved, panAge: Date.now() - (this.interactions._lastPanTime || 0) });
+      let d = document.getElementById('_dbg'); if (!d) { d = document.createElement('div'); d.id = '_dbg'; d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#000;color:#0f0;font:11px monospace;padding:4px;max-height:30vh;overflow:auto;'; document.body.appendChild(d); } d.innerHTML = 'click event: touch=' + !!e._fromTouch + ' drag=' + this.interactions._dragMoved + ' panAge=' + (Date.now() - (this.interactions._lastPanTime || 0)) + '<br>' + d.innerHTML;
       if (e._overlayHandled || e._listHandled) return;
       if (!e._fromTouch) {
         if (this.interactions._dragMoved) { this.interactions._dragMoved = false; return; }
@@ -106,7 +106,7 @@ class EventHandlers {
         const dist = endTouch ? Math.hypot(endTouch.clientX - _touchStart.x, endTouch.clientY - _touchStart.y) : 0;
 
         if (dist < 20 && dt < 400 && !this.interactions._dragMoved) {
-          console.log('[TOUCH] tap detected, dispatching click', { dist: Math.round(dist), dt });
+          let d = document.getElementById('_dbg'); if (!d) { d = document.createElement('div'); d.id = '_dbg'; d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#000;color:#0f0;font:11px monospace;padding:4px;max-height:30vh;overflow:auto;'; document.body.appendChild(d); } d.innerHTML = 'TAP dist=' + Math.round(dist) + ' dt=' + dt + '<br>' + d.innerHTML;
           // Dispatch DOM click for Lists module, then handleClick for click-and-go
           const clickEvt = new MouseEvent('click', {
             clientX: _touchStart.x, clientY: _touchStart.y, bubbles: true, cancelable: true
