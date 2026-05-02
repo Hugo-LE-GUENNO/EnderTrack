@@ -1,7 +1,18 @@
 /* Responsive Design & Media Queries */
 
-/* ── Large desktop (>1400px) — spacious ─────────────────────── */
-@media (min-width: 1401px) {
+/* ── Wide desktop (≥1700px) — original large octagon ────────── */
+@media (min-width: 1700px) {
+  .app-container {
+    grid-template-columns: clamp(320px, 22vw, 420px) 1fr clamp(200px, 15vw, 300px);
+  }
+  .arrow-container { width: 200px; }
+  .arrow-pad { padding: 22px; }
+  .z-controls-right { width: 70px; padding: 16px 0; }
+  .z-btn { width: 50px; height: 50px; font-size: 22px; }
+}
+
+/* ── Large desktop (1400-1700px) ────────────────────────────── */
+@media (min-width: 1401px) and (max-width: 1699px) {
   .app-container {
     grid-template-columns: clamp(280px, 20vw, 380px) 1fr clamp(180px, 14vw, 280px);
   }
@@ -15,7 +26,6 @@
   }
   .arrow-container { width: min(160px, 100%); }
 
-  /* Compact status coordinates */
   .status-widget .coordinate-value { font-size: var(--font-lg); }
   .status-widget .coordinate-unit { display: none; }
 }
@@ -32,7 +42,6 @@
   .z-controls-right { width: 50px; }
   .z-btn { width: 38px; height: 38px; font-size: 16px; }
 
-  /* Status widget compact when relocated into left panel */
   .status-widget.relocated {
     order: 99;
     margin-top: 8px;
@@ -52,7 +61,6 @@
   .status-widget.relocated .coordinate-unit { display: none; }
   .status-widget.relocated .emergency-btn-widget { padding: 4px 8px; font-size: 10px; }
 
-  /* Config rows: allow wrapping */
   .tab-panel details div[style*="display:flex"] { flex-wrap: wrap; }
 }
 
@@ -90,7 +98,6 @@
 }
 
 /* ── Mobile portrait (≤500px) ───────────────────────────────── */
-/* Canvas on top, tabs + 2-column (nav left, status right) below */
 @media (max-width: 500px) {
   .app-container {
     grid-template-columns: 1fr;
@@ -98,60 +105,50 @@
     overflow: hidden;
   }
 
-  .global-header {
-    grid-row: 1;
-    grid-column: 1;
-    padding: 2px 8px;
-  }
+  .global-header { grid-row: 1; padding: 2px 8px; }
   .global-header img { height: 22px; }
 
-  /* Canvas takes middle */
-  .center-panel {
-    grid-row: 2;
-    grid-column: 1;
-    min-height: 0;
-  }
-
+  .center-panel { grid-row: 2; min-height: 0; }
   .canvas-header { padding: 2px 8px; }
   .canvas-header .app-title { font-size: 11px; }
 
-  /* Left panel becomes bottom section */
   .left-panel {
     grid-row: 3;
-    grid-column: 1;
     max-height: 55vh;
     overflow-y: auto;
     border-radius: var(--radius) var(--radius) 0 0;
   }
 
-  .tab-system { padding: 4px; gap: 2px; flex-wrap: wrap; }
-  .tab-btn { padding: 3px 6px; font-size: 9px; }
-
-  /* Navigation tab: 2-column layout (controls left, status right) */
-  .status-widget.relocated {
-    order: 0;
-    margin-top: 0;
-    border-top: none;
-    padding: 6px;
+  /* Tabs: single horizontal row, scrollable */
+  .tab-system {
+    padding: 4px 6px;
+    gap: 2px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+  .tab-btn { padding: 4px 8px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
 
+  /* Navigation tab: 2-column grid — controls | status */
   #navigationTabContent {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: 6px;
+    align-items: start;
   }
 
   #navigationTabContent .navigation-controls-container {
-    flex: 1;
-    min-width: 150px;
     padding: 6px;
     margin-bottom: 0;
   }
 
-  #navigationTabContent .status-widget.relocated {
-    flex: 0 0 auto;
-    min-width: 100px;
-    max-width: 140px;
+  .status-widget.relocated {
+    order: 0;
+    margin-top: 0;
+    border-top: none;
+    border-left: 1px solid var(--border, #444);
+    padding: 6px;
+    min-width: 90px;
   }
 
   .status-widget.relocated .coordinates-display {
@@ -162,8 +159,9 @@
 
   .status-widget.relocated .coordinate-value { font-size: 11px; }
   .status-widget.relocated .coordinate-label { font-size: 10px; min-width: 12px; }
+  .status-widget.relocated .coordinate-unit { display: none; }
+  .status-widget.relocated .emergency-btn-widget { padding: 3px 6px; font-size: 9px; }
 
-  /* Compact controls */
   .navigation-controls-container { padding: 6px; gap: 2px; }
   .arrow-container { width: min(100px, 100%); }
   .arrow-pad { padding: 8px; }
@@ -175,18 +173,15 @@
   .axis-control input[type="number"] { width: 40px; font-size: 10px; }
   .axis-label { font-size: 10px; }
 
-  /* Compact goto */
   .goto-section { padding: 4px; }
-  .goto-inputs { flex-wrap: wrap; gap: 3px; }
+  .goto-inputs { gap: 3px; }
   .goto-field input { font-size: 10px; padding: 3px; width: 55px; }
   .goto-field label { font-size: 9px; }
   .action-btn { font-size: 9px; padding: 3px 8px; }
 
-  /* Config compact */
   details summary { font-size: 10px; padding: 3px 0; }
   details > div { padding: 4px; }
 
-  /* Z visualization thinner */
   .z-visualization-panel { min-width: 35px; max-width: 45px; }
 }
 
