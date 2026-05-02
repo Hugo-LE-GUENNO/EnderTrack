@@ -70,6 +70,9 @@ if __name__ == '__main__':
     network_config.print_startup_info()
     print()
     import logging
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
+    import cli as _cli
+    _cli = type('', (), {'show_server_banner': lambda *a: None})()
+    import flask.cli
+    flask.cli.show_server_banner = lambda *a, **k: None
     app.run(host=network_config.HOST, port=network_config.PORT, debug=False, threaded=True)
