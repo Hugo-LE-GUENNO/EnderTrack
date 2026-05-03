@@ -144,9 +144,10 @@ class MovementEngine {
     if (state.lockZ) dz = 0;
 
     if (state.lockXY && (dx !== 0 || dy !== 0)) {
+      // Coupled XY: normalize diagonal to same distance as cardinal
       const mag = Math.sqrt(dx * dx + dy * dy);
       if (mag > 0) {
-        const sens = Math.max(sensX, sensY);
+        const sens = parseFloat(document.getElementById('sensitivityXY')?.value) || Math.max(sensX, sensY);
         dx = (dx / mag) * sens;
         dy = (dy / mag) * sens;
       }
@@ -303,19 +304,26 @@ class MovementEngine {
   _isOpposite(direction) {
     const d = this._moveDir;
     if (!d) return false;
+    // Map direction to vector (same logic as moveDirection)
+    const state = EnderTrack.State.get();
+    const orient = state.axisOrientation || { x: 'right', y: 'up' };
+    let ox = 0, oy = 0, oz = 0;
     switch (direction) {
-      case 'left':      return d.dx > 0;
-      case 'right':     return d.dx < 0;
-      case 'up':        return d.dy < 0;
-      case 'down':      return d.dy > 0;
-      case 'upLeft':    return d.dx > 0 || d.dy < 0;
-      case 'upRight':   return d.dx < 0 || d.dy < 0;
-      case 'downLeft':  return d.dx > 0 || d.dy > 0;
-      case 'downRight': return d.dx < 0 || d.dy > 0;
-      case 'zUp':       return d.dz < 0;
-      case 'zDown':     return d.dz > 0;
-      default: return false;
+      case 'left':      ox = -1; break;
+      case 'right':     ox = 1; break;
+      case 'up':        oy = 1; break;
+      case 'down':      oy = -1; break;
+      case 'upLeft':    ox = -1; oy = 1; break;
+      case 'upRight':   ox = 1; oy = 1; break;
+      case 'downLeft':  ox = -1; oy = -1; break;
+      case 'downRight': ox = 1; oy = -1; break;
+      case 'zUp':       oz = 1; break;
+      case 'zDown':     oz = -1; break;
     }
+    if (orient.x === 'left') ox = -ox;
+    if (orient.y === 'down') oy = -oy;
+    // Dot product < 0 means opposite
+    return (d.dx * ox + d.dy * oy + d.dz * oz) < 0;
   }
 
   stopMovement(silent = false) {
