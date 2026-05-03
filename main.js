@@ -828,7 +828,7 @@ window._openPluginCatalog = async function() {
     if (!data.success) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:#ef4444;">' + (data.error || 'Erreur') + '</div>'; return; }
     if (!data.catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">Aucun plugin disponible</div>'; return; }
     el.innerHTML = '<div id="catalogLog" style="display:none; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px; font-size:10px; font-family:monospace; color:var(--coordinates-color); max-height:80px; overflow-y:auto;"></div>' +
-      data.catalog.map(p => {
+      data.catalog.sort((a, b) => (a.name || a._folder).localeCompare(b.name || b._folder)).map(p => {
       const installed = p._installed;
       const name = p.name || p._folder;
       const icon = p.icon || '🔌';
