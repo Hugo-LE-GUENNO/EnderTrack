@@ -104,12 +104,16 @@ class EnderTrackBootstrap {
         if (loadingScreen) loadingScreen.style.display = 'none';
         if (appContainer) appContainer.style.visibility = 'visible';
         
-        // Apply initial zoom AFTER container is visible and laid out
+        // Fit to view: resize + fit, then again after layout settles
+        const doFit = () => {
+          if (EnderTrack.Canvas?.handleResize) EnderTrack.Canvas.handleResize();
+          if (EnderTrack.State?.applyInitialZoom) EnderTrack.State.applyInitialZoom();
+        };
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            if (EnderTrack.State?.applyInitialZoom) {
-              EnderTrack.State.applyInitialZoom();
-            }
+            doFit();
+            setTimeout(doFit, 500);
+            setTimeout(doFit, 1500);
           });
         });
       }, 500);
@@ -118,6 +122,7 @@ class EnderTrackBootstrap {
       window.addEventListener('resize', () => {
         clearTimeout(window._resizeFitTimer);
         window._resizeFitTimer = setTimeout(() => {
+          if (EnderTrack.Canvas?.handleResize) EnderTrack.Canvas.handleResize();
           if (EnderTrack.State?.applyInitialZoom) EnderTrack.State.applyInitialZoom();
         }, 300);
       });
@@ -752,6 +757,15 @@ window.openLists = () => {
   }
 };
 
+
+window.toggleFullscreen = function() {
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    const el = document.documentElement;
+    (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  }
+};
 
 window.showAboutModal = async function() {
   const existing = document.querySelector('.about-modal-overlay');

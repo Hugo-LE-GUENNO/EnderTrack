@@ -21,6 +21,7 @@ body {
   overflow: hidden;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   margin: var(--spacing-0);
   padding: var(--spacing-0);
 }
@@ -32,6 +33,7 @@ body {
   grid-template-rows: auto 1fr;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   column-gap: var(--gap-sm);
   row-gap: 0;
   padding: var(--spacing-0);

@@ -36,6 +36,11 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=PROJECT_ROOT, static_url_path='')
 CORS(app)
 
+@app.after_request
+def _no_cache(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
+
 @app.route('/')
 def serve_index():
     return send_from_directory(PROJECT_ROOT, 'index.html')

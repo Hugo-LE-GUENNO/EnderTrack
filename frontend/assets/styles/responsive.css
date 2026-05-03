@@ -58,27 +58,16 @@
 }
 
 /* ══════════════════════════════════════════════════════════════ */
-/* ── Tablet portrait (≤800px) — vertical layout ──────────────  */
-/*                                                               */
-/*  ┌───────────────────────────────┐                            */
-/*  │ ⚙️ Réglages │ 🧭 Nav │ 📍 Pos │                            */
-/*  ├──────────────────────┬────────┤                            */
-/*  │                      │        │                            */
-/*  │     Canvas XY        │   Z    │  flex: 1                   */
-/*  │                      │        │                            */
-/*  ├──────────────────────┴────────┤                            */
-/*  │  Tab content (scrollable)     │  max 40vh                  */
-/*  ├───────────┬───────────────────┤                            */
-/*  │ X Y Z     │     🔴 STOP       │  status bar                */
-/*  └───────────┴───────────────────┘                            */
-/*                                                               */
+/* ── Tablet + Mobile portrait (≤800px) — vertical layout ───── */
 /* ══════════════════════════════════════════════════════════════ */
 @media (max-width: 800px) {
   html, body { overflow: hidden !important; height: 100% !important; }
 
   .app-container {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
@@ -87,8 +76,11 @@
 
   .right-panel { display: none !important; }
 
-  /* ── Header + tabs ── */
-  .global-header { flex-shrink: 0; padding: 4px 10px; }
+  /* Reorder DOM: header → canvas → controls → status */
+  .global-header { order: 0; flex-shrink: 0; padding: 4px 10px; }
+  .center-panel  { order: 1; flex: 1 1 0 !important; min-height: 25vh !important; overflow: hidden !important; }
+  .left-panel    { order: 2; flex: 0 0 auto !important; min-height: 20vh; max-height: 45vh; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+
   .global-header img { height: 22px; }
   .global-header > div[style*="flex:1"] { display: none; }
 
@@ -96,88 +88,121 @@
   .tab-btn { flex: 1; padding: 6px 4px; font-size: 12px; text-align: center; }
   .tab-system > div[style*="width:1px"] { display: none; }
 
-  /* ── Canvas ── */
-  .center-panel { flex: 1; min-height: 0; overflow: hidden; }
-  .canvas-header { display: none; }
-  .canvas-content { min-height: 0; gap: 4px; }
+  /* Canvas — square aspect */
+  .canvas-header { display: none !important; }
+  .canvas-content { min-height: 0 !important; height: 100% !important; gap: 4px; }
+  .main-canvas { flex: 1 !important; min-height: 0 !important; aspect-ratio: 1; max-height: 100%; }
   .z-visualization-panel { width: 70px; min-width: 60px; max-width: 80px; }
 
-  /* ── Left panel = controls ── */
-  .left-panel {
-    flex-shrink: 0;
-    max-height: 40vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
+  /* Left panel tabs hidden (already in header) */
   .left-panel > .tab-system,
-  .left-panel .tab-system { display: none; }
+  .left-panel .tab-system { display: none !important; }
 
   .left-panel .tab-content {
     flex: 1;
     overflow-y: auto;
-    padding: 8px 12px;
+    padding: 6px 8px;
   }
+
+  /* ── Navigation: 2 columns (sliders left, buttons right) ── */
+  .navigation-controls-container {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 4px;
+    padding: 6px;
+    margin-bottom: 4px;
+  }
+
+  .step-controls {
+    grid-column: 1;
+    grid-row: 1;
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .axis-control {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .axis-control input[type="range"] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .normal-mode {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    gap: 6px;
+    align-self: center;
+  }
+
+  .goto-section {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    padding: 4px;
+  }
+
+  .arrow-container { width: min(140px, 100%); }
+  .arrow-pad { padding: 10px; }
+  .z-controls-right { width: 42px; padding: 5px 0; }
+  .z-btn { width: 34px; height: 34px; font-size: 14px; }
+
+  .axis-control { gap: 4px; }
+  .axis-control input[type="number"] { width: 45px; font-size: 11px; }
+  .axis-label { font-size: 10px; }
+
+  .goto-inputs { gap: 3px; }
+  .goto-field input { font-size: 11px; padding: 3px; width: 55px; }
+  .goto-field label { font-size: 10px; }
+  .action-btn { font-size: 10px; padding: 3px 8px; }
+
+  details summary { font-size: 12px; padding: 4px 0; }
+  details > div { padding: 6px; }
 
   /* ── Status bar ── */
   .status-widget.relocated {
-    flex-shrink: 0;
+    order: 3;
+    flex-shrink: 0 !important;
     margin: 0;
-    padding: 4px 8px;
+    padding: 3px 8px;
     border-top: 1px solid var(--border, #444);
-    display: flex;
+    display: flex !important;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   .status-widget.relocated .coordinates-display {
-    flex-direction: row; gap: 8px; padding: 0; margin: 0; flex: 1;
+    flex-direction: row; gap: 6px; padding: 0; margin: 0; flex: 1;
   }
-  .status-widget.relocated .coordinate-item { gap: 3px; }
-  .status-widget.relocated .coordinate-value { font-size: 13px; font-weight: 600; }
-  .status-widget.relocated .coordinate-label { font-size: 11px; }
+  .status-widget.relocated .coordinate-item { gap: 2px; }
+  .status-widget.relocated .coordinate-value { font-size: 12px; font-weight: 600; }
+  .status-widget.relocated .coordinate-label { font-size: 10px; }
   .status-widget.relocated .coordinate-unit { display: none; }
   .status-widget.relocated #statusHeader { display: none; }
+
+  /* Emergency: icon only, no text */
   .status-widget.relocated .emergency-btn-widget {
-    padding: 4px 8px; font-size: 10px; flex-shrink: 0; margin: 0;
-    white-space: nowrap; min-width: 0;
+    padding: 4px 8px; font-size: 0; flex-shrink: 0; margin: 0;
+    width: 32px; height: 32px; min-width: 32px;
+    display: flex; align-items: center; justify-content: center;
   }
-  .status-widget.relocated .emergency-btn-widget span,
-  .status-widget.relocated .emergency-btn-widget { letter-spacing: 0; }
-  .status-widget.relocated .emergency-icon-widget { width: 14px; height: 14px; }
+  .status-widget.relocated .emergency-icon-widget { width: 18px; height: 18px; }
+
   .status-widget.relocated #statusDeviceRow,
   .status-widget.relocated #statusPluginZone,
   .status-widget.relocated > div[style*="padding-left:16px"] > :not(.coordinates-display) { display: none; }
   .status-widget.relocated > div[style*="padding-left:16px"] { padding-left: 0 !important; }
-
-  /* ── Controls ── */
-  .navigation-controls-container { padding: 8px; gap: 4px; margin-bottom: 4px; }
-  .normal-mode { gap: 8px; }
-  .arrow-container { width: min(140px, 100%); }
-  .arrow-pad { padding: 10px; }
-  .z-controls-right { width: 44px; padding: 6px 0; }
-  .z-btn { width: 34px; height: 34px; font-size: 14px; }
-
-  .step-controls { margin-top: 4px; }
-  .axis-control { gap: 4px; }
-  .axis-control input[type="number"] { width: 50px; font-size: 12px; }
-  .axis-label { font-size: 11px; }
-
-  .goto-section { padding: 6px; }
-  .goto-inputs { gap: 4px; }
-  .goto-field input { font-size: 12px; padding: 4px; width: 60px; }
-  .goto-field label { font-size: 11px; }
-  .action-btn { font-size: 11px; padding: 4px 10px; }
-
-  details summary { font-size: 12px; padding: 4px 0; }
-  details > div { padding: 6px; }
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/* ── Mobile portrait (≤500px) — compact single screen ──────── */
-/* ══════════════════════════════════════════════════════════════ */
+/* ── Mobile (≤500px) — tighter ─────────────────────────────── */
 @media (max-width: 500px) {
   .global-header { padding: 2px 6px; }
   .global-header img { height: 18px; }
@@ -185,46 +210,31 @@
   .tab-system { padding: 2px; gap: 2px; }
   .tab-btn { padding: 5px 2px; font-size: 10px; }
 
-  .canvas-header { display: none; }
-  .canvas-content { gap: 2px; }
-  .z-visualization-panel { width: 55px; min-width: 45px; max-width: 65px; }
+  .z-visualization-panel { width: 55px !important; min-width: 45px !important; max-width: 65px !important; }
 
-  .left-panel { max-height: 35vh; }
+  .left-panel { max-height: 40vh !important; }
   .left-panel .tab-content { padding: 4px 6px; }
 
-  /* Status bar tighter */
-  .status-widget.relocated { padding: 4px 8px; gap: 8px; }
-  .status-widget.relocated .coordinates-display { gap: 6px; }
-  .status-widget.relocated .coordinate-value { font-size: 12px; }
-  .status-widget.relocated .coordinate-label { font-size: 10px; }
-  .status-widget.relocated .emergency-btn-widget { padding: 4px 10px; font-size: 9px; }
-  .status-widget.relocated .emergency-icon-widget { width: 14px; height: 14px; }
-
-  /* Compact controls */
-  .navigation-controls-container { padding: 4px; gap: 2px; margin-bottom: 2px; }
-  .normal-mode { gap: 4px; }
-  .arrow-container { width: min(105px, 100%); }
+  .arrow-container { width: min(100px, 100%) !important; }
   .arrow-pad { padding: 6px; }
   .z-controls-right { width: 32px; padding: 3px 0; }
   .z-btn { width: 26px; height: 26px; font-size: 11px; }
 
-  .step-controls { margin-top: 2px; }
-  .axis-control { gap: 2px; margin-bottom: 0; }
-  .axis-control input[type="number"] { width: 36px; font-size: 10px; padding: 1px 2px; }
+  .axis-control input[type="number"] { width: 36px; font-size: 10px; }
   .axis-label { font-size: 9px; }
 
-  .goto-section { padding: 3px; }
-  .goto-inputs { gap: 2px; }
   .goto-field input { font-size: 10px; padding: 2px; width: 46px; }
   .goto-field label { font-size: 9px; }
   .action-btn { font-size: 9px; padding: 2px 6px; }
-  .home-row { margin-top: 2px; }
+
+  .status-widget.relocated { padding: 2px 6px; gap: 4px; }
+  .status-widget.relocated .coordinate-value { font-size: 11px; }
 
   details summary { font-size: 10px; padding: 2px 0; }
   details > div { padding: 3px; }
 }
 
-/* ── Short screens (landscape RPi, etc) ─────────────────────── */
+/* ── Short screens ──────────────────────────────────────────── */
 @media (max-height: 600px) {
   .global-header { padding: var(--spacing-xs) var(--spacing-sm); }
   .global-header img { height: 28px; }
@@ -261,7 +271,6 @@
   .center-panel { width: 100%; }
 }
 
-/* Touch devices: slightly wider Z panel */
 @media (pointer: coarse) and (min-width: 801px) {
   .z-visualization-panel { width: 90px; }
 }

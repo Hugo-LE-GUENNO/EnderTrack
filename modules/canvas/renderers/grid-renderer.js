@@ -6,8 +6,8 @@ class GridRenderer {
     const zoom = state.zoom || 1;
     const panX = state.panX || 0;
     const panY = state.panY || 0;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    const centerX = (canvas._cssW||canvas.width) / 2;
+    const centerY = (canvas._cssH||canvas.height) / 2;
     
     // Use coordinate bounds if available, fallback to plateau dimensions
     const bounds = state.coordinateBounds || {
@@ -210,33 +210,33 @@ class GridRenderer {
     for (let x = startX; x <= endX; x += labelSpacing) {
       const canvasPos = coords.mapToCanvas(x, 0);
       // Only draw if within canvas bounds
-      if (canvasPos.cx >= 0 && canvasPos.cx <= ctx.canvas.width) {
+      if (canvasPos.cx >= 0 && canvasPos.cx <= (ctx.canvas._cssW||ctx.canvas.width)) {
         // Tick mark at bottom
         ctx.beginPath();
-        ctx.moveTo(canvasPos.cx, ctx.canvas.height);
-        ctx.lineTo(canvasPos.cx, ctx.canvas.height - 5);
+        ctx.moveTo(canvasPos.cx, (ctx.canvas._cssH||ctx.canvas.height));
+        ctx.lineTo(canvasPos.cx, (ctx.canvas._cssH||ctx.canvas.height) - 5);
         ctx.stroke();
         
         // Label at bottom with color based on sign
         ctx.fillStyle = x >= 0 ? 'rgba(34, 139, 34, 0.8)' : 'rgba(178, 34, 34, 0.8)'; // Dark green / Dark red
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(x.toString(), canvasPos.cx, ctx.canvas.height - 6);
+        ctx.fillText(x.toString(), canvasPos.cx, (ctx.canvas._cssH||ctx.canvas.height) - 6);
       }
     }
     
     // Add max X value if not already included
     if (bounds.x.max % labelSpacing !== 0) {
       const canvasPos = coords.mapToCanvas(bounds.x.max, 0);
-      if (canvasPos.cx >= 0 && canvasPos.cx <= ctx.canvas.width) {
+      if (canvasPos.cx >= 0 && canvasPos.cx <= (ctx.canvas._cssW||ctx.canvas.width)) {
         ctx.beginPath();
-        ctx.moveTo(canvasPos.cx, ctx.canvas.height);
-        ctx.lineTo(canvasPos.cx, ctx.canvas.height - 5);
+        ctx.moveTo(canvasPos.cx, (ctx.canvas._cssH||ctx.canvas.height));
+        ctx.lineTo(canvasPos.cx, (ctx.canvas._cssH||ctx.canvas.height) - 5);
         ctx.stroke();
         ctx.fillStyle = bounds.x.max >= 0 ? 'rgba(34, 139, 34, 0.8)' : 'rgba(178, 34, 34, 0.8)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(bounds.x.max.toString(), canvasPos.cx, ctx.canvas.height - 6);
+        ctx.fillText(bounds.x.max.toString(), canvasPos.cx, (ctx.canvas._cssH||ctx.canvas.height) - 6);
       }
     }
     
@@ -247,7 +247,7 @@ class GridRenderer {
     for (let y = startY; y <= endY; y += labelSpacing) {
       const canvasPos = coords.mapToCanvas(0, y);
       // Only draw if within canvas bounds
-      if (canvasPos.cy >= 0 && canvasPos.cy <= ctx.canvas.height) {
+      if (canvasPos.cy >= 0 && canvasPos.cy <= (ctx.canvas._cssH||ctx.canvas.height)) {
         // Tick mark at left
         ctx.beginPath();
         ctx.moveTo(0, canvasPos.cy);
@@ -265,7 +265,7 @@ class GridRenderer {
     // Add max Y value if not already included
     if (bounds.y.max % labelSpacing !== 0) {
       const canvasPos = coords.mapToCanvas(0, bounds.y.max);
-      if (canvasPos.cy >= 0 && canvasPos.cy <= ctx.canvas.height) {
+      if (canvasPos.cy >= 0 && canvasPos.cy <= (ctx.canvas._cssH||ctx.canvas.height)) {
         ctx.beginPath();
         ctx.moveTo(0, canvasPos.cy);
         ctx.lineTo(5, canvasPos.cy);

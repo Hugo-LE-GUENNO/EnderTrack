@@ -85,8 +85,8 @@ class TrackRenderer {
         const posX = canvasPos.cx;
         const posY = canvasPos.cy;
         
-        if (posX >= -10 && posX <= ctx.canvas.width + 10 && 
-            posY >= -10 && posY <= ctx.canvas.height + 10) {
+        if (posX >= -10 && posX <= (ctx.canvas._cssW||ctx.canvas.width) + 10 && 
+            posY >= -10 && posY <= (ctx.canvas._cssH||ctx.canvas.height) + 10) {
           ctx.beginPath();
           ctx.arc(posX, posY, 1, 0, Math.PI * 2);
           ctx.fill();

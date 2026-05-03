@@ -39,22 +39,22 @@ class CanvasManager {
     
     const width = Math.floor(rect.width - 16);
     const height = Math.floor(rect.height - 16);
+    const dpr = window.devicePixelRatio || 1;
     
-    this.canvas.width = width;
-    this.canvas.height = height;
-    
+    // Canvas pixel size = CSS size × DPR for sharp rendering
+    this.canvas.width = width * dpr;
+    this.canvas.height = height * dpr;
     this.canvas.style.width = width + 'px';
     this.canvas.style.height = height + 'px';
     
-    // High DPI support
-    const dpr = window.devicePixelRatio || 1;
-    if (dpr > 1) {
-      this.canvas.width = width * dpr;
-      this.canvas.height = height * dpr;
-      this.ctx.scale(dpr, dpr);
-      this.canvas.style.width = width + 'px';
-      this.canvas.style.height = height + 'px';
-    }
+    // Scale context so all drawing uses CSS coordinates
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    
+    // Store CSS size for coordinate system
+    this._cssWidth = width;
+    this._cssHeight = height;
+    this.canvas._cssW = width;
+    this.canvas._cssH = height;
     
     // Rendering properties
     this.ctx.imageSmoothingEnabled = true;
@@ -112,8 +112,8 @@ class CanvasManager {
     const state = window.EnderTrack.State.get();
     
     window.EnderTrack.Coordinates.updateParameters({
-      canvasWidth: this.canvas.width,
-      canvasHeight: this.canvas.height,
+      canvasWidth: this._cssWidth || this.canvas.getBoundingClientRect().width,
+      canvasHeight: this._cssHeight || this.canvas.getBoundingClientRect().height,
       mapSizeMm: state.mapSizeMm,
       plateauDimensions: state.plateauDimensions,
       coordinateBounds: state.coordinateBounds,
@@ -161,7 +161,7 @@ class CanvasManager {
   }
 
   clear() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.clearRect(0, 0, this._cssWidth || this.canvas.width, this._cssHeight || this.canvas.height);
   }
 
   // Utility methods

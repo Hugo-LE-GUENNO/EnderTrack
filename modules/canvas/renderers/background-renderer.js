@@ -9,7 +9,7 @@ class BackgroundRenderer {
     // Use Enderscope theme colors
     const bgColor = window.customColors?.outsideColor || getComputedStyle(document.documentElement).getPropertyValue('--app-bg').trim();
     ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, (canvas._cssW||canvas.width), (canvas._cssH||canvas.height));
   }
 
   static renderPlatform(ctx, canvas, state) {

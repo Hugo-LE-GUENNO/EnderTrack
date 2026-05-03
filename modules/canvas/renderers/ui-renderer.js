@@ -9,7 +9,7 @@ class UIRenderer {
     const zoom = state.zoom || 1;
     const scaleBarRatio = 0.33; // Taille fixe de la barre
     const scaleBarMultiplier = state.scaleBarMultiplier || 1; // Multiplicateur utilisateur
-    const targetBarLengthPx = canvas.width * scaleBarRatio;
+    const targetBarLengthPx = (canvas._cssW||canvas.width) * scaleBarRatio;
     
     // CORRECTION: Utiliser directement le zoom sans passer par targetScaleMm
     const coords = window.EnderTrack?.Coordinates;
@@ -64,7 +64,7 @@ class UIRenderer {
     
     const barLengthPx = scaleValueMm * pxPerMm;
     const x = 20;
-    const y = canvas.height - 30;
+    const y = (canvas._cssH||canvas.height) - 30;
     
     // Scale bar
     const scaleBarColor = window.customColors?.scaleBarColor || '#ffffff';

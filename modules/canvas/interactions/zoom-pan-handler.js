@@ -116,7 +116,6 @@ class ZoomPanHandler {
     const plateauSizeX = bounds.maxX - bounds.minX;
     const plateauSizeY = bounds.maxY - bounds.minY;
     
-    // Obtenir les dimensions du canvas
     const canvas = this.interactions?.canvas || document.getElementById('mapCanvas');
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -124,29 +123,27 @@ class ZoomPanHandler {
     
     const canvasWidth = rect.width;
     const canvasHeight = rect.height;
-    
     let borderFactor = customBorderFactor || 0.8;
     
-    // Calculer le zoom pour que le plateau soit visible avec la bordure
     const zoomX = (canvasWidth * borderFactor) / (plateauSizeX * coords.pxPerMm());
     const zoomY = (canvasHeight * borderFactor) / (plateauSizeY * coords.pxPerMm());
     const optimalZoom = Math.min(zoomX, zoomY);
     
-    // Centrer sur le centre du plateau
     const centerX = (bounds.minX + bounds.maxX) / 2;
     const centerY = (bounds.minY + bounds.maxY) / 2;
     
-    EnderTrack.State.update({
-      zoom: optimalZoom,
-      panX: 0,
-      panY: 0
-    });
-    
-    // Force update
+    // Reset pan, set zoom, update coords, then center
+    EnderTrack.State.update({ zoom: optimalZoom, panX: 0, panY: 0 });
     window.EnderTrack.Canvas.updateCoordinateSystem();
     
-    // Centrer sur le centre du plateau
-    this.centerOnPosition(centerX, centerY);
+    // Calculate where center of plateau maps to, and offset to screen center
+    const mapped = coords.mapToCanvas(centerX, centerY);
+    const panX = canvasWidth / 2 - mapped.cx;
+    const panY = canvasHeight / 2 - mapped.cy;
+    EnderTrack.State.update({ panX, panY });
+    window.EnderTrack.Canvas.updateCoordinateSystem();
+    
+    // Debug on mobile
     
     window.EnderTrack.Canvas.requestRender();
   }
@@ -156,8 +153,9 @@ class ZoomPanHandler {
     const coords = window.EnderTrack?.Coordinates;
     if (!coords) return;
     
-    const centerX = this.interactions.canvas.width / 2;
-    const centerY = this.interactions.canvas.height / 2;
+    const rect = this.interactions.canvas.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
     
     const targetPos = coords.mapToCanvas(x, y);
     const state = EnderTrack.State.get();

@@ -234,8 +234,8 @@ class PositionRenderer {
     // Ne pas afficher le crosshair si en dehors du plateau
     if (!isOnPlateau) return;
     
-    if (posX < -50 || posX > ctx.canvas.width + 50 || 
-        posY < -50 || posY > ctx.canvas.height + 50) {
+    if (posX < -50 || posX > (ctx.canvas._cssW||ctx.canvas.width) + 50 || 
+        posY < -50 || posY > (ctx.canvas._cssH||ctx.canvas.height) + 50) {
       return;
     }
     
