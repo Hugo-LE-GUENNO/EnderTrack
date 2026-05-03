@@ -820,31 +820,37 @@ window._openPluginCatalog = async function() {
   if (!el) return;
   if (el.style.display !== 'none') { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">⏳ Chargement du catalogue...</div>';
+  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">\u23f3 Chargement...</div>';
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  let catalog = null, offline = false;
   try {
     const resp = await fetch(serverUrl + '/api/plugins/catalog', { signal: AbortSignal.timeout(10000) });
     const data = await resp.json();
-    if (!data.success) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:#ef4444;">' + (data.error || 'Erreur') + '</div>'; return; }
-    if (!data.catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">Aucun plugin disponible</div>'; return; }
-    el.innerHTML = '<div id="catalogLog" style="display:none; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px; font-size:10px; font-family:monospace; color:var(--coordinates-color); max-height:80px; overflow-y:auto;"></div>' +
-      data.catalog.sort((a, b) => (a.name || a._folder).localeCompare(b.name || b._folder)).map(p => {
-      const installed = p._installed;
-      const name = p.name || p._folder;
-      const icon = p.icon || '🔌';
-      const desc = p.description || '';
-      const statusDot = installed ? '🟢' : '⚫';
-      const btn = installed
-        ? '<button id="catBtn_' + p._folder + '" onclick="window._uninstallPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Supprimer</button>'
-        : '<button id="catBtn_' + p._folder + '" onclick="window._installPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Installer</button>';
-      return '<div id="catRow_' + p._folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
-        '<div style="display:flex; align-items:center; gap:6px;"><span style="font-size:8px;">' + statusDot + '</span><div><span style="font-size:12px;">' + icon + ' ' + name + '</span>' +
-        (desc ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6;">' + desc + '</div>' : '') +
-        '</div></div>' + btn + '</div>';
-    }).join('');
-  } catch(e) {
-    el.innerHTML = '<div style="padding:8px; font-size:11px; color:#ef4444;">Impossible de contacter GitHub: ' + e.message + '</div>';
+    if (data.success && data.catalog.length) {
+      catalog = data.catalog;
+      try { localStorage.setItem('endertrack_catalog_cache', JSON.stringify(catalog)); } catch {}
+    }
+  } catch {
+    try { catalog = JSON.parse(localStorage.getItem('endertrack_catalog_cache')); offline = true; } catch {}
   }
+  if (!catalog || !catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">Aucun plugin disponible</div>'; return; }
+  const header = offline ? '<div style="padding:4px 8px; font-size:10px; color:var(--coordinates-color); margin-bottom:4px;">\ud83d\udce1 Hors-ligne — cache local</div>' : '';
+  el.innerHTML = header +
+    '<div id="catalogLog" style="display:none; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px; font-size:10px; font-family:monospace; color:var(--coordinates-color); max-height:80px; overflow-y:auto;"></div>' +
+    catalog.sort((a, b) => (a.name || a._folder).localeCompare(b.name || b._folder)).map(p => {
+    const installed = p._installed;
+    const name = p.name || p._folder;
+    const icon = p.icon || '\ud83d\udd0c';
+    const desc = p.description || '';
+    const statusDot = installed ? '\ud83d\udfe2' : '\u26ab';
+    const btn = installed
+      ? '<button id="catBtn_' + p._folder + '" onclick="window._uninstallPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Supprimer</button>'
+      : '<button id="catBtn_' + p._folder + '" onclick="window._installPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Installer</button>';
+    return '<div id="catRow_' + p._folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
+      '<div style="display:flex; align-items:center; gap:6px;"><span style="font-size:8px;">' + statusDot + '</span><div><span style="font-size:12px;">' + icon + ' ' + name + '</span>' +
+      (desc ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6;">' + desc + '</div>' : '') +
+      '</div></div>' + btn + '</div>';
+  }).join('');
 };
 
 window._catalogLog = function(msg, type) {
