@@ -181,6 +181,7 @@ class NavigationControls {
       if (!btn) return;
 
       let isPressed = false;
+      let touchHandled = false;
       const handlePress = () => {
         if (isPressed) return;
         isPressed = true;
@@ -192,12 +193,12 @@ class NavigationControls {
         btn.classList.remove('pressed');
       };
 
-      btn.addEventListener('mousedown', (e) => { e.preventDefault(); handlePress(); });
+      btn.addEventListener('mousedown', (e) => { e.preventDefault(); if (!touchHandled) handlePress(); });
       btn.addEventListener('mouseup', handleRelease);
       btn.addEventListener('mouseleave', handleRelease);
-      btn.addEventListener('touchstart', (e) => { e.preventDefault(); handlePress(); });
-      btn.addEventListener('touchend', (e) => { e.preventDefault(); handleRelease(); });
-      btn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleRelease(); });
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); touchHandled = true; handlePress(); });
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); handleRelease(); setTimeout(() => { touchHandled = false; }, 300); });
+      btn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleRelease(); setTimeout(() => { touchHandled = false; }, 300); });
     });
   }
 
