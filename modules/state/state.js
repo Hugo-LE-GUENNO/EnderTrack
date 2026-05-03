@@ -302,7 +302,20 @@ class StateManager {
     // Load position from server (async, non-blocking)
     fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state', { signal: AbortSignal.timeout(2000) })
       .then(r => r.json())
-      .then(s => { if (s?.position) this.update({ pos: s.position }); })
+      .then(s => {
+        if (s?.position) {
+          this.update({ pos: s.position });
+          // Sync inputs
+          const ix = document.getElementById('inputX');
+          const iy = document.getElementById('inputY');
+          const iz = document.getElementById('inputZ');
+          if (ix) ix.value = s.position.x.toFixed(2);
+          if (iy) iy.value = s.position.y.toFixed(2);
+          if (iz) iz.value = s.position.z.toFixed(2);
+          window.EnderTrack?.Canvas?.requestRender?.();
+          window.EnderTrack?.ZVisualization?.render?.();
+        }
+      })
       .catch(() => {});
     
     return true;
