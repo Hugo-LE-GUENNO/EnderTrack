@@ -36,7 +36,18 @@ HOST, PORT = _parse_args()
 
 
 def get_local_ip():
-    """Retourne l'IP locale de la machine (pour affichage info)."""
+    """Retourne l'IP locale (hotspot, WiFi ou ethernet)."""
+    import subprocess
+    # Method 1: scan interfaces for non-localhost IPs
+    try:
+        result = subprocess.run(['hostname', '-I'], capture_output=True, text=True, timeout=2)
+        ips = result.stdout.strip().split()
+        for ip in ips:
+            if ip and not ip.startswith('127.') and ':' not in ip:
+                return ip
+    except Exception:
+        pass
+    # Method 2: UDP trick (needs internet)
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80))
