@@ -176,7 +176,7 @@ class MovementEngine {
         return;
       }
 
-      this.stopMovement();
+      this.stopMovement(true); // silent: don't broadcast interrupted position
       EnderTrack.State.update({ isMoving: true });
       this.isMoving = true;
       this.emergencyStop = false;
@@ -288,15 +288,21 @@ class MovementEngine {
     EnderTrack.Events.notifyListeners('movement:completed', { position: finalPos, success });
   }
 
-  stopMovement() {
+  stopMovement(silent = false) {
     this._cancelAnim();
     if (this.isMoving) {
-      // Stop hardware if connected
       const enderscope = window.EnderTrack?.Enderscope;
       if (enderscope?.isConnected) {
         fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/emergency_stop', { method: 'POST' }).catch(() => {});
       }
-      this.completeMovement(EnderTrack.State.get().pos, false);
+      const pos = EnderTrack.State.get().pos;
+      const roundedPos = EnderTrack.Math.roundPoint(pos);
+      EnderTrack.State.update({ pos: roundedPos, isMoving: false });
+      this.isMoving = false;
+      if (!silent) {
+        this._broadcast('position:arrived', { x: roundedPos.x, y: roundedPos.y, z: roundedPos.z });
+        EnderTrack.Events.notifyListeners('movement:completed', { position: roundedPos, success: false });
+      }
     }
   }
 
