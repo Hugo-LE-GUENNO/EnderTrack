@@ -10,6 +10,7 @@ class ListManager {
     this._clickMode = false;
     this.load();
     if (this.groups.length === 0) this.addGroup('Liste 1');
+    this._startSync();
   }
 
   get positions() {
@@ -446,7 +447,12 @@ class ListManager {
     localStorage.setItem('endertrack_lists', JSON.stringify(data));
     // Sync to server
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state/patch';
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lists: data }) }).catch(() => {});
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lists: data }) })
+      .then(r => r.json()).then(() => {
+        // Update local hash so poll doesn't re-fetch our own save
+        fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state/hash')
+          .then(r => r.json()).then(d => { if (d.hash) this._lastHash = d.hash; }).catch(() => {});
+      }).catch(() => {});
   }
 
   load() {
@@ -477,6 +483,29 @@ class ListManager {
     this._nextGroupId = raw._nextGroupId || 1;
     this.renderUI?.();
     window.EnderTrack?.Canvas?.requestRender?.();
+    window.EnderTrack?.ZVisualization?.render?.();
+  }
+
+  // Poll server for changes every 3s
+  _startSync() {
+    this._lastHash = '';
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+    setInterval(async () => {
+      try {
+        const resp = await fetch(url + '/api/state/hash', { signal: AbortSignal.timeout(1500) });
+        const { hash } = await resp.json();
+        if (hash && hash !== this._lastHash) {
+          if (this._lastHash !== '') {
+            // Hash changed by another client — reload
+            const state = await (await fetch(url + '/api/state', { signal: AbortSignal.timeout(2000) })).json();
+            if (state?.lists?.groups) {
+              this._applyData(state.lists);
+            }
+          }
+          this._lastHash = hash;
+        }
+      } catch {}
+    }, 3000);
   }
 
   exportGroup(gid) {

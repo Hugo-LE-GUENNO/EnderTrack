@@ -27,10 +27,20 @@ def load_state():
     return {}
 
 
+_state_hash = ''
+
+def get_state_hash():
+    global _state_hash
+    return _state_hash
+
 def save_state(state):
+    global _state_hash
     _ensure_dir()
+    raw = json.dumps(state, sort_keys=True)
+    import hashlib
+    _state_hash = hashlib.md5(raw.encode()).hexdigest()[:8]
     with open(STATE_FILE, 'w') as f:
-        json.dump(state, f, indent=2)
+        f.write(json.dumps(state, indent=2))
 
 
 def log_activity(ip, action, details=None):
@@ -53,6 +63,10 @@ def register_routes(app):
     @app.route('/api/state', methods=['GET'])
     def _get_state():
         return jsonify(load_state())
+
+    @app.route('/api/state/hash', methods=['GET'])
+    def _get_hash():
+        return jsonify({'hash': get_state_hash()})
 
     @app.route('/api/state', methods=['POST'])
     def _save_state():
