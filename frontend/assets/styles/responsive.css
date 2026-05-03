@@ -98,8 +98,7 @@
 
   /* ── Canvas ── */
   .center-panel { flex: 1; min-height: 0; overflow: hidden; }
-  .canvas-header { padding: 2px 8px; }
-  .canvas-header .app-title { font-size: 12px; }
+  .canvas-header { display: none; }
   .canvas-content { min-height: 0; gap: 4px; }
   .z-visualization-panel { width: 70px; min-width: 60px; max-width: 80px; }
 
@@ -125,24 +124,29 @@
   .status-widget.relocated {
     flex-shrink: 0;
     margin: 0;
-    padding: 6px 12px;
+    padding: 4px 8px;
     border-top: 1px solid var(--border, #444);
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
 
   .status-widget.relocated .coordinates-display {
-    flex-direction: row; gap: 10px; padding: 0; margin: 0; flex: 1;
+    flex-direction: row; gap: 8px; padding: 0; margin: 0; flex: 1;
   }
   .status-widget.relocated .coordinate-item { gap: 3px; }
-  .status-widget.relocated .coordinate-value { font-size: 14px; font-weight: 600; }
+  .status-widget.relocated .coordinate-value { font-size: 13px; font-weight: 600; }
   .status-widget.relocated .coordinate-label { font-size: 11px; }
   .status-widget.relocated .coordinate-unit { display: none; }
   .status-widget.relocated #statusHeader { display: none; }
-  .status-widget.relocated .emergency-btn-widget { padding: 6px 14px; font-size: 11px; flex-shrink: 0; margin: 0; }
-  .status-widget.relocated .emergency-icon-widget { width: 16px; height: 16px; }
+  .status-widget.relocated .emergency-btn-widget {
+    padding: 4px 8px; font-size: 10px; flex-shrink: 0; margin: 0;
+    white-space: nowrap; min-width: 0;
+  }
+  .status-widget.relocated .emergency-btn-widget span,
+  .status-widget.relocated .emergency-btn-widget { letter-spacing: 0; }
+  .status-widget.relocated .emergency-icon-widget { width: 14px; height: 14px; }
   .status-widget.relocated #statusDeviceRow,
   .status-widget.relocated #statusPluginZone,
   .status-widget.relocated > div[style*="padding-left:16px"] > :not(.coordinates-display) { display: none; }

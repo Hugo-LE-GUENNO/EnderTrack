@@ -106,11 +106,21 @@ class EnderTrackBootstrap {
         
         // Apply initial zoom AFTER container is visible and laid out
         requestAnimationFrame(() => {
-          if (EnderTrack.State?.applyInitialZoom) {
-            EnderTrack.State.applyInitialZoom();
-          }
+          requestAnimationFrame(() => {
+            if (EnderTrack.State?.applyInitialZoom) {
+              EnderTrack.State.applyInitialZoom();
+            }
+          });
         });
       }, 500);
+
+      // Refit on orientation change or resize
+      window.addEventListener('resize', () => {
+        clearTimeout(window._resizeFitTimer);
+        window._resizeFitTimer = setTimeout(() => {
+          if (EnderTrack.State?.applyInitialZoom) EnderTrack.State.applyInitialZoom();
+        }, 300);
+      });
       
       const endTime = performance.now();
       const initTime = Math.round(endTime - startTime);
