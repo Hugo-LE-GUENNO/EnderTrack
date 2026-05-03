@@ -29,10 +29,13 @@ class MovementEngine {
 
   _remoteMove(data) {
     if (this.isMoving) return;
-    const start = EnderTrack.State.get().pos;
+    this._cancelAnim();
+    const start = { x: data.sx, y: data.sy, z: data.sz };
     const target = { x: data.x, y: data.y, z: data.z };
     const duration = data.duration || 1000;
     const startTime = Date.now();
+    // Snap to start position first
+    EnderTrack.State.update({ pos: start, isMoving: true });
     const animate = () => {
       const progress = Math.min((Date.now() - startTime) / duration, 1);
       const t = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
@@ -42,15 +45,28 @@ class MovementEngine {
         z: start.z + (target.z - start.z) * t
       };
       EnderTrack.State.update({ pos });
-      if (progress < 1) requestAnimationFrame(animate);
+      if (progress < 1) {
+        this.currentAnimation = requestAnimationFrame(animate);
+      } else {
+        EnderTrack.State.update({ pos: target, isMoving: false });
+        EnderTrack.Events.notifyListeners('position:changed', target);
+      }
     };
-    requestAnimationFrame(animate);
+    this.currentAnimation = requestAnimationFrame(animate);
   }
 
   _remoteArrive(data) {
+    this._cancelAnim();
     const pos = { x: data.x, y: data.y, z: data.z };
     EnderTrack.State.update({ pos, isMoving: false });
     EnderTrack.Events.notifyListeners('position:changed', pos);
+    // Sync inputs
+    const ix = document.getElementById('inputX');
+    const iy = document.getElementById('inputY');
+    const iz = document.getElementById('inputZ');
+    if (ix) ix.value = pos.x.toFixed(2);
+    if (iy) iy.value = pos.y.toFixed(2);
+    if (iz) iz.value = pos.z.toFixed(2);
   }
 
   _broadcast(type, data) {
@@ -235,7 +251,7 @@ class MovementEngine {
       };
       this.currentAnimation = requestAnimationFrame(animate);
       EnderTrack.Events.notifyListeners('movement:started', movement);
-      this._broadcast('position:moving', { x: movement.target.x, y: movement.target.y, z: movement.target.z, duration: movement.duration });
+      this._broadcast('position:moving', { x: movement.target.x, y: movement.target.y, z: movement.target.z, sx: movement.start.x, sy: movement.start.y, sz: movement.start.z, duration: movement.duration });
     });
   }
 
@@ -267,6 +283,11 @@ class MovementEngine {
     if (success) EnderTrack.State.recordFinalPosition?.(roundedPos);
     this.isMoving = false;
     this._broadcast('position:arrived', { x: roundedPos.x, y: roundedPos.y, z: roundedPos.z });
+    // Persist position to server
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state/patch';
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ position: { x: roundedPos.x, y: roundedPos.y, z: roundedPos.z } })
+    }).catch(() => {});
     EnderTrack.Events.notifyListeners('movement:completed', { position: finalPos, success });
   }
 

@@ -298,6 +298,12 @@ class StateManager {
     
     // Initialize default UI state
     this.initializeDefaultUI();
+
+    // Load position from server (async, non-blocking)
+    fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state', { signal: AbortSignal.timeout(2000) })
+      .then(r => r.json())
+      .then(s => { if (s?.position) this.update({ pos: s.position }); })
+      .catch(() => {});
     
     return true;
   }
