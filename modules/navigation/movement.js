@@ -97,6 +97,12 @@ class MovementEngine {
   async moveDirection(direction, customDistance = null) {
     const state = EnderTrack.State.get();
 
+    // If moving, check if this direction is opposite → stop
+    if (this.isMoving && this._moveDir && this._isOpposite(direction)) {
+      this.stopMovement();
+      return true;
+    }
+
     // Read sensitivity from sliders directly
     let sensX = state.sensitivityX || 1;
     let sensY = state.sensitivityY || 1;
@@ -181,6 +187,11 @@ class MovementEngine {
       this.isMoving = true;
       this.emergencyStop = false;
       this._currentResolve = resolve;
+      this._moveDir = {
+        dx: movement.target.x - movement.start.x,
+        dy: movement.target.y - movement.start.y,
+        dz: movement.target.z - movement.start.z
+      };
 
       // Hardware path
       const enderscope = window.EnderTrack?.Enderscope;
@@ -289,8 +300,27 @@ class MovementEngine {
     EnderTrack.Events.notifyListeners('movement:completed', { position: finalPos, success });
   }
 
+  _isOpposite(direction) {
+    const d = this._moveDir;
+    if (!d) return false;
+    switch (direction) {
+      case 'left':      return d.dx > 0;
+      case 'right':     return d.dx < 0;
+      case 'up':        return d.dy < 0;
+      case 'down':      return d.dy > 0;
+      case 'upLeft':    return d.dx > 0 || d.dy < 0;
+      case 'upRight':   return d.dx < 0 || d.dy < 0;
+      case 'downLeft':  return d.dx > 0 || d.dy > 0;
+      case 'downRight': return d.dx < 0 || d.dy > 0;
+      case 'zUp':       return d.dz < 0;
+      case 'zDown':     return d.dz > 0;
+      default: return false;
+    }
+  }
+
   stopMovement(silent = false) {
     this._cancelAnim();
+    this._moveDir = null;
     if (this.isMoving) {
       const enderscope = window.EnderTrack?.Enderscope;
       if (enderscope?.isConnected) {
