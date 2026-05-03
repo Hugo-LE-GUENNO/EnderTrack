@@ -44,6 +44,10 @@ def serve_index():
 def get_version():
     return {'version': VERSION}
 
+@app.route('/api/clients')
+def get_clients():
+    return {'clients': sorted(_known_clients), 'count': len(_known_clients)}
+
 # ─── Version ─────────────────────────────────────────────────────────────────
 
 import json as _json
@@ -53,6 +57,17 @@ try:
 except: VERSION = '?'
 
 # ─── Enregistrement des modules ──────────────────────────────────────────────
+
+# Track connected devices
+_known_clients = set()
+
+@app.before_request
+def _track_clients():
+    from flask import request
+    ip = request.remote_addr
+    if ip and ip not in _known_clients and ip != '127.0.0.1':
+        _known_clients.add(ip)
+        print(f'  \U0001f4f1 Nouvel appareil: {ip}')
 
 # 1. Fonctions de base (filesystem, browse, paths)
 from server import basic_functions
