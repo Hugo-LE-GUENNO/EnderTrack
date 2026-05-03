@@ -10,3 +10,7 @@ Thumbs.db
 *.tmp
 node_modules/
 ENDERTRACK_CONTEXTE*.txt
+.env
+*.log
+.vscode/
+.idea/

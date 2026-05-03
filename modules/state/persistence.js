@@ -10,7 +10,6 @@ class PersistenceManager {
   }
 
   init() {
-    // console.log('💾 Initializing Persistence Manager...');
     
     // Setup auto-save
     this.setupAutoSave();
@@ -19,7 +18,6 @@ class PersistenceManager {
     this.setupEventListeners();
     
     this.isInitialized = true;
-    // console.log('✅ Persistence Manager initialized');
     
     return true;
   }
@@ -72,7 +70,6 @@ class PersistenceManager {
   autoSave() {
     try {
       this.saveState();
-      // console.log('💾 Auto-saved state');
     } catch (error) {
       console.warn('Auto-save failed:', error);
     }
@@ -152,7 +149,6 @@ class PersistenceManager {
         version: parsedState.version || 'unknown'
       });
       
-      // console.log('💾 State loaded successfully');
       return true;
       
     } catch (error) {

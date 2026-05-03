@@ -18,12 +18,10 @@ class CoordinateConfig {
   }
 
   init() {
-    // console.log('🎯 Initializing Coordinate Configuration...');
     this.setupEventListeners();
     this.loadFromState();
     this.updateUI();
     this.isInitialized = true;
-    // console.log('✅ Coordinate Configuration initialized');
   }
 
   setupEventListeners() {

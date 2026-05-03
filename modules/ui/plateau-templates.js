@@ -37,13 +37,11 @@ class PlateauTemplates {
     // Charger les profils principaux
     if (window.ProfilesData?.main) {
       this.templates = [...window.ProfilesData.main];
-      // console.log(`✅ Main profiles loaded: ${window.ProfilesData.main.length}`);
     }
     
     // Charger les profils Enderscope
     if (window.ProfilesData?.enderscope) {
       this.templates = [...this.templates, ...window.ProfilesData.enderscope];
-      // console.log(`✅ Enderscope profiles loaded: ${window.ProfilesData.enderscope.length}`);
     }
     
     // Scanner automatiquement les profils custom (ProfileCustom1, ProfileCustom2, etc.)
@@ -58,7 +56,6 @@ class PlateauTemplates {
       });
       
       this.templates = [...this.templates, ...customProfiles];
-      // console.log(`✅ Custom profiles loaded from ProfileCustom${customIndex}: ${customProfiles.length}`);
       customIndex++;
     }
     
