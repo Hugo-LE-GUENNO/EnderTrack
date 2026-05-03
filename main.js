@@ -746,6 +746,9 @@ window.clearHistory = () => EnderTrack.State?.clearHistory?.();
     if (e.key === 'PageUp') { e.preventDefault(); EnderTrack.Navigation?.moveDirection?.('zUp'); return; }
     if (e.key === 'PageDown') { e.preventDefault(); EnderTrack.Navigation?.moveDirection?.('zDown'); return; }
 
+    // Space = soft stop (stop movement, stay in place)
+    if (e.key === ' ') { e.preventDefault(); EnderTrack.Movement?.stopMovement?.(); return; }
+
     // XY arrows: buffer with 50ms tempo for diagonal detection
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();

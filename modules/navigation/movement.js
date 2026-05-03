@@ -6,6 +6,7 @@ class MovementEngine {
     this.currentAnimation = null;
     this.emergencyStop = false;
     this._clientId = Math.random().toString(36).slice(2, 8);
+    this._currentResolve = null;
     this._setupSSE();
   }
 
@@ -176,10 +177,11 @@ class MovementEngine {
         return;
       }
 
-      this.stopMovement(true); // silent: don't broadcast interrupted position
+      this.stopMovement(true);
       EnderTrack.State.update({ isMoving: true });
       this.isMoving = true;
       this.emergencyStop = false;
+      this._currentResolve = resolve;
 
       // Hardware path
       const enderscope = window.EnderTrack?.Enderscope;
@@ -299,6 +301,8 @@ class MovementEngine {
       const roundedPos = EnderTrack.Math.roundPoint(pos);
       EnderTrack.State.update({ pos: roundedPos, isMoving: false });
       this.isMoving = false;
+      // Resolve pending Promise so next movement can start
+      if (this._currentResolve) { this._currentResolve(false); this._currentResolve = null; }
       if (!silent) {
         this._broadcast('position:arrived', { x: roundedPos.x, y: roundedPos.y, z: roundedPos.z });
         EnderTrack.Events.notifyListeners('movement:completed', { position: roundedPos, success: false });
