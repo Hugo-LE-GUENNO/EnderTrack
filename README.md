@@ -40,19 +40,19 @@ Pour une autre édition : `git clone -b <edition> https://github.com/Hugo-LE-GUE
 
 Compatibles avec toutes les éditions.
 
-| Plugin | Dossier | Description | Installation |
-|--------|---------|-------------|-------------|
-| 🎮 Contrôleur Externe | `external-controller` | Mapping clavier + gamepad | `cp -r /tmp/et-plugins/plugins/external-controller plugins/` |
-| 🔩 Extruder | `extruder` | Contrôle moteur extrudeur | `cp -r /tmp/et-plugins/plugins/extruder plugins/` |
-| 🌡️ TempoBed | `tempo-bed` | Température plateau chauffant | `cp -r /tmp/et-plugins/plugins/tempo-bed plugins/` |
-
-**Via l'interface** : Réglages → Extensions → Catalogue (installe en un clic).
-
-**Manuellement** :
+Installation (remplacer `<plugin>` par le nom ci-dessous) :
 ```bash
 git clone -b plugins https://github.com/Hugo-LE-GUENNO/EnderTrack.git /tmp/et-plugins
-cp -r /tmp/et-plugins/plugins/<dossier> plugins/
+cp -r /tmp/et-plugins/plugins/<plugin> plugins/
 ```
+
+Ou via l'interface : Réglages → Extensions → Catalogue.
+
+| Plugin | `<plugin>` | Description |
+|--------|-----------|-------------|
+| 🎮 Contrôleur Externe | `external-controller` | Mapping clavier + gamepad |
+| 🔩 Extruder | `extruder` | Contrôle moteur extrudeur |
+| 🌡️ TempoBed | `tempo-bed` | Température plateau chauffant |
 
 👉 **[Créer un plugin](docs/plugins.md)** · Catalogue : branche [`plugins`](../../tree/plugins)
 
