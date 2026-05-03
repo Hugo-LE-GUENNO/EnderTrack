@@ -79,7 +79,7 @@
   /* Reorder DOM: header → canvas → controls → status */
   .global-header { order: 0; flex-shrink: 0; padding: 4px 10px; }
   .center-panel  { order: 1; flex: 1 1 0 !important; min-height: 25vh !important; overflow: hidden !important; }
-  .left-panel    { order: 2; flex: 0 0 auto !important; min-height: 20vh; max-height: 45vh; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+  .left-panel    { order: 2; flex: 0 0 auto !important; min-height: 20vh; max-height: 45vh; overflow: auto !important; display: flex !important; flex-direction: column !important; }
 
   .global-header img { height: 22px; }
   .global-header > div[style*="flex:1"] { display: none; }

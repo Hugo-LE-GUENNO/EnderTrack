@@ -185,18 +185,19 @@ class NavigationControls {
         if (isPressed) return;
         isPressed = true;
         btn.classList.add('pressed');
-        EnderTrack.Movement.moveDirection(direction);
+        this.moveDirection(direction);
       };
       const handleRelease = () => {
         isPressed = false;
         btn.classList.remove('pressed');
       };
 
-      // Use pointerdown/up — unified mouse + touch, fires only once
-      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); handlePress(); });
-      btn.addEventListener('pointerup', handleRelease);
-      btn.addEventListener('pointerleave', handleRelease);
-      btn.addEventListener('pointercancel', handleRelease);
+      btn.addEventListener('mousedown', (e) => { e.preventDefault(); handlePress(); });
+      btn.addEventListener('mouseup', handleRelease);
+      btn.addEventListener('mouseleave', handleRelease);
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); handlePress(); });
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); handleRelease(); });
+      btn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleRelease(); });
     });
   }
 
