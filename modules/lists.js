@@ -444,17 +444,39 @@ class ListManager {
       _nextGroupId: this._nextGroupId
     };
     localStorage.setItem('endertrack_lists', JSON.stringify(data));
+    // Sync to server
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state/patch';
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lists: data }) }).catch(() => {});
   }
 
   load() {
+    // Try server first, fallback to localStorage
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state';
+    fetch(url, { signal: AbortSignal.timeout(2000) })
+      .then(r => r.json())
+      .then(state => {
+        if (state?.lists?.groups?.length) {
+          this._applyData(state.lists);
+        } else {
+          this._loadLocal();
+        }
+      })
+      .catch(() => this._loadLocal());
+  }
+
+  _loadLocal() {
     try {
       const raw = JSON.parse(localStorage.getItem('endertrack_lists') || '{}');
-      if (raw.groups) {
-        this.groups = raw.groups;
-        this.activeGroupId = raw.activeGroupId || this.groups[0]?.id;
-        this._nextGroupId = raw._nextGroupId || 1;
-      }
+      if (raw.groups) this._applyData(raw);
     } catch (e) { /* ignore */ }
+  }
+
+  _applyData(raw) {
+    this.groups = raw.groups;
+    this.activeGroupId = raw.activeGroupId || this.groups[0]?.id;
+    this._nextGroupId = raw._nextGroupId || 1;
+    this.renderUI?.();
+    window.EnderTrack?.Canvas?.requestRender?.();
   }
 
   exportGroup(gid) {

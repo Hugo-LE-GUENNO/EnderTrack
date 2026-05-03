@@ -990,53 +990,7 @@ window._serverLog = function(action, details) {
     };
   }
 
-  // Tab switch
-  const origSwitch = window.switchTab;
-  if (origSwitch) {
-    window.switchTab = function(tabId) {
-      origSwitch(tabId);
-      window._serverLog('Onglet', tabId);
-    };
-  }
+
 })();
 
-// Server state sync: save on changes, load on startup
-(function() {
-  const SERVER = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-  let _saveTimer = null;
 
-  // Load server state on startup (merge with localStorage)
-  setTimeout(async () => {
-    try {
-      const resp = await fetch(SERVER + '/api/state', { signal: AbortSignal.timeout(2000) });
-      const serverState = await resp.json();
-      if (serverState && Object.keys(serverState).length > 0) {
-        // Merge: server state wins for positions/lists, local wins for UI prefs
-        if (serverState.lists && window.EnderTrack?.Lists) {
-          window.EnderTrack.Lists.groups = serverState.lists;
-          window.EnderTrack.Lists.renderUI?.();
-          window.EnderTrack.Canvas?.requestRender?.();
-        }
-      }
-    } catch {}
-  }, 2000);
-
-  // Save to server on list changes (debounced)
-  if (window.EnderTrack?.Events) {
-    const saveToServer = () => {
-      clearTimeout(_saveTimer);
-      _saveTimer = setTimeout(() => {
-        const lists = window.EnderTrack?.Lists?.groups;
-        if (lists) {
-          fetch(SERVER + '/api/state/patch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lists })
-          }).catch(() => {});
-        }
-      }, 1000);
-    };
-
-    EnderTrack.Events.on('state:changed', saveToServer);
-  }
-})();
