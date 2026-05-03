@@ -28,7 +28,6 @@ class MovementEngine {
   }
 
   _remoteMove(data) {
-    if (this.isMoving) return;
     this._cancelAnim();
     const start = { x: data.sx, y: data.sy, z: data.sz };
     const target = { x: data.x, y: data.y, z: data.z };
@@ -78,7 +77,6 @@ class MovementEngine {
 
   async moveAbsolute(targetX, targetY, targetZ) {
     const state = EnderTrack.State.get();
-    if (state.isMoving && !this.emergencyStop) return false;
 
     const target = this.validateCoordinates(targetX, targetY, targetZ);
     if (!target) return false;
@@ -98,7 +96,6 @@ class MovementEngine {
 
   async moveDirection(direction, customDistance = null) {
     const state = EnderTrack.State.get();
-    if (state.isMoving || this.isMoving) return false;
 
     // Read sensitivity from sliders directly
     let sensX = state.sensitivityX || 1;
@@ -293,7 +290,14 @@ class MovementEngine {
 
   stopMovement() {
     this._cancelAnim();
-    if (this.isMoving) this.completeMovement(EnderTrack.State.get().pos, false);
+    if (this.isMoving) {
+      // Stop hardware if connected
+      const enderscope = window.EnderTrack?.Enderscope;
+      if (enderscope?.isConnected) {
+        fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/emergency_stop', { method: 'POST' }).catch(() => {});
+      }
+      this.completeMovement(EnderTrack.State.get().pos, false);
+    }
   }
 
   emergencyStopMovement() {
