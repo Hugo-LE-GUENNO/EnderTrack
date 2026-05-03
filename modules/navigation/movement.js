@@ -7,7 +7,7 @@ class MovementEngine {
     this.emergencyStop = false;
     this._clientId = Math.random().toString(36).slice(2, 8);
     this._currentResolve = null;
-    this._setupSSE();
+    window.addEventListener('load', () => this._setupSSE());
   }
 
   _setupSSE() {

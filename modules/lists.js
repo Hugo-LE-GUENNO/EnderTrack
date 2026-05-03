@@ -10,7 +10,7 @@ class ListManager {
     this._clickMode = false;
     this.load();
     if (this.groups.length === 0) this.addGroup('Liste 1');
-    this._startSync();
+    window.addEventListener('load', () => this._startSync());
   }
 
   get positions() {

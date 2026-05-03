@@ -112,8 +112,8 @@ class CanvasManager {
     const state = window.EnderTrack.State.get();
     
     window.EnderTrack.Coordinates.updateParameters({
-      canvasWidth: this._cssWidth || this.canvas.getBoundingClientRect().width,
-      canvasHeight: this._cssHeight || this.canvas.getBoundingClientRect().height,
+      canvasWidth: this._cssWidth || this.canvas.clientWidth,
+      canvasHeight: this._cssHeight || this.canvas.clientHeight,
       mapSizeMm: state.mapSizeMm,
       plateauDimensions: state.plateauDimensions,
       coordinateBounds: state.coordinateBounds,
