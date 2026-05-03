@@ -11,12 +11,30 @@
 
 ---
 
-## Versions
+## Éditions
 
-| Branche | Description | Commande |
-|---------|-------------|----------|
-| [`basic`](../../tree/basic) | v2.1 — navigation, listes, tactile, responsive, plugins | `git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
-| [`plugins`](../../tree/plugins) | Plugins additionnels | `git clone -b plugins https://github.com/Hugo-LE-GUENNO/EnderTrack.git` |
+Chaque édition est une **branche** avec ses propres modules. Choisir une fois, puis suivre ses mises à jour.
+
+| Édition | Modules | Dernière version |
+|---------|---------|-----------------|
+| [`basic`](../../tree/basic) | Navigation, listes, plugins | v2.1 |
+| *imagerie* | *basic + caméra, Z-stack, time-lapse* | *à venir* |
+
+```bash
+git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+```
+
+### Mises à jour
+
+Les **versions** (v1.0, v2.0, v2.1...) sont les mises à jour d'une édition. Voir les [tags](../../tags).
+
+```bash
+git pull    # mettre à jour vers la dernière version de son édition
+```
+
+### Plugins
+
+Compatibles avec toutes les éditions. Voir la branche [`plugins`](../../tree/plugins).
 
 ## Démarrage
 
