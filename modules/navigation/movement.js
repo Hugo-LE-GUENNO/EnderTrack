@@ -5,6 +5,59 @@ class MovementEngine {
     this.isMoving = false;
     this.currentAnimation = null;
     this.emergencyStop = false;
+    this._clientId = Math.random().toString(36).slice(2, 8);
+    this._setupSSE();
+  }
+
+  _setupSSE() {
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+    try {
+      const es = new EventSource(url + '/api/events');
+      es.onmessage = (e) => {
+        try {
+          const evt = JSON.parse(e.data);
+          if (evt.data?._from === this._clientId) return;
+          if (evt.type === 'position:moving') {
+            this._remoteMove(evt.data);
+          } else if (evt.type === 'position:arrived') {
+            this._remoteArrive(evt.data);
+          }
+        } catch {}
+      };
+    } catch {}
+  }
+
+  _remoteMove(data) {
+    if (this.isMoving) return;
+    const start = EnderTrack.State.get().pos;
+    const target = { x: data.x, y: data.y, z: data.z };
+    const duration = data.duration || 1000;
+    const startTime = Date.now();
+    const animate = () => {
+      const progress = Math.min((Date.now() - startTime) / duration, 1);
+      const t = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      const pos = {
+        x: start.x + (target.x - start.x) * t,
+        y: start.y + (target.y - start.y) * t,
+        z: start.z + (target.z - start.z) * t
+      };
+      EnderTrack.State.update({ pos });
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }
+
+  _remoteArrive(data) {
+    const pos = { x: data.x, y: data.y, z: data.z };
+    EnderTrack.State.update({ pos, isMoving: false });
+    EnderTrack.Events.notifyListeners('position:changed', pos);
+  }
+
+  _broadcast(type, data) {
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/events/publish';
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, data: { ...data, _from: this._clientId } })
+    }).catch(() => {});
   }
 
   async moveAbsolute(targetX, targetY, targetZ) {
@@ -182,6 +235,7 @@ class MovementEngine {
       };
       this.currentAnimation = requestAnimationFrame(animate);
       EnderTrack.Events.notifyListeners('movement:started', movement);
+      this._broadcast('position:moving', { x: movement.target.x, y: movement.target.y, z: movement.target.z, duration: movement.duration });
     });
   }
 
@@ -212,6 +266,7 @@ class MovementEngine {
     EnderTrack.Events.notifyListeners('position:changed', roundedPos);
     if (success) EnderTrack.State.recordFinalPosition?.(roundedPos);
     this.isMoving = false;
+    this._broadcast('position:arrived', { x: roundedPos.x, y: roundedPos.y, z: roundedPos.z });
     EnderTrack.Events.notifyListeners('movement:completed', { position: finalPos, success });
   }
 
