@@ -1,0 +1,34 @@
+{
+  "lists": {
+    "groups": [
+      {
+        "id": 1,
+        "name": "Liste 1",
+        "visible": true,
+        "pinned": true,
+        "color": "#4a90e2",
+        "positions": [
+          {
+            "name": "",
+            "x": 99.91,
+            "y": 81.26,
+            "z": 85.61
+          },
+          {
+            "name": "",
+            "x": 55.94,
+            "y": 138.9,
+            "z": 85.61
+          }
+        ]
+      }
+    ],
+    "activeGroupId": 1,
+    "_nextGroupId": 2
+  },
+  "position": {
+    "x": 55.94,
+    "y": 138.9,
+    "z": 85.61
+  }
+}

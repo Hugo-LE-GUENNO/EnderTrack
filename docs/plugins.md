@@ -153,5 +153,77 @@ EnderTrack.UI.showNotification(msg, type), EnderTrack.Canvas.requestRender()
 API Python : dict ACTIONS = {'/endpoint': handler_function}
 Appel frontend : fetch('/api/plugins/{id}/{script}/{action}')
 
+Sync serveur :
+- État partagé : GET/POST /api/state, POST /api/state/patch
+- Temps réel : EventSource('/api/events'), POST /api/events/publish
+- Log terminal : POST /api/log {action, details}
+
 Le plugin doit : [DESCRIPTION]
 ```
+
+
+## Synchronisation serveur
+
+### État partagé
+
+Lire et écrire dans l'état serveur (`data/state.json`) :
+
+```javascript
+const SERVER = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+
+// Lire
+const state = await (await fetch(SERVER + '/api/state')).json();
+
+// Écrire (merge partiel)
+await fetch(SERVER + '/api/state/patch', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ monPlugin: { config: 'valeur' } })
+});
+```
+
+### Événements temps réel (SSE)
+
+Écouter les événements des autres clients :
+
+```javascript
+const es = new EventSource(SERVER + '/api/events');
+es.onmessage = (e) => {
+  const evt = JSON.parse(e.data);
+  // evt.type = 'lists:updated', 'position:moved', etc.
+  // evt.data._from = clientId de l'émetteur
+};
+```
+
+Publier un événement à tous les clients :
+
+```javascript
+fetch(SERVER + '/api/events/publish', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ type: 'monPlugin:update', data: { value: 42 } })
+});
+```
+
+### Log d'activité
+
+Envoyer un log visible dans le terminal serveur :
+
+```javascript
+fetch(SERVER + '/api/log', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'Capture', details: 'image_001.png' })
+});
+// Terminal: [14:32:05] 192.168.1.15 — Capture (image_001.png)
+```
+
+### Événements disponibles
+
+| Type | Données | Émis par |
+|------|---------|----------|
+| `lists:updated` | `{_from}` | Client qui modifie une liste |
+| `position:moving` | `{x,y,z,sx,sy,sz,duration}` | Client qui lance un mouvement |
+| `position:arrived` | `{x,y,z}` | Client dont le mouvement est terminé |
+| `position:moved` | `{x,y,z}` | Serveur (mouvement hardware) |
+| `position:homed` | `{}` | Serveur (home hardware) |

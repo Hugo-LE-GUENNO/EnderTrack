@@ -99,5 +99,61 @@ Si backend : server/mon_module.py avec register_routes(app).
 
 API : EnderTrack.State, EnderTrack.Movement, EnderTrack.Canvas, EnderTrack.UI
 
+Sync serveur :
+- État partagé : GET/POST /api/state, POST /api/state/patch
+- Temps réel : EventSource('/api/events'), POST /api/events/publish
+- Log terminal : POST /api/log {action, details}
+
 Le module doit : [DESCRIPTION]
 ```
+
+
+## Synchronisation serveur
+
+Un module peut utiliser les mêmes APIs que les plugins pour la sync multi-clients.
+
+### Routes disponibles
+
+| Route | Méthode | Description |
+|-------|---------|-------------|
+| `/api/state` | GET | Lire l'état partagé |
+| `/api/state/patch` | POST | Écrire (merge partiel) |
+| `/api/state/hash` | GET | Hash MD5 pour détecter les changements |
+| `/api/events` | GET | Connexion SSE (temps réel) |
+| `/api/events/publish` | POST | Publier un événement à tous les clients |
+| `/api/log` | POST | Envoyer un log au terminal serveur |
+
+### Exemple : module avec sync temps réel
+
+```javascript
+class MonModule {
+  activate() {
+    const SERVER = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    this._es = new EventSource(SERVER + '/api/events');
+    this._es.onmessage = (e) => {
+      const evt = JSON.parse(e.data);
+      if (evt.type === 'monModule:data') this.onRemoteData(evt.data);
+    };
+  }
+
+  deactivate() {
+    this._es?.close();
+  }
+
+  sendData(data) {
+    fetch(SERVER + '/api/events/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'monModule:data', data })
+    });
+  }
+}
+```
+
+### Stockage
+
+| Donnée | Où | Pourquoi |
+|--------|-----|---------|
+| Position, listes | `data/state.json` (serveur) | Partagé entre appareils |
+| Thème, préférences UI | `localStorage` (navigateur) | Propre à chaque appareil |
+| Images, fichiers lourds | `data/` (serveur) | Accessible par tous |
