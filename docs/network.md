@@ -44,7 +44,14 @@ Hotspot persistant au boot :
 sudo nmcli connection modify Hotspot connection.autoconnect yes
 ```
 
-## Partage 4G/5G
+## Hotspot + internet
+
+La carte WiFi ne peut pas être hotspot ET client en même temps. Pour avoir les deux :
+
+- **Ethernet + WiFi hotspot** — câble Ethernet pour internet, WiFi en hotspot
+- **Tethering USB + WiFi hotspot** — smartphone branché en USB partage sa 4G, WiFi du PC en hotspot
+
+## Partage 4G/5G (sans hotspot PC)
 
 1. **Smartphone** : Paramètres → Partage de connexion → Activer
 2. **PC** : Se connecter au WiFi du smartphone
