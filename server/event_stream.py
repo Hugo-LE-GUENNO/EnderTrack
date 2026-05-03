@@ -87,9 +87,9 @@ def register_routes(app):
         event_type = data.get('type', 'update')
         event_data = data.get('data')
         ip = request.remote_addr
-        # Add sender IP so clients can ignore their own events
         if isinstance(event_data, dict):
-            event_data['_from'] = ip
+            if '_from' not in event_data:
+                event_data['_from'] = ip
         elif event_data is None:
             event_data = {'_from': ip}
         bus.publish(event_type, event_data)
