@@ -72,6 +72,14 @@ Ou via l'interface : Réglages → Extensions → Catalogue.
 - [EnderScope](https://github.com/Pickering-Lab/EnderScope) ([publi](http://doi.org/10.1098/rsta.2023.0214))
 - [diy.microscopie.org](https://diy.microscopie.org/explore.html)
 
+## À propos
+
+EnderTrack est né comme interface de pilotage pour [EnderScope](https://github.com/Pickering-Lab/EnderScope), un microscope DIY construit à partir d'une imprimante 3D Ender. Le projet utilise [enderscope.py](https://github.com/mutterer/enderscopy) pour communiquer en G-code avec la platine motorisée.
+
+En pratique, EnderTrack pilote n'importe quelle platine XYZ compatible G-code — imprimantes 3D, stages de microscope, CNC, ou tout appareil contrôlé par série USB.
+
+Projet initié au CNRS suite à l'école thématique de microscopie [MIFOBIO](https://mifobio.fr) 2025. Plus de ressources sur [diy.microscopie.org](https://diy.microscopie.org/explore.html).
+
 ## Licence
 
 GPLv3 — Hugo Le Guenno, 2025
