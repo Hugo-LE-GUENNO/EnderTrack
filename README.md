@@ -21,12 +21,7 @@ python3 endertrack-server.py
 
 Ouvrir http://localhost:5000 — zéro installation, dépendances incluses.
 
-```bash
-git pull                  # dernière version de son édition
-git tag -l                # lister les versions disponibles
-git checkout v2.1.0       # revenir à une version précise
-git checkout basic        # retour à la dernière version
-```
+Mettre à jour : `git pull`
 
 Accès tablette/téléphone : `python3 endertrack-server.py --lan` · 👉 **[Réseau, hotspot, RPi](docs/network.md)**
 
