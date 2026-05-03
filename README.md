@@ -17,7 +17,7 @@ Chaque édition est une **branche** avec ses propres modules. Choisir une fois, 
 
 | Édition | Modules | Version |
 |---------|---------|---------|
-| [`basic`](../../tree/basic) | Navigation, listes, tactile, responsive | v2.1 |
+| [`basic`](../../tree/basic) | Navigation, listes, tactile, responsive | v2.1.0 |
 | *imagerie* | *basic + caméra, Z-stack, time-lapse* | *à venir* |
 
 ```bash
