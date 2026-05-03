@@ -82,7 +82,6 @@ class MovementEngine {
     const target = this.validateCoordinates(targetX, targetY, targetZ);
     if (!target) return false;
     if (!this.checkSafetyLimits(target.x, target.y, target.z)) return false;
-
     return await this.executeMovement(this.calculateMovement(state.pos, target));
   }
 

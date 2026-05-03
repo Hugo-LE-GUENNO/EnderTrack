@@ -182,7 +182,7 @@ class NavigationControls {
 
       let isPressed = false;
       const handlePress = () => {
-        if (isPressed || EnderTrack.State.get().isMoving) return;
+        if (isPressed) return;
         isPressed = true;
         btn.classList.add('pressed');
         this.moveDirection(direction);
