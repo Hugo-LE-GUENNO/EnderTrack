@@ -82,13 +82,11 @@ class MovementEngine {
     const target = this.validateCoordinates(targetX, targetY, targetZ);
     if (!target) return false;
     if (!this.checkSafetyLimits(target.x, target.y, target.z)) return false;
-    this._isAbsoluteMove = true;
     return await this.executeMovement(this.calculateMovement(state.pos, target));
   }
 
   async moveRelative(dx, dy, dz) {
     const state = EnderTrack.State.get();
-    this._isAbsoluteMove = false;
     return await this.moveAbsolute(
       state.pos.x + Number(dx),
       state.pos.y + Number(dy),
@@ -186,6 +184,7 @@ class MovementEngine {
       }
 
       this.stopMovement(true);
+      this._isAbsoluteMove = movement.duration > 400;
       EnderTrack.State.update({ isMoving: true });
       this.isMoving = true;
       this.emergencyStop = false;
