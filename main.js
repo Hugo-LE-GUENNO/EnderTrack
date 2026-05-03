@@ -347,13 +347,27 @@ class EnderTrackBootstrap {
       await EnderTrack.Persistence.init();
       const loaded = EnderTrack.Persistence.loadState();
       
-      // Synchroniser l'interface avec l'état chargé
       if (loaded) {
         setTimeout(() => {
           EnderTrackBootstrap.syncUIWithState();
         }, 100);
       }
     }
+
+    // Load position from server (overrides localStorage)
+    try {
+      const resp = await fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state', { signal: AbortSignal.timeout(2000) });
+      const serverState = await resp.json();
+      if (serverState?.position) {
+        EnderTrack.State.update({ pos: serverState.position });
+        const ix = document.getElementById('inputX');
+        const iy = document.getElementById('inputY');
+        const iz = document.getElementById('inputZ');
+        if (ix) ix.value = serverState.position.x.toFixed(2);
+        if (iy) iy.value = serverState.position.y.toFixed(2);
+        if (iz) iz.value = serverState.position.z.toFixed(2);
+      }
+    } catch {}
     
     // Navigation system
     if (EnderTrack.Navigation?.init) {
