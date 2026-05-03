@@ -11,14 +11,7 @@
 
 ---
 
-## Éditions
-
-Chaque édition est une **branche** avec ses propres modules. Choisir une fois, puis suivre ses mises à jour.
-
-| Édition | Modules | Version |
-|---------|---------|---------|
-| [`basic`](../../tree/basic) | Navigation, listes, tactile, responsive | v2.1.0 |
-| *imagerie* | *basic + caméra, Z-stack, time-lapse* | *à venir* |
+## Installation
 
 ```bash
 git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
@@ -30,23 +23,36 @@ Ouvrir http://localhost:5000 — zéro installation, dépendances incluses.
 
 Mettre à jour : `git pull` · Historique : [tags](../../tags)
 
-## Réseau
+Accès tablette/téléphone : `python3 endertrack-server.py --lan` · 👉 **[Réseau, hotspot, RPi](docs/network.md)**
 
-```bash
-python3 endertrack-server.py --lan    # accès depuis tablette/téléphone
-```
+## Éditions
 
-👉 **[Hotspot WiFi, 4G/5G, Raspberry Pi](docs/network.md)**
+Chaque édition est une **branche** avec ses propres modules.
+
+| Édition | Modules | Version |
+|---------|---------|---------|
+| [`basic`](../../tree/basic) | Navigation, listes, tactile, responsive | v2.1.0 |
+| *imagerie* | *basic + caméra, Z-stack, time-lapse* | *à venir* |
+
+Pour une autre édition : `git clone -b <edition> https://github.com/Hugo-LE-GUENNO/EnderTrack.git`
 
 ## Plugins
 
-Compatibles avec toutes les éditions. Installer : copier dans `plugins/` → Réglages → Extensions.
+Compatibles avec toutes les éditions.
 
 | Plugin | Description |
 |--------|-------------|
 | 🎮 Contrôleur Externe | Mapping clavier + gamepad |
 | 🔩 Extruder | Contrôle moteur extrudeur |
 | 🌡️ TempoBed | Température plateau chauffant |
+
+Installer depuis l'interface : Réglages → Extensions → Catalogue.
+
+Installer manuellement :
+```bash
+git clone -b plugins https://github.com/Hugo-LE-GUENNO/EnderTrack.git /tmp/et-plugins
+cp -r /tmp/et-plugins/plugins/extruder plugins/
+```
 
 👉 **[Créer un plugin](docs/plugins.md)** · Catalogue : branche [`plugins`](../../tree/plugins)
 
