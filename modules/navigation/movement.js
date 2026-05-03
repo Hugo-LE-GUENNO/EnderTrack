@@ -97,8 +97,8 @@ class MovementEngine {
   async moveDirection(direction, customDistance = null) {
     const state = EnderTrack.State.get();
 
-    // If moving, check if this direction is opposite → stop
-    if (this.isMoving && this._moveDir && this._isOpposite(direction)) {
+    // Any arrow press during movement = stop
+    if (this.isMoving) {
       this.stopMovement();
       return true;
     }
@@ -188,11 +188,6 @@ class MovementEngine {
       this.isMoving = true;
       this.emergencyStop = false;
       this._currentResolve = resolve;
-      this._moveDir = {
-        dx: movement.target.x - movement.start.x,
-        dy: movement.target.y - movement.start.y,
-        dz: movement.target.z - movement.start.z
-      };
 
       // Hardware path
       const enderscope = window.EnderTrack?.Enderscope;
@@ -301,34 +296,8 @@ class MovementEngine {
     EnderTrack.Events.notifyListeners('movement:completed', { position: finalPos, success });
   }
 
-  _isOpposite(direction) {
-    const d = this._moveDir;
-    if (!d) return false;
-    // Map direction to vector (same logic as moveDirection)
-    const state = EnderTrack.State.get();
-    const orient = state.axisOrientation || { x: 'right', y: 'up' };
-    let ox = 0, oy = 0, oz = 0;
-    switch (direction) {
-      case 'left':      ox = -1; break;
-      case 'right':     ox = 1; break;
-      case 'up':        oy = 1; break;
-      case 'down':      oy = -1; break;
-      case 'upLeft':    ox = -1; oy = 1; break;
-      case 'upRight':   ox = 1; oy = 1; break;
-      case 'downLeft':  ox = -1; oy = -1; break;
-      case 'downRight': ox = 1; oy = -1; break;
-      case 'zUp':       oz = 1; break;
-      case 'zDown':     oz = -1; break;
-    }
-    if (orient.x === 'left') ox = -ox;
-    if (orient.y === 'down') oy = -oy;
-    // Dot product < 0 means opposite
-    return (d.dx * ox + d.dy * oy + d.dz * oz) < 0;
-  }
-
   stopMovement(silent = false) {
     this._cancelAnim();
-    this._moveDir = null;
     if (this.isMoving) {
       const enderscope = window.EnderTrack?.Enderscope;
       if (enderscope?.isConnected) {
