@@ -371,6 +371,28 @@ Le module doit : [DÉCRIRE CE QUE LE MODULE DOIT FAIRE]
 
 </details>
 
+## Communauté
+
+EnderTrack est ouvert aux contributions — plugins, versions spécialisées, corrections.
+
+| Contribution | Comment |
+|-------------|---------|
+| 🔌 **Plugin** | Fork → branche `plugins` → ajouter un dossier → Pull Request |
+| 🔬 **Version spécialisée** | Fork → nouvelle branche depuis `basic` → Pull Request |
+| 🐛 **Bug / idée** | Ouvrir une [Issue](../../issues) |
+
+👉 Voir le guide complet : **[CONTRIBUTING.md](CONTRIBUTING.md)**
+
+### Plugins communautaires
+
+| Plugin | Auteur | Description |
+|--------|--------|-------------|
+| 🎮 Contrôleur Externe | EnderTeam | Mapping clavier + gamepad |
+| 🔩 Extruder | EnderTeam | Contrôle moteur extrudeur |
+| 🌡️ TempoBed | EnderTeam | Température plateau chauffant |
+
+*Votre plugin ici ? → [Contribuer un plugin](CONTRIBUTING.md#-contribuer-un-plugin)*
+
 ## Liens
 
 - [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
