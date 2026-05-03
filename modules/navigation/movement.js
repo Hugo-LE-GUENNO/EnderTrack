@@ -97,9 +97,10 @@ class MovementEngine {
   async moveDirection(direction, customDistance = null) {
     const state = EnderTrack.State.get();
 
-    // Arrow press during a long movement (click-and-go) = stop it, then move
+    // Arrow press during a long movement (click-and-go) = stop it first
     if (this.isMoving && this._isAbsoluteMove) {
       this.stopMovement();
+      return true;
     }
 
     // Read sensitivity from sliders directly
