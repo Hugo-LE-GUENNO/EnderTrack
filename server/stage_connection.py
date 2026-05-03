@@ -214,6 +214,10 @@ def register_routes(app):
             stage.finish_moves()
             dt = time.time() - t0
             print(f'  > Move X{x} Y{y} Z{z} F{feedrate} ({round(dt*1000)}ms)')
+            try:
+                from server.event_stream import bus
+                bus.publish('position:moved', {'x': x, 'y': y, 'z': z})
+            except: pass
             return jsonify({'success': True, 'm400_duration': round(dt, 3)})
         return jsonify({'success': True, 'simulation': True})
 
@@ -228,6 +232,10 @@ def register_routes(app):
             stage.finish_moves()
             dt = time.time() - t0
             print(f'  > Rel dX{dx} dY{dy} dZ{dz} F{feedrate} ({round(dt*1000)}ms)')
+            try:
+                from server.event_stream import bus
+                bus.publish('position:moved', {'dx': dx, 'dy': dy, 'dz': dz})
+            except: pass
             return jsonify({'success': True, 'm400_duration': round(dt, 3)})
         return jsonify({'success': True, 'simulation': True})
 
@@ -236,6 +244,10 @@ def register_routes(app):
         if stage:
             stage.home()
             print('  > Home')
+            try:
+                from server.event_stream import bus
+                bus.publish('position:homed', {})
+            except: pass
         return jsonify({'success': True})
 
     @app.route('/api/gcode', methods=['POST'])

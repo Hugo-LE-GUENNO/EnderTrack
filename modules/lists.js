@@ -445,13 +445,14 @@ class ListManager {
       _nextGroupId: this._nextGroupId
     };
     localStorage.setItem('endertrack_lists', JSON.stringify(data));
-    // Sync to server
-    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state/patch';
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lists: data }) })
-      .then(r => r.json()).then(() => {
-        // Update local hash so poll doesn't re-fetch our own save
-        fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state/hash')
-          .then(r => r.json()).then(d => { if (d.hash) this._lastHash = d.hash; }).catch(() => {});
+    // Sync to server + broadcast SSE event
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+    fetch(url + '/api/state/patch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lists: data }) })
+      .then(() => {
+        // Broadcast to other clients
+        fetch(url + '/api/events/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'lists:updated', data: { _from: this._clientId } })
+        }).catch(() => {});
       }).catch(() => {});
   }
 
@@ -486,8 +487,37 @@ class ListManager {
     window.EnderTrack?.ZVisualization?.render?.();
   }
 
-  // Poll server for changes every 3s
+  // Real-time sync via SSE
   _startSync() {
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+    this._clientId = Math.random().toString(36).slice(2, 8);
+
+    try {
+      const es = new EventSource(url + '/api/events');
+      es.onmessage = (e) => {
+        try {
+          const evt = JSON.parse(e.data);
+          if (evt.type === 'lists:updated' && evt.data?._from !== this._clientId) {
+            // Another client changed the lists — reload from server
+            fetch(url + '/api/state', { signal: AbortSignal.timeout(2000) })
+              .then(r => r.json())
+              .then(state => { if (state?.lists?.groups) this._applyData(state.lists); })
+              .catch(() => {});
+          }
+        } catch {}
+      };
+      es.onerror = () => {
+        // SSE failed — fallback to polling
+        es.close();
+        this._startPolling();
+      };
+    } catch {
+      this._startPolling();
+    }
+  }
+
+  // Fallback polling if SSE not available
+  _startPolling() {
     this._lastHash = '';
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
     setInterval(async () => {
@@ -496,11 +526,8 @@ class ListManager {
         const { hash } = await resp.json();
         if (hash && hash !== this._lastHash) {
           if (this._lastHash !== '') {
-            // Hash changed by another client — reload
             const state = await (await fetch(url + '/api/state', { signal: AbortSignal.timeout(2000) })).json();
-            if (state?.lists?.groups) {
-              this._applyData(state.lists);
-            }
+            if (state?.lists?.groups) this._applyData(state.lists);
           }
           this._lastHash = hash;
         }

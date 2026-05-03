@@ -90,7 +90,11 @@ plugin_router.register_routes(app)
 from server import state_store
 state_store.register_routes(app)
 
-# 5. Configuration réseau
+# 5. Real-time event stream (SSE)
+from server import event_stream
+event_stream.register_routes(app)
+
+# 6. Configuration réseau
 from server import network_config
 
 # ─── Démarrage ───────────────────────────────────────────────────────────────
