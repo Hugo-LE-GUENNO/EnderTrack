@@ -945,3 +945,98 @@ window._uninstallPlugin = async function(folder) {
   }
 };
 
+
+// Server activity log helper
+window._serverLog = function(action, details) {
+  const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/log';
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, details })
+  }).catch(() => {});
+};
+
+// Log key actions
+(function() {
+  if (!window.EnderTrack?.Events) return;
+  const E = EnderTrack.Events;
+
+  // Position added to list
+  const origAddPos = window.EnderTrack?.Lists?.addPosition;
+  if (origAddPos) {
+    const lists = window.EnderTrack.Lists;
+    const orig = lists.addPosition.bind(lists);
+    lists.addPosition = function(x, y, z, name) {
+      orig(x, y, z, name);
+      const g = lists.groups.find(g => g.id === lists.activeGroupId);
+      window._serverLog('Position ajoutée', `${g?.name || '?'} — X${x?.toFixed(1)} Y${y?.toFixed(1)} Z${z?.toFixed(1)}`);
+    };
+  }
+
+  // Movement completed
+  E.on('movement:completed', () => {
+    const pos = EnderTrack.State.get().pos;
+    window._serverLog('Mouvement terminé', `X${pos.x.toFixed(1)} Y${pos.y.toFixed(1)} Z${pos.z.toFixed(1)}`);
+  });
+
+  // Emergency stop
+  const origStop = window.EnderTrack?.App?.emergencyStop;
+  if (origStop) {
+    const app = window.EnderTrack.App;
+    const origFn = app.emergencyStop.bind(app);
+    app.emergencyStop = function() {
+      origFn();
+      window._serverLog('EMERGENCY STOP');
+    };
+  }
+
+  // Tab switch
+  const origSwitch = window.switchTab;
+  if (origSwitch) {
+    window.switchTab = function(tabId) {
+      origSwitch(tabId);
+      window._serverLog('Onglet', tabId);
+    };
+  }
+})();
+
+// Server state sync: save on changes, load on startup
+(function() {
+  const SERVER = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  let _saveTimer = null;
+
+  // Load server state on startup (merge with localStorage)
+  setTimeout(async () => {
+    try {
+      const resp = await fetch(SERVER + '/api/state', { signal: AbortSignal.timeout(2000) });
+      const serverState = await resp.json();
+      if (serverState && Object.keys(serverState).length > 0) {
+        // Merge: server state wins for positions/lists, local wins for UI prefs
+        if (serverState.lists && window.EnderTrack?.Lists) {
+          window.EnderTrack.Lists.groups = serverState.lists;
+          window.EnderTrack.Lists.renderUI?.();
+          window.EnderTrack.Canvas?.requestRender?.();
+        }
+      }
+    } catch {}
+  }, 2000);
+
+  // Save to server on list changes (debounced)
+  if (window.EnderTrack?.Events) {
+    const saveToServer = () => {
+      clearTimeout(_saveTimer);
+      _saveTimer = setTimeout(() => {
+        const lists = window.EnderTrack?.Lists?.groups;
+        if (lists) {
+          fetch(SERVER + '/api/state/patch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lists })
+          }).catch(() => {});
+        }
+      }, 1000);
+    };
+
+    EnderTrack.Events.on('state:changed', saveToServer);
+  }
+})();

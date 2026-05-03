@@ -14,3 +14,4 @@ ENDERTRACK_CONTEXTE*.txt
 *.log
 .vscode/
 .idea/
+data/

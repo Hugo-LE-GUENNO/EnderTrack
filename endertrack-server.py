@@ -86,7 +86,11 @@ stage_connection.register_routes(app)
 from server import plugin_router
 plugin_router.register_routes(app)
 
-# 4. Configuration réseau
+# 4. State storage + activity log
+from server import state_store
+state_store.register_routes(app)
+
+# 5. Configuration réseau
 from server import network_config
 
 # ─── Démarrage ───────────────────────────────────────────────────────────────
