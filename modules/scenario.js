@@ -48,6 +48,7 @@ class ScenarioRunner {
     this.renderUI();
     EnderTrack.Canvas?.requestRender?.();
     EnderTrack.Events?.emit?.('scenario:deactivated');
+    fetch('/api/events/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'scenario:stopped', data: {} }) }).catch(() => {});
   }
 
   pause() {
@@ -146,6 +147,7 @@ class ScenarioRunner {
     this._startTimer();
     this.renderUI();
     EnderTrack.Events?.emit?.('scenario:activated');
+    fetch('/api/events/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'scenario:started', data: { list: list.name, points: list.positions.length, loops: this.loops } }) }).catch(() => {});
 
     for (let loop = 0; loop < this.loops && !this._stopped; loop++) {
       this._currentLoop = loop;
@@ -195,6 +197,7 @@ class ScenarioRunner {
     this.isExecuting = false;
     this.isPaused = false;
     this.renderUI();
+    fetch('/api/events/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'scenario:stopped', data: {} }) }).catch(() => {});
   }
 
   // === UI ===

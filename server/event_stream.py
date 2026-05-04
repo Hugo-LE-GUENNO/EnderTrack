@@ -92,6 +92,11 @@ def register_routes(app):
                 event_data['_from'] = ip
         elif event_data is None:
             event_data = {'_from': ip}
+        if event_type == 'scenario:started':
+            name = event_data.get('list', '?') if isinstance(event_data, dict) else '?'
+            print(f"  \u25b6 Scenario [{name}]")
+        elif event_type == 'scenario:stopped':
+            print(f"  \u25a0 Scenario termin\u00e9")
         bus.publish(event_type, event_data)
         return jsonify({'success': True, 'clients': bus.client_count})
 

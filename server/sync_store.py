@@ -51,16 +51,29 @@ def register_routes(app):
     def _set_overlays():
         data = request.get_json()
         groups = data.get('groups', []) if data else []
-        total = sum(len(g.get('overlays', [])) for g in groups)
         # Don't overwrite server data with completely empty state (no groups)
         if not groups:
             existing = _read('overlays')
             if existing and existing.get('groups'):
 
                 return jsonify({'success': True, 'skipped': True})
+        # Diff logging
+        old = _read('overlays') or {'groups': []}
+        old_counts = {g.get('name', g.get('id', '?')): len(g.get('overlays', [])) for g in old.get('groups', [])}
+        new_counts = {g.get('name', g.get('id', '?')): len(g.get('overlays', [])) for g in groups}
+        for name, cnt in new_counts.items():
+            old_cnt = old_counts.get(name, 0)
+            if name not in old_counts:
+                print(f"  + Overlay [{name}] ({cnt} img)")
+            elif cnt > old_cnt:
+                print(f"  + Overlay [{name}] +{cnt - old_cnt} img ({cnt})")
+            elif cnt < old_cnt:
+                print(f"  - Overlay [{name}] -{old_cnt - cnt} img ({cnt})")
+        for name in old_counts:
+            if name not in new_counts:
+                print(f"  - Overlay [{name}] supprimé")
         _write('overlays', data)
         _broadcast('sync:overlays', data)
-        print(f"  \U0001f4be Sync overlays ({total})")
         return jsonify({'success': True})
 
     # --- Lists ---
@@ -74,16 +87,29 @@ def register_routes(app):
     def _set_lists():
         data = request.get_json()
         groups = data.get('groups', []) if data else []
-        total = sum(len(g.get('positions', [])) for g in groups)
         # Don't overwrite server data with completely empty state (no groups)
         if not groups:
             existing = _read('lists')
             if existing and existing.get('groups'):
 
                 return jsonify({'success': True, 'skipped': True})
+        # Diff logging
+        old = _read('lists') or {'groups': []}
+        old_counts = {g.get('name', g.get('id', '?')): len(g.get('positions', [])) for g in old.get('groups', [])}
+        new_counts = {g.get('name', g.get('id', '?')): len(g.get('positions', [])) for g in groups}
+        for name, cnt in new_counts.items():
+            old_cnt = old_counts.get(name, 0)
+            if name not in old_counts:
+                print(f"  + Liste [{name}] ({cnt} pts)")
+            elif cnt > old_cnt:
+                print(f"  + Liste [{name}] +{cnt - old_cnt} pts ({cnt})")
+            elif cnt < old_cnt:
+                print(f"  - Liste [{name}] -{old_cnt - cnt} pts ({cnt})")
+        for name in old_counts:
+            if name not in new_counts:
+                print(f"  - Liste [{name}] supprimée")
         _write('lists', data)
         _broadcast('sync:lists', data)
-        print(f"  \U0001f4be Sync listes ({total} pts)")
         return jsonify({'success': True})
 
     # --- Config (plateau dimensions, bounds, orientation) ---

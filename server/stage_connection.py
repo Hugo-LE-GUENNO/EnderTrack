@@ -55,6 +55,9 @@ class Stage:
             raise Exception("Port série fermé")
         if not command.endswith("\n"):
             command += "\n"
+        cmd = command.strip()
+        if cmd and cmd not in ('M114', 'M400', 'M115', 'G21', 'G90', 'G91'):
+            print(f"  > {cmd}")
         self.ser.write(command.encode('utf-8'))
         if wait_ok:
             lines = []
@@ -177,7 +180,6 @@ def register_routes(app):
             stage = Stage(port, baud, homing=False)
             _last_fail.pop(port, None)
             _connecting = False
-            print(f'  + Connecte: {port} @ {baud}')
             return jsonify({'success': True, 'message': f'Connecté à {port}', 'firmware': stage.firmware_name})
         except Exception as e:
             _connecting = False
@@ -238,7 +240,6 @@ def register_routes(app):
             t0 = time.time()
             stage.finish_moves()
             dt = time.time() - t0
-            print(f'  > Move X{x} Y{y} Z{z} F{feedrate} ({round(dt*1000)}ms)')
             try:
                 from server.event_stream import bus
                 bus.publish('position:arrived', {'x': x, 'y': y, 'z': z})
@@ -270,7 +271,6 @@ def register_routes(app):
             t0 = time.time()
             stage.finish_moves()
             dt = time.time() - t0
-            print(f'  > Rel dX{dx} dY{dy} dZ{dz} F{feedrate} ({round(dt*1000)}ms)')
             try:
                 from server.event_stream import bus
                 bus.publish('position:arrived', {'x': tx, 'y': ty, 'z': tz})
@@ -282,7 +282,6 @@ def register_routes(app):
     def _home():
         if stage:
             stage.home()
-            print('  > Home')
             try:
                 from server.event_stream import bus
                 bus.publish('position:homed', {})
