@@ -537,7 +537,6 @@ class EnderscopeConnection {
     }
 
     const feedrate = window.EnderTrack?.State?.get()?.feedrate || 3000;
-    console.time('⏱️ moveAbsolute (total avec M400)');
     
     try {
       const response = await fetch(`${this.serverUrl}/api/move/absolute`, {
@@ -547,7 +546,6 @@ class EnderscopeConnection {
       });
 
       const result = await response.json();
-      console.timeEnd('⏱️ moveAbsolute (total avec M400)');
       
       if (result.m400_duration !== undefined) {
       }
@@ -562,7 +560,6 @@ class EnderscopeConnection {
       }
       return false;
     } catch (error) {
-      console.timeEnd('⏱️ moveAbsolute (total avec M400)');
       return false;
     }
   }
@@ -574,7 +571,6 @@ class EnderscopeConnection {
     }
 
     const feedrate = window.EnderTrack?.State?.get()?.feedrate || 3000;
-    console.time('⏱️ moveRelative (total avec M400)');
     
     try {
       const response = await fetch(`${this.serverUrl}/api/move/relative`, {
@@ -584,7 +580,6 @@ class EnderscopeConnection {
       });
 
       const result = await response.json();
-      console.timeEnd('⏱️ moveRelative (total avec M400)');
       
       if (result.m400_duration !== undefined) {
       }
@@ -605,7 +600,6 @@ class EnderscopeConnection {
       }
       return false;
     } catch (error) {
-      console.timeEnd('⏱️ moveRelative (total avec M400)');
       return false;
     }
   }

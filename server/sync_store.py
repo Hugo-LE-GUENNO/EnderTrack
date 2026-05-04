@@ -54,11 +54,11 @@ def register_routes(app):
         data = request.get_json()
         groups = data.get('groups', []) if data else []
         total = sum(len(g.get('overlays', [])) for g in groups)
-        # Don't overwrite server data with empty data
-        if not groups or total == 0:
+        # Don't overwrite server data with completely empty state (no groups)
+        if not groups:
             existing = _read('overlays')
             if existing and existing.get('groups'):
-                print(f"  \u26a0\ufe0f sync/overlays POST ignored (empty data, server has data)")
+                print(f"  \u26a0\ufe0f sync/overlays POST ignored (no groups, server has data)")
                 return jsonify({'success': True, 'skipped': True})
         _write('overlays', data)
         _broadcast('sync:overlays', data)
@@ -79,14 +79,12 @@ def register_routes(app):
         data = request.get_json()
         groups = data.get('groups', []) if data else []
         total = sum(len(g.get('positions', [])) for g in groups)
-        # Don't overwrite server data with empty data
-        if not groups or total == 0:
+        # Don't overwrite server data with completely empty state (no groups)
+        if not groups:
             existing = _read('lists')
             if existing and existing.get('groups'):
-                ex_total = sum(len(g.get('positions', [])) for g in existing.get('groups', []))
-                if ex_total > 0:
-                    print(f"  \u26a0\ufe0f sync/lists POST ignored (empty data, server has {ex_total} positions)")
-                    return jsonify({'success': True, 'skipped': True})
+                print(f"  \u26a0\ufe0f sync/lists POST ignored (no groups, server has data)")
+                return jsonify({'success': True, 'skipped': True})
         _write('lists', data)
         _broadcast('sync:lists', data)
         print(f"  \U0001f4e4 sync/lists POST -> {len(groups)} group(s), {total} position(s)")

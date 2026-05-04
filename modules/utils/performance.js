@@ -109,10 +109,8 @@ class PerformanceMonitor {
 
   printStats() {
     const stats = this.getStats();
-    console.group('📊 Performance Stats');
     if (stats.memory.available) {
     }
-    console.groupEnd();
   }
 }
 
