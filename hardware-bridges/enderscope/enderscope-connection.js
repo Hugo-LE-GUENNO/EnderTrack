@@ -10,6 +10,7 @@ class EnderscopeConnection {
     this.connectionError = null;
     this.connectionMonitor = null;
     this.lastConnectionCheck = Date.now();
+    this.autoConnectEnabled = true;
   }
 
   async init() {
@@ -25,47 +26,43 @@ class EnderscopeConnection {
 
   async autoConnect() {
     try {
-      // Check if server is reachable first
+      // Just check server status — don't try to connect (server manages the serial port)
       const response = await fetch(`${this.serverUrl}/api/status`, {
         signal: AbortSignal.timeout(2000)
       });
       const status = await response.json();
       
       if (status.connected) {
-        // Already connected (server kept connection)
         this.isConnected = true;
         this.currentPort = status.port;
         this.updateConnectionStatus();
         await this.syncPosition();
         this.showStartupNotification(true);
-        return;
-      }
-      
-      // Try to connect to default port
-      const port = document.getElementById('serialPort')?.value || '/dev/ttyUSB0';
-      const baudRate = parseInt(document.getElementById('baudRate')?.value) || 115200;
-      
-      const connectResponse = await fetch(`${this.serverUrl}/api/connect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ port, baudRate }),
-        signal: AbortSignal.timeout(10000)
-      });
-      
-      const result = await connectResponse.json();
-      
-      if (result.success) {
-        this.isConnected = true;
-        this.currentPort = port;
-        this.currentBaudRate = baudRate;
-        this.updateConnectionStatus();
-        await this.syncPosition();
-        this.showStartupNotification(true);
+      } else if (this.autoConnectEnabled) {
+        // Only the first client auto-connects (others just check status)
+        const port = document.getElementById('serialPort')?.value || '/dev/ttyUSB0';
+        const baudRate = parseInt(document.getElementById('baudRate')?.value) || 115200;
+        const connectResponse = await fetch(`${this.serverUrl}/api/connect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ port, baudRate }),
+          signal: AbortSignal.timeout(10000)
+        });
+        const result = await connectResponse.json();
+        if (result.success) {
+          this.isConnected = true;
+          this.currentPort = port;
+          this.currentBaudRate = baudRate;
+          this.updateConnectionStatus();
+          await this.syncPosition();
+          this.showStartupNotification(true);
+        } else {
+          this.showStartupNotification(false);
+        }
       } else {
         this.showStartupNotification(false);
       }
     } catch (error) {
-      // Server not available — stay in simulator mode silently
       this.showStartupNotification(false);
     }
   }
@@ -406,8 +403,8 @@ class EnderscopeConnection {
       statusIndicator.classList.add('connected');
       statusText.textContent = `Connecté (${this.currentPort})`;
       statusText.style.color = '#10b981';
-      connectBtn.textContent = 'Déconnecter';
-      connectBtn.onclick = () => this.disconnect();
+      connectBtn.textContent = 'Simulateur';
+      connectBtn.onclick = () => { this.autoConnectEnabled = false; this.disconnect(); };
       if (controls) controls.style.display = 'block';
     } else {
       if (this.connectionError) {
@@ -418,7 +415,7 @@ class EnderscopeConnection {
         statusText.style.color = 'var(--text-general)';
       }
       connectBtn.textContent = 'Connecter';
-      connectBtn.onclick = () => this.connect();
+      connectBtn.onclick = () => { this.autoConnectEnabled = true; this.connect(); };
       if (controls) controls.style.display = 'none';
     }
     this.updateMainModeIndicator();
@@ -443,7 +440,20 @@ class EnderscopeConnection {
   }
 
   async tryReconnect() {
+    if (!this.autoConnectEnabled) return;
     try {
+      // Check if server already connected (another client may have connected)
+      const statusResp = await fetch(`${this.serverUrl}/api/status`, { signal: AbortSignal.timeout(2000) });
+      const status = await statusResp.json();
+      if (status.connected) {
+        this.isConnected = true;
+        this.currentPort = status.port;
+        this.connectionError = null;
+        this.updateConnectionStatus();
+        await this.syncPosition();
+        return;
+      }
+      // Server not connected — try to connect
       const r = await fetch(`${this.serverUrl}/api/ports`);
       const ports = await r.json();
       const usbPort = ports.find(p => p.includes('USB') || p.includes('ACM'));
@@ -461,7 +471,6 @@ class EnderscopeConnection {
           this.connectionError = null;
           this.updateConnectionStatus();
           await this.syncPosition();
-          window.EnderTrack?.UI?.showSuccess?.(`🔬 Reconnecté (${usbPort})`);
         }
       }
     } catch {}

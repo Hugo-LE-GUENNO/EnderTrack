@@ -17,6 +17,7 @@ except ImportError:
 # ─── Stage class ─────────────────────────────────────────────────────────────
 
 stage = None  # Instance globale
+_connecting = False
 
 
 class Stage:
@@ -158,7 +159,7 @@ def register_routes(app):
 
     @app.route('/api/connect', methods=['POST'])
     def _connect():
-        global stage
+        global stage, _connecting
         data = request.get_json() or {}
         port = data.get('port')
         baud = data.get('baudRate', 115200)
@@ -166,12 +167,21 @@ def register_routes(app):
             return jsonify({'success': False, 'error': 'Port requis'})
         if not HAS_SERIAL:
             return jsonify({'success': False, 'error': 'pyserial non installé (pip install pyserial)'})
+        # Already connected to this port — just return success
+        if stage and is_connected() and hasattr(stage, 'port') and stage.port == port:
+            print(f'  = Déjà connecté: {port} (ignoré)')
+            return jsonify({'success': True, 'message': f'Déjà connecté à {port}', 'firmware': getattr(stage, 'firmware_name', None)})
+        if _connecting:
+            return jsonify({'success': False, 'error': 'Connexion en cours...'})
         try:
+            _connecting = True
             stage = Stage(port, baud, homing=False)
             _last_fail.pop(port, None)
+            _connecting = False
             print(f'  + Connecte: {port} @ {baud}')
             return jsonify({'success': True, 'message': f'Connecté à {port}', 'firmware': stage.firmware_name})
         except Exception as e:
+            _connecting = False
             if _last_fail.get(port) != str(e):
                 print(f'  x Connexion echouee: {port} - {e}')
                 _last_fail[port] = str(e)
@@ -209,6 +219,22 @@ def register_routes(app):
         x, y, z = data.get('x', 0), data.get('y', 0), data.get('z', 0)
         feedrate = data.get('feedrate', 3000)
         if stage:
+            # Get current position for animation start
+            cur = stage.get_position(as_dict=True)
+            sx, sy, sz = cur.get('X', 0), cur.get('Y', 0), cur.get('Z', 0)
+            # Estimate duration
+            import math
+            distXY = math.sqrt((x - sx)**2 + (y - sy)**2)
+            distZ = abs(z - sz)
+            speedXY = feedrate / 60
+            speedZ = min(feedrate / 60, 5)
+            duration = max(distXY / speedXY if distXY > 0 else 0, distZ / speedZ if distZ > 0 else 0) * 1000
+            duration = max(duration, 200)
+            # Broadcast animation start BEFORE moving
+            try:
+                from server.event_stream import bus
+                bus.publish('position:moving', {'x': x, 'y': y, 'z': z, 'sx': sx, 'sy': sy, 'sz': sz, 'duration': duration})
+            except: pass
             stage.move_absolute(x, y, z, feedrate=feedrate)
             t0 = time.time()
             stage.finish_moves()
@@ -216,7 +242,7 @@ def register_routes(app):
             print(f'  > Move X{x} Y{y} Z{z} F{feedrate} ({round(dt*1000)}ms)')
             try:
                 from server.event_stream import bus
-                bus.publish('position:moved', {'x': x, 'y': y, 'z': z})
+                bus.publish('position:arrived', {'x': x, 'y': y, 'z': z})
             except: pass
             return jsonify({'success': True, 'm400_duration': round(dt, 3)})
         return jsonify({'success': True, 'simulation': True})
@@ -227,6 +253,20 @@ def register_routes(app):
         dx, dy, dz = data.get('dx', 0), data.get('dy', 0), data.get('dz', 0)
         feedrate = data.get('feedrate', 3000)
         if stage:
+            cur = stage.get_position(as_dict=True)
+            sx, sy, sz = cur.get('X', 0), cur.get('Y', 0), cur.get('Z', 0)
+            tx, ty, tz = sx + dx, sy + dy, sz + dz
+            import math
+            distXY = math.sqrt(dx**2 + dy**2)
+            distZ = abs(dz)
+            speedXY = feedrate / 60
+            speedZ = min(feedrate / 60, 5)
+            duration = max(distXY / speedXY if distXY > 0 else 0, distZ / speedZ if distZ > 0 else 0) * 1000
+            duration = max(duration, 200)
+            try:
+                from server.event_stream import bus
+                bus.publish('position:moving', {'x': tx, 'y': ty, 'z': tz, 'sx': sx, 'sy': sy, 'sz': sz, 'duration': duration})
+            except: pass
             stage.move_relative(dx, dy, dz, feedrate=feedrate)
             t0 = time.time()
             stage.finish_moves()
@@ -234,7 +274,7 @@ def register_routes(app):
             print(f'  > Rel dX{dx} dY{dy} dZ{dz} F{feedrate} ({round(dt*1000)}ms)')
             try:
                 from server.event_stream import bus
-                bus.publish('position:moved', {'dx': dx, 'dy': dy, 'dz': dz})
+                bus.publish('position:arrived', {'x': tx, 'y': ty, 'z': tz})
             except: pass
             return jsonify({'success': True, 'm400_duration': round(dt, 3)})
         return jsonify({'success': True, 'simulation': True})

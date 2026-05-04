@@ -279,8 +279,9 @@ class ZInteractions {
       return;
     }
 
-    // Priority 5: scenario executing — block
+    // Priority 5: scenario or movement in progress — block
     if (window.EnderTrack?.Scenario?.isExecuting) return;
+    if (window.EnderTrack?.Movement?.isMoving) return;
 
     // Priority 6: click-and-go
     this._clickAndGo(e);

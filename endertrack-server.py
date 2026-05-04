@@ -90,6 +90,10 @@ plugin_router.register_routes(app)
 from server import state_store
 state_store.register_routes(app)
 
+# 5. Sync store (overlays, lists — shared between clients)
+from server import sync_store
+sync_store.register_routes(app)
+
 # 5. Real-time event stream (SSE)
 from server import event_stream
 event_stream.register_routes(app)

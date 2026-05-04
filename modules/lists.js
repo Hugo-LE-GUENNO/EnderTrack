@@ -445,25 +445,22 @@ class ListManager {
       _nextGroupId: this._nextGroupId
     };
     localStorage.setItem('endertrack_lists', JSON.stringify(data));
-    // Sync to server + broadcast SSE event
+    // Sync to server
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
-    fetch(url + '/api/state/patch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lists: data }) })
-      .then(() => {
-        // Broadcast to other clients
-        fetch(url + '/api/events/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'lists:updated', data: { _from: this._clientId } })
-        }).catch(() => {});
-      }).catch(() => {});
+    fetch(url + '/api/sync/lists', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch(() => {});
   }
 
   load() {
     // Try server first, fallback to localStorage
-    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state';
-    fetch(url, { signal: AbortSignal.timeout(2000) })
-      .then(r => r.json())
-      .then(state => {
-        if (state?.lists?.groups?.length) {
-          this._applyData(state.lists);
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+    fetch(url + '/api/sync/lists', { signal: AbortSignal.timeout(2000) })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        if (data?.groups?.length) {
+          this._applyData(data);
         } else {
           this._loadLocal();
         }

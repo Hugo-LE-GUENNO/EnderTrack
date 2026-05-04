@@ -129,8 +129,8 @@ class OverlayManager {
     this.renderUI(); EnderTrack.Canvas?.requestRender?.();
   }
 
-  save() {
-    const data = {
+  _serializeData() {
+    return {
       groups: this.groups.map(g => ({
         id: g.id, name: g.name, visible: g.visible,
         overlays: g.overlays.map(({ id, name, src, x, y, width, height, opacity, rotation, visible }) =>
@@ -140,30 +140,58 @@ class OverlayManager {
       _nextId: this._nextId,
       _nextGroupId: this._nextGroupId
     };
+  }
+
+  save() {
+    const data = this._serializeData();
     localStorage.setItem('endertrack_overlays', JSON.stringify(data));
+    // Sync to server
+    const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(url + '/api/sync/overlays', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch(() => {});
+  }
+
+  _loadFromData(raw) {
+    this.groups = [];
+    if (Array.isArray(raw)) {
+      const g = { id: 1, name: 'Overlay 1', overlays: [], visible: true };
+      raw.forEach(d => { const img = new Image(); img.src = d.src; g.overlays.push({ ...d, rotation: d.rotation || 0, img }); });
+      this.groups = [g];
+      this.activeGroupId = 1;
+      this._nextGroupId = 2;
+      this._nextId = Math.max(1, ...g.overlays.map(o => o.id)) + 1;
+    } else if (raw.groups) {
+      raw.groups.forEach(g => {
+        const group = { id: g.id, name: g.name, visible: g.visible !== false, overlays: [] };
+        (g.overlays || []).forEach(d => { const img = new Image(); img.src = d.src; group.overlays.push({ ...d, rotation: d.rotation || 0, img }); });
+        this.groups.push(group);
+      });
+      this.activeGroupId = raw.activeGroupId || this.groups[0]?.id;
+      this._nextId = raw._nextId || 1;
+      this._nextGroupId = raw._nextGroupId || 1;
+    }
   }
 
   load() {
+    // Try server first, fallback to localStorage
+    const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(url + '/api/sync/overlays', { signal: AbortSignal.timeout(2000) })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        if (data.groups?.length) {
+          this._loadFromData(data);
+          this.renderUI(); EnderTrack.Canvas?.requestRender?.();
+        } else { this._loadLocal(); }
+      })
+      .catch(() => this._loadLocal());
+  }
+
+  _loadLocal() {
     try {
       const raw = JSON.parse(localStorage.getItem('endertrack_overlays') || '{}');
-      if (Array.isArray(raw)) {
-        // Legacy: single array of overlays
-        const g = { id: 1, name: 'Overlay 1', overlays: [], visible: true };
-        raw.forEach(d => { const img = new Image(); img.src = d.src; g.overlays.push({ ...d, rotation: d.rotation || 0, img }); });
-        this.groups = [g];
-        this.activeGroupId = 1;
-        this._nextGroupId = 2;
-        this._nextId = Math.max(1, ...g.overlays.map(o => o.id)) + 1;
-      } else if (raw.groups) {
-        raw.groups.forEach(g => {
-          const group = { id: g.id, name: g.name, visible: g.visible !== false, overlays: [] };
-          (g.overlays || []).forEach(d => { const img = new Image(); img.src = d.src; group.overlays.push({ ...d, rotation: d.rotation || 0, img }); });
-          this.groups.push(group);
-        });
-        this.activeGroupId = raw.activeGroupId || this.groups[0]?.id;
-        this._nextId = raw._nextId || 1;
-        this._nextGroupId = raw._nextGroupId || 1;
-      }
+      this._loadFromData(raw);
     } catch (e) { /* ignore */ }
   }
 

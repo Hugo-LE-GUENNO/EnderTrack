@@ -48,7 +48,7 @@
         <!-- Global Header with Logo and Tabs -->
         <div class="global-header">
             <div class="tab-system">
-                <button class="tab-btn" id="settingsTab" onclick="switchTab('settings')">
+                <button class="tab-btn" id="settingsTab" onclick="switchTab('settings')" style="opacity:0.5;">
                     Réglages
                 </button>
                 <div style="width:1px; height:20px; background:var(--border); margin:0 4px; align-self:center;"></div>
@@ -331,6 +331,9 @@
                                 <button onclick="saveAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Exporter</button>
                                 <button onclick="loadStorageFromFile()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Importer</button>
                                 <button onclick="resetAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Réinitialiser</button>
+                            </div>
+                            <div style="display:flex; gap:4px; margin-top:4px;">
+                                <button onclick="clearHistory()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Reset tracks</button>
                             </div>
                         </div>
                     </details>

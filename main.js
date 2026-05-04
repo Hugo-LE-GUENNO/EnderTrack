@@ -709,7 +709,11 @@ window.emergencyStop = () => EnderTrack.App.emergencyStop();
   // Expose for instant update on connection change
   window._updateStatusNow = updateStatus;
 })();
-window.clearHistory = () => EnderTrack.State?.clearHistory?.();
+window.clearHistory = () => {
+  EnderTrack.State?.clearHistory?.();
+  const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+  fetch(url + '/api/sync/tracks', { method: 'DELETE' }).catch(() => {});
+};
 
 // Global keyboard navigation with diagonal detection
 (function() {
@@ -741,7 +745,7 @@ window.clearHistory = () => EnderTrack.State?.clearHistory?.();
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (window.EnderTrack?.Scenario?.isExecuting) return;
-
+    if (window.EnderTrack?.Movement?.isMoving) return;
 
     // Z movement (immediate, no combo needed)
     if (e.key === 'PageUp') { e.preventDefault(); EnderTrack.Navigation?.moveDirection?.('zUp'); return; }
@@ -839,6 +843,75 @@ window.showAboutModal = async function() {
 window.openSequences = () => {};
 window.openDrivers = () => {};
 window.openEnderman = () => {};
+
+// Config sync (plateau dimensions, bounds, orientation)
+(function() {
+  const url = () => (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+  let syncTimer = null;
+
+  // Push config to server (debounced)
+  window._syncConfig = function() {
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => {
+      const state = EnderTrack.State?.get();
+      if (!state) return;
+      const config = {
+        plateauDimensions: state.plateauDimensions,
+        coordinateBounds: state.coordinateBounds,
+        axisOrientation: state.axisOrientation,
+        feedrate: state.feedrate
+      };
+      fetch(url() + '/api/sync/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      }).catch(() => {});
+    }, 500);
+  };
+
+  // Load config from server on startup
+  setTimeout(() => {
+    fetch(url() + '/api/sync/config', { signal: AbortSignal.timeout(2000) })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(config => {
+        if (!config || !config.plateauDimensions) return;
+        EnderTrack.State?.update?.({
+          plateauDimensions: config.plateauDimensions,
+          coordinateBounds: config.coordinateBounds,
+          axisOrientation: config.axisOrientation,
+          feedrate: config.feedrate
+        });
+        if (typeof EnderTrackBootstrap?.syncUIWithState === 'function') {
+          EnderTrackBootstrap.syncUIWithState();
+        }
+        EnderTrack.Canvas?.requestRender?.();
+      })
+      .catch(() => {});
+
+    // Load tracks from server
+    fetch(url() + '/api/sync/tracks', { signal: AbortSignal.timeout(2000) })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        if (data?.positionHistory?.length || data?.continuousTrack?.length) {
+          EnderTrack.State?.update?.({
+            positionHistory: data.positionHistory || [],
+            continuousTrack: data.continuousTrack || []
+          });
+          EnderTrack.Canvas?.requestRender?.();
+        }
+      })
+      .catch(() => {});
+  }, 2000);
+
+  // Listen for config changes
+  EnderTrack.Events?.on?.('state:changed', (newState, oldState) => {
+    if (newState.plateauDimensions !== oldState.plateauDimensions ||
+        newState.coordinateBounds !== oldState.coordinateBounds ||
+        newState.axisOrientation !== oldState.axisOrientation ||
+        newState.feedrate !== oldState.feedrate) {
+      window._syncConfig();
+    }
+  });
+})();
 
 // Plugin Catalog
 // Unified plugin search (local + catalog)

@@ -40,4 +40,5 @@
   background: var(--active-element);
   color: var(--text-selected);
   border-bottom-color: var(--coordinates-color);
+  opacity: 1 !important;
 }

@@ -6,9 +6,8 @@ class ClickHandler {
   }
 
   handleClick(screenX, screenY, event) {
-    if (window.EnderTrack?.Scenario?.isExecuting) {
-      return;
-    }
+    if (window.EnderTrack?.Scenario?.isExecuting) return;
+    if (window.EnderTrack?.Movement?.isMoving) return;
     
     // Auto-switch to Navigation tab if clicking canvas from a passive tab
     // Exclude: lists, acquisition (own click behavior), settings when overlays active (image manipulation)
