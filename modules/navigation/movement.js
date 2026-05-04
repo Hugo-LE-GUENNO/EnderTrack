@@ -81,7 +81,7 @@ class MovementEngine {
         y: start.y + (target.y - start.y) * tXY,
         z: start.z + (target.z - start.z) * tZ
       };
-      EnderTrack.State.update({ pos });
+      this._updatePos(pos);
       if (progress < 1) {
         this.currentAnimation = requestAnimationFrame(animate);
       } else {
