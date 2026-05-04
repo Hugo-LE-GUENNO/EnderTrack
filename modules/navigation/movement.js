@@ -132,11 +132,53 @@ class MovementEngine {
 
   async moveRelative(dx, dy, dz) {
     const state = EnderTrack.State.get();
-    return await this.moveAbsolute(
-      state.pos.x + Number(dx),
-      state.pos.y + Number(dy),
-      state.pos.z + Number(dz)
-    );
+    const tx = state.pos.x + Number(dx);
+    const ty = state.pos.y + Number(dy);
+    const tz = state.pos.z + Number(dz);
+
+    // Hardware: use real relative G-code (G91 + G1 + G90)
+    const enderscope = window.EnderTrack?.Enderscope;
+    if (enderscope?.isConnected) {
+      const target = this.validateCoordinates(tx, ty, tz);
+      if (!target) return false;
+      if (!this.checkSafetyLimits(target.x, target.y, target.z)) return false;
+      if (this.isMoving) return false;
+
+      const movement = this.calculateMovement(state.pos, target);
+      this.isMoving = true;
+      this._isLocalMove = true;
+      EnderTrack.State.update({ isMoving: true });
+
+      // Animate locally
+      movement.startTime = Date.now();
+      const animateHw = () => {
+        if (!this.isMoving) return;
+        const progress = Math.min((Date.now() - movement.startTime) / movement.duration, 1);
+        const tXY = EnderTrack.Math.easeTrapezoidalXY(progress);
+        const tZ = EnderTrack.Math.easeTrapezoidalZ(progress);
+        this._updatePos({
+          x: EnderTrack.Math.lerp(movement.start.x, movement.target.x, tXY),
+          y: EnderTrack.Math.lerp(movement.start.y, movement.target.y, tXY),
+          z: EnderTrack.Math.lerp(movement.start.z, movement.target.z, tZ)
+        });
+        if (progress < 1) this.currentAnimation = requestAnimationFrame(animateHw);
+      };
+      this.currentAnimation = requestAnimationFrame(animateHw);
+
+      try {
+        const ok = await window.EnderTrack.EnderscopeMovement.moveRelative(Number(dx), Number(dy), Number(dz));
+        this._cancelAnim();
+        if (ok) { this.completeMovement(target, true); return true; }
+        else { this.completeMovement(state.pos, false); return false; }
+      } catch (e) {
+        this._cancelAnim();
+        this.completeMovement(state.pos, false);
+        return false;
+      }
+    }
+
+    // Simulation: convert to absolute
+    return await this.moveAbsolute(tx, ty, tz);
   }
 
   async moveDirection(direction, customDistance = null) {

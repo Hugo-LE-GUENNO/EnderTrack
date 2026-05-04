@@ -50,14 +50,15 @@ class Stage:
             self.ser.close()
             raise Exception(f"Le device sur {port} ne répond pas au G-code (pas de réponse à M115)")
 
-    def send_gcode(self, command, wait_ok=False, timeout=10):
+    def send_gcode(self, command, wait_ok=False, timeout=10, _log=True):
         if not self.ser.is_open:
             raise Exception("Port série fermé")
         if not command.endswith("\n"):
             command += "\n"
-        cmd = command.strip()
-        if cmd and cmd not in ('M114', 'M400', 'M115', 'G21', 'G90', 'G91'):
-            print(f"  > {cmd}")
+        if _log:
+            cmd = command.strip()
+            if cmd and cmd not in ('M114', 'M400', 'M115', 'G21', 'G90', 'G91'):
+                print(f"  > {cmd}")
         self.ser.write(command.encode('utf-8'))
         if wait_ok:
             lines = []
@@ -74,18 +75,20 @@ class Stage:
         return ["sent"]
 
     def move_absolute(self, x, y, z, feedrate=3000):
-        self.send_gcode(f"G1 X{x} Y{y} Z{z} F{feedrate}", wait_ok=True)
+        print(f"  > [ABS] G1 X{x} Y{y} Z{z} F{feedrate}")
+        self.send_gcode(f"G1 X{x} Y{y} Z{z} F{feedrate}", wait_ok=True, _log=False)
         self.position = {'X': float(x), 'Y': float(y), 'Z': float(z)}
 
     def move_relative(self, dx, dy, dz, feedrate=3000):
-        self.send_gcode("G91", wait_ok=True)
+        print(f"  > [REL] G1 X{dx} Y{dy} Z{dz} F{feedrate}")
+        self.send_gcode("G91", wait_ok=True, _log=False)
         try:
-            self.send_gcode(f"G1 X{dx} Y{dy} Z{dz} F{feedrate}", wait_ok=True)
+            self.send_gcode(f"G1 X{dx} Y{dy} Z{dz} F{feedrate}", wait_ok=True, _log=False)
             self.position['X'] += float(dx)
             self.position['Y'] += float(dy)
             self.position['Z'] += float(dz)
         finally:
-            self.send_gcode("G90", wait_ok=True)
+            self.send_gcode("G90", wait_ok=True, _log=False)
 
     def finish_moves(self):
         time.sleep(0.05)
