@@ -169,7 +169,6 @@ def register_routes(app):
             return jsonify({'success': False, 'error': 'pyserial non installé (pip install pyserial)'})
         # Already connected to this port — just return success
         if stage and is_connected() and hasattr(stage, 'port') and stage.port == port:
-            print(f'  = Déjà connecté: {port} (ignoré)')
             return jsonify({'success': True, 'message': f'Déjà connecté à {port}', 'firmware': getattr(stage, 'firmware_name', None)})
         if _connecting:
             return jsonify({'success': False, 'error': 'Connexion en cours...'})
@@ -301,7 +300,6 @@ def register_routes(app):
             return jsonify({'success': False, 'error': f'Commande bloquée: {command.split()[0]}'})
         if stage:
             lines = stage.send_gcode(command, wait_ok=True)
-            print(f'  > G-code: {command}')
             return jsonify({'success': True, 'response': lines})
         return jsonify({'success': True, 'response': [f'[SIM] {command}', 'ok']})
 

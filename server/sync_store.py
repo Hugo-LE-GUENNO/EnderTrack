@@ -45,8 +45,6 @@ def register_routes(app):
     @app.route('/api/sync/overlays', methods=['GET'])
     def _get_overlays():
         data = _read('overlays')
-        n = len(data.get('groups', [])) if data else 0
-        print(f"  \U0001f4e5 sync/overlays GET -> {n} group(s)")
         return jsonify(data or {'groups': []})
 
     @app.route('/api/sync/overlays', methods=['POST'])
@@ -58,11 +56,11 @@ def register_routes(app):
         if not groups:
             existing = _read('overlays')
             if existing and existing.get('groups'):
-                print(f"  \u26a0\ufe0f sync/overlays POST ignored (no groups, server has data)")
+
                 return jsonify({'success': True, 'skipped': True})
         _write('overlays', data)
         _broadcast('sync:overlays', data)
-        print(f"  \U0001f4e4 sync/overlays POST -> {len(groups)} group(s), {total} overlay(s)")
+        print(f"  \U0001f4be Sync overlays ({total})")
         return jsonify({'success': True})
 
     # --- Lists ---
@@ -70,8 +68,6 @@ def register_routes(app):
     @app.route('/api/sync/lists', methods=['GET'])
     def _get_lists():
         data = _read('lists')
-        n = len(data.get('groups', [])) if data else 0
-        print(f"  \U0001f4e5 sync/lists GET -> {n} group(s)")
         return jsonify(data or {'groups': []})
 
     @app.route('/api/sync/lists', methods=['POST'])
@@ -83,11 +79,11 @@ def register_routes(app):
         if not groups:
             existing = _read('lists')
             if existing and existing.get('groups'):
-                print(f"  \u26a0\ufe0f sync/lists POST ignored (no groups, server has data)")
+
                 return jsonify({'success': True, 'skipped': True})
         _write('lists', data)
         _broadcast('sync:lists', data)
-        print(f"  \U0001f4e4 sync/lists POST -> {len(groups)} group(s), {total} position(s)")
+        print(f"  \U0001f4be Sync listes ({total} pts)")
         return jsonify({'success': True})
 
     # --- Config (plateau dimensions, bounds, orientation) ---
@@ -105,7 +101,7 @@ def register_routes(app):
         existing.update(data)
         _write('config', existing)
         _broadcast('sync:config', existing)
-        print(f"  \U0001f4e4 sync/config POST -> {list(data.keys())}")
+
         return jsonify({'success': True})
 
     # --- Tracks ---
