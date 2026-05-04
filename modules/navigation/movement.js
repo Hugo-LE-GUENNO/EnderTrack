@@ -14,7 +14,7 @@ class MovementEngine {
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
     try {
       const es = new EventSource(url + '/api/events');
-      window.addEventListener('beforeunload', () => es.close());
+      this._sse = es;
       es.onmessage = (e) => {
         try {
           const evt = JSON.parse(e.data);

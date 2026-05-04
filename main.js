@@ -446,6 +446,12 @@ if (document.readyState === 'loading') {
   }
 }
 
+// Close SSE connections cleanly on page unload
+window.addEventListener('pagehide', () => {
+  EnderTrack.Movement?._sse?.close();
+  EnderTrack.Lists?._sse?.close();
+});
+
 // Global error handler
 window.addEventListener('error', (event) => {
   console.error('Global error:', event.error || event.message || 'Unknown error');
