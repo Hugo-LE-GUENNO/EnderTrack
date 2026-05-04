@@ -135,4 +135,3 @@ def register_routes(app):
                 result[name] = data
         return jsonify(result)
 
-    print("  \U0001f4be sync_store: routes /api/sync/overlays, /api/sync/lists, /api/sync/export")
