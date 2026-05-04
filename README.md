@@ -1,4 +1,4 @@
-# EnderTrack — v2.3.1
+# EnderTrack — v2.4.0
 
 Contrôleur de position 3D pour platines XYZ motorisées. Simulateur intégré ou pilotage réel via G-code (USB série).
 
