@@ -145,12 +145,15 @@ class OverlayManager {
   save() {
     const data = this._serializeData();
     localStorage.setItem('endertrack_overlays', JSON.stringify(data));
-    // Sync to server
-    const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    fetch(url + '/api/sync/overlays', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }).catch(() => {});
+    // Sync to server (debounced)
+    if (this._syncTimer) clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(() => {
+      const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      fetch(url + '/api/sync/overlays', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this._serializeData())
+      }).catch(() => {});
+    }, 500);
   }
 
   _loadFromData(raw) {
