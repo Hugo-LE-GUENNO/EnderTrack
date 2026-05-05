@@ -6,15 +6,15 @@ class ScenarioModule {
     this.selectedListId = null;
     this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [], preview: [] };
     this.manager = null;
-    this.executor = null;
+    this._executor = null;
     this._logEntries = [];
   }
 
-  get isExecuting() { return this.executor?.isExecuting || false; }
+  get isExecuting() { return this._executor?.isExecuting || false; }
 
   async init() {
     this.manager = new window.EnderTrack.ScenarioManager();
-    this.executor = new window.EnderTrack.ScenarioExecutor();
+    this._executor = new window.EnderTrack.ScenarioExecutor();
     this.isActive = true;
     this.updateCanvasOverlay();
     this.createUI();
@@ -87,7 +87,7 @@ class ScenarioModule {
     this.showExecutionUI();
     EnderTrack.Events?.emit?.('scenario:activated');
 
-    await this.executor.executeTree(scenario.tree, scenario.watchers);
+    await this._executor.executeTree(scenario.tree, scenario.watchers);
 
     EnderTrack.Events?.emit?.('scenario:completed', {
       scenarioName: scenario.name,
@@ -98,7 +98,7 @@ class ScenarioModule {
   }
 
   stopExecution() {
-    this.executor?.stop();
+    this._executor?.stop();
     this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [], preview: this.scenarioTrack.preview || [] };
     this._showRightPanel(false);
     EnderTrack.Events?.emit?.('scenario:deactivated');
@@ -215,9 +215,9 @@ class ScenarioModule {
   }
 
   _togglePause() {
-    this.executor?.togglePause?.();
+    this._executor?.togglePause?.();
     const btn = document.getElementById('sbPauseBtn');
-    if (btn) btn.textContent = this.executor?.isPaused ? '▶' : '⏸';
+    if (btn) btn.textContent = this._executor?.isPaused ? '▶' : '⏸';
   }
 
   // === COMPAT API ===
@@ -225,6 +225,7 @@ class ScenarioModule {
   stop() { this.stopExecution(); }
 
   get executor() { return { isExecuting: this.isExecuting, stop: () => this.stop() }; }
+  set executor(_) { /* compat: ignore */ }
 
   getSelectedList() {
     if (!this.selectedListId) return null;
