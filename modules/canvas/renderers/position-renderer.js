@@ -71,19 +71,113 @@ class PositionRenderer {
   
   static renderScenarioTrack(ctx, coords) {
     const track = window.EnderTrack?.Scenario?.scenarioTrack;
-    if (!track?.visited?.length) return;
-    ctx.strokeStyle = "#10b981";
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.6;
-    ctx.beginPath();
-    const first = coords.mapToCanvas(track.visited[0].x, track.visited[0].y);
-    ctx.moveTo(first.cx, first.cy);
-    for (let i = 1; i < track.visited.length; i++) {
-      const p = coords.mapToCanvas(track.visited[i].x, track.visited[i].y);
-      ctx.lineTo(p.cx, p.cy);
+    if (!track) return;
+
+    const executing = window.EnderTrack?.Scenario?.isExecuting;
+
+    // Preview track (before execution) — dashed yellow with arrows
+    if (!executing && track.preview?.length > 1) {
+      ctx.save();
+      ctx.strokeStyle = '#ffc107';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.5;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      const f = coords.mapToCanvas(track.preview[0].x, track.preview[0].y);
+      ctx.moveTo(f.cx, f.cy);
+      for (let i = 1; i < track.preview.length; i++) {
+        const p = coords.mapToCanvas(track.preview[i].x, track.preview[i].y);
+        ctx.lineTo(p.cx, p.cy);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Arrows
+      ctx.fillStyle = '#ffc107';
+      ctx.globalAlpha = 0.6;
+      for (let i = 1; i < track.preview.length; i++) {
+        const prev = coords.mapToCanvas(track.preview[i - 1].x, track.preview[i - 1].y);
+        const cur = coords.mapToCanvas(track.preview[i].x, track.preview[i].y);
+        const dx = cur.cx - prev.cx, dy = cur.cy - prev.cy;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 12) continue;
+        const angle = Math.atan2(dy, dx);
+        const mx = prev.cx + dx * 0.5, my = prev.cy + dy * 0.5;
+        ctx.save();
+        ctx.translate(mx, my);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(4, 0);
+        ctx.lineTo(-3, -3);
+        ctx.lineTo(-3, 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      // Points
+      for (const pt of track.preview) {
+        const p = coords.mapToCanvas(pt.x, pt.y);
+        ctx.beginPath();
+        ctx.arc(p.cx, p.cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      return;
     }
-    ctx.stroke();
-    ctx.globalAlpha = 1;
+
+    // During execution: visited (green) + remaining (gray dashed)
+    if (executing) {
+      // Visited — solid green
+      if (track.visited?.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        const f = coords.mapToCanvas(track.visited[0].x, track.visited[0].y);
+        ctx.moveTo(f.cx, f.cy);
+        for (let i = 1; i < track.visited.length; i++) {
+          const p = coords.mapToCanvas(track.visited[i].x, track.visited[i].y);
+          ctx.lineTo(p.cx, p.cy);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Current — pulsing dot
+      if (track.current) {
+        const c = coords.mapToCanvas(track.current.x, track.current.y);
+        const pulse = 3 + Math.sin(Date.now() / 300) * 1.5;
+        ctx.save();
+        ctx.fillStyle = '#10b981';
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.arc(c.cx, c.cy, pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Remaining — dashed gray
+      if (track.remaining?.length > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.4;
+        ctx.setLineDash([4, 4]);
+        const start = track.current || (track.visited?.length ? track.visited[track.visited.length - 1] : null);
+        if (start) {
+          ctx.beginPath();
+          const s = coords.mapToCanvas(start.x, start.y);
+          ctx.moveTo(s.cx, s.cy);
+          for (const pt of track.remaining) {
+            const p = coords.mapToCanvas(pt.x, pt.y);
+            ctx.lineTo(p.cx, p.cy);
+          }
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
   }
 
   static renderNavigationOverlays(ctx, state, coords) {
