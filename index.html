@@ -58,6 +58,9 @@
                 <button class="tab-btn" id="listsTab" onclick="switchTab('lists')">
                     Positions
                 </button>
+                <button class="tab-btn" id="acquisitionTab" onclick="switchTab('acquisition')">
+                    Acquisition
+                </button>
             </div>
             <div style="flex:1"></div>
             <button onclick="toggleFullscreen()" style="background:none; border:none; cursor:pointer; font-size:18px; opacity:0.6; padding:4px;" title="Plein écran">&#x26F6;</button>
@@ -372,9 +375,11 @@
                 <div class="tab-panel" id="listsTabContent">
                     <div id="listsContent"><!-- Lists renders here --></div>
                     <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
-                    <div id="acquisitionTabContent" style="margin-top:8px; border-top:1px solid #333; padding-top:8px;">
-                        <!-- Scenario interface will be loaded here -->
-                    </div>
+                </div>
+
+                <!-- Acquisition Panel -->
+                <div class="tab-panel" id="acquisitionTabContent">
+                    <!-- Scenario Builder interface -->
                 </div>
                 
 

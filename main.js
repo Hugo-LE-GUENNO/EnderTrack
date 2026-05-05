@@ -540,10 +540,6 @@ window.switchTab = (tabId) => {
     if (sizeLabel && window.EnderTrack?.StorageManager) sizeLabel.textContent = window.EnderTrack.StorageManager.getStorageSize() + ' KB';
   } else if (tabId === 'lists' && window.EnderTrack?.Lists) {
     window.EnderTrack.Lists.activate();
-    // Scenario is embedded in Positions tab
-    if (window.EnderTrack?.Scenario) {
-      window.EnderTrack.Scenario.activate();
-    }
   } else if (tabId === 'acquisition' && window.EnderTrack?.Scenario) {
     canvas.classList.add('scenario-mode');
     window.EnderTrack.Scenario.activate();
