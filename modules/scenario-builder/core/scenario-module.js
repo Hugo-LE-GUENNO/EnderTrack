@@ -91,7 +91,7 @@ class ScenarioModule {
 
     EnderTrack.Events?.emit?.('scenario:completed', {
       scenarioName: scenario.name,
-      duration: this.executor.getElapsedTime()
+      duration: this._executor.getElapsedTime()
     });
     this._showRightPanel(false);
     this.createUI();
