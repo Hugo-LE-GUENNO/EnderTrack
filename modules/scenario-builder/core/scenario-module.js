@@ -169,27 +169,233 @@ class ScenarioModule {
   }
 
   _renderPresetsTab(scenarios, current) {
-    const templates = window.EnderTrack?.Acquisition?.getTemplates() || [];
-    return `
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:10px; color:var(--text-general);">Acquisition rapide</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-          ${templates.map(t => `
-            <button onclick="EnderTrack.AcquisitionModal._selectedType='${t.id}'; EnderTrack.AcquisitionModal.open()"
-              style="padding:10px 8px; border:1px solid #444; border-radius:6px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-selected); text-align:center;">
-              <div style="font-size:18px; margin-bottom:2px;">${t.icon}</div>${t.name}
-            </button>
-          `).join('')}
-        </div>
-        ${scenarios.length > 0 ? `
-        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #333;">
-          <div style="font-size:10px; color:var(--text-general); margin-bottom:6px;">Scénarios existants</div>
-          <select id="sbScenarioSelect" style="width:100%; padding:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
-            ${scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '\ud83c\udfac'} ${s.name}</option>`).join('')}
+    if (!this._preset) this._preset = { multipos: false, timelapse: false, zstack: false, mosaic: false };
+    const p = this._preset;
+    const pos = window.EnderTrack?.State?.get?.()?.pos || { x: 0, y: 0, z: 0 };
+    if (!this._presetParams) this._presetParams = {
+      interval: 10, count: 10,
+      zStart: Math.max(0, pos.z - 0.5).toFixed(2), zEnd: (pos.z + 0.5).toFixed(2), zStep: 0.05,
+      listId: '', delay: 0.5,
+      gridX: 3, gridY: 3, overlap: 10,
+      exposure: 100000, gain: 1.0,
+      lightChannel: '', lightIntensity: 100,
+      format: 'tiff', path: './captures', prefix: 'acq'
+    };
+    const pp = this._presetParams;
+    const channels = window.EnderTrack?.Light?.getChannels() || [];
+    const lists = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+
+    let paramsHtml = '';
+
+    // Dynamic params based on checked modes
+    if (p.multipos) {
+      paramsHtml += `<div style="padding:6px; background:var(--app-bg); border-radius:4px; margin-top:6px;">
+        <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">📍 Multi-positions</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="font-size:10px; width:50px;">Liste</label>
+          <select onchange="EnderTrack.Scenario._pp('listId', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+            ${lists.map(l => `<option value="${l.id}" ${String(l.id) === String(pp.listId) ? 'selected' : ''}>${l.name} (${l.positions?.length || 0})</option>`).join('')}
           </select>
-          <button onclick="EnderTrack.Scenario.executeScenario()" style="width:100%; margin-top:6px; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\u25b6 Ex\u00e9cuter</button>
-        </div>` : ''}
+        </div>
+        <div style="display:flex; gap:6px; align-items:center; margin-top:4px;">
+          <label style="font-size:10px; width:50px;">Délai</label>
+          <input type="number" value="${pp.delay}" min="0" step="0.1" onchange="EnderTrack.Scenario._pp('delay', parseFloat(this.value))"
+            style="width:50px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">s</span>
+        </div>
       </div>`;
+    }
+
+    if (p.mosaic) {
+      paramsHtml += `<div style="padding:6px; background:var(--app-bg); border-radius:4px; margin-top:6px;">
+        <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">🧩 Mosaïque</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="font-size:10px; width:50px;">Grille</label>
+          <input type="number" value="${pp.gridX}" min="1" onchange="EnderTrack.Scenario._pp('gridX', parseInt(this.value))"
+            style="width:35px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:10px; color:var(--text-general);">×</span>
+          <input type="number" value="${pp.gridY}" min="1" onchange="EnderTrack.Scenario._pp('gridY', parseInt(this.value))"
+            style="width:35px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">overlap</span>
+          <input type="number" value="${pp.overlap}" min="0" max="50" onchange="EnderTrack.Scenario._pp('overlap', parseInt(this.value))"
+            style="width:35px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">%</span>
+        </div>
+      </div>`;
+    }
+
+    if (p.timelapse) {
+      paramsHtml += `<div style="padding:6px; background:var(--app-bg); border-radius:4px; margin-top:6px;">
+        <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">⏱️ Time-lapse</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="font-size:10px; width:50px;">Interval</label>
+          <input type="number" value="${pp.interval}" min="0.1" step="0.1" onchange="EnderTrack.Scenario._pp('interval', parseFloat(this.value))"
+            style="width:50px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">s</span>
+          <label style="font-size:10px; margin-left:8px;">×</label>
+          <input type="number" value="${pp.count}" min="1" onchange="EnderTrack.Scenario._pp('count', parseInt(this.value))"
+            style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+        </div>
+      </div>`;
+    }
+
+    if (p.zstack) {
+      paramsHtml += `<div style="padding:6px; background:var(--app-bg); border-radius:4px; margin-top:6px;">
+        <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">📚 Z-Stack</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="font-size:10px; width:30px;">Z</label>
+          <input type="number" value="${pp.zStart}" step="0.01" onchange="EnderTrack.Scenario._pp('zStart', parseFloat(this.value))"
+            style="width:50px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">→</span>
+          <input type="number" value="${pp.zEnd}" step="0.01" onchange="EnderTrack.Scenario._pp('zEnd', parseFloat(this.value))"
+            style="width:50px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">pas</span>
+          <input type="number" value="${pp.zStep}" min="0.001" step="0.005" onchange="EnderTrack.Scenario._pp('zStep', parseFloat(this.value))"
+            style="width:50px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">mm</span>
+        </div>
+      </div>`;
+    }
+
+    return `
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <!-- Mode checkboxes -->
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:3px; padding:4px 8px; border:1px solid ${p.multipos ? 'var(--active-element)' : '#444'}; border-radius:4px; background:${p.multipos ? 'var(--app-bg)' : 'transparent'};">
+            <input type="checkbox" ${p.multipos ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('multipos', this.checked)">
+            <span style="color:var(--text-selected);">📍 Multi-pos</span>
+          </label>
+          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:3px; padding:4px 8px; border:1px solid ${p.timelapse ? 'var(--active-element)' : '#444'}; border-radius:4px; background:${p.timelapse ? 'var(--app-bg)' : 'transparent'};">
+            <input type="checkbox" ${p.timelapse ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('timelapse', this.checked)">
+            <span style="color:var(--text-selected);">⏱️ Time-lapse</span>
+          </label>
+          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:3px; padding:4px 8px; border:1px solid ${p.zstack ? 'var(--active-element)' : '#444'}; border-radius:4px; background:${p.zstack ? 'var(--app-bg)' : 'transparent'};">
+            <input type="checkbox" ${p.zstack ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('zstack', this.checked)">
+            <span style="color:var(--text-selected);">📚 Z-Stack</span>
+          </label>
+          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:3px; padding:4px 8px; border:1px solid ${p.mosaic ? 'var(--active-element)' : '#444'}; border-radius:4px; background:${p.mosaic ? 'var(--app-bg)' : 'transparent'};">
+            <input type="checkbox" ${p.mosaic ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('mosaic', this.checked)">
+            <span style="color:var(--text-selected);">🧩 Mosaïque</span>
+          </label>
+        </div>
+
+        ${paramsHtml}
+
+        <!-- Acquisition -->
+        <div style="padding:6px; border-top:1px solid #333; margin-top:4px;">
+          <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">📷 Acquisition</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <label style="font-size:10px; width:50px;">Expo</label>
+            <input type="number" value="${pp.exposure}" min="100" step="1000" onchange="EnderTrack.Scenario._pp('exposure', parseInt(this.value))"
+              style="width:70px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+            <span style="font-size:9px; color:var(--text-general);">µs</span>
+            <label style="font-size:10px; margin-left:8px;">Gain</label>
+            <input type="number" value="${pp.gain}" min="1" max="16" step="0.1" onchange="EnderTrack.Scenario._pp('gain', parseFloat(this.value))"
+              style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          </div>
+        </div>
+
+        <!-- Excitation -->
+        <div style="padding:6px;">
+          <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">💡 Excitation</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <label style="font-size:10px; width:50px;">Canal</label>
+            <select onchange="EnderTrack.Scenario._pp('lightChannel', this.value)"
+              style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+              <option value="">— Aucun —</option>
+              ${channels.map(c => `<option value="${c.id}" ${c.id === pp.lightChannel ? 'selected' : ''}>${c.name}</option>`).join('')}
+            </select>
+            <input type="number" value="${pp.lightIntensity}" min="0" max="100" onchange="EnderTrack.Scenario._pp('lightIntensity', parseInt(this.value))"
+              style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+            <span style="font-size:9px; color:var(--text-general);">%</span>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div style="padding:6px; border-top:1px solid #333;">
+          <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">💾 Sortie</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select onchange="EnderTrack.Scenario._pp('format', this.value)"
+              style="padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+              <option value="tiff" ${pp.format === 'tiff' ? 'selected' : ''}>TIFF</option>
+              <option value="png" ${pp.format === 'png' ? 'selected' : ''}>PNG</option>
+              <option value="jpeg" ${pp.format === 'jpeg' ? 'selected' : ''}>JPEG</option>
+            </select>
+            <input type="text" value="${pp.prefix}" onchange="EnderTrack.Scenario._pp('prefix', this.value)"
+              style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="préfixe">
+          </div>
+        </div>
+
+        <!-- Generate -->
+        <button onclick="EnderTrack.Scenario._generateFromPreset()"
+          style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600; margin-top:4px;"
+          ${!p.multipos && !p.timelapse && !p.zstack && !p.mosaic ? 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4; margin-top:4px;"' : ''}>
+          ▶ Générer le scénario
+        </button>
+      </div>`;
+  }
+
+  _togglePreset(key, val) {
+    if (!this._preset) this._preset = {};
+    this._preset[key] = val;
+    // Mosaic and multipos are exclusive
+    if (key === 'mosaic' && val) this._preset.multipos = false;
+    if (key === 'multipos' && val) this._preset.mosaic = false;
+    this.createUI();
+  }
+
+  _pp(key, val) {
+    if (!this._presetParams) this._presetParams = {};
+    this._presetParams[key] = val;
+  }
+
+  _generateFromPreset() {
+    const p = this._preset || {};
+    const pp = this._presetParams || {};
+    // Determine template
+    let templateId;
+    if (p.mosaic) templateId = p.zstack ? 'multipos_zstack' : 'multipos';
+    else if (p.multipos && p.zstack) templateId = 'multipos_zstack';
+    else if (p.multipos) templateId = 'multipos';
+    else if (p.zstack) templateId = 'zstack';
+    else if (p.timelapse) templateId = 'timelapse';
+    else return;
+
+    // Generate mosaic list if needed
+    if (p.mosaic) {
+      window.EnderTrack.AcquisitionModal._params = pp;
+      window.EnderTrack.AcquisitionModal._generateMosaicList();
+      pp.listId = window.EnderTrack.AcquisitionModal._params.listId;
+    }
+
+    // Generate base scenario
+    const acq = window.EnderTrack.Acquisition;
+    if (p.timelapse && templateId !== 'timelapse') {
+      // Wrap in timelapse loop
+      const inner = acq.templates.get(templateId)?.generate(pp);
+      if (inner) {
+        const tree = {
+          type: 'root',
+          children: [{
+            type: 'loop', loopId: 'simple',
+            params: { count: pp.count || 10, countMode: 'number', loopVar: '$t', label: `Time-lapse (${pp.count}x)`, showInLog: true, logMessage: '⏱️ Cycle $t' },
+            children: [...inner.children, { type: 'action', actionId: 'wait', params: { duration: pp.interval || 10, showInLog: false, label: 'Intervalle' } }]
+          }]
+        };
+        const manager = window.EnderTrack?.Scenario?.manager;
+        const scenario = manager.createScenario('⏱️ Time-lapse + ' + templateId);
+        scenario.tree = tree;
+        manager.save();
+        window.EnderTrack.Scenario.updateCanvasOverlay();
+        this._subTab = 'builder';
+        this.createUI();
+        return;
+      }
+    }
+
+    acq.generate(templateId, pp);
+    this._subTab = 'builder';
+    this.createUI();
   }
 
   _renderBuilderTab(scenarios, current) {
