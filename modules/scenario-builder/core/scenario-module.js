@@ -165,15 +165,10 @@ class ScenarioModule {
           <button onclick="EnderTrack.Scenario.executeScenario()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">▶ Exécuter</button>
           <button onclick="EnderTrack.Scenario._openBuilder()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--container-bg); color:var(--text-general);">🔧 Builder</button>
         </div>
-        <details style="margin-top:4px;">
-          <summary style="font-size:11px; color:var(--text-general); cursor:pointer;">+ Nouveau scénario</summary>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px;">
-            ${(window.EnderTrack?.Acquisition?.getTemplates() || []).map(t => `
-              <button onclick="EnderTrack.Scenario._showWizard('${t.id}')" style="padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general); text-align:left;">${t.icon} ${t.name}</button>
-            `).join('')}
-            <button onclick="EnderTrack.Scenario._newScenario()" style="padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general); text-align:left;">📝 Vide</button>
-          </div>
-        </details>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button onclick="EnderTrack.AcquisitionModal.open()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">+ Nouvelle acquisition</button>
+          <button onclick="EnderTrack.Scenario._newScenario()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">+ Scénario vide</button>
+        </div>
       </div>`;
 
     document.getElementById('sbScenarioSelect')?.addEventListener('change', e => {
