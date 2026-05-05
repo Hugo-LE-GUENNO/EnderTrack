@@ -338,9 +338,6 @@ class ScenarioModule {
   _togglePreset(key, val) {
     if (!this._preset) this._preset = {};
     this._preset[key] = val;
-    // Mosaic and multipos are exclusive
-    if (key === 'mosaic' && val) this._preset.multipos = false;
-    if (key === 'multipos' && val) this._preset.mosaic = false;
     this.createUI();
   }
 
@@ -352,50 +349,131 @@ class ScenarioModule {
   _generateFromPreset() {
     const p = this._preset || {};
     const pp = this._presetParams || {};
-    // Determine template
-    let templateId;
-    if (p.mosaic) templateId = p.zstack ? 'multipos_zstack' : 'multipos';
-    else if (p.multipos && p.zstack) templateId = 'multipos_zstack';
-    else if (p.multipos) templateId = 'multipos';
-    else if (p.zstack) templateId = 'zstack';
-    else if (p.timelapse) templateId = 'timelapse';
-    else return;
+    const manager = window.EnderTrack?.Scenario?.manager;
+    if (!manager) return;
+    if (!p.multipos && !p.timelapse && !p.zstack && !p.mosaic) return;
 
-    // Generate mosaic list if needed
-    if (p.mosaic) {
-      window.EnderTrack.AcquisitionModal._params = pp;
-      window.EnderTrack.AcquisitionModal._generateMosaicList();
-      pp.listId = window.EnderTrack.AcquisitionModal._params.listId;
+    const parts = [];
+    if (p.multipos) parts.push('Multi-pos');
+    if (p.mosaic) parts.push('Mosaic');
+    if (p.zstack) parts.push('Z-Stack');
+    if (p.timelapse) parts.push('Timelapse');
+    const name = parts.join(' + ');
+
+    // Capture block: light on + capture + light off
+    const captureActions = [];
+    if (pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'set', intensity: pp.lightIntensity || 100, showInLog: false } });
+    captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', showInLog: true, label: 'Capture' } });
+    if (pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'off', showInLog: false } });
+
+    // Z-stack wrapper
+    const wrapZ = (children) => {
+      if (!p.zstack) return children;
+      const steps = Math.max(1, Math.round(Math.abs(pp.zEnd - pp.zStart) / Math.max(0.001, pp.zStep)));
+      return [{
+        type: 'loop', loopId: 'simple',
+        params: { count: steps + 1, countMode: 'number', loopVar: '$k', label: `Z-Stack (${steps + 1})`, showInLog: true, logMessage: 'Z $k' },
+        children: [
+          { type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'manual', x: '$x', y: '$y', z: `${pp.zStart} + $k * ${pp.zStep}`, showInLog: false, label: 'Z' } },
+          { type: 'action', actionId: 'wait', params: { duration: 0.1, showInLog: false } },
+          ...children
+        ]
+      }];
+    };
+
+    let core = wrapZ(captureActions);
+
+    // Mosaic + multipos: at each position, do a mosaic grid
+    if (p.mosaic && p.multipos) {
+      this._generateMosaicGrid(pp);
+      core = [{
+        type: 'loop', loopId: 'simple',
+        params: { count: 0, countMode: 'list', countListId: pp._mosaicListId, loopVar: '$m', label: `Mosaic (${pp.gridX}x${pp.gridY})`, showInLog: true, logMessage: 'Tile $m' },
+        children: [
+          { type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'list', listId: pp._mosaicListId, listPickMode: 'index', listIndex: '$m', showInLog: false, label: 'Tile' } },
+          { type: 'action', actionId: 'wait', params: { duration: 0.2, showInLog: false } },
+          ...wrapZ(captureActions)
+        ]
+      }];
     }
 
-    // Generate base scenario
-    const acq = window.EnderTrack.Acquisition;
-    if (p.timelapse && templateId !== 'timelapse') {
-      // Wrap in timelapse loop
-      const inner = acq.templates.get(templateId)?.generate(pp);
-      if (inner) {
-        const tree = {
-          type: 'root',
-          children: [{
-            type: 'loop', loopId: 'simple',
-            params: { count: pp.count || 10, countMode: 'number', loopVar: '$t', label: `Time-lapse (${pp.count}x)`, showInLog: true, logMessage: '⏱️ Cycle $t' },
-            children: [...inner.children, { type: 'action', actionId: 'wait', params: { duration: pp.interval || 10, showInLog: false, label: 'Intervalle' } }]
-          }]
-        };
-        const manager = window.EnderTrack?.Scenario?.manager;
-        const scenario = manager.createScenario('⏱️ Time-lapse + ' + templateId);
-        scenario.tree = tree;
-        manager.save();
-        window.EnderTrack.Scenario.updateCanvasOverlay();
-        this._subTab = 'builder';
-        this.createUI();
-        return;
+    let rootChildren;
+    if (p.multipos) {
+      rootChildren = [{
+        type: 'loop', loopId: 'simple',
+        params: { count: 0, countMode: 'list', countListId: pp.listId, loopVar: '$i', label: 'Positions', showInLog: true, logMessage: 'Position $i' },
+        children: [
+          { type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'list', listId: pp.listId, listPickMode: 'index', listIndex: '$i', showInLog: false, label: 'Go' } },
+          { type: 'action', actionId: 'wait', params: { duration: pp.delay || 0.2, showInLog: false } },
+          ...core
+        ]
+      }];
+    } else if (p.mosaic) {
+      this._generateMosaicGrid(pp);
+      rootChildren = [{
+        type: 'loop', loopId: 'simple',
+        params: { count: 0, countMode: 'list', countListId: pp._mosaicListId, loopVar: '$i', label: `Mosaic (${pp.gridX}x${pp.gridY})`, showInLog: true, logMessage: 'Tile $i' },
+        children: [
+          { type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'list', listId: pp._mosaicListId, listPickMode: 'index', listIndex: '$i', showInLog: false, label: 'Tile' } },
+          { type: 'action', actionId: 'wait', params: { duration: 0.2, showInLog: false } },
+          ...wrapZ(captureActions)
+        ]
+      }];
+    } else {
+      rootChildren = core;
+    }
+
+    // Timelapse wrapper
+    if (p.timelapse) {
+      const isOnlyTimelapse = !p.multipos && !p.zstack && !p.mosaic;
+      if (isOnlyTimelapse) {
+        rootChildren = [{
+          type: 'loop', loopId: 'simple',
+          params: { count: pp.count || 10, countMode: 'number', loopVar: '$t', label: `Time-lapse (${pp.count}x)`, showInLog: true, logMessage: 'Frame $t' },
+          children: [...captureActions, { type: 'action', actionId: 'wait', params: { duration: pp.interval || 10, showInLog: false } }]
+        }];
+      } else {
+        rootChildren = [{
+          type: 'loop', loopId: 'simple',
+          params: { count: pp.count || 10, countMode: 'number', loopVar: '$t', label: `Time-lapse (${pp.count}x)`, showInLog: true, logMessage: 'Cycle $t' },
+          children: [...rootChildren, { type: 'action', actionId: 'wait', params: { duration: pp.interval || 10, showInLog: false } }]
+        }];
       }
     }
 
-    acq.generate(templateId, pp);
+    const tree = { type: 'root', children: rootChildren };
+    const scenario = manager.createScenario(name);
+    scenario.tree = tree;
+    manager.save();
+    window.EnderTrack.Scenario.updateCanvasOverlay();
     this._subTab = 'builder';
     this.createUI();
+  }
+
+  _generateMosaicGrid(pp) {
+    const pos = window.EnderTrack?.State?.get?.()?.pos || { x: 0, y: 0, z: 0 };
+    const fovX = 0.5, fovY = 0.4; // placeholder FOV mm
+    const stepX = fovX * (1 - (pp.overlap || 10) / 100);
+    const stepY = fovY * (1 - (pp.overlap || 10) / 100);
+    const anchor = pp.mosaicAnchor || 'center';
+    const offsetX = anchor === 'center' ? -stepX * (pp.gridX - 1) / 2 : 0;
+    const offsetY = anchor === 'center' ? -stepY * (pp.gridY - 1) / 2 : 0;
+    const positions = [];
+    for (let row = 0; row < pp.gridY; row++) {
+      const cols = row % 2 === 1
+        ? Array.from({ length: pp.gridX }, (_, i) => pp.gridX - 1 - i)
+        : Array.from({ length: pp.gridX }, (_, i) => i);
+      for (const col of cols) {
+        positions.push({ x: pos.x + offsetX + col * stepX, y: pos.y + offsetY + row * stepY, z: pos.z });
+      }
+    }
+    const listManager = window.EnderTrack?.Lists?.manager;
+    if (listManager?.createList) {
+      const list = listManager.createList(`Mosaic ${pp.gridX}x${pp.gridY}`);
+      list.positions = positions;
+      listManager.save?.();
+      pp._mosaicListId = String(list.id);
+    }
   }
 
   _renderBuilderTab(scenarios, current) {
