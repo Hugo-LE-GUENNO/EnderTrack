@@ -135,39 +135,23 @@ class ScenarioModule {
     const container = document.getElementById('acquisitionTabContent');
     if (!container) return;
 
+    if (!this._subTab) this._subTab = 'presets';
     const scenarios = this.manager?.getAllScenarios() || [];
     const current = this.manager?.getCurrentScenario();
-    const actionCount = current ? EnderTrack.TreeUtils.countActions(current.tree) : 0;
-    const watcherCount = current?.watchers?.length || 0;
-    const desc = current?.description || '';
-    const icon = current?.icon || '🎬';
-
-    let infoHtml = '';
-    if (current) {
-      const parts = [`${actionCount} action${actionCount > 1 ? 's' : ''}`];
-      if (watcherCount) parts.push(`${watcherCount} watcher${watcherCount > 1 ? 's' : ''}`);
-      const statsLine = `<div style="font-size:10px; color:var(--text-general); margin-bottom:4px;">${icon} ${parts.join(' \u2022 ')}</div>`;
-      const descLine = desc ? `<div style="font-size:10px; color:var(--text-general); opacity:0.6;">${desc}</div>` : '';
-      const customFields = current.customFields || [];
-      const customHtml = customFields.filter(f => f.label).map(f =>
-        `<div style="display:flex; justify-content:space-between; font-size:10px; padding:1px 0;"><span style="color:var(--text-general);">${f.label}</span><span style="color:var(--coordinates-color); font-family:monospace;">${f.value || ''}</span></div>`
-      ).join('');
-      if (statsLine || descLine || customHtml) infoHtml = `<div style="background:var(--app-bg); border-radius:4px; padding:8px;">${statsLine}${descLine}${customHtml}</div>`;
-    }
 
     container.innerHTML = `
-      <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
-        <select id="sbScenarioSelect" style="width:100%; padding:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
-          ${scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '🎬'} ${s.name}</option>`).join('')}
-        </select>
-        ${infoHtml}
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-          <button onclick="EnderTrack.Scenario.executeScenario()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">▶ Exécuter</button>
-          <button onclick="EnderTrack.Scenario._openBuilder()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--container-bg); color:var(--text-general);">🔧 Builder</button>
+      <div style="display:flex; flex-direction:column; height:100%;">
+        <!-- Sub-tabs -->
+        <div style="display:flex; gap:2px; padding:6px 8px; border-bottom:1px solid #333;">
+          <button onclick="EnderTrack.Scenario._setSubTab('presets')" style="padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${this._subTab === 'presets' ? 'var(--active-element)' : 'transparent'}; color:${this._subTab === 'presets' ? 'var(--text-selected)' : 'var(--text-general)'};">Presets</button>
+          <button onclick="EnderTrack.Scenario._setSubTab('builder')" style="padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${this._subTab === 'builder' ? 'var(--active-element)' : 'transparent'}; color:${this._subTab === 'builder' ? 'var(--text-selected)' : 'var(--text-general)'};">Builder</button>
+          <button onclick="EnderTrack.Scenario._setSubTab('accessories')" style="padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${this._subTab === 'accessories' ? 'var(--active-element)' : 'transparent'}; color:${this._subTab === 'accessories' ? 'var(--text-selected)' : 'var(--text-general)'};">Accessoires</button>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-          <button onclick="EnderTrack.AcquisitionModal.open()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">+ Nouvelle acquisition</button>
-          <button onclick="EnderTrack.Scenario._newScenario()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">+ Scénario vide</button>
+        <!-- Content -->
+        <div style="flex:1; overflow-y:auto; padding:8px;">
+          ${this._subTab === 'presets' ? this._renderPresetsTab(scenarios, current) : ''}
+          ${this._subTab === 'builder' ? this._renderBuilderTab(scenarios, current) : ''}
+          ${this._subTab === 'accessories' ? this._renderAccessoriesTab() : ''}
         </div>
       </div>`;
 
@@ -177,6 +161,101 @@ class ScenarioModule {
       this.updateCanvasOverlay();
       this.createUI();
     });
+  }
+
+  _setSubTab(tab) {
+    this._subTab = tab;
+    this.createUI();
+  }
+
+  _renderPresetsTab(scenarios, current) {
+    const templates = window.EnderTrack?.Acquisition?.getTemplates() || [];
+    return `
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:10px; color:var(--text-general);">Acquisition rapide</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          ${templates.map(t => `
+            <button onclick="EnderTrack.AcquisitionModal._selectedType='${t.id}'; EnderTrack.AcquisitionModal.open()"
+              style="padding:10px 8px; border:1px solid #444; border-radius:6px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-selected); text-align:center;">
+              <div style="font-size:18px; margin-bottom:2px;">${t.icon}</div>${t.name}
+            </button>
+          `).join('')}
+        </div>
+        ${scenarios.length > 0 ? `
+        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #333;">
+          <div style="font-size:10px; color:var(--text-general); margin-bottom:6px;">Scénarios existants</div>
+          <select id="sbScenarioSelect" style="width:100%; padding:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
+            ${scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '\ud83c\udfac'} ${s.name}</option>`).join('')}
+          </select>
+          <button onclick="EnderTrack.Scenario.executeScenario()" style="width:100%; margin-top:6px; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\u25b6 Ex\u00e9cuter</button>
+        </div>` : ''}
+      </div>`;
+  }
+
+  _renderBuilderTab(scenarios, current) {
+    const actionCount = current ? EnderTrack.TreeUtils.countActions(current.tree) : 0;
+    return `
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <select id="sbScenarioSelect" style="width:100%; padding:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
+          ${scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '\ud83c\udfac'} ${s.name}</option>`).join('')}
+        </select>
+        ${current ? `<div style="font-size:10px; color:var(--text-general);">${current.icon || '\ud83c\udfac'} ${actionCount} action${actionCount > 1 ? 's' : ''}</div>` : ''}
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button onclick="EnderTrack.Scenario._openBuilder()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\ud83d\udd27 Ouvrir Builder</button>
+          <button onclick="EnderTrack.Scenario.executeScenario()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--container-bg); color:var(--text-general);">\u25b6 Ex\u00e9cuter</button>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button onclick="EnderTrack.Scenario._newScenario()" style="padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">+ Nouveau vide</button>
+          <button onclick="EnderTrack.Scenario._deleteScenario()" style="padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">\ud83d\uddd1 Supprimer</button>
+        </div>
+      </div>`;
+  }
+
+  _renderAccessoriesTab() {
+    const link = window.EnderTrack?.ComputeLink;
+    const light = window.EnderTrack?.Light;
+    const camera = window.EnderTrack?.Camera;
+    return `
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <details>
+          <summary style="font-size:11px; cursor:pointer; color:var(--text-selected);">\ud83d\udcf7 Cam\u00e9ra</summary>
+          <div style="padding:6px; font-size:10px; color:var(--text-general);">
+            Driver: <strong>${camera?.driverName || 'aucun'}</strong><br>
+            Live: ${camera?.live ? '\u2705' : '\u274c'}
+            <div style="margin-top:4px; display:flex; gap:4px;">
+              <button onclick="EnderTrack.Camera.startLive()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Start Live</button>
+              <button onclick="EnderTrack.Camera.stopLive()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Stop</button>
+              <button onclick="EnderTrack.Display.toggleSplit()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Split view</button>
+            </div>
+          </div>
+        </details>
+        <details>
+          <summary style="font-size:11px; cursor:pointer; color:var(--text-selected);">\ud83d\udca1 \u00c9clairage</summary>
+          <div style="padding:6px; font-size:10px; color:var(--text-general);">
+            Driver: <strong>${light?.driverName || 'aucun'}</strong>
+            ${(light?.getChannels() || []).map(ch => `
+              <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                <span style="width:80px;">${ch.name}</span>
+                <input type="range" min="0" max="100" value="${Math.round((ch.intensity || 0) * 100)}"
+                  oninput="EnderTrack.Light.setChannel('${ch.id}', this.value/100)"
+                  style="flex:1; height:4px;">
+                <span style="font-family:monospace; width:30px; text-align:right;">${Math.round((ch.intensity || 0) * 100)}%</span>
+              </div>
+            `).join('')}
+          </div>
+        </details>
+        <details>
+          <summary style="font-size:11px; cursor:pointer; color:var(--text-selected);">\ud83d\udda5\ufe0f Compute Link</summary>
+          <div style="padding:6px; font-size:10px; color:var(--text-general);">
+            Status: ${link?.connected ? `\u2705 ${link.serverUrl}` : '\u274c D\u00e9connect\u00e9'}
+            <div style="margin-top:4px; display:flex; gap:4px;">
+              <input type="text" id="computeLinkUrl" placeholder="http://server:8080" value="${link?.serverUrl || ''}"
+                style="flex:1; padding:3px 6px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+              <button onclick="EnderTrack.ComputeLink.connect(document.getElementById('computeLinkUrl').value)" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Connecter</button>
+            </div>
+          </div>
+        </details>
+      </div>`;
   }
 
   showExecutionUI() {
