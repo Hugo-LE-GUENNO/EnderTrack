@@ -1,0 +1,141 @@
+// modules/light/light.js — Light abstraction module
+
+class LightModule {
+  constructor() {
+    this.driver = null;
+    this.driverName = null;
+    this.channels = []; // [{id, name, type, intensity, on}]
+  }
+
+  // === DRIVER MANAGEMENT ===
+
+  async setDriver(name) {
+    const Driver = window.EnderTrack?.LightDrivers?.[name];
+    if (!Driver) return false;
+    this.driver = new Driver(this);
+    this.driverName = name;
+    const ok = await this.driver.init();
+    if (ok) {
+      this.channels = this.driver.getChannels();
+      this._registerScenarioActions();
+    }
+    return ok;
+  }
+
+  getAvailableDrivers() {
+    return Object.keys(window.EnderTrack?.LightDrivers || {});
+  }
+
+  // === API ===
+
+  async setChannel(channelId, intensity) {
+    const ch = this.channels.find(c => c.id === channelId);
+    if (!ch) return false;
+    ch.intensity = Math.max(0, Math.min(1, intensity));
+    ch.on = ch.intensity > 0;
+    if (this.driver?.setChannel) return await this.driver.setChannel(channelId, ch.intensity);
+    return true;
+  }
+
+  async on(channelId, intensity = 1) {
+    return await this.setChannel(channelId, intensity);
+  }
+
+  async off(channelId) {
+    return await this.setChannel(channelId, 0);
+  }
+
+  async allOff() {
+    for (const ch of this.channels) await this.off(ch.id);
+    return true;
+  }
+
+  async allOn(intensity = 1) {
+    for (const ch of this.channels) await this.on(ch.id, intensity);
+    return true;
+  }
+
+  getChannels() { return [...this.channels]; }
+
+  getStatus() {
+    return {
+      connected: !!this.driver,
+      driver: this.driverName,
+      channels: this.channels.map(c => ({ ...c }))
+    };
+  }
+
+  // === SCENARIO ACTIONS ===
+
+  _registerScenarioActions() {
+    if (!window.EnderTrack?.ActionRegistry) return;
+
+    // Build channel options from current config
+    const channelOpts = this.channels.map(c => ({ value: c.id, label: `${c.name}` }));
+
+    window.EnderTrack.ActionRegistry.register({
+      id: 'light_set',
+      label: '💡 Light',
+      icon: '💡',
+      category: 'light',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Light' },
+        { id: 'channel', label: 'Canal', type: 'select', options: channelOpts, default: channelOpts[0]?.value || '' },
+        { id: 'action', label: 'Action', type: 'select', options: [
+          { value: 'on', label: 'ON' },
+          { value: 'off', label: 'OFF' },
+          { value: 'set', label: 'Intensité' }
+        ], default: 'on' },
+        { id: 'intensity', label: 'Intensité (0-100%)', type: 'number', default: 100, min: 0, max: 100, showIf: 'action=set' },
+        { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
+      ],
+      execute: async (params, context) => {
+        const light = window.EnderTrack.Light;
+        let result;
+        if (params.action === 'off') {
+          result = await light.off(params.channel);
+        } else if (params.action === 'set') {
+          result = await light.on(params.channel, (params.intensity || 100) / 100);
+        } else {
+          result = await light.on(params.channel);
+        }
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          const ch = light.channels.find(c => c.id === params.channel);
+          const name = ch?.name || params.channel;
+          const msg = params.action === 'off' ? `💡 ${name} OFF` : `💡 ${name} ${Math.round((ch?.intensity || 1) * 100)}%`;
+          window.EnderTrack.Scenario.addLog(msg, 'info');
+        }
+        return { success: result !== false };
+      }
+    });
+
+    window.EnderTrack.ActionRegistry.register({
+      id: 'light_all_off',
+      label: '🌑 All lights OFF',
+      icon: '🌑',
+      category: 'light',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'All OFF' },
+        { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
+      ],
+      execute: async (params) => {
+        await window.EnderTrack.Light.allOff();
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog('🌑 All lights OFF', 'info');
+        }
+        return { success: true };
+      }
+    });
+  }
+}
+
+window.EnderTrack = window.EnderTrack || {};
+window.EnderTrack.Light = new LightModule();
+window.EnderTrack.LightDrivers = window.EnderTrack.LightDrivers || {};
+
+// Auto-init with simulation driver
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => EnderTrack.Light.setDriver('simulation'));
+} else {
+  setTimeout(() => EnderTrack.Light.setDriver('simulation'), 0);
+}

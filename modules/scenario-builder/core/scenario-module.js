@@ -161,8 +161,19 @@ class ScenarioModule {
           ${scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '🎬'} ${s.name}</option>`).join('')}
         </select>
         ${infoHtml}
-        <button onclick="EnderTrack.Scenario.executeScenario()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">▶ Exécuter</button>
-        <button onclick="EnderTrack.Scenario._openBuilder()" style="width:100%; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--container-bg); color:var(--text-general); transition:background 0.15s;" onmouseover="this.style.background='var(--active-element)';this.style.color='var(--text-selected)'" onmouseout="this.style.background='var(--container-bg)';this.style.color='var(--text-general)'">🔧 Builder</button>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button onclick="EnderTrack.Scenario.executeScenario()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">▶ Exécuter</button>
+          <button onclick="EnderTrack.Scenario._openBuilder()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--container-bg); color:var(--text-general);">🔧 Builder</button>
+        </div>
+        <details style="margin-top:4px;">
+          <summary style="font-size:11px; color:var(--text-general); cursor:pointer;">+ Nouveau scénario</summary>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px;">
+            ${(window.EnderTrack?.Acquisition?.getTemplates() || []).map(t => `
+              <button onclick="EnderTrack.Scenario._showWizard('${t.id}')" style="padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general); text-align:left;">${t.icon} ${t.name}</button>
+            `).join('')}
+            <button onclick="EnderTrack.Scenario._newScenario()" style="padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general); text-align:left;">📝 Vide</button>
+          </div>
+        </details>
       </div>`;
 
     document.getElementById('sbScenarioSelect')?.addEventListener('change', e => {
@@ -195,7 +206,21 @@ class ScenarioModule {
     const name = prompt('Nom du scénario :', `Scénario ${this.manager.getAllScenarios().length + 1}`);
     if (!name) return;
     this.manager.createScenario(name);
+    this.updateCanvasOverlay();
     this.createUI();
+  }
+
+  _showWizard(templateId) {
+    const tpl = window.EnderTrack?.Acquisition?.templates?.get(templateId);
+    if (!tpl) return;
+    const params = {};
+    for (const p of tpl.params) {
+      const val = prompt(`${tpl.icon} ${tpl.name}
+${p.label}:`, p.default ?? '');
+      if (val === null) return;
+      params[p.id] = p.type === 'number' ? parseFloat(val) || p.default : val;
+    }
+    window.EnderTrack.Acquisition.generate(templateId, params);
   }
 
   _deleteScenario() {
