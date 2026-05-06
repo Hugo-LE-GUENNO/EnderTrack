@@ -406,11 +406,11 @@
                                 window._updateCameraLayout();
                               };
                               window._removeCamera = async (idx) => {
-                                await EnderTrack.Camera.stopLive();
-                                await EnderTrack.Camera.setDriver('simulation');
                                 window._cameras.splice(idx, 1);
                                 window._renderCameras();
-                                window._updateCameraLayout();
+                                // Remove last viewport (shrink)
+                                const display = EnderTrack.Display;
+                                display.setLayout(window._cameras.length + 1);
                               };
                               window._renderCameras = () => {
                                 const el = document.getElementById('cameraList');
@@ -424,8 +424,7 @@
                               };
                               window._updateCameraLayout = () => {
                                 const n = window._cameras.length;
-                                EnderTrack.Display.setLayout(n + 1); // +1 for stage
-                                // Assign cameras to viewports
+                                EnderTrack.Display.setLayout(n + 1);
                                 setTimeout(() => {
                                   for (let i = 0; i < n; i++) {
                                     EnderTrack.Display.assignSource(i + 1, 'camera:' + i);
