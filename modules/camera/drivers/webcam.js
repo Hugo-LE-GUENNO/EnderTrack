@@ -24,7 +24,11 @@ class WebcamCameraDriver {
 
   async startLive() {
     try {
-      const constraints = { video: this.deviceId ? { deviceId: { exact: this.deviceId } } : true };
+      const constraints = {
+        video: this.deviceId
+          ? { deviceId: { exact: this.deviceId }, width: 1280, height: 720 }
+          : { width: 1280, height: 720 }
+      };
       this._stream = await navigator.mediaDevices.getUserMedia(constraints);
       this._live = true;
       return true;
