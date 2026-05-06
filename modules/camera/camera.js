@@ -78,7 +78,7 @@ class CameraModule {
   async startLive() {
     if (!this.driver) return false;
     const ok = await this.driver.startLive();
-    if (ok) { this.live = true; this._updateStatus(); this._renderNav(); }
+    if (ok) { this.live = true; this._renderNav(); }
     return ok;
   }
 
@@ -86,7 +86,6 @@ class CameraModule {
     if (!this.driver) return false;
     await this.driver.stopLive();
     this.live = false;
-    this._updateStatus();
     this._renderNav();
     return true;
   }
@@ -215,12 +214,11 @@ class CameraModule {
       sp.remove('camera');
     } else {
       const camName = (window._cameras && window._cameras.length) ? window._cameras[0].label : 'Camera';
-      const detail = this.live ? 'live' : 'connecté';
       sp.set('camera', {
         name: camName,
         icon: '📷',
-        state: this.live ? 'connected' : 'warning',
-        detail: this.driverName + ' — ' + detail
+        state: 'connected',
+        detail: this.driverName
       });
     }
   }

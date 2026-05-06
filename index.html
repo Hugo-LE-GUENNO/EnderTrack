@@ -415,40 +415,14 @@
                               window._renderCameras = () => {
                                 const el = document.getElementById('cameraList');
                                 if (!el) return;
-                                const cfg = EnderTrack.Camera.config;
                                 el.innerHTML = window._cameras.map((c, i) => `
-                                  <div style="padding:6px; margin-bottom:6px; background:var(--app-bg); border-radius:4px;">
-                                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                                      <span style="font-size:10px; color:var(--text-selected); flex:1;">📷 ${c.label}</span>
-                                      <button onclick="window._removeCamera(${i})" style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:none; color:#ef4444;">✕</button>
-                                    </div>
-                                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:3px;">
-                                      <label style="font-size:9px; color:var(--text-general); width:55px;">Pixel size</label>
-                                      <input type="number" value="${cfg.pixelSize}" min="0.01" step="0.01"
-                                        onchange="EnderTrack.Camera.configure({pixelSize:parseFloat(this.value)})"
-                                        style="width:50px; padding:2px 4px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:9px; text-align:center;">
-                                      <span style="font-size:8px; color:var(--text-general);">µm/px</span>
-                                    </div>
-                                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:3px;">
-                                      <label style="font-size:9px; color:var(--text-general); width:55px;">Rotation</label>
-                                      <input type="range" min="0" max="360" value="${cfg.rotation}" step="0.5"
-                                        oninput="EnderTrack.Camera.configure({rotation:parseFloat(this.value)}); this.nextElementSibling.textContent=this.value+'°'"
-                                        style="flex:1; height:3px;">
-                                      <span style="font-size:9px; color:var(--coordinates-color); width:28px; text-align:right; font-family:monospace;">${cfg.rotation}°</span>
-                                    </div>
-                                    <div style="display:flex; gap:8px; align-items:center;">
-                                      <label style="font-size:9px; color:var(--text-general); width:55px;">Flip</label>
-                                      <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:2px;">
-                                        <input type="checkbox" ${cfg.flipH ? 'checked' : ''} onchange="EnderTrack.Camera.configure({flipH:this.checked})">
-                                        <span style="color:var(--text-general);">H</span>
-                                      </label>
-                                      <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:2px;">
-                                        <input type="checkbox" ${cfg.flipV ? 'checked' : ''} onchange="EnderTrack.Camera.configure({flipV:this.checked})">
-                                        <span style="color:var(--text-general);">V</span>
-                                      </label>
-                                    </div>
+                                  <div style="display:flex; align-items:center; gap:6px; padding:6px; margin-bottom:4px; background:var(--app-bg); border-radius:4px;">
+                                    <span style="font-size:10px; color:var(--text-selected); flex:1;">📷 $${c.label}</span>
+                                    <span style="font-size:9px; color:var(--text-general);">$${c.type}</span>
+                                    <button onclick="window._removeCamera($${i})" style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:none; color:#ef4444;">✕</button>
                                   </div>
-                                `).join('');
+                                `).join(');
+                              };
                               };
                               window._updateCameraLayout = () => {
                                 const n = window._cameras.length;
