@@ -145,13 +145,13 @@ class ScenarioModule {
         <div style="display:flex; gap:2px; padding:6px 8px; border-bottom:1px solid #333;">
           <button onclick="EnderTrack.Scenario._setSubTab('presets')" style="padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${this._subTab === 'presets' ? 'var(--active-element)' : 'transparent'}; color:${this._subTab === 'presets' ? 'var(--text-selected)' : 'var(--text-general)'};">Presets</button>
           <button onclick="EnderTrack.Scenario._setSubTab('builder')" style="padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${this._subTab === 'builder' ? 'var(--active-element)' : 'transparent'}; color:${this._subTab === 'builder' ? 'var(--text-selected)' : 'var(--text-general)'};">Builder</button>
-          <button onclick="EnderTrack.Scenario._setSubTab('accessories')" style="padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${this._subTab === 'accessories' ? 'var(--active-element)' : 'transparent'}; color:${this._subTab === 'accessories' ? 'var(--text-selected)' : 'var(--text-general)'};">Accessoires</button>
+
         </div>
         <!-- Content -->
         <div style="flex:1; overflow-y:auto; padding:8px;">
           ${this._subTab === 'presets' ? this._renderPresetsTab(scenarios, current) : ''}
           ${this._subTab === 'builder' ? this._renderBuilderTab(scenarios, current) : ''}
-          ${this._subTab === 'accessories' ? this._renderAccessoriesTab() : ''}
+          
         </div>
       </div>`;
 
@@ -259,24 +259,12 @@ class ScenarioModule {
 
     return `
       <div style="display:flex; flex-direction:column; gap:6px;">
-        <!-- Mode checkboxes -->
-        <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:3px; padding:4px 8px; border:1px solid ${p.multipos ? 'var(--active-element)' : '#444'}; border-radius:4px; background:${p.multipos ? 'var(--app-bg)' : 'transparent'};">
-            <input type="checkbox" ${p.multipos ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('multipos', this.checked)">
-            <span style="color:var(--text-selected);">📍 Multi-pos</span>
-          </label>
-          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:3px; padding:4px 8px; border:1px solid ${p.timelapse ? 'var(--active-element)' : '#444'}; border-radius:4px; background:${p.timelapse ? 'var(--app-bg)' : 'transparent'};">
-            <input type="checkbox" ${p.timelapse ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('timelapse', this.checked)">
-            <span style="color:var(--text-selected);">⏱️ Time-lapse</span>
-          </label>
-          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:3px; padding:4px 8px; border:1px solid ${p.zstack ? 'var(--active-element)' : '#444'}; border-radius:4px; background:${p.zstack ? 'var(--app-bg)' : 'transparent'};">
-            <input type="checkbox" ${p.zstack ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('zstack', this.checked)">
-            <span style="color:var(--text-selected);">📚 Z-Stack</span>
-          </label>
-          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:3px; padding:4px 8px; border:1px solid ${p.mosaic ? 'var(--active-element)' : '#444'}; border-radius:4px; background:${p.mosaic ? 'var(--app-bg)' : 'transparent'};">
-            <input type="checkbox" ${p.mosaic ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('mosaic', this.checked)">
-            <span style="color:var(--text-selected);">🧩 Mosaïque</span>
-          </label>
+        <!-- Mode toggles -->
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          <button onclick="EnderTrack.Scenario._togglePreset('multipos', ${!p.multipos})" style="padding:4px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${p.multipos ? 'var(--active-element)' : 'var(--app-bg)'}; color:${p.multipos ? 'var(--text-selected)' : 'var(--text-general)'};">📍 Multi-pos</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('timelapse', ${!p.timelapse})" style="padding:4px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${p.timelapse ? 'var(--active-element)' : 'var(--app-bg)'}; color:${p.timelapse ? 'var(--text-selected)' : 'var(--text-general)'};">⏱️ Time-lapse</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('zstack', ${!p.zstack})" style="padding:4px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${p.zstack ? 'var(--active-element)' : 'var(--app-bg)'}; color:${p.zstack ? 'var(--text-selected)' : 'var(--text-general)'};">📚 Z-Stack</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('mosaic', ${!p.mosaic})" style="padding:4px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${p.mosaic ? 'var(--active-element)' : 'var(--app-bg)'}; color:${p.mosaic ? 'var(--text-selected)' : 'var(--text-general)'};">🧩 Mosaïque</button>
         </div>
 
         ${paramsHtml}
