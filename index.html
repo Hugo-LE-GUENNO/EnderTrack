@@ -414,8 +414,8 @@
                                 } else if (type === 'mjpeg') {
                                   const url = prompt('URL du flux MJPEG :', 'http://192.168.1.x:8080/video');
                                   if (!url) return;
-                                  await EnderTrack.Camera.setDriver('simulation'); // placeholder
-                                  EnderTrack.Camera.configure({ streamUrl: url });
+                                  await EnderTrack.Camera.setDriver('mjpeg');
+                                  await EnderTrack.Camera.configure({ streamUrl: url });
                                   document.getElementById('cameraDeviceInfo').textContent = '\ud83c\udf10 MJPEG: ' + url;
                                 } else {
                                   await EnderTrack.Camera.setDriver('simulation');
@@ -701,6 +701,7 @@
     <!-- Camera -->
     <script src="modules/camera/drivers/simulation.js"></script>
     <script src="modules/camera/drivers/webcam.js"></script>
+    <script src="modules/camera/drivers/mjpeg.js"></script>
     <script src="modules/camera/camera.js"></script>
 
     <!-- Light -->

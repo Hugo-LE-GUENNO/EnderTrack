@@ -36,8 +36,19 @@ class DisplayModule {
     this._cleanup();
     this._container.querySelectorAll('.viewport-cell').forEach(el => el.remove());
 
+    // Wrap stage elements (main-canvas + z-panel) if not already wrapped
+    let stageWrap = this._container.querySelector('.stage-viewport');
     const mainCanvas = document.querySelector('.main-canvas');
     const zPanel = document.getElementById('zVisualizationPanel');
+
+    if (!stageWrap && mainCanvas) {
+      stageWrap = document.createElement('div');
+      stageWrap.className = 'stage-viewport';
+      stageWrap.style.cssText = 'display:flex; flex:1; min-width:0; min-height:0; overflow:hidden;';
+      mainCanvas.parentNode.insertBefore(stageWrap, mainCanvas);
+      stageWrap.appendChild(mainCanvas);
+      if (zPanel) stageWrap.appendChild(zPanel);
+    }
 
     switch (this.layout) {
       case '1':
@@ -45,16 +56,13 @@ class DisplayModule {
         this._container.style.display = 'flex';
         this._container.style.gridTemplateColumns = '';
         this._container.style.gridTemplateRows = '';
-        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.flex = '1'; }
-        if (zPanel) zPanel.style.display = '';
+        if (stageWrap) stageWrap.style.flex = '1';
         break;
       case '2h':
         this.viewports = [{ id: 0, source: 'stage' }, { id: 1, source: null }];
         this._container.style.display = 'grid';
         this._container.style.gridTemplateColumns = '1fr 1fr';
         this._container.style.gridTemplateRows = '1fr';
-        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.flex = ''; }
-        if (zPanel) zPanel.style.display = 'none';
         this._createViewportCell(1);
         break;
       case '2v':
@@ -62,8 +70,6 @@ class DisplayModule {
         this._container.style.display = 'grid';
         this._container.style.gridTemplateColumns = '1fr';
         this._container.style.gridTemplateRows = '1fr 1fr';
-        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.flex = ''; }
-        if (zPanel) zPanel.style.display = 'none';
         this._createViewportCell(1);
         break;
       case '4':
@@ -71,8 +77,6 @@ class DisplayModule {
         this._container.style.display = 'grid';
         this._container.style.gridTemplateColumns = '1fr 1fr';
         this._container.style.gridTemplateRows = '1fr 1fr';
-        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.flex = ''; }
-        if (zPanel) zPanel.style.display = 'none';
         this._createViewportCell(1);
         this._createViewportCell(2);
         this._createViewportCell(3);
