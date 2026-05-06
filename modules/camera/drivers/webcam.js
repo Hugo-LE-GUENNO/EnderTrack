@@ -37,19 +37,17 @@ class WebcamCameraDriver {
 
   async startLive() {
     try {
-      const constraints = {
-        video: this.deviceId
-          ? { deviceId: { exact: this.deviceId } }
-          : { facingMode: 'environment' }
-      };
+      let constraints = { video: this.deviceId ? { deviceId: { exact: this.deviceId } } : true };
       this._stream = await navigator.mediaDevices.getUserMedia(constraints);
       this._video.srcObject = this._stream;
       await this._video.play();
       // Wait for first real frame
-      await new Promise(r => {
+      await new Promise((resolve, reject) => {
+        let attempts = 0;
         const check = () => {
-          if (this._video.readyState >= 2 && this._video.videoWidth > 0) r();
-          else requestAnimationFrame(check);
+          if (this._video.readyState >= 2 && this._video.videoWidth > 0) resolve();
+          else if (++attempts > 50) reject(new Error('Video not ready'));
+          else setTimeout(check, 100);
         };
         check();
       });

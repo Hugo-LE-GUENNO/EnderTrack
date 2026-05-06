@@ -144,6 +144,7 @@ class DisplayModule {
       video.srcObject = camera.driver._stream;
       cv.cell.insertBefore(video, cv.ph);
       cv._video = video;
+      video.play().catch(() => {});
       return;
     }
 
