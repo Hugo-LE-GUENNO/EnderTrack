@@ -68,6 +68,9 @@ class DisplayModule {
         this._stageWrap.style.gridRow = '';
         this._stageWrap.style.gridColumn = '';
       }
+      // Ensure stage is back in viewport 0
+      this.viewports[0].source = 'stage';
+      this._renderSource(0, 'stage');
       return;
     }
 
@@ -95,6 +98,10 @@ class DisplayModule {
       const vp = this.viewports[i];
       if (vp.source) this._renderSource(i, vp.source);
     }
+
+    // Always ensure viewport 0 has its source rendered
+    const vp0 = this.viewports[0];
+    if (vp0?.source) this._renderSource(0, vp0.source);
   }
 
   _buildCell(id) {
