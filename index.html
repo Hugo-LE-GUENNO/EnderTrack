@@ -375,8 +375,8 @@
                                     <input type="text" id="cameraPath" value="./captures" onchange="EnderTrack.Camera.configure({storagePath: this.value})" style="flex:1; padding:3px 6px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
                                 </div>
                                 <div style="display:flex; gap:4px;">
-                                    <button onclick="EnderTrack.Camera.startLive(); EnderTrack.Display.setLayout('split-h')" style="flex:1; padding:5px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Live + Split</button>
-                                    <button onclick="EnderTrack.Camera.stopLive(); EnderTrack.Display.setLayout('single')" style="flex:1; padding:5px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Stop</button>
+                                    <button onclick="window._liveAndSplit()" style="flex:1; padding:5px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Live + Split</button>
+                                    <button onclick="EnderTrack.Camera.stopLive(); EnderTrack.Display.setLayout('1')" style="flex:1; padding:5px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Stop</button>
                                     <button onclick="window._removeCameraDevice()" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:#ef4444; color:#fff;">✕</button>
                                 </div>
                             </div>
@@ -391,6 +391,12 @@
                                 </div>
                             </div>
                             <script>
+                              window._liveAndSplit = async () => {
+                                await EnderTrack.Camera.startLive();
+                                EnderTrack.Display.setLayout('2h');
+                                // Wait for DOM update then assign camera to viewport 1
+                                setTimeout(() => EnderTrack.Display.assignSource(1, 'camera'), 100);
+                              };
                               window._showCameraTypeMenu = () => {
                                 const menu = document.getElementById('cameraTypeMenu');
                                 menu.style.display = menu.style.display === 'none' ? '' : 'none';
@@ -426,7 +432,7 @@
                               };
                               window._removeCameraDevice = async () => {
                                 await EnderTrack.Camera.stopLive();
-                                EnderTrack.Display.setLayout('single');
+                                EnderTrack.Display.setLayout('1');
                                 await EnderTrack.Camera.setDriver('simulation');
                                 document.getElementById('cameraConfig').style.display = 'none';
                                 document.getElementById('cameraAddBtn').style.display = '';
