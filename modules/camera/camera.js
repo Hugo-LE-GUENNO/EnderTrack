@@ -11,10 +11,6 @@ class CameraModule {
       gain: 1.0,
       format: 'tiff',
       storagePath: './captures',
-      pixelSize: 1.0,       // µm/px
-      rotation: 0,          // degrees
-      flipH: false,
-      flipV: false
     };
     this._frameListeners = [];
     this._navEl = null;
@@ -104,9 +100,6 @@ class CameraModule {
     return { connected: !!this.driver, driver: this.driverName, live: this.live, config: { ...this.config } };
   }
 
-  getEffectivePixelSize() {
-    return this.config.pixelSize || 1.0;
-  }
 
   // === FRAME LISTENERS ===
 
@@ -128,15 +121,20 @@ class CameraModule {
       this._navEl.id = 'camera-nav';
       zone.appendChild(this._navEl);
     }
+    const camName = (window._cameras && window._cameras.length) ? window._cameras[0].label : 'Camera';
+    const recording = this._recording;
     this._navEl.innerHTML = `
       <style>
-        #camera-nav .cam-btn { padding:6px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; }
+        #camera-nav .cam-btn { padding:5px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; }
         #camera-nav .cam-btn:hover { background:var(--active-element); color:var(--text-selected); }
+        #camera-nav .cam-btn.rec { background:#ef4444; color:#fff; }
       </style>
+      <div style="font-size:10px; color:var(--text-selected); margin-bottom:4px;">${camName}</div>
       <div style="display:flex; gap:4px;">
         $${this.live ? `
           <button class="cam-btn" onclick="EnderTrack.Camera.stopLive()">Stop</button>
           <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">Save</button>
+          <button class="cam-btn $${recording ? 'rec' : ''}" onclick="EnderTrack.Camera.toggleRecord()">${recording ? '\u23f9 Rec' : '\u23fa Rec'}</button>
         ` : `
           <button class="cam-btn" onclick="window._liveAndSplit()">Live</button>
         `}
@@ -154,6 +152,38 @@ class CameraModule {
     a.click();
   }
 
+  toggleRecord() {
+    if (this._recording) this.stopRecord();
+    else this.startRecord();
+  }
+
+  startRecord() {
+    if (!this.driver?._stream) return;
+    this._chunks = [];
+    this._mediaRecorder = new MediaRecorder(this.driver._stream, { mimeType: 'video/webm' });
+    this._mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) this._chunks.push(e.data); };
+    this._mediaRecorder.onstop = () => {
+      const blob = new Blob(this._chunks, { type: 'video/webm' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      a.download = 'record_' + ts + '.webm';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      this._chunks = [];
+    };
+    this._mediaRecorder.start();
+    this._recording = true;
+    this._renderNav();
+  }
+
+  stopRecord() {
+    if (this._mediaRecorder && this._recording) {
+      this._mediaRecorder.stop();
+    }
+    this._recording = false;
+    this._renderNav();
+  }
   // === IMAGE PROCESSING ===
 
   toggleFastExplore() {
