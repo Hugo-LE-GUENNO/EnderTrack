@@ -4,30 +4,17 @@ class WebcamCameraDriver {
   constructor(camera) {
     this.camera = camera;
     this._stream = null;
-    this._video = null;
-    this._canvas = null;
-    this._ctx = null;
     this._live = false;
-    this._timer = null;
-    this.deviceId = null; // specific device or null for default
+    this.deviceId = null;
   }
 
   async init(config) {
-    this._canvas = document.createElement('canvas');
-    this._ctx = this._canvas.getContext('2d');
-    this._video = document.createElement('video');
-    this._video.setAttribute('playsinline', '');
-    this._video.setAttribute('autoplay', '');
-    this._video.muted = true;
-    // Attach to DOM (hidden) — required for stable rendering in some browsers
-    this._video.style.cssText = 'position:fixed; top:-9999px; left:-9999px; width:1px; height:1px;';
-    document.body.appendChild(this._video);
+    if (config.deviceId) this.deviceId = config.deviceId;
     return true;
   }
 
   async configure(config) {
     if (config.deviceId) this.deviceId = config.deviceId;
-    // Restart stream if live with new config
     if (this._live) {
       await this.stopLive();
       await this.startLive();
@@ -37,23 +24,8 @@ class WebcamCameraDriver {
 
   async startLive() {
     try {
-      let constraints = { video: this.deviceId ? { deviceId: { exact: this.deviceId } } : true };
+      const constraints = { video: this.deviceId ? { deviceId: { exact: this.deviceId } } : true };
       this._stream = await navigator.mediaDevices.getUserMedia(constraints);
-      this._video.srcObject = this._stream;
-      await this._video.play();
-      // Wait for first real frame
-      await new Promise((resolve, reject) => {
-        let attempts = 0;
-        const check = () => {
-          if (this._video.readyState >= 2 && this._video.videoWidth > 0) resolve();
-          else if (++attempts > 50) reject(new Error('Video not ready'));
-          else setTimeout(check, 100);
-        };
-        check();
-      });
-      // Set canvas size once
-      this._canvas.width = this._video.videoWidth;
-      this._canvas.height = this._video.videoHeight;
       this._live = true;
       return true;
     } catch (e) {
@@ -68,37 +40,38 @@ class WebcamCameraDriver {
       this._stream.getTracks().forEach(t => t.stop());
       this._stream = null;
     }
-    this._video.srcObject = null;
   }
 
   async capture(params) {
-    const frame = this._grabFrame();
+    const frame = await this.getFrame();
     if (!frame) return { success: false, error: 'No frame' };
-    return {
-      success: true,
-      frame: frame.frame,
-      width: frame.width,
-      height: frame.height,
-      path: params.path,
-      format: params.format || 'jpeg'
-    };
+    return { success: true, frame: frame.frame, width: frame.width, height: frame.height, path: params.path, format: params.format || 'jpeg' };
   }
 
   async getFrame() {
-    if (!this._video || this._video.readyState < 2) return null;
-    this._ctx.drawImage(this._video, 0, 0);
-    const b64 = this._canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-    return { frame: b64, width: this._canvas.width, height: this._canvas.height, timestamp: Date.now() };
+    // Find the video element displaying our stream (in viewport)
+    const video = this._findVideoElement();
+    if (!video || video.readyState < 2) return null;
+    const w = video.videoWidth, h = video.videoHeight;
+    if (!w || !h) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+    return { frame: b64, width: w, height: h, timestamp: Date.now() };
   }
 
-  _grabFrame() {
-    return this.getFrame();
+  _findVideoElement() {
+    // Find video element in viewport that has our stream
+    const videos = document.querySelectorAll('.viewport-cell video');
+    for (const v of videos) {
+      if (v.srcObject === this._stream) return v;
+    }
+    return null;
   }
 
-  // List available video devices
   static async listDevices() {
     try {
-      // Need permission first
       const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
       tmp.getTracks().forEach(t => t.stop());
       const devices = await navigator.mediaDevices.enumerateDevices();
