@@ -167,7 +167,6 @@ class CameraModule {
       </div>
     `;
   }
-  }
 
   // === IMAGE PROCESSING ===
 
