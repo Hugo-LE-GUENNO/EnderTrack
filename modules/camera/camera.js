@@ -111,7 +111,8 @@ class CameraModule {
   _renderNav() {
     const zone = document.getElementById('navPluginZone');
     if (!zone) return;
-    if (this.driverName === 'simulation') {
+    const cameras = window._cameras || [];
+    if (!cameras.length || this.driverName === 'simulation') {
       if (this._navEl) { this._navEl.remove(); this._navEl = null; }
       return;
     }
@@ -120,7 +121,6 @@ class CameraModule {
       this._navEl.id = 'camera-nav';
       zone.appendChild(this._navEl);
     }
-    const camName = (window._cameras && window._cameras.length) ? window._cameras[0].label : 'Camera';
     const recording = this._recording;
     this._navEl.innerHTML = `
       <style>
@@ -128,16 +128,20 @@ class CameraModule {
         #camera-nav .cam-btn:hover { background:var(--active-element); color:var(--text-selected); }
         #camera-nav .cam-btn.rec { background:#ef4444; color:#fff; }
       </style>
-      <div style="font-size:10px; color:var(--text-selected); margin-bottom:4px;">${camName}</div>
-      <div style="display:flex; gap:4px;">
-        $${this.live ? `
-          <button class="cam-btn" onclick="EnderTrack.Camera.stopLive()">Stop</button>
-          <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">Save</button>
-          <button class="cam-btn $${recording ? 'rec' : ''}" onclick="EnderTrack.Camera.toggleRecord()">${recording ? '\u23f9 Rec' : '\u23fa Rec'}</button>
-        ` : `
-          <button class="cam-btn" onclick="window._liveAndSplit()">Live</button>
-        `}
-      </div>
+      ${cameras.map((cam, i) => `
+        <div style="margin-bottom:6px;">
+          <div style="font-size:10px; color:var(--text-selected); margin-bottom:3px;">${cam.label}</div>
+          <div style="display:flex; gap:4px;">
+            ${this.live ? `
+              <button class="cam-btn" onclick="EnderTrack.Camera.stopLive()">Stop</button>
+              <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">Save</button>
+              <button class="cam-btn ${recording ? 'rec' : ''}" onclick="EnderTrack.Camera.toggleRecord()">${recording ? '\u23f9 Rec' : '\u23fa Rec'}</button>
+            ` : `
+              <button class="cam-btn" onclick="window._liveAndSplit()">Live</button>
+            `}
+          </div>
+        </div>
+      `).join('')}
     `;
   }
 
@@ -210,17 +214,18 @@ class CameraModule {
   _updateStatus() {
     const sp = window.EnderTrack?.StatusPeripherals;
     if (!sp) return;
-    if (this.driverName === 'simulation') {
-      sp.remove('camera');
-    } else {
-      const camName = (window._cameras && window._cameras.length) ? window._cameras[0].label : 'Camera';
-      sp.set('camera', {
-        name: camName,
+    const cameras = window._cameras || [];
+    // Remove old entries
+    for (let i = 0; i < 8; i++) sp.remove('camera_' + i);
+    if (this.driverName === 'simulation' || !cameras.length) return;
+    cameras.forEach((cam, i) => {
+      sp.set('camera_' + i, {
+        name: cam.label,
         icon: '📷',
         state: 'connected',
-        detail: this.driverName
+        detail: cam.type
       });
-    }
+    });
   }
 
   // === SCENARIO ACTION ===
