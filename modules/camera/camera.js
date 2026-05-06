@@ -18,6 +18,13 @@ class CameraModule {
     };
     this._frameListeners = [];
     this._navEl = null;
+    // Image processing
+    this.grayscale = true;
+    this.lutId = 'gray';
+    this._lutTable = null;
+    this.histogram = null;
+    this.fastExplore = null;
+    this.tiles = [];
   }
 
   // === DRIVER MANAGEMENT ===
@@ -36,6 +43,14 @@ class CameraModule {
       this._registerScenarioAction();
       this._updateStatus();
       this._renderNav();
+      // Init histogram and fast-explore if available
+      if (!this.histogram && window.EnderTrack?.CameraHistogram) {
+        this.histogram = new window.EnderTrack.CameraHistogram();
+        this.histogram.inject();
+      }
+      if (!this.fastExplore && window.EnderTrack?.CameraFastExplore) {
+        this.fastExplore = new window.EnderTrack.CameraFastExplore(this);
+      }
     }
     return ok;
   }
@@ -152,6 +167,28 @@ class CameraModule {
       </div>
     `;
   }
+  }
+
+  // === IMAGE PROCESSING ===
+
+  toggleFastExplore() {
+    if (!this.fastExplore) return;
+    if (this.fastExplore.active) this.fastExplore.deactivate();
+    else this.fastExplore.activate();
+    this._renderNav();
+  }
+
+  setLut(id) {
+    this.lutId = id;
+    this.grayscale = (id !== 'none');
+    this._buildLutTable();
+  }
+
+  _buildLutTable() {
+    const luts = window.EnderTrack?.CameraLUTs;
+    if (!luts || !this.lutId || this.lutId === 'none') { this._lutTable = null; return; }
+    const def = luts[this.lutId];
+    this._lutTable = def ? def.generate() : null;
   }
 
   // === STATUS WIDGET ===
