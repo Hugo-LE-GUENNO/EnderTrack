@@ -3,11 +3,7 @@
 class SimulationLightDriver {
   constructor(light) {
     this.light = light;
-    this._channels = [
-      { id: 'white', name: 'White', type: 'led', intensity: 0, on: false },
-      { id: 'fluo', name: 'Fluorescence', type: 'led', intensity: 0, on: false },
-      { id: 'bf', name: 'Brightfield', type: 'led', intensity: 0, on: false }
-    ];
+    this._channels = [];
   }
 
   async init() {
