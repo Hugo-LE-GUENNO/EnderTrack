@@ -260,11 +260,11 @@ class ScenarioModule {
     return `
       <div style="display:flex; flex-direction:column; gap:6px;">
         <!-- Mode toggles -->
-        <div style="display:flex; gap:4px; flex-wrap:wrap;">
-          <button onclick="EnderTrack.Scenario._togglePreset('multipos', ${!p.multipos})" style="padding:4px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${p.multipos ? 'var(--active-element)' : 'var(--app-bg)'}; color:${p.multipos ? 'var(--text-selected)' : 'var(--text-general)'};">📍 Multi-pos</button>
-          <button onclick="EnderTrack.Scenario._togglePreset('timelapse', ${!p.timelapse})" style="padding:4px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${p.timelapse ? 'var(--active-element)' : 'var(--app-bg)'}; color:${p.timelapse ? 'var(--text-selected)' : 'var(--text-general)'};">⏱️ Time-lapse</button>
-          <button onclick="EnderTrack.Scenario._togglePreset('zstack', ${!p.zstack})" style="padding:4px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${p.zstack ? 'var(--active-element)' : 'var(--app-bg)'}; color:${p.zstack ? 'var(--text-selected)' : 'var(--text-general)'};">📚 Z-Stack</button>
-          <button onclick="EnderTrack.Scenario._togglePreset('mosaic', ${!p.mosaic})" style="padding:4px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${p.mosaic ? 'var(--active-element)' : 'var(--app-bg)'}; color:${p.mosaic ? 'var(--text-selected)' : 'var(--text-general)'};">🧩 Mosaïque</button>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+          <button onclick="EnderTrack.Scenario._togglePreset('multipos', ${!p.multipos})" style="padding:10px 8px; border:${p.multipos ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:10px; background:${p.multipos ? 'var(--app-bg)' : 'transparent'}; color:var(--text-selected); text-align:center;">📍 Multi-pos</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('timelapse', ${!p.timelapse})" style="padding:10px 8px; border:${p.timelapse ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:10px; background:${p.timelapse ? 'var(--app-bg)' : 'transparent'}; color:var(--text-selected); text-align:center;">⏱️ Time-lapse</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('zstack', ${!p.zstack})" style="padding:10px 8px; border:${p.zstack ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:10px; background:${p.zstack ? 'var(--app-bg)' : 'transparent'}; color:var(--text-selected); text-align:center;">📚 Z-Stack</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('mosaic', ${!p.mosaic})" style="padding:10px 8px; border:${p.mosaic ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:10px; background:${p.mosaic ? 'var(--app-bg)' : 'transparent'}; color:var(--text-selected); text-align:center;">🧩 Mosaïque</button>
         </div>
 
         ${paramsHtml}
