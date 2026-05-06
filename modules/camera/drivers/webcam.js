@@ -83,7 +83,7 @@ class WebcamCameraDriver {
   }
 
   _grabFrame() {
-    if (!this._video || !this._video.videoWidth) return null;
+    if (!this._video || !this._video.videoWidth || this._video.readyState < 2) return null;
     const w = this._video.videoWidth;
     const h = this._video.videoHeight;
     this._canvas.width = w;
