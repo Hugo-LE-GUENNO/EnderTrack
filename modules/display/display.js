@@ -74,9 +74,8 @@ class DisplayModule {
       return;
     }
 
-    // Grid: stage takes left column, others stack in right column
-    const rightCount = n - 1;
-    const rows = Math.max(1, rightCount);
+    // Grid: 2 columns, rows adapt
+    const rows = Math.ceil(n / 2);
     this._container.style.display = 'grid';
     this._container.style.gridTemplateColumns = '1fr 1fr';
     this._container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
@@ -84,12 +83,16 @@ class DisplayModule {
 
     if (this._stageWrap) {
       this._stageWrap.style.flex = '';
-      // Stage always spans full left column
-      this._stageWrap.style.gridColumn = '1';
-      this._stageWrap.style.gridRow = `1 / ${rows + 1}`;
+      if (n % 2 === 1) {
+        this._stageWrap.style.gridColumn = '1';
+        this._stageWrap.style.gridRow = `1 / ${rows + 1}`;
+      } else {
+        this._stageWrap.style.gridColumn = '';
+        this._stageWrap.style.gridRow = '';
+      }
     }
 
-    // Other cells go in right column (or fill remaining spots)
+    // Other cells
     for (let i = 1; i < n; i++) {
       this._buildCell(i);
       const vp = this.viewports[i];
@@ -99,6 +102,12 @@ class DisplayModule {
     // Always ensure viewport 0 has its source rendered
     const vp0 = this.viewports[0];
     if (vp0?.source) this._renderSource(0, vp0.source);
+
+    // Trigger canvas resize after layout change
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+      window.EnderTrack?.Canvas?.requestRender?.();
+    }, 50);
   }
 
   _buildCell(id) {
