@@ -27,7 +27,18 @@ class DisplayModule {
   // === LAYOUT ===
 
   setLayout(mode) {
-    this.layout = mode;
+    // Accept number of total panels or legacy codes
+    if (typeof mode === 'number') {
+      this.viewports = [{ id: 0, source: 'stage' }];
+      for (let i = 1; i < mode; i++) this.viewports.push({ id: i, source: null });
+    } else {
+      // Legacy codes
+      const counts = { '1': 1, '2h': 2, '2v': 2, '4': 4 };
+      const n = counts[mode] || 1;
+      this.viewports = [{ id: 0, source: 'stage' }];
+      for (let i = 1; i < n; i++) this.viewports.push({ id: i, source: null });
+    }
+    this.layout = String(this.viewports.length);
     this._applyLayout();
   }
 
@@ -36,7 +47,7 @@ class DisplayModule {
     this._cleanup();
     this._container.querySelectorAll('.viewport-cell').forEach(el => el.remove());
 
-    // Wrap stage elements (main-canvas + z-panel) if not already wrapped
+    // Wrap stage elements if not already wrapped
     let stageWrap = this._container.querySelector('.stage-viewport');
     const mainCanvas = document.querySelector('.main-canvas');
     const zPanel = document.getElementById('zVisualizationPanel');
@@ -50,37 +61,30 @@ class DisplayModule {
       if (zPanel) stageWrap.appendChild(zPanel);
     }
 
-    switch (this.layout) {
-      case '1':
-        this.viewports = [{ id: 0, source: 'stage' }];
-        this._container.style.display = 'flex';
-        this._container.style.gridTemplateColumns = '';
-        this._container.style.gridTemplateRows = '';
-        if (stageWrap) stageWrap.style.flex = '1';
-        break;
-      case '2h':
-        this.viewports = [{ id: 0, source: 'stage' }, { id: 1, source: null }];
-        this._container.style.display = 'grid';
-        this._container.style.gridTemplateColumns = '1fr 1fr';
-        this._container.style.gridTemplateRows = '1fr';
-        this._createViewportCell(1);
-        break;
-      case '2v':
-        this.viewports = [{ id: 0, source: 'stage' }, { id: 1, source: null }];
-        this._container.style.display = 'grid';
-        this._container.style.gridTemplateColumns = '1fr';
-        this._container.style.gridTemplateRows = '1fr 1fr';
-        this._createViewportCell(1);
-        break;
-      case '4':
-        this.viewports = [{ id: 0, source: 'stage' }, { id: 1, source: null }, { id: 2, source: null }, { id: 3, source: null }];
-        this._container.style.display = 'grid';
-        this._container.style.gridTemplateColumns = '1fr 1fr';
-        this._container.style.gridTemplateRows = '1fr 1fr';
-        this._createViewportCell(1);
-        this._createViewportCell(2);
-        this._createViewportCell(3);
-        break;
+    const n = this.viewports.length; // total panels including stage
+
+    if (n <= 1) {
+      this._container.style.display = 'flex';
+      this._container.style.gridTemplateColumns = '';
+      this._container.style.gridTemplateRows = '';
+      if (stageWrap) stageWrap.style.flex = '1';
+    } else if (n === 2) {
+      this._container.style.display = 'grid';
+      this._container.style.gridTemplateColumns = '1fr 1fr';
+      this._container.style.gridTemplateRows = '1fr';
+      this._createViewportCell(1);
+    } else if (n === 3) {
+      this._container.style.display = 'grid';
+      this._container.style.gridTemplateColumns = '1fr 1fr';
+      this._container.style.gridTemplateRows = '1fr 1fr';
+      if (stageWrap) stageWrap.style.gridRow = '1 / 3';
+      this._createViewportCell(1);
+      this._createViewportCell(2);
+    } else {
+      this._container.style.display = 'grid';
+      this._container.style.gridTemplateColumns = '1fr 1fr';
+      this._container.style.gridTemplateRows = '1fr 1fr';
+      for (let i = 1; i < n; i++) this._createViewportCell(i);
     }
   }
 
@@ -168,17 +172,13 @@ class DisplayModule {
   _showLayoutMenu(x, y) {
     this._removeMenus();
     const menu = this._createMenu(x, y);
-    const layouts = [
-      { id: '1', label: '⬜ Simple', icon: '1' },
-      { id: '2h', label: '◫ Split horizontal', icon: '2H' },
-      { id: '2v', label: '⬒ Split vertical', icon: '2V' },
-      { id: '4', label: '⊞ Quadrants', icon: '4' }
-    ];
-    layouts.forEach(l => {
-      const row = this._createMenuItem(l.label, l.id === this.layout);
-      row.addEventListener('click', () => { this.setLayout(l.id); this._removeMenus(); });
+    const current = this.viewports.length;
+    for (let n = 1; n <= 4; n++) {
+      const labels = { 1: '⬜ Stage seul', 2: '◫ 2 panneaux', 3: '⬜ 3 panneaux', 4: '⊞ 4 panneaux' };
+      const row = this._createMenuItem(labels[n], current === n);
+      row.addEventListener('click', () => { this.setLayout(n); this._removeMenus(); });
       menu.appendChild(row);
-    });
+    }
     document.body.appendChild(menu);
     this._autoCloseMenu(menu);
   }
@@ -187,14 +187,12 @@ class DisplayModule {
     this._removeMenus();
     const menu = this._createMenu(x, y);
 
-    // Available sources
-    const sources = [{ id: null, label: '— Vide —' }];
-    // Camera sources
-    const cam = window.EnderTrack?.Camera;
-    if (cam?.driverName && cam.driverName !== 'simulation') {
-      sources.push({ id: 'camera', label: '📷 Camera live' });
-    }
-    sources.push({ id: 'camera_sim', label: '📷 Camera (simulation)' });
+    // Build sources list from available devices
+    const sources = [{ id: 'stage', label: '📍 Platine XYZ' }];
+    const cameras = window._cameras || [];
+    cameras.forEach((c, i) => {
+      sources.push({ id: 'camera:' + i, label: '📷 ' + c.label });
+    });
 
     const vp = this.viewports.find(v => v.id === viewportId);
     sources.forEach(s => {
@@ -202,14 +200,6 @@ class DisplayModule {
       row.addEventListener('click', () => { this.assignSource(viewportId, s.id); this._removeMenus(); });
       menu.appendChild(row);
     });
-
-    // Layout option at bottom
-    const sep = document.createElement('div');
-    sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
-    menu.appendChild(sep);
-    const layoutRow = this._createMenuItem('⊞ Changer layout...');
-    layoutRow.addEventListener('click', () => { this._removeMenus(); this._showLayoutMenu(x, y); });
-    menu.appendChild(layoutRow);
 
     document.body.appendChild(menu);
     this._autoCloseMenu(menu);

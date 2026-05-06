@@ -424,14 +424,11 @@
                               };
                               window._updateCameraLayout = () => {
                                 const n = window._cameras.length;
-                                if (n === 0) { EnderTrack.Display.setLayout('1'); return; }
-                                if (n === 1) EnderTrack.Display.setLayout('2h');
-                                else if (n === 2) EnderTrack.Display.setLayout('2v'); 
-                                else EnderTrack.Display.setLayout('4');
+                                EnderTrack.Display.setLayout(n + 1); // +1 for stage
                                 // Assign cameras to viewports
                                 setTimeout(() => {
-                                  for (let i = 0; i < n && i < 3; i++) {
-                                    EnderTrack.Display.assignSource(i + 1, 'camera');
+                                  for (let i = 0; i < n; i++) {
+                                    EnderTrack.Display.assignSource(i + 1, 'camera:' + i);
                                   }
                                 }, 100);
                               };
