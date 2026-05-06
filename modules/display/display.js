@@ -141,6 +141,11 @@ class DisplayModule {
 
   // === CONTEXT MENUS ===
 
+  _showLayoutMenuFromBtn(btn) {
+    const rect = btn.getBoundingClientRect();
+    this._showLayoutMenu(rect.left, rect.bottom + 4);
+  }
+
   _showLayoutMenu(x, y) {
     this._removeMenus();
     const menu = this._createMenu(x, y);
