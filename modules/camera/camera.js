@@ -27,7 +27,10 @@ class CameraModule {
     this.driver = new Driver(this);
     this.driverName = name;
     const ok = await this.driver.init(this.config);
-    if (ok) this._registerScenarioAction();
+    if (ok) {
+      this._registerScenarioAction();
+      this._updateStatus();
+    }
     return ok;
   }
 
@@ -58,7 +61,7 @@ class CameraModule {
   async startLive() {
     if (!this.driver) return false;
     const ok = await this.driver.startLive();
-    if (ok) this.live = true;
+    if (ok) { this.live = true; this._updateStatus(); }
     return ok;
   }
 
@@ -66,6 +69,7 @@ class CameraModule {
     if (!this.driver) return false;
     await this.driver.stopLive();
     this.live = false;
+    this._updateStatus();
     return true;
   }
 
@@ -88,6 +92,23 @@ class CameraModule {
   onFrame(fn) { this._frameListeners.push(fn); }
   offFrame(fn) { this._frameListeners = this._frameListeners.filter(f => f !== fn); }
   _emitFrame(frame) { this._frameListeners.forEach(fn => fn(frame)); }
+
+  // === STATUS WIDGET ===
+
+  _updateStatus() {
+    const sp = window.EnderTrack?.StatusPeripherals;
+    if (!sp) return;
+    if (this.driverName === 'simulation') {
+      sp.remove('camera');
+    } else {
+      sp.set('camera', {
+        name: 'Camera',
+        icon: '📷',
+        state: this.live ? 'connected' : 'warning',
+        detail: this.driverName + (this.live ? ' (live)' : '')
+      });
+    }
+  }
 
   // === SCENARIO ACTION ===
 

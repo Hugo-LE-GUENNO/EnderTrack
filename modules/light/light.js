@@ -18,6 +18,7 @@ class LightModule {
     if (ok) {
       this.channels = this.driver.getChannels();
       this._registerScenarioActions();
+      this._updateStatus();
     }
     return ok;
   }
@@ -33,7 +34,8 @@ class LightModule {
     if (!ch) return false;
     ch.intensity = Math.max(0, Math.min(1, intensity));
     ch.on = ch.intensity > 0;
-    if (this.driver?.setChannel) return await this.driver.setChannel(channelId, ch.intensity);
+    if (this.driver?.setChannel) await this.driver.setChannel(channelId, ch.intensity);
+    this._updateStatus();
     return true;
   }
 
@@ -63,6 +65,25 @@ class LightModule {
       driver: this.driverName,
       channels: this.channels.map(c => ({ ...c }))
     };
+  }
+
+  // === STATUS WIDGET ===
+
+  _updateStatus() {
+    const sp = window.EnderTrack?.StatusPeripherals;
+    if (!sp) return;
+    const activeChannels = this.channels.filter(c => c.on);
+    if (this.driverName === 'simulation' && activeChannels.length === 0) {
+      sp.remove('light');
+    } else if (this.driverName !== 'simulation' || activeChannels.length > 0) {
+      const detail = activeChannels.length ? activeChannels.map(c => c.name).join(', ') : 'off';
+      sp.set('light', {
+        name: 'Light',
+        icon: '💡',
+        state: activeChannels.length > 0 ? 'connected' : 'warning',
+        detail
+      });
+    }
   }
 
   // === SCENARIO ACTIONS ===

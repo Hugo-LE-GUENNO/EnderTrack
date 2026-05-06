@@ -17,12 +17,14 @@ class ComputeLink {
       if (res.ok) {
         this.connected = true;
         this._log('info', `Connected to ${this.serverUrl}`);
+        this._updateStatus();
         return true;
       }
     } catch (e) {
       this._log('error', `Connection failed: ${e.message}`);
     }
     this.connected = false;
+    this._updateStatus();
     return false;
   }
 
@@ -30,6 +32,7 @@ class ComputeLink {
     this.connected = false;
     this.serverUrl = '';
     this._log('info', 'Disconnected');
+    window.EnderTrack?.StatusPeripherals?.remove('compute');
   }
 
   // === SEND / RECEIVE ===
@@ -152,6 +155,18 @@ class ComputeLink {
         return result;
       }
     });
+  }
+
+  _updateStatus() {
+    const sp = window.EnderTrack?.StatusPeripherals;
+    if (!sp) return;
+    if (this.connected) {
+      sp.set('compute', { name: 'Compute', icon: '🖥️', state: 'connected', detail: this.serverUrl.replace('http://', '') });
+    } else if (this.serverUrl) {
+      sp.set('compute', { name: 'Compute', icon: '🖥️', state: 'disconnected', detail: 'offline' });
+    } else {
+      sp.remove('compute');
+    }
   }
 
   // === UTILS ===
