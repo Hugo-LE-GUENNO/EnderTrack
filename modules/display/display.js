@@ -131,12 +131,17 @@ class DisplayModule {
     const cv = this._canvases.get(viewportId);
     if (!cv) return;
 
-    // If webcam driver, move its video element directly into viewport
+    // If webcam driver with active stream, create a video element with the stream
     const camera = window.EnderTrack?.Camera;
-    if (camera?.driver?._video && camera.driver._live) {
+    if (camera?.driver?._stream) {
       cv.img.style.display = 'none';
-      const video = camera.driver._video;
-      video.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain;';
+      if (cv._video) cv._video.remove();
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
+      video.srcObject = camera.driver._stream;
       cv.cell.insertBefore(video, cv.ph);
       cv._video = video;
       return;

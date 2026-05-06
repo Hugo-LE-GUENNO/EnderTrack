@@ -17,7 +17,11 @@ class WebcamCameraDriver {
     this._ctx = this._canvas.getContext('2d');
     this._video = document.createElement('video');
     this._video.setAttribute('playsinline', '');
+    this._video.setAttribute('autoplay', '');
     this._video.muted = true;
+    // Attach to DOM (hidden) — required for stable rendering in some browsers
+    this._video.style.cssText = 'position:fixed; top:-9999px; left:-9999px; width:1px; height:1px;';
+    document.body.appendChild(this._video);
     return true;
   }
 
