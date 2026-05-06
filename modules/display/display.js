@@ -74,8 +74,9 @@ class DisplayModule {
       return;
     }
 
-    // Grid
-    const rows = Math.ceil(n / 2);
+    // Grid: stage takes left column, others stack in right column
+    const rightCount = n - 1;
+    const rows = Math.max(1, rightCount);
     this._container.style.display = 'grid';
     this._container.style.gridTemplateColumns = '1fr 1fr';
     this._container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
@@ -83,16 +84,12 @@ class DisplayModule {
 
     if (this._stageWrap) {
       this._stageWrap.style.flex = '';
-      if (n % 2 === 1) {
-        this._stageWrap.style.gridColumn = '1';
-        this._stageWrap.style.gridRow = `1 / ${rows + 1}`;
-      } else {
-        this._stageWrap.style.gridColumn = '';
-        this._stageWrap.style.gridRow = '';
-      }
+      // Stage always spans full left column
+      this._stageWrap.style.gridColumn = '1';
+      this._stageWrap.style.gridRow = `1 / ${rows + 1}`;
     }
 
-    // Create cells and assign sources
+    // Other cells go in right column (or fill remaining spots)
     for (let i = 1; i < n; i++) {
       this._buildCell(i);
       const vp = this.viewports[i];
