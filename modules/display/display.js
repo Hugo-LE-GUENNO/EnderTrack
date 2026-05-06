@@ -128,8 +128,27 @@ class DisplayModule {
     if (this._pollTimers[viewportId]) { clearInterval(this._pollTimers[viewportId]); this._pollTimers[viewportId] = null; }
     if (!source || source === 'stage') return;
 
+    const cv = this._canvases.get(viewportId);
+    if (!cv) return;
+
+    // If webcam driver, inject video element directly (no encoding)
+    const camera = window.EnderTrack?.Camera;
+    if (camera?.driver?._video && camera.driver._video.srcObject) {
+      cv.img.style.display = 'none';
+      const video = document.createElement('video');
+      video.srcObject = camera.driver._video.srcObject;
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain;';
+      cv.cell.insertBefore(video, cv.ph);
+      cv._video = video;
+      video.play();
+      return;
+    }
+
+    // Fallback: poll frames as base64 (for MJPEG, simulation, etc.)
     this._pollTimers[viewportId] = setInterval(async () => {
-      const cv = this._canvases.get(viewportId);
       if (!cv) return;
       const frame = await window.EnderTrack?.Camera?.getFrame();
       if (frame?.frame) {

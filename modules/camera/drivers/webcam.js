@@ -53,7 +53,6 @@ class WebcamCameraDriver {
       this._canvas.width = this._video.videoWidth;
       this._canvas.height = this._video.videoHeight;
       this._live = true;
-      this._pollFrames();
       return true;
     } catch (e) {
       console.warn('[Webcam] startLive failed:', e.message);
@@ -61,19 +60,8 @@ class WebcamCameraDriver {
     }
   }
 
-  _pollFrames() {
-    if (!this._live) return;
-    if (this._video.readyState >= 2) {
-      this._ctx.drawImage(this._video, 0, 0);
-      const b64 = this._canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
-      this.camera._emitFrame({ frame: b64, width: this._canvas.width, height: this._canvas.height, timestamp: Date.now() });
-    }
-    this._rafId = setTimeout(() => this._pollFrames(), 200);
-  }
-
   async stopLive() {
     this._live = false;
-    if (this._rafId) { clearTimeout(this._rafId); this._rafId = null; }
     if (this._stream) {
       this._stream.getTracks().forEach(t => t.stop());
       this._stream = null;
