@@ -360,3 +360,16 @@
   min-height: 0;
   height: 100%;
 }
+
+/* Fix: canvas-content in grid mode needs full height from parent chain */
+.widget-container {
+  display: flex;
+  flex-direction: column;
+}
+.widget-container .canvas-content {
+  flex: 1;
+  min-height: 0;
+}
+.canvas-content[style*="grid"] {
+  height: 100%;
+}
