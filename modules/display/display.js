@@ -156,6 +156,7 @@ class DisplayModule {
   assignSource(viewportId, source) {
     const vp = this.viewports.find(v => v.id === viewportId);
     if (!vp) return;
+    if (vp.source === source) return; // already assigned here
 
     // If another viewport already has this source, swap
     const existing = this.viewports.find(v => v.id !== viewportId && v.source === source);
