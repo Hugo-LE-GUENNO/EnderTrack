@@ -104,7 +104,8 @@ class DisplayModule {
     cell.style.cssText = 'position:relative; background:#111; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid #333; min-width:0; min-height:0;';
 
     const ph = document.createElement('div');
-    ph.style.cssText = 'color:#555; font-size:11px;';
+    ph.className = 'viewport-placeholder';
+    ph.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#555; font-size:11px; pointer-events:none;';
     ph.textContent = 'Clic droit \u2192 source';
     cell.appendChild(ph);
 
@@ -167,7 +168,7 @@ class DisplayModule {
         if (zPanel) cell.appendChild(zPanel);
       }
       // Hide placeholder
-      const ph = cell.querySelector('div[style*="color:#555"]');
+      const ph = cell.querySelector(".viewport-placeholder");
       if (ph) ph.style.display = 'none';
       return;
     }
@@ -187,13 +188,13 @@ class DisplayModule {
         this._videos.set(viewportId, video);
       }
       // Hide placeholder
-      const ph = cell.querySelector('div[style*="color:#555"]');
+      const ph = cell.querySelector(".viewport-placeholder");
       if (ph) ph.style.display = 'none';
       return;
     }
 
     // No source — show placeholder
-    const ph = cell.querySelector('div[style*="color:#555"]');
+    const ph = cell.querySelector(".viewport-placeholder");
     if (ph) ph.style.display = '';
   }
 
