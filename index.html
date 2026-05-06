@@ -356,87 +356,72 @@
 
                     <!-- Camera -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📷 Caméra</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📷 Caméras</summary>
                         <div style="padding:8px;" id="cameraSettingsContent">
-                            <div id="cameraDeviceInfo" style="font-size:10px; color:var(--text-general); margin-bottom:6px;">Aucune caméra</div>
-                            <div id="cameraConfig" style="display:none;">
-                                <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-                                    <label style="font-size:10px; color:var(--text-general); width:50px;">Device</label>
-                                    <select id="cameraDeviceSelect" onchange="EnderTrack.Camera.configure({deviceId: this.value})" style="flex:1; padding:3px 6px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;"></select>
-                                </div>
-                                <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-                                    <label style="font-size:10px; color:var(--text-general); width:50px;">Format</label>
-                                    <select id="cameraFormat" onchange="EnderTrack.Camera.configure({format: this.value})" style="padding:3px 6px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
-                                        <option value="tiff">TIFF</option>
-                                        <option value="png">PNG</option>
-                                        <option value="jpeg">JPEG</option>
-                                    </select>
-                                    <label style="font-size:10px; color:var(--text-general); margin-left:8px;">Dossier</label>
-                                    <input type="text" id="cameraPath" value="./captures" onchange="EnderTrack.Camera.configure({storagePath: this.value})" style="flex:1; padding:3px 6px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
-                                </div>
-                                <div style="display:flex; gap:4px;">
-                                    <button onclick="window._liveAndSplit()" style="flex:1; padding:5px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Live + Split</button>
-                                    <button onclick="EnderTrack.Camera.stopLive(); EnderTrack.Display.setLayout('1')" style="flex:1; padding:5px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">Stop</button>
-                                    <button onclick="window._removeCameraDevice()" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:#ef4444; color:#fff;">✕</button>
-                                </div>
-                            </div>
-                            <button id="cameraAddBtn" onclick="window._showCameraTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter une caméra</button>
+                            <div id="cameraList"></div>
+                            <button onclick="window._showCameraTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter une caméra</button>
                             <div id="cameraTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
-                                <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">Type de caméra :</div>
                                 <div style="display:flex; flex-direction:column; gap:3px;">
-                                    <button onclick="window._addCameraDevice('webcam')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🔌 USB / Webcam</button>
-                                    <button onclick="window._addCameraDevice('picamera2')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 Raspberry Pi Camera</button>
-                                    <button onclick="window._addCameraDevice('mjpeg')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🌐 MJPEG Stream (IP cam)</button>
-                                    <button onclick="window._addCameraDevice('simulation')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🎮 Simulation</button>
+                                    <button onclick="window._addCamera('webcam')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🔌 USB / Webcam</button>
+                                    <button onclick="window._addCamera('picamera2')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 Raspberry Pi Camera</button>
+                                    <button onclick="window._addCamera('mjpeg')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🌐 MJPEG Stream (IP cam)</button>
+                                    <button onclick="window._addCamera('simulation')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🎮 Simulation</button>
                                 </div>
                             </div>
                             <script>
-                              window._liveAndSplit = async () => {
-                                await EnderTrack.Camera.startLive();
-                                EnderTrack.Display.setLayout('2h');
-                                // Wait for DOM update then assign camera to viewport 1
-                                setTimeout(() => EnderTrack.Display.assignSource(1, 'camera'), 100);
-                              };
+                              window._cameras = [];
                               window._showCameraTypeMenu = () => {
-                                const menu = document.getElementById('cameraTypeMenu');
-                                menu.style.display = menu.style.display === 'none' ? '' : 'none';
+                                const m = document.getElementById('cameraTypeMenu');
+                                m.style.display = m.style.display === 'none' ? '' : 'none';
                               };
-                              window._addCameraDevice = async (type) => {
+                              window._addCamera = async (type) => {
                                 document.getElementById('cameraTypeMenu').style.display = 'none';
-                                if (type === 'webcam') {
-                                  const devices = await (window.EnderTrack?.CameraDrivers?.webcam?.listDevices?.() || Promise.resolve([]));
-                                  await EnderTrack.Camera.setDriver('webcam');
-                                  const sel = document.getElementById('cameraDeviceSelect');
-                                  if (sel && devices.length) {
-                                    sel.innerHTML = devices.map(d => '<option value="'+d.id+'">'+d.label+'</option>').join('');
-                                    EnderTrack.Camera.configure({ deviceId: devices[0].id });
-                                  } else if (sel) {
-                                    sel.innerHTML = '<option>Default</option>';
-                                  }
-                                  document.getElementById('cameraDeviceInfo').textContent = '\ud83d\udd0c Webcam';
-                                } else if (type === 'picamera2') {
-                                  await EnderTrack.Camera.setDriver('simulation'); // placeholder
-                                  document.getElementById('cameraDeviceInfo').textContent = '\ud83e\udd67 RPi Camera (n\u00e9cessite serveur RPi)';
-                                } else if (type === 'mjpeg') {
+                                let label = type;
+                                if (type === 'mjpeg') {
                                   const url = prompt('URL du flux MJPEG :', 'http://192.168.1.x:8080/video');
                                   if (!url) return;
+                                  label = url.replace('http://', '').slice(0, 25);
                                   await EnderTrack.Camera.setDriver('mjpeg');
                                   await EnderTrack.Camera.configure({ streamUrl: url });
-                                  document.getElementById('cameraDeviceInfo').textContent = '\ud83c\udf10 MJPEG: ' + url;
+                                } else if (type === 'webcam') {
+                                  const devices = await (EnderTrack.CameraDrivers.webcam.listDevices?.() || Promise.resolve([]));
+                                  await EnderTrack.Camera.setDriver('webcam');
+                                  if (devices.length) {
+                                    label = devices[0].label || 'USB Camera';
+                                    await EnderTrack.Camera.configure({ deviceId: devices[0].id });
+                                  }
+                                } else if (type === 'picamera2') {
+                                  await EnderTrack.Camera.setDriver('simulation');
+                                  label = 'RPi Camera';
                                 } else {
                                   await EnderTrack.Camera.setDriver('simulation');
-                                  document.getElementById('cameraDeviceInfo').textContent = '\ud83c\udfae Simulation';
+                                  label = 'Simulation';
                                 }
-                                document.getElementById('cameraConfig').style.display = '';
-                                document.getElementById('cameraAddBtn').style.display = 'none';
+                                window._cameras.push({ type, label, id: Date.now() });
+                                window._renderCameras();
                               };
-                              window._removeCameraDevice = async () => {
+                              window._removeCamera = async (idx) => {
                                 await EnderTrack.Camera.stopLive();
                                 EnderTrack.Display.setLayout('1');
                                 await EnderTrack.Camera.setDriver('simulation');
-                                document.getElementById('cameraConfig').style.display = 'none';
-                                document.getElementById('cameraAddBtn').style.display = '';
-                                document.getElementById('cameraDeviceInfo').textContent = 'Aucune cam\u00e9ra';
+                                window._cameras.splice(idx, 1);
+                                window._renderCameras();
+                              };
+                              window._renderCameras = () => {
+                                const el = document.getElementById('cameraList');
+                                if (!el) return;
+                                el.innerHTML = window._cameras.map((c, i) => `
+                                  <div style="display:flex; align-items:center; gap:6px; padding:6px; margin-bottom:4px; background:var(--app-bg); border-radius:4px;">
+                                    <span style="font-size:10px; color:var(--text-selected); flex:1;">📷 ${c.label}</span>
+                                    <button onclick="window._liveAndSplit()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--container-bg); color:var(--text-general);">Live</button>
+                                    <button onclick="window._removeCamera(${i})" style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:none; color:#ef4444;">✕</button>
+                                  </div>
+                                `).join('');
+                              };
+                              window._liveAndSplit = async () => {
+                                await EnderTrack.Camera.startLive();
+                                EnderTrack.Display.setLayout('2h');
+                                setTimeout(() => EnderTrack.Display.assignSource(1, 'camera'), 100);
                               };
                             </script>
                         </div>
