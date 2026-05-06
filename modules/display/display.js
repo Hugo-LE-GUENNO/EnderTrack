@@ -10,9 +10,8 @@ class DisplayModule {
   }
 
   init() {
-    this._container = document.querySelector('.main-canvas');
+    this._container = document.querySelector('.canvas-content');
     if (!this._container) return;
-    this._container.style.position = 'relative';
 
     // Right-click on viewport cells → source menu
     this._container.addEventListener('contextmenu', (e) => {
@@ -34,28 +33,28 @@ class DisplayModule {
 
   _applyLayout() {
     if (!this._container) return;
-    // Clean up live viewports
     this._cleanup();
-
-    // Remove all viewport overlays
     this._container.querySelectorAll('.viewport-cell').forEach(el => el.remove());
 
-    const mainCanvas = document.getElementById('mapCanvas');
+    const mainCanvas = document.querySelector('.main-canvas');
+    const zPanel = document.getElementById('zVisualizationPanel');
 
     switch (this.layout) {
       case '1':
         this.viewports = [{ id: 0, source: 'stage' }];
-        this._container.style.display = '';
+        this._container.style.display = 'flex';
         this._container.style.gridTemplateColumns = '';
         this._container.style.gridTemplateRows = '';
-        if (mainCanvas) mainCanvas.style.display = '';
+        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.flex = '1'; }
+        if (zPanel) zPanel.style.display = '';
         break;
       case '2h':
         this.viewports = [{ id: 0, source: 'stage' }, { id: 1, source: null }];
         this._container.style.display = 'grid';
         this._container.style.gridTemplateColumns = '1fr 1fr';
         this._container.style.gridTemplateRows = '1fr';
-        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.gridColumn = '1'; }
+        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.flex = ''; }
+        if (zPanel) zPanel.style.display = 'none';
         this._createViewportCell(1);
         break;
       case '2v':
@@ -63,7 +62,8 @@ class DisplayModule {
         this._container.style.display = 'grid';
         this._container.style.gridTemplateColumns = '1fr';
         this._container.style.gridTemplateRows = '1fr 1fr';
-        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.gridRow = '1'; }
+        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.flex = ''; }
+        if (zPanel) zPanel.style.display = 'none';
         this._createViewportCell(1);
         break;
       case '4':
@@ -71,7 +71,8 @@ class DisplayModule {
         this._container.style.display = 'grid';
         this._container.style.gridTemplateColumns = '1fr 1fr';
         this._container.style.gridTemplateRows = '1fr 1fr';
-        if (mainCanvas) { mainCanvas.style.display = ''; }
+        if (mainCanvas) { mainCanvas.style.display = ''; mainCanvas.style.flex = ''; }
+        if (zPanel) zPanel.style.display = 'none';
         this._createViewportCell(1);
         this._createViewportCell(2);
         this._createViewportCell(3);
