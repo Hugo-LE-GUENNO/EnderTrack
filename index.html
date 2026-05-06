@@ -397,16 +397,20 @@
                                   await EnderTrack.Camera.setDriver('simulation');
                                   label = 'Simulation';
                                 }
-                                window._cameras.push({ type, label, id: Date.now() });
+                                // Ask for a name
+                                const name = prompt('Nom de la cam\u00e9ra :', label);
+                                if (!name) return;
+                                window._cameras.push({ type, label: name, id: Date.now() });
                                 window._renderCameras();
                                 await EnderTrack.Camera.startLive();
                                 window._updateCameraLayout();
                               };
                               window._removeCamera = async (idx) => {
                                 await EnderTrack.Camera.stopLive();
+                                await EnderTrack.Camera.setDriver('simulation');
                                 window._cameras.splice(idx, 1);
-                                window._updateCameraLayout();
                                 window._renderCameras();
+                                window._updateCameraLayout();
                               };
                               window._renderCameras = () => {
                                 const el = document.getElementById('cameraList');

@@ -249,7 +249,10 @@ class DisplayModule {
   _cleanup() {
     this._pollTimers.forEach(t => { if (t) clearInterval(t); });
     this._pollTimers = [];
-    this._canvases.forEach(cv => cv.cell?.remove());
+    this._canvases.forEach(cv => {
+      if (cv._video) { cv._video.srcObject = null; cv._video.remove(); }
+      cv.cell?.remove();
+    });
     this._canvases.clear();
   }
 
