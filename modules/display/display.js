@@ -80,21 +80,26 @@ class DisplayModule {
       this._container.style.display = 'flex';
       this._container.style.gridTemplateColumns = '';
       this._container.style.gridTemplateRows = '';
-      if (this._stageWrap) { this._stageWrap.style.flex = '1'; this._stageWrap.style.gridRow = ''; this._stageWrap.style.gridColumn = ''; }
+      if (this._stageWrap) {
+        this._stageWrap.style.flex = '1';
+        this._stageWrap.style.gridRow = '';
+        this._stageWrap.style.gridColumn = '';
+        this._stageWrap.style.height = '';
+      }
       return;
     }
 
     // Grid layout based on panel count
-    // Strategy: 2 columns, rows adapt. Stage takes left column full height when odd.
     const cols = 2;
     const rows = Math.ceil(n / cols);
     this._container.style.display = 'grid';
     this._container.style.gridTemplateColumns = '1fr 1fr';
     this._container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    this._container.style.height = '100%';
 
     if (this._stageWrap) {
       this._stageWrap.style.flex = '';
-      // Stage spans full left column if odd number of panels
+      this._stageWrap.style.height = '100%';
       if (n % 2 === 1) {
         this._stageWrap.style.gridColumn = '1';
         this._stageWrap.style.gridRow = `1 / ${rows + 1}`;

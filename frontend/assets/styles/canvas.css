@@ -349,3 +349,14 @@
   flex: 1;
   min-height: 0;
 }
+
+/* Stage viewport in grid mode */
+.stage-viewport {
+  min-height: 0;
+  min-width: 0;
+}
+.stage-viewport .main-canvas {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
