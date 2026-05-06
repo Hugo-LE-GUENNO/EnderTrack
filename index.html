@@ -444,48 +444,88 @@
                     <details>
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💡 Éclairage</summary>
                         <div style="padding:8px;" id="lightSettingsContent">
-                            <div id="lightChannelsConfig"></div>
-                            <button onclick="window._showLightTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter un canal</button>
+                            <div id="lightList"></div>
+                            <button onclick="window._showLightTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter une lumière</button>
                             <div id="lightTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
-                                <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">Type d'éclairage :</div>
                                 <div style="display:flex; flex-direction:column; gap:3px;">
-                                    <button onclick="window._addLightChannel('gpio')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 GPIO (Raspberry Pi)</button>
-                                    <button onclick="window._addLightChannel('arduino')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">⚡ Arduino (Série)</button>
-                                    <button onclick="window._addLightChannel('gcode')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🖨 G-code (M150)</button>
-                                    <button onclick="window._addLightChannel('simulation')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🎮 Simulation</button>
+                                    <button onclick="window._addLight('gpio')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 GPIO (Raspberry Pi)</button>
+                                    <button onclick="window._addLight('arduino')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">⚡ Arduino (Série)</button>
                                 </div>
                             </div>
                             <script>
-                              window._renderLightChannels = () => {
-                                const el = document.getElementById('lightChannelsConfig');
-                                if (!el) return;
-                                const channels = window.EnderTrack?.Light?.getChannels() || [];
-                                el.innerHTML = channels.map(ch => `
-                                  <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px; padding:6px; background:var(--app-bg); border-radius:4px;">
-                                    <span style="font-size:10px; color:var(--text-selected); width:70px;">${ch.name}</span>
-                                    <input type="range" min="0" max="100" value="${Math.round((ch.intensity||0)*100)}"
-                                      oninput="EnderTrack.Light.setChannel('${ch.id}', this.value/100); this.nextElementSibling.textContent=this.value+'%'"
-                                      style="flex:1; height:4px;">
-                                    <span style="font-size:9px; color:var(--coordinates-color); width:28px; text-align:right; font-family:monospace;">${Math.round((ch.intensity||0)*100)}%</span>
-                                  </div>
-                                `).join('');
-                              };
+                              window._lights = [];
                               window._showLightTypeMenu = () => {
-                                const menu = document.getElementById('lightTypeMenu');
-                                menu.style.display = menu.style.display === 'none' ? '' : 'none';
+                                const m = document.getElementById('lightTypeMenu');
+                                m.style.display = m.style.display === 'none' ? '' : 'none';
                               };
-                              window._addLightChannel = (type) => {
+                              window._addLight = (type) => {
                                 document.getElementById('lightTypeMenu').style.display = 'none';
-                                const name = prompt('Nom du canal :', type === 'gpio' ? 'Neopixel' : type === 'gcode' ? 'LED M150' : 'LED ' + ((EnderTrack.Light?.channels?.length || 0) + 1));
+                                const name = prompt('Nom :', type === 'gpio' ? 'Neopixel' : 'LED');
                                 if (!name) return;
                                 const id = name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
+                                window._lights.push({ id, name, type, r: 0, g: 0, b: 0, on: false });
+                                // Register in Light module
                                 if (EnderTrack.Light?.driver?._channels) {
                                   EnderTrack.Light.driver._channels.push({ id, name, type, intensity: 0, on: false });
                                   EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
                                 }
-                                window._renderLightChannels();
+                                window._renderLights();
+                                EnderTrack.Light._renderNav?.();
+                                EnderTrack.Light._updateStatus?.();
                               };
-                              setTimeout(() => window._renderLightChannels(), 500);
+                              window._removeLight = (idx) => {
+                                const light = window._lights[idx];
+                                if (light && EnderTrack.Light?.driver?._channels) {
+                                  const ci = EnderTrack.Light.driver._channels.findIndex(c => c.id === light.id);
+                                  if (ci >= 0) EnderTrack.Light.driver._channels.splice(ci, 1);
+                                  EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
+                                }
+                                window._lights.splice(idx, 1);
+                                window._renderLights();
+                                EnderTrack.Light._renderNav?.();
+                                EnderTrack.Light._updateStatus?.();
+                              };
+                              window._setLightRGB = (idx, channel, value) => {
+                                const light = window._lights[idx];
+                                if (!light) return;
+                                light[channel] = parseInt(value);
+                              };
+                              window._renderLights = () => {
+                                const el = document.getElementById('lightList');
+                                if (!el) return;
+                                el.innerHTML = window._lights.map((l, i) => `
+                                  <div style="padding:6px; margin-bottom:6px; background:var(--app-bg); border-radius:4px;">
+                                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                                      <span style="font-size:10px; color:var(--text-selected); flex:1;">💡 ${l.name}</span>
+                                      <span style="font-size:9px; color:var(--text-general);">${l.type}</span>
+                                      <button onclick="window._removeLight(${i})" style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:none; color:#ef4444;">✕</button>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:4px; margin-bottom:2px;">
+                                      <span style="font-size:9px; color:#f66; width:12px;">R</span>
+                                      <input type="range" min="0" max="255" value="${l.r}" oninput="window._setLightRGB(${i},'r',this.value)" style="flex:1; height:3px; accent-color:#f44;">
+                                      <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.r}</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:4px; margin-bottom:2px;">
+                                      <span style="font-size:9px; color:#6f6; width:12px;">G</span>
+                                      <input type="range" min="0" max="255" value="${l.g}" oninput="window._setLightRGB(${i},'g',this.value)" style="flex:1; height:3px; accent-color:#4f4;">
+                                      <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.g}</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:4px;">
+                                      <span style="font-size:9px; color:#66f; width:12px;">B</span>
+                                      <input type="range" min="0" max="255" value="${l.b}" oninput="window._setLightRGB(${i},'b',this.value)" style="flex:1; height:3px; accent-color:#44f;">
+                                      <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.b}</span>
+                                    </div>
+                                  </div>
+                                `).join('');
+                              };
+                              window._toggleLight = (idx) => {
+                                const l = window._lights[idx];
+                                if (!l) return;
+                                l.on = !l.on;
+                                const intensity = l.on ? Math.max(l.r, l.g, l.b) / 255 : 0;
+                                EnderTrack.Light?.setChannel?.(l.id, intensity);
+                                EnderTrack.Light?._renderNav?.();
+                              };
                             </script>
                         </div>
                     </details>

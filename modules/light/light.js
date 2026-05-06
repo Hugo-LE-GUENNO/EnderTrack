@@ -19,6 +19,7 @@ class LightModule {
       this.channels = this.driver.getChannels();
       this._registerScenarioActions();
       this._updateStatus();
+      this._renderNav();
     }
     return ok;
   }
@@ -37,6 +38,7 @@ class LightModule {
     if (this.driver?.setChannel) await this.driver.setChannel(channelId, ch.intensity);
     this._updateStatus();
     return true;
+    this._renderNav();
   }
 
   async on(channelId, intensity = 1) {
@@ -67,23 +69,52 @@ class LightModule {
     };
   }
 
+  // === NAV CONTROLS ===
+
+  _renderNav() {
+    const zone = document.getElementById('navPluginZone');
+    if (!zone) return;
+    const lights = window._lights || [];
+    if (!lights.length) {
+      if (this._navEl) { this._navEl.remove(); this._navEl = null; }
+      return;
+    }
+    if (!this._navEl) {
+      this._navEl = document.createElement('div');
+      this._navEl.id = 'light-nav';
+      zone.appendChild(this._navEl);
+    }
+    this._navEl.innerHTML = `
+      <style>
+        #light-nav .light-btn { padding:5px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; flex:1; min-width:0; transition:background 0.15s; }
+        #light-nav .light-btn.off { background:var(--app-bg); color:var(--text-general); }
+        #light-nav .light-btn.on { background:var(--active-element); color:var(--text-selected); }
+      </style>
+      ${lights.map((l, i) => `
+        <div style="display:flex; align-items:center; gap:4px; margin-bottom:3px;">
+          <span style="font-size:9px; color:var(--text-general); flex:1;">${l.name}</span>
+          <button class="light-btn ${l.on ? 'on' : 'off'}" onclick="window._toggleLight(${i})">${l.on ? 'ON' : 'OFF'}</button>
+        </div>
+      `).join('')}
+    `;
+  }
+
   // === STATUS WIDGET ===
 
   _updateStatus() {
     const sp = window.EnderTrack?.StatusPeripherals;
     if (!sp) return;
-    const activeChannels = this.channels.filter(c => c.on);
-    if (this.driverName === 'simulation' && activeChannels.length === 0) {
-      sp.remove('light');
-    } else if (this.driverName !== 'simulation' || activeChannels.length > 0) {
-      const detail = activeChannels.length ? activeChannels.map(c => c.name).join(', ') : 'off';
-      sp.set('light', {
-        name: 'Light',
+    const lights = window._lights || [];
+    // Remove old
+    for (let i = 0; i < 8; i++) sp.remove('light_' + i);
+    lights.forEach((l, i) => {
+      sp.set('light_' + i, {
+        name: l.name,
         icon: '💡',
-        state: activeChannels.length > 0 ? 'connected' : 'warning',
-        detail
+        state: 'connected',
+        detail: l.type
       });
-    }
+    });
   }
 
   // === SCENARIO ACTIONS ===
