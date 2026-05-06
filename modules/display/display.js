@@ -4,94 +4,75 @@ class DisplayModule {
   constructor() {
     this.viewports = [{ id: 0, source: 'stage' }];
     this._container = null;
-    this._pollTimers = new Map();
-    this._cells = new Map(); // id → { el, video, img, ph }
     this._stageWrap = null;
+    this._cells = new Map(); // id → DOM element
+    this._videos = new Map(); // id → video element
+    this._timers = new Map(); // id → interval
   }
 
   init() {
     this._container = document.querySelector('.canvas-content');
     if (!this._container) return;
-    // Wrap stage (main-canvas + z-panel) into a viewport cell
+
     const mainCanvas = document.querySelector('.main-canvas');
     const zPanel = document.getElementById('zVisualizationPanel');
-    if (mainCanvas) {
-      this._stageWrap = document.createElement('div');
-      this._stageWrap.className = 'viewport-cell stage-viewport';
-      this._stageWrap.dataset.viewportId = '0';
-      this._stageWrap.style.cssText = 'display:flex; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%;';
-      mainCanvas.parentNode.insertBefore(this._stageWrap, mainCanvas);
-      this._stageWrap.appendChild(mainCanvas);
-      if (zPanel) this._stageWrap.appendChild(zPanel);
-      // Right-click on stage too
-      this._stageWrap.addEventListener('contextmenu', (e) => {
-        if (e.target.closest('.viewport-cell') === this._stageWrap) {
-          e.preventDefault();
-          this._showSourceMenu(e.clientX, e.clientY, 0);
-        }
-      });
-    }
+    if (!mainCanvas) return;
+
+    this._stageWrap = document.createElement('div');
+    this._stageWrap.className = 'viewport-cell stage-viewport';
+    this._stageWrap.dataset.viewportId = '0';
+    this._stageWrap.style.cssText = 'display:flex; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%;';
+    mainCanvas.parentNode.insertBefore(this._stageWrap, mainCanvas);
+    this._stageWrap.appendChild(mainCanvas);
+    if (zPanel) this._stageWrap.appendChild(zPanel);
+
+    this._stageWrap.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this._showSourceMenu(e.clientX, e.clientY, 0);
+    });
   }
 
   // === LAYOUT ===
 
   setLayout(panelCount) {
-    const n = Math.max(1, Math.min(8, typeof panelCount === 'number' ? panelCount : parseInt(panelCount) || 1));
-    // Preserve existing viewport sources
+    const n = Math.max(1, Math.min(8, parseInt(panelCount) || 1));
+
+    // Adjust viewports array
     while (this.viewports.length < n) {
       this.viewports.push({ id: this.viewports.length, source: null });
     }
     while (this.viewports.length > n) {
       const removed = this.viewports.pop();
-      this._removeCell(removed.id);
+      this._destroyCell(removed.id);
     }
-    this._applyGrid();
+    this._rebuildGrid();
   }
 
-  addViewport(source = null) {
-    if (this.viewports.length >= 8) return -1;
-    const id = this.viewports.length;
-    this.viewports.push({ id, source });
-    this._applyGrid();
-    if (source) this._assignSourceToCell(id, source);
-    return id;
-  }
-
-  removeViewport(id) {
-    if (id === 0) return; // can't remove stage
-    const idx = this.viewports.findIndex(v => v.id === id);
-    if (idx === -1) return;
-    this._removeCell(id);
-    this.viewports.splice(idx, 1);
-    // Re-index
-    this.viewports.forEach((v, i) => v.id = i);
-    this._applyGrid();
-  }
-
-  _applyGrid() {
+  _rebuildGrid() {
     if (!this._container) return;
     const n = this.viewports.length;
 
-    // Remove non-stage cells
-    this._container.querySelectorAll('.viewport-cell:not(.stage-viewport)').forEach(el => el.remove());
-    this._cells.clear();
+    // Destroy all non-stage cells
+    for (const [id] of this._cells) {
+      this._destroyCell(id);
+    }
 
+    // Reset container
     if (n <= 1) {
       this._container.style.display = 'flex';
       this._container.style.gridTemplateColumns = '';
       this._container.style.gridTemplateRows = '';
+      this._container.style.height = '';
       if (this._stageWrap) {
         this._stageWrap.style.flex = '1';
         this._stageWrap.style.gridRow = '';
         this._stageWrap.style.gridColumn = '';
-        this._stageWrap.style.height = '';
       }
       return;
     }
 
-    // Grid layout based on panel count
-    const cols = 2;
-    const rows = Math.ceil(n / cols);
+    // Grid
+    const rows = Math.ceil(n / 2);
     this._container.style.display = 'grid';
     this._container.style.gridTemplateColumns = '1fr 1fr';
     this._container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
@@ -99,7 +80,6 @@ class DisplayModule {
 
     if (this._stageWrap) {
       this._stageWrap.style.flex = '';
-      this._stageWrap.style.height = '100%';
       if (n % 2 === 1) {
         this._stageWrap.style.gridColumn = '1';
         this._stageWrap.style.gridRow = `1 / ${rows + 1}`;
@@ -109,31 +89,22 @@ class DisplayModule {
       }
     }
 
-    // Create cells for viewports 1+
+    // Create cells and assign sources
     for (let i = 1; i < n; i++) {
-      this._createCell(i);
-    }
-
-    // Re-assign sources
-    for (let i = 1; i < n; i++) {
+      this._buildCell(i);
       const vp = this.viewports[i];
-      if (vp.source) this._assignSourceToCell(i, vp.source);
+      if (vp.source) this._renderSource(i, vp.source);
     }
   }
 
-  _createCell(id) {
+  _buildCell(id) {
     const cell = document.createElement('div');
     cell.className = 'viewport-cell';
     cell.dataset.viewportId = id;
     cell.style.cssText = 'position:relative; background:#111; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid #333; min-width:0; min-height:0;';
 
-    const img = document.createElement('img');
-    img.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain; display:none;';
-    cell.appendChild(img);
-
     const ph = document.createElement('div');
-    ph.className = 'viewport-placeholder';
-    ph.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#555; font-size:11px;';
+    ph.style.cssText = 'color:#555; font-size:11px;';
     ph.textContent = 'Clic droit \u2192 source';
     cell.appendChild(ph);
 
@@ -144,16 +115,22 @@ class DisplayModule {
     });
 
     this._container.appendChild(cell);
-    this._cells.set(id, { el: cell, img, ph, video: null });
+    this._cells.set(id, cell);
   }
 
-  _removeCell(id) {
+  _destroyCell(id) {
+    // Kill video/timer
+    this._killSource(id);
+    // Remove DOM
     const cell = this._cells.get(id);
-    if (!cell) return;
-    if (cell.video) { cell.video.srcObject = null; cell.video.remove(); }
-    if (this._pollTimers.has(id)) { clearInterval(this._pollTimers.get(id)); this._pollTimers.delete(id); }
-    cell.el.remove();
-    this._cells.delete(id);
+    if (cell) { cell.remove(); this._cells.delete(id); }
+  }
+
+  _killSource(id) {
+    const video = this._videos.get(id);
+    if (video) { video.srcObject = null; video.remove(); this._videos.delete(id); }
+    const timer = this._timers.get(id);
+    if (timer) { clearInterval(timer); this._timers.delete(id); }
   }
 
   // === SOURCE ASSIGNMENT ===
@@ -161,83 +138,66 @@ class DisplayModule {
   assignSource(viewportId, source) {
     const vp = this.viewports.find(v => v.id === viewportId);
     if (!vp) return;
-    if (vp.source === source) return; // already assigned here
+    if (vp.source === source) return;
 
-    // If another viewport already has this source, swap
-    const existing = this.viewports.find(v => v.id !== viewportId && v.source === source);
-    if (existing) {
-      existing.source = vp.source;
-      this._assignSourceToCell(existing.id, existing.source);
+    // Swap if source already used elsewhere
+    const other = this.viewports.find(v => v.id !== viewportId && v.source === source);
+    if (other) {
+      const oldSource = vp.source;
+      other.source = oldSource;
+      this._killSource(other.id);
+      this._renderSource(other.id, oldSource);
     }
 
     vp.source = source;
-    this._assignSourceToCell(viewportId, source);
+    this._killSource(viewportId);
+    this._renderSource(viewportId, source);
   }
 
-  _assignSourceToCell(viewportId, source) {
-    // Get the cell element (viewport 0 = stageWrap, others = created cells)
-    const cellEl = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId)?.el;
-    if (!cellEl) return;
-    const cell = this._cells.get(viewportId);
+  _renderSource(viewportId, source) {
+    const cell = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId);
+    if (!cell) return;
 
-    // Cleanup previous content (except stage DOM which is just moved)
-    if (cell?.video) { cell.video.srcObject = null; cell.video.remove(); cell.video = null; }
-    if (this._pollTimers.has(viewportId)) { clearInterval(this._pollTimers.get(viewportId)); this._pollTimers.delete(viewportId); }
-    if (cell) { cell.img.style.display = 'none'; cell.ph.style.display = ''; }
-
-    // Assign stage: move stage DOM into this cell
+    // Stage source: move main-canvas + z-panel into this cell
     if (source === 'stage') {
       const mainCanvas = document.querySelector('.main-canvas');
       const zPanel = document.getElementById('zVisualizationPanel');
-      if (mainCanvas) {
-        if (viewportId === 0) {
-          // Stage back to its original wrapper
-          if (!this._stageWrap.contains(mainCanvas)) this._stageWrap.appendChild(mainCanvas);
-          if (zPanel && !this._stageWrap.contains(zPanel)) this._stageWrap.appendChild(zPanel);
-        } else if (cell) {
-          // Move stage into another cell
-          cell.ph.style.display = 'none';
-          cellEl.insertBefore(mainCanvas, cell.ph);
-          if (zPanel) cellEl.insertBefore(zPanel, cell.ph);
-        }
+      if (mainCanvas && !cell.contains(mainCanvas)) {
+        cell.appendChild(mainCanvas);
+        if (zPanel) cell.appendChild(zPanel);
       }
+      // Hide placeholder
+      const ph = cell.querySelector('div[style*="color:#555"]');
+      if (ph) ph.style.display = 'none';
       return;
     }
 
-    // No source
-    if (!source) {
-      if (cell) cell.ph.style.display = '';
+    // Camera source: create video element
+    if (source && source.startsWith('camera')) {
+      const camera = window.EnderTrack?.Camera;
+      if (camera?.driver?._stream) {
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
+        video.srcObject = camera.driver._stream;
+        cell.appendChild(video);
+        video.play().catch(() => {});
+        this._videos.set(viewportId, video);
+      }
+      // Hide placeholder
+      const ph = cell.querySelector('div[style*="color:#555"]');
+      if (ph) ph.style.display = 'none';
       return;
     }
 
-    // Camera source
-    if (cell) cell.ph.style.display = 'none';
-    const camera = window.EnderTrack?.Camera;
-    if (camera?.driver?._stream) {
-      const video = document.createElement('video');
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
-      video.srcObject = camera.driver._stream;
-      if (cell) { cellEl.insertBefore(video, cell.ph); cell.video = video; }
-      else { cellEl.appendChild(video); }
-      video.play().catch(() => {});
-      return;
-    }
-
-    // Fallback: poll frames
-    if (cell) {
-      cell.img.style.display = '';
-      const timer = setInterval(async () => {
-        const frame = await camera?.getFrame();
-        if (frame?.frame) cell.img.src = 'data:image/jpeg;base64,' + frame.frame;
-      }, 250);
-      this._pollTimers.set(viewportId, timer);
-    }
+    // No source — show placeholder
+    const ph = cell.querySelector('div[style*="color:#555"]');
+    if (ph) ph.style.display = '';
   }
 
-  // === CONTEXT MENU ===
+  // === CONTEXT MENUS ===
 
   _showSourceMenu(x, y, viewportId) {
     this._removeMenus();
@@ -273,8 +233,6 @@ class DisplayModule {
     document.querySelectorAll('.viewport-context-menu').forEach(m => m.remove());
   }
 
-  // === HEADER BUTTON ===
-
   _showLayoutMenuFromBtn(btn) {
     const rect = btn.getBoundingClientRect();
     this._removeMenus();
@@ -299,8 +257,6 @@ class DisplayModule {
       document.addEventListener('mousedown', close);
     }, 0);
   }
-
-  // === CLEANUP ===
 
   getStatus() {
     return { panelCount: this.viewports.length, viewports: this.viewports.map(v => ({ ...v })) };
