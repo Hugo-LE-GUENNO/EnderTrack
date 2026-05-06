@@ -41,13 +41,19 @@ class WebcamCameraDriver {
       this._stream = await navigator.mediaDevices.getUserMedia(constraints);
       this._video.srcObject = this._stream;
       await this._video.play();
+      // Wait for first real frame
+      await new Promise(r => {
+        const check = () => {
+          if (this._video.readyState >= 2 && this._video.videoWidth > 0) r();
+          else requestAnimationFrame(check);
+        };
+        check();
+      });
+      // Set canvas size once
+      this._canvas.width = this._video.videoWidth;
+      this._canvas.height = this._video.videoHeight;
       this._live = true;
-      // Poll frames
-      this._timer = setInterval(() => {
-        if (!this._live) return;
-        const frame = this._grabFrame();
-        if (frame) this.camera._emitFrame(frame);
-      }, 200);
+      this._pollFrames();
       return true;
     } catch (e) {
       console.warn('[Webcam] startLive failed:', e.message);
@@ -55,9 +61,19 @@ class WebcamCameraDriver {
     }
   }
 
+  _pollFrames() {
+    if (!this._live) return;
+    if (this._video.readyState >= 2) {
+      this._ctx.drawImage(this._video, 0, 0);
+      const b64 = this._canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+      this.camera._emitFrame({ frame: b64, width: this._canvas.width, height: this._canvas.height, timestamp: Date.now() });
+    }
+    this._rafId = setTimeout(() => this._pollFrames(), 200);
+  }
+
   async stopLive() {
     this._live = false;
-    if (this._timer) { clearInterval(this._timer); this._timer = null; }
+    if (this._rafId) { clearTimeout(this._rafId); this._rafId = null; }
     if (this._stream) {
       this._stream.getTracks().forEach(t => t.stop());
       this._stream = null;
@@ -79,18 +95,14 @@ class WebcamCameraDriver {
   }
 
   async getFrame() {
-    return this._grabFrame();
+    if (!this._video || this._video.readyState < 2) return null;
+    this._ctx.drawImage(this._video, 0, 0);
+    const b64 = this._canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    return { frame: b64, width: this._canvas.width, height: this._canvas.height, timestamp: Date.now() };
   }
 
   _grabFrame() {
-    if (!this._video || !this._video.videoWidth || this._video.readyState < 2) return null;
-    const w = this._video.videoWidth;
-    const h = this._video.videoHeight;
-    this._canvas.width = w;
-    this._canvas.height = h;
-    this._ctx.drawImage(this._video, 0, 0);
-    const b64 = this._canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-    return { frame: b64, width: w, height: h, timestamp: Date.now() };
+    return this.getFrame();
   }
 
   // List available video devices

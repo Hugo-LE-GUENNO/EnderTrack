@@ -90,9 +90,9 @@ class DisplayModule {
     cell.dataset.viewportId = id;
     cell.style.cssText = 'position:relative; background:#111; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid #333;';
 
-    const canvas = document.createElement('canvas');
-    canvas.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain;';
-    cell.appendChild(canvas);
+    const img = document.createElement('img');
+    img.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain;';
+    cell.appendChild(img);
 
     // Placeholder
     const ph = document.createElement('div');
@@ -109,7 +109,7 @@ class DisplayModule {
     });
 
     this._container.appendChild(cell);
-    this._canvases.set(id, { canvas, ctx: canvas.getContext('2d'), cell, ph });
+    this._canvases.set(id, { img, cell, ph });
   }
 
   // === SOURCE ASSIGNMENT ===
@@ -133,15 +133,9 @@ class DisplayModule {
       if (!cv) return;
       const frame = await window.EnderTrack?.Camera?.getFrame();
       if (frame?.frame) {
-        const img = new Image();
-        img.onload = () => {
-          cv.canvas.width = img.width;
-          cv.canvas.height = img.height;
-          cv.ctx.drawImage(img, 0, 0);
-        };
-        img.src = 'data:image/jpeg;base64,' + frame.frame;
+        cv.img.src = 'data:image/jpeg;base64,' + frame.frame;
       }
-    }, 200);
+    }, 250);
   }
 
   // === CONTEXT MENUS ===
