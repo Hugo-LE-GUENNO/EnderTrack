@@ -379,21 +379,49 @@
                                     <button onclick="window._removeCameraDevice()" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:#ef4444; color:#fff;">✕</button>
                                 </div>
                             </div>
-                            <button id="cameraAddBtn" onclick="window._addCameraDevice()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter une caméra</button>
+                            <button id="cameraAddBtn" onclick="window._showCameraTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter une caméra</button>
+                            <div id="cameraTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
+                                <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">Type de caméra :</div>
+                                <div style="display:flex; flex-direction:column; gap:3px;">
+                                    <button onclick="window._addCameraDevice('webcam')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🔌 USB / Webcam</button>
+                                    <button onclick="window._addCameraDevice('picamera2')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 Raspberry Pi Camera</button>
+                                    <button onclick="window._addCameraDevice('mjpeg')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🌐 MJPEG Stream (IP cam)</button>
+                                    <button onclick="window._addCameraDevice('simulation')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🎮 Simulation</button>
+                                </div>
+                            </div>
                             <script>
-                              window._addCameraDevice = async () => {
-                                const devices = await (window.EnderTrack?.CameraDrivers?.webcam?.listDevices?.() || Promise.resolve([]));
-                                await EnderTrack.Camera.setDriver('webcam');
-                                const sel = document.getElementById('cameraDeviceSelect');
-                                if (sel && devices.length) {
-                                  sel.innerHTML = devices.map(d => '<option value="'+d.id+'">'+d.label+'</option>').join('');
-                                  EnderTrack.Camera.configure({ deviceId: devices[0].id });
-                                } else if (sel) {
-                                  sel.innerHTML = '<option>Default</option>';
+                              window._showCameraTypeMenu = () => {
+                                const menu = document.getElementById('cameraTypeMenu');
+                                menu.style.display = menu.style.display === 'none' ? '' : 'none';
+                              };
+                              window._addCameraDevice = async (type) => {
+                                document.getElementById('cameraTypeMenu').style.display = 'none';
+                                if (type === 'webcam') {
+                                  const devices = await (window.EnderTrack?.CameraDrivers?.webcam?.listDevices?.() || Promise.resolve([]));
+                                  await EnderTrack.Camera.setDriver('webcam');
+                                  const sel = document.getElementById('cameraDeviceSelect');
+                                  if (sel && devices.length) {
+                                    sel.innerHTML = devices.map(d => '<option value="'+d.id+'">'+d.label+'</option>').join('');
+                                    EnderTrack.Camera.configure({ deviceId: devices[0].id });
+                                  } else if (sel) {
+                                    sel.innerHTML = '<option>Default</option>';
+                                  }
+                                  document.getElementById('cameraDeviceInfo').textContent = '\ud83d\udd0c Webcam';
+                                } else if (type === 'picamera2') {
+                                  await EnderTrack.Camera.setDriver('simulation'); // placeholder
+                                  document.getElementById('cameraDeviceInfo').textContent = '\ud83e\udd67 RPi Camera (n\u00e9cessite serveur RPi)';
+                                } else if (type === 'mjpeg') {
+                                  const url = prompt('URL du flux MJPEG :', 'http://192.168.1.x:8080/video');
+                                  if (!url) return;
+                                  await EnderTrack.Camera.setDriver('simulation'); // placeholder
+                                  EnderTrack.Camera.configure({ streamUrl: url });
+                                  document.getElementById('cameraDeviceInfo').textContent = '\ud83c\udf10 MJPEG: ' + url;
+                                } else {
+                                  await EnderTrack.Camera.setDriver('simulation');
+                                  document.getElementById('cameraDeviceInfo').textContent = '\ud83c\udfae Simulation';
                                 }
                                 document.getElementById('cameraConfig').style.display = '';
                                 document.getElementById('cameraAddBtn').style.display = 'none';
-                                document.getElementById('cameraDeviceInfo').textContent = 'Webcam connect\u00e9e';
                               };
                               window._removeCameraDevice = async () => {
                                 await EnderTrack.Camera.stopLive();
@@ -412,7 +440,16 @@
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💡 Éclairage</summary>
                         <div style="padding:8px;" id="lightSettingsContent">
                             <div id="lightChannelsConfig"></div>
-                            <button onclick="window._addLightChannel()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter un canal</button>
+                            <button onclick="window._showLightTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter un canal</button>
+                            <div id="lightTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
+                                <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">Type d'éclairage :</div>
+                                <div style="display:flex; flex-direction:column; gap:3px;">
+                                    <button onclick="window._addLightChannel('gpio')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 GPIO (Raspberry Pi)</button>
+                                    <button onclick="window._addLightChannel('arduino')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">⚡ Arduino (Série)</button>
+                                    <button onclick="window._addLightChannel('gcode')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🖨 G-code (M150)</button>
+                                    <button onclick="window._addLightChannel('simulation')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🎮 Simulation</button>
+                                </div>
+                            </div>
                             <script>
                               window._renderLightChannels = () => {
                                 const el = document.getElementById('lightChannelsConfig');
@@ -428,12 +465,17 @@
                                   </div>
                                 `).join('');
                               };
-                              window._addLightChannel = () => {
-                                const name = prompt('Nom du canal :', 'LED ' + ((EnderTrack.Light?.channels?.length || 0) + 1));
+                              window._showLightTypeMenu = () => {
+                                const menu = document.getElementById('lightTypeMenu');
+                                menu.style.display = menu.style.display === 'none' ? '' : 'none';
+                              };
+                              window._addLightChannel = (type) => {
+                                document.getElementById('lightTypeMenu').style.display = 'none';
+                                const name = prompt('Nom du canal :', type === 'gpio' ? 'Neopixel' : type === 'gcode' ? 'LED M150' : 'LED ' + ((EnderTrack.Light?.channels?.length || 0) + 1));
                                 if (!name) return;
-                                const id = name.toLowerCase().replace(/\s+/g, '_');
+                                const id = name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
                                 if (EnderTrack.Light?.driver?._channels) {
-                                  EnderTrack.Light.driver._channels.push({ id, name, type: 'led', intensity: 0, on: false });
+                                  EnderTrack.Light.driver._channels.push({ id, name, type, intensity: 0, on: false });
                                   EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
                                 }
                                 window._renderLightChannels();
