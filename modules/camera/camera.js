@@ -214,11 +214,13 @@ class CameraModule {
     if (this.driverName === 'simulation') {
       sp.remove('camera');
     } else {
+      const camName = (window._cameras && window._cameras.length) ? window._cameras[0].label : 'Camera';
+      const detail = this.live ? 'live' : 'connecté';
       sp.set('camera', {
-        name: 'Camera',
+        name: camName,
         icon: '📷',
         state: this.live ? 'connected' : 'warning',
-        detail: this.driverName + (this.live ? ' (live)' : '')
+        detail: this.driverName + ' — ' + detail
       });
     }
   }
