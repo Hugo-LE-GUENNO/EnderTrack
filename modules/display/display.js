@@ -21,7 +21,7 @@ class DisplayModule {
     this._stageWrap = document.createElement('div');
     this._stageWrap.className = 'viewport-cell stage-viewport';
     this._stageWrap.dataset.viewportId = '0';
-    this._stageWrap.style.cssText = 'display:flex; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%;';
+    this._stageWrap.style.cssText = 'display:flex; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%; background:#111;';
     mainCanvas.parentNode.insertBefore(this._stageWrap, mainCanvas);
     this._stageWrap.appendChild(mainCanvas);
     if (zPanel) this._stageWrap.appendChild(zPanel);
