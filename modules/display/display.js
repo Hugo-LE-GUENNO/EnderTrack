@@ -12,17 +12,7 @@ class DisplayModule {
   init() {
     this._container = document.querySelector('.main-canvas');
     if (!this._container) return;
-
-    // Layout button in corner of canvas
-    const btn = document.createElement('button');
-    btn.id = 'layoutBtn';
-    btn.textContent = '⊞';
-    btn.style.cssText = 'position:absolute; top:4px; right:4px; z-index:100; width:22px; height:22px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:rgba(0,0,0,0.4); color:var(--text-general); opacity:0.5; transition:opacity 0.2s;';
-    btn.addEventListener('mouseenter', () => btn.style.opacity = '1');
-    btn.addEventListener('mouseleave', () => btn.style.opacity = '0.5');
-    btn.addEventListener('click', (e) => this._showLayoutMenu(e.clientX, e.clientY));
     this._container.style.position = 'relative';
-    this._container.appendChild(btn);
 
     // Right-click on viewport cells → source menu
     this._container.addEventListener('contextmenu', (e) => {
