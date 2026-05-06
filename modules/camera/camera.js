@@ -128,44 +128,30 @@ class CameraModule {
       this._navEl.id = 'camera-nav';
       zone.appendChild(this._navEl);
     }
-
-    const exp = this.config.exposure || 100000;
-    const gain = this.config.gain || 1.0;
-    const fmtExp = (us) => us >= 1000000 ? (us/1000000).toFixed(1)+'s' : us >= 1000 ? (us/1000).toFixed(0)+'ms' : us+'µs';
-
     this._navEl.innerHTML = `
       <style>
-        #camera-nav input[type="range"] { -webkit-appearance:none; height:4px; background:#404040; border-radius:2px; outline:none; }
-        #camera-nav input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; background:var(--active-element); border-radius:50%; cursor:pointer; }
-        #camera-nav input[type="range"]::-moz-range-thumb { width:12px; height:12px; background:var(--active-element); border-radius:50%; cursor:pointer; border:none; }
         #camera-nav .cam-btn { padding:6px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; }
         #camera-nav .cam-btn:hover { background:var(--active-element); color:var(--text-selected); }
-        #camera-nav .cam-btn.active { background:var(--active-element); color:var(--text-selected); }
       </style>
-      <div style="display:flex; align-items:center; gap:4px; margin-bottom:3px;">
-        <span style="font-size:10px; color:var(--text-general); min-width:26px;">Exp</span>
-        <input type="range" min="100" max="2000000" value="${exp}" step="100"
-          oninput="EnderTrack.Camera.configure({exposure:parseInt(this.value)})"
-          style="flex:1;">
-        <span id="camExpVal" style="font-family:monospace; font-size:10px; color:var(--coordinates-color); min-width:40px; text-align:right;">${fmtExp(exp)}</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:4px; margin-bottom:4px;">
-        <span style="font-size:10px; color:var(--text-general); min-width:26px;">Gain</span>
-        <input type="range" min="1" max="16" value="${gain}" step="0.1"
-          oninput="EnderTrack.Camera.configure({gain:parseFloat(this.value)})"
-          style="flex:1;">
-        <span id="camGainVal" style="font-family:monospace; font-size:10px; color:var(--coordinates-color); min-width:40px; text-align:right;">${gain.toFixed(1)}</span>
-      </div>
       <div style="display:flex; gap:4px;">
-        ${this.live ? `
+        $${this.live ? `
           <button class="cam-btn" onclick="EnderTrack.Camera.stopLive()">Stop</button>
-          <button class="cam-btn" onclick="EnderTrack.Camera.capture()">📷 Capture</button>
+          <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">Save</button>
         ` : `
           <button class="cam-btn" onclick="window._liveAndSplit()">Live</button>
-          <button class="cam-btn" onclick="EnderTrack.Camera.capture()">📷 Capture</button>
         `}
       </div>
     `;
+  }
+
+  async saveLive() {
+    const frame = await this.getFrame();
+    if (!frame?.frame) return;
+    const a = document.createElement('a');
+    a.href = 'data:image/jpeg;base64,' + frame.frame;
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    a.download = 'capture_' + ts + '.jpg';
+    a.click();
   }
 
   // === IMAGE PROCESSING ===
