@@ -156,24 +156,56 @@ class DisplayModule {
   assignSource(viewportId, source) {
     const vp = this.viewports.find(v => v.id === viewportId);
     if (!vp) return;
+
+    // If another viewport already has this source, swap
+    const existing = this.viewports.find(v => v.id !== viewportId && v.source === source);
+    if (existing) {
+      existing.source = vp.source;
+      this._assignSourceToCell(existing.id, existing.source);
+    }
+
     vp.source = source;
     this._assignSourceToCell(viewportId, source);
   }
 
   _assignSourceToCell(viewportId, source) {
-    if (viewportId === 0) return; // stage is always stage (handled by main canvas)
+    // Get the cell element (viewport 0 = stageWrap, others = created cells)
+    const cellEl = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId)?.el;
+    if (!cellEl) return;
     const cell = this._cells.get(viewportId);
-    if (!cell) return;
 
-    // Cleanup previous
-    if (cell.video) { cell.video.srcObject = null; cell.video.remove(); cell.video = null; }
+    // Cleanup previous content (except stage DOM which is just moved)
+    if (cell?.video) { cell.video.srcObject = null; cell.video.remove(); cell.video = null; }
     if (this._pollTimers.has(viewportId)) { clearInterval(this._pollTimers.get(viewportId)); this._pollTimers.delete(viewportId); }
-    cell.img.style.display = 'none';
-    cell.ph.style.display = source ? 'none' : '';
+    if (cell) { cell.img.style.display = 'none'; cell.ph.style.display = ''; }
 
-    if (!source || source === 'stage') return;
+    // Assign stage: move stage DOM into this cell
+    if (source === 'stage') {
+      const mainCanvas = document.querySelector('.main-canvas');
+      const zPanel = document.getElementById('zVisualizationPanel');
+      if (mainCanvas) {
+        if (viewportId === 0) {
+          // Stage back to its original wrapper
+          if (!this._stageWrap.contains(mainCanvas)) this._stageWrap.appendChild(mainCanvas);
+          if (zPanel && !this._stageWrap.contains(zPanel)) this._stageWrap.appendChild(zPanel);
+        } else if (cell) {
+          // Move stage into another cell
+          cell.ph.style.display = 'none';
+          cellEl.insertBefore(mainCanvas, cell.ph);
+          if (zPanel) cellEl.insertBefore(zPanel, cell.ph);
+        }
+      }
+      return;
+    }
 
-    // Camera source — try to get stream for direct video
+    // No source
+    if (!source) {
+      if (cell) cell.ph.style.display = '';
+      return;
+    }
+
+    // Camera source
+    if (cell) cell.ph.style.display = 'none';
     const camera = window.EnderTrack?.Camera;
     if (camera?.driver?._stream) {
       const video = document.createElement('video');
@@ -182,19 +214,21 @@ class DisplayModule {
       video.playsInline = true;
       video.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
       video.srcObject = camera.driver._stream;
-      cell.el.insertBefore(video, cell.ph);
-      cell.video = video;
+      if (cell) { cellEl.insertBefore(video, cell.ph); cell.video = video; }
+      else { cellEl.appendChild(video); }
       video.play().catch(() => {});
       return;
     }
 
     // Fallback: poll frames
-    cell.img.style.display = '';
-    const timer = setInterval(async () => {
-      const frame = await camera?.getFrame();
-      if (frame?.frame) cell.img.src = 'data:image/jpeg;base64,' + frame.frame;
-    }, 250);
-    this._pollTimers.set(viewportId, timer);
+    if (cell) {
+      cell.img.style.display = '';
+      const timer = setInterval(async () => {
+        const frame = await camera?.getFrame();
+        if (frame?.frame) cell.img.src = 'data:image/jpeg;base64,' + frame.frame;
+      }, 250);
+      this._pollTimers.set(viewportId, timer);
+    }
   }
 
   // === CONTEXT MENU ===
