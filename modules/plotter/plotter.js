@@ -7,7 +7,10 @@ class PlotterModule {
     this.scale = 0.1;
     this.threshold = 128;
     this.maxPoints = 2000;
+    this.invert = false;
+    this._fileName = '';
     this._drawing = false;
+    this._progress = 0;
     this._stopped = false;
   }
 
@@ -55,7 +58,7 @@ class PlotterModule {
         for (let i = 0; i < w * h; i++) {
           const idx = i * 4;
           const lum = 0.299 * data[idx] + 0.587 * data[idx+1] + 0.114 * data[idx+2];
-          binary[i] = lum < this.threshold ? 1 : 0;
+          binary[i] = this.invert ? (lum >= this.threshold ? 1 : 0) : (lum < this.threshold ? 1 : 0);
         }
 
         // Show binary preview
@@ -148,6 +151,9 @@ class PlotterModule {
     let lastX = null, lastY = null;
 
     for (let i = 0; i < positions.length && !this._stopped; i++) {
+      this._progress = Math.round((i / positions.length) * 100);
+      const bar = document.querySelector('#plotterContent div[style*="transition:width"]');
+      if (bar) bar.style.width = this._progress + '%';
       const p = positions[i];
       // If new stroke (gap from last point), pen up + travel + pen down
       if (lastX !== null && (Math.abs(p.x - lastX) > 1 || Math.abs(p.y - lastY) > 1)) {
@@ -191,37 +197,50 @@ class PlotterModule {
     const pointCount = activeList?.positions?.length || 0;
 
     container.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
-        <div style="font-size:10px; color:var(--text-general);">Charger une image, un G-code (.gcode) ou des coordonn\u00e9es (.txt)</div>
-        <input type="file" id="plotterFile" accept=".gcode,.gc,.ngc,.txt,image/*" onchange="EnderTrack.Plotter._onFile(event)"
+      <div style="display:flex; flex-direction:column; gap:6px; padding:8px;">
+        <input type="file" accept=".gcode,.gc,.ngc,.txt,image/*" onchange="EnderTrack.Plotter._onFile(event)"
           style="font-size:10px; color:var(--text-general);">
-        <div id="plotterPreview" style="background:#111; border-radius:4px; min-height:80px; display:flex; align-items:center; justify-content:center; overflow:hidden;"></div>
+
+        <div id="plotterPreview" style="background:#111; border-radius:4px; min-height:100px; max-height:200px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+          ${this._fileName ? '' : '<span style="font-size:10px; color:#555;">Aper\u00e7u du masque</span>'}
+        </div>
+
         <div style="display:flex; gap:6px; align-items:center;">
-          <label style="font-size:10px; color:var(--text-general); width:50px;">Seuil</label>
+          <label style="font-size:10px; color:var(--text-general); width:40px;">Seuil</label>
           <input type="range" min="10" max="245" value="${this.threshold}" class="et-slider"
-            oninput="EnderTrack.Plotter.threshold=parseInt(this.value); this.nextElementSibling.textContent=this.value">
-          <span style="font-size:9px; color:var(--coordinates-color); width:24px; text-align:right;">${this.threshold}</span>
-          <label style="font-size:10px; color:var(--text-general); margin-left:6px;">Max</label>
-          <input type="number" value="${this.maxPoints}" min="100" max="10000" step="100" onchange="EnderTrack.Plotter.maxPoints=parseInt(this.value)"
-            style="width:50px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+            oninput="EnderTrack.Plotter.threshold=parseInt(this.value); this.nextElementSibling.textContent=this.value; EnderTrack.Plotter._reprocess()">
+          <span style="font-size:9px; color:var(--coordinates-color); width:20px; text-align:right;">${this.threshold}</span>
+          <button onclick="EnderTrack.Plotter.invert=!EnderTrack.Plotter.invert; EnderTrack.Plotter._reprocess()"
+            style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:${this.invert ? 'var(--active-element)' : 'var(--app-bg)'}; color:${this.invert ? 'var(--text-selected)' : 'var(--text-general)'};">Inv</button>
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
-          <label style="font-size:10px; color:var(--text-general); width:50px;">\u00c9chelle</label>
-          <input type="number" value="${this.scale}" min="0.01" step="0.01" onchange="EnderTrack.Plotter.scale=parseFloat(this.value)"
+          <label style="font-size:10px; color:var(--text-general); width:40px;">Max</label>
+          <input type="number" value="${this.maxPoints}" min="100" max="10000" step="100"
+            onchange="EnderTrack.Plotter.maxPoints=parseInt(this.value); EnderTrack.Plotter._reprocess()"
             style="width:50px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">mm/px</span>
+          <label style="font-size:10px; color:var(--text-general); margin-left:4px;">mm/px</label>
+          <input type="number" value="${this.scale}" min="0.01" step="0.01"
+            onchange="EnderTrack.Plotter.scale=parseFloat(this.value); EnderTrack.Plotter._reprocess()"
+            style="width:45px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
-          <label style="font-size:10px; color:var(--text-general); width:50px;">Z pen</label>
-          <input type="number" value="${this.penDownZ}" step="0.5" onchange="EnderTrack.Plotter.penDownZ=parseFloat(this.value)"
-            style="width:40px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">\u2193 down</span>
-          <input type="number" value="${this.penUpZ}" step="0.5" onchange="EnderTrack.Plotter.penUpZ=parseFloat(this.value)"
-            style="width:40px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">\u2191 up</span>
+          <label style="font-size:10px; color:var(--text-general); width:40px;">Z</label>
+          <input type="number" value="${this.penDownZ}" step="0.5"
+            onchange="EnderTrack.Plotter.penDownZ=parseFloat(this.value)"
+            style="width:35px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">\u2193</span>
+          <input type="number" value="${this.penUpZ}" step="0.5"
+            onchange="EnderTrack.Plotter.penUpZ=parseFloat(this.value)"
+            style="width:35px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">\u2191</span>
         </div>
-        <div id="plotterInfo" style="font-size:10px; color:var(--text-general);">${pointCount ? pointCount + ' points' : ''}</div>
+
+        ${this._fileName ? `<div style="font-size:10px; color:var(--text-selected);">\ud83d\udd8a\ufe0f ${this._fileName} \u2014 ${pointCount} pts</div>` : ''}
+
         ${this._drawing ? `
+          <div style="width:100%; height:4px; background:var(--app-bg); border-radius:2px; overflow:hidden;">
+            <div style="width:${this._progress}%; height:100%; background:var(--active-element); transition:width 0.3s;"></div>
+          </div>
           <button onclick="EnderTrack.Plotter.stop()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">\u25a0 Stop</button>
         ` : `
           <button onclick="EnderTrack.Plotter.draw()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;" ${pointCount ? '' : 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4;"'}>\ud83d\udd8a\ufe0f Draw</button>
@@ -232,10 +251,17 @@ class PlotterModule {
   async _onFile(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    const count = await this.loadAndGenerate(file);
-    const info = document.getElementById('plotterInfo');
-    if (info) info.textContent = count + ' points \u2192 liste "' + file.name + '"';
+    this._file = file;
+    this._fileName = file.name;
+    await this.loadAndGenerate(file);
     this.renderUI();
+  }
+
+  async _reprocess() {
+    if (this._file) {
+      await this.loadAndGenerate(this._file);
+      this.renderUI();
+    }
   }
 }
 
