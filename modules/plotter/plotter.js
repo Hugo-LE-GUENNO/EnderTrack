@@ -126,11 +126,40 @@ class PlotterModule {
   _showBinaryPreview(binary, w, h) {
     const preview = document.getElementById('plotterPreview');
     if (!preview) return;
+
+    // Get stage size in mm
+    const bounds = window.EnderTrack?.Coordinates?.coordinateBounds;
+    const stageW = bounds ? (bounds.x.max - bounds.x.min) : 200;
+    const stageH = bounds ? (bounds.y.max - bounds.y.min) : 200;
+
+    // Image size in mm
+    const imgWmm = w * this.scale;
+    const imgHmm = h * this.scale;
+
+    // Draw stage with image inside at correct scale
+    const canvasSize = 200; // preview canvas px
+    const pxPerMm = canvasSize / Math.max(stageW, stageH);
+
     const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    canvas.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain; image-rendering:pixelated;';
+    canvas.width = canvasSize; canvas.height = canvasSize;
+    canvas.style.cssText = 'max-width:100%; image-rendering:pixelated;';
     const ctx = canvas.getContext('2d');
-    const imgData = ctx.createImageData(w, h);
+
+    // Stage background
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+    // Stage outline
+    const sw = stageW * pxPerMm, sh = stageH * pxPerMm;
+    const sx = (canvasSize - sw) / 2, sy = (canvasSize - sh) / 2;
+    ctx.strokeStyle = '#444';
+    ctx.strokeRect(sx, sy, sw, sh);
+
+    // Render binary image into a temp canvas
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    const tctx = tmp.getContext('2d');
+    const imgData = tctx.createImageData(w, h);
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
         const srcX = this.flipH ? (w - 1 - px) : px;
@@ -140,7 +169,17 @@ class PlotterModule {
         imgData.data[di] = v; imgData.data[di+1] = v; imgData.data[di+2] = v; imgData.data[di+3] = 255;
       }
     }
-    ctx.putImageData(imgData, 0, 0);
+    tctx.putImageData(imgData, 0, 0);
+
+    // Draw image at scale inside stage (origin = bottom-left of stage on canvas = top-left visually)
+    const iw = imgWmm * pxPerMm, ih = imgHmm * pxPerMm;
+    ctx.drawImage(tmp, sx, sy + sh - ih, iw, ih);
+
+    // Size label
+    ctx.fillStyle = '#888';
+    ctx.font = '9px sans-serif';
+    ctx.fillText(imgWmm.toFixed(1) + ' x ' + imgHmm.toFixed(1) + ' mm', sx + 2, sy + sh - ih - 3);
+
     preview.innerHTML = '';
     preview.appendChild(canvas);
   }
