@@ -134,7 +134,7 @@ class PlotterModule {
       for (let px = 0; px < w; px++) {
         const srcX = this.flipH ? (w - 1 - px) : px;
         const srcY = this.flipV ? (h - 1 - py) : py;
-        const v = binary[srcY * w + srcX] ? 0 : 255;
+        const v = binary[srcY * w + srcX] ? 255 : 0;
         const di = (py * w + px) * 4;
         imgData.data[di] = v; imgData.data[di+1] = v; imgData.data[di+2] = v; imgData.data[di+3] = 255;
       }
@@ -284,14 +284,14 @@ class PlotterModule {
 
         ${this._fileName ? `<div style="font-size:10px; color:var(--text-selected);">\ud83d\udd8a\ufe0f ${this._fileName} \u2014 ${pointCount} pts</div>` : ''}
 
-        ${this._drawing ? `
+        ${this._fileName ? (this._drawing ? `
           <div style="width:100%; height:4px; background:var(--app-bg); border-radius:2px; overflow:hidden;">
             <div style="width:${this._progress}%; height:100%; background:var(--active-element); transition:width 0.3s;"></div>
           </div>
           <button onclick="EnderTrack.Plotter.stop()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">\u25a0 Stop</button>
         ` : `
           <button onclick="EnderTrack.Plotter.draw()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;" ${pointCount ? '' : 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4;"'}>\ud83d\udd8a\ufe0f Draw</button>
-        `}
+        `) : ''}
       </div>`;
 
     // Re-render preview if image loaded
