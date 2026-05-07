@@ -16,7 +16,14 @@ class PlotterModule {
 
   // === IMAGE LOADING ===
 
-  async loadImage(file) {
+  async loadFile(file) {
+    if (file.name.endsWith('.txt') || file.type === 'text/plain') {
+      return await this._loadTxt(file);
+    }
+    return await this._loadImage(file);
+  }
+
+  async _loadImage(file) {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -28,6 +35,24 @@ class PlotterModule {
       };
       img.src = URL.createObjectURL(file);
     });
+  }
+
+  async _loadTxt(file) {
+    const text = await file.text();
+    const lines = text.trim().split('\n');
+    const path = [];
+    for (const line of lines) {
+      const parts = line.trim().split(/[,;\s\t]+/);
+      if (parts.length >= 2) {
+        const x = parseFloat(parts[0]);
+        const y = parseFloat(parts[1]);
+        if (!isNaN(x) && !isNaN(y)) {
+          path.push({ x: this.offsetX + x * this.scale, y: this.offsetY + y * this.scale });
+        }
+      }
+    }
+    this.paths = path.length > 0 ? [path] : [];
+    return { width: 0, height: 0, paths: this.paths.length, points: path.length };
   }
 
   // === PATH EXTRACTION (simple contour tracing) ===
@@ -89,40 +114,43 @@ class PlotterModule {
     return null;
   }
 
-  // === GENERATE DRAW SCENARIO ===
+  // === EXECUTE DRAWING ===
 
-  generateScenario() {
-    if (!this.paths.length) return null;
+  async executeDraw() {
+    if (!this.paths.length) return;
+    this._drawing = true;
+    this._stopped = false;
+    this.renderUI();
 
-    const children = [];
-    for (let p = 0; p < this.paths.length; p++) {
+    const move = async (x, y, z) => {
+      if (this._stopped) return;
+      await window.EnderTrack?.Movement?.moveAbsolute(x, y, z);
+    };
+
+    for (let p = 0; p < this.paths.length && !this._stopped; p++) {
       const path = this.paths[p];
       if (!path.length) continue;
-      // Pen up + move to start
-      children.push({ type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'manual', x: String(path[0].x), y: String(path[0].y), z: String(this.penUpZ), showInLog: false, label: 'Lift' } });
+      // Pen up + move to start of path
+      await move(path[0].x, path[0].y, this.penUpZ);
       // Pen down
-      children.push({ type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'manual', x: String(path[0].x), y: String(path[0].y), z: String(this.penDownZ), showInLog: false, label: 'Down' } });
-      // Draw path
-      for (let i = 1; i < path.length; i++) {
-        children.push({ type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'manual', x: String(path[i].x), y: String(path[i].y), z: String(this.penDownZ), showInLog: false, label: 'Draw' } });
+      await move(path[0].x, path[0].y, this.penDownZ);
+      // Draw along path
+      for (let i = 1; i < path.length && !this._stopped; i++) {
+        await move(path[i].x, path[i].y, this.penDownZ);
       }
     }
-    // Final pen up
-    children.push({ type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'manual', x: '0', y: '0', z: String(this.penUpZ), showInLog: true, logMessage: 'Drawing complete', label: 'Home' } });
+    // Final pen up + home
+    if (!this._stopped) await move(0, 0, this.penUpZ);
 
-    const tree = { type: 'root', children };
+    this._drawing = false;
+    this.renderUI();
+  }
 
-    // Inject into scenario manager if available
-    const manager = window.EnderTrack?.Scenario?.manager;
-    if (manager) {
-      const scenario = manager.createScenario('Plotter drawing');
-      scenario.tree = tree;
-      scenario.icon = '🖊️';
-      manager.save();
-      window.EnderTrack?.Scenario?.updateCanvasOverlay?.();
-      window.EnderTrack?.Scenario?.createUI?.();
-    }
-    return tree;
+  stopDraw() {
+    this._stopped = true;
+    this._drawing = false;
+    window.EnderTrack?.Movement?.stopMovement?.();
+    this.renderUI();
   }
 
   // === UI ===
@@ -134,7 +162,7 @@ class PlotterModule {
     container.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:8px;">
         <div style="display:flex; gap:6px; align-items:center;">
-          <input type="file" id="plotterFileInput" accept="image/*" onchange="EnderTrack.Plotter._onFileChange(event)"
+          <input type="file" id="plotterFileInput" accept="image/*,.txt" onchange="EnderTrack.Plotter._onFileChange(event)"
             style="flex:1; font-size:10px; color:var(--text-general);">
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
@@ -163,16 +191,22 @@ class PlotterModule {
           <span style="font-size:10px; color:#555;">Charger une image</span>
         </div>
         <div id="plotterInfo" style="font-size:10px; color:var(--text-general);"></div>
-        <button onclick="EnderTrack.Plotter._draw()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;" ${this.paths.length ? '' : 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4;"'}>
-          🖊️ Draw
-        </button>
+        ${this._drawing ? `
+          <button onclick="EnderTrack.Plotter.stopDraw()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">
+            ■ Stop
+          </button>
+        ` : `
+          <button onclick="EnderTrack.Plotter._draw()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;" ${this.paths.length ? '' : 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4;"'}>
+            🖊️ Draw
+          </button>
+        `}
       </div>`;
   }
 
   async _onFileChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    const result = await this.loadImage(file);
+    const result = await this.loadFile(file);
     // Show preview
     const preview = document.getElementById('plotterPreview');
     if (preview) {
@@ -189,11 +223,7 @@ class PlotterModule {
 
   _draw() {
     this._extractPaths(); // Re-extract with current settings
-    this.generateScenario();
-    // Switch to scenario execution
-    if (window.EnderTrack?.Scenario?.executeScenario) {
-      window.EnderTrack.Scenario.executeScenario();
-    }
+    this.executeDraw();
   }
 }
 
