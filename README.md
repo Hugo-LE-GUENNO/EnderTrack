@@ -32,7 +32,7 @@ Chaque édition est une **branche** avec ses propres modules.
 | Édition | Modules | Version |
 |---------|---------|---------|
 | [`basic`](../../tree/basic) | Navigation, listes, tactile, responsive | v2.4.0 |
-| *imagerie* | *basic + caméra, Z-stack, time-lapse* | *à venir* |
+| [`imagerie`](../../tree/imagerie) | basic + caméra, éclairage, acquisition, scénarios | v3.0.0 |
 
 Pour une autre édition : `git clone -b <edition> https://github.com/Hugo-LE-GUENNO/EnderTrack.git`
 
