@@ -1,4 +1,6 @@
-# EnderTrack — v3.0.0
+# EnderTrack — Édition Imagerie v1.0.0
+
+> Basé sur [`basic` v2.4.0](/tree/basic). Ajoute caméra, éclairage, acquisition et scénarios avancés.
 
 Contrôleur de position 3D pour platines XYZ motorisées. Simulateur intégré ou pilotage réel via G-code (USB série).
 
