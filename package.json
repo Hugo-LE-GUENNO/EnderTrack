@@ -1,6 +1,6 @@
 {
   "name": "endertrack",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "description": "Contrôleur de position 3D pour platines XYZ motorisées",
   "main": "main.js",
   "scripts": {
