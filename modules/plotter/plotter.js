@@ -1,32 +1,29 @@
-// modules/plotter/plotter.js — Pen plotter (image/txt → list → draw)
+// modules/plotter/plotter.js — Pen plotter (gcode/txt → list → draw)
 
 class PlotterModule {
   constructor() {
-    this.penUpZ = 5;
-    this.penDownZ = 0;
-    this.scale = 0.1;       // mm per pixel
-    this.threshold = 128;
-    this.offsetX = 0;
-    this.offsetY = 0;
+    this.penUpZ = 7;
+    this.penDownZ = 6;
+    this.scale = 1;
     this._drawing = false;
     this._stopped = false;
   }
 
-  // === FILE LOADING → POSITION LIST ===
+  // === FILE LOADING ===
 
   async loadAndGenerate(file) {
     let positions;
-    if (file.name.endsWith('.txt') || file.type === 'text/plain') {
-      positions = await this._parseTxt(file);
+    if (file.name.endsWith('.gcode') || file.name.endsWith('.gc') || file.name.endsWith('.ngc')) {
+      positions = await this._parseGcode(file);
     } else {
-      positions = await this._parseImage(file);
+      positions = await this._parseTxt(file);
     }
     if (!positions.length) return 0;
 
     // Add to Lists module
     const lists = window.EnderTrack?.Lists;
     if (lists) {
-      lists.addGroup(file.name);
+      lists.addGroup('Plot: ' + file.name);
       const g = lists._activeGroup();
       if (g) {
         g.positions = positions;
@@ -45,38 +42,34 @@ class PlotterModule {
       const parts = line.trim().split(/[,;\s\t]+/);
       if (parts.length >= 2) {
         const x = parseFloat(parts[0]), y = parseFloat(parts[1]);
-        if (!isNaN(x) && !isNaN(y)) positions.push({ x: this.offsetX + x * this.scale, y: this.offsetY + y * this.scale, z: this.penDownZ });
+        if (!isNaN(x) && !isNaN(y)) positions.push({ x: x * this.scale, y: y * this.scale, z: this.penDownZ });
       }
     }
     return positions;
   }
 
-  async _parseImage(file) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width; canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const data = ctx.getImageData(0, 0, img.width, img.height).data;
-        const positions = [];
-        for (let y = 0; y < img.height; y++) {
-          for (let x = 0; x < img.width; x++) {
-            const i = (y * img.width + x) * 4;
-            const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-            if (lum < this.threshold) {
-              positions.push({ x: this.offsetX + x * this.scale, y: this.offsetY + y * this.scale, z: this.penDownZ });
-            }
-          }
-        }
-        resolve(positions);
-      };
-      img.src = URL.createObjectURL(file);
-    });
+  async _parseGcode(file) {
+    const text = await file.text();
+    const positions = [];
+    let curX = 0, curY = 0, curZ = this.penUpZ;
+    for (const line of text.split('\n')) {
+      const cmd = line.trim().split(';')[0]; // remove comments
+      if (!cmd.startsWith('G0') && !cmd.startsWith('G1')) continue;
+      const xm = cmd.match(/X([\-\d.]+)/);
+      const ym = cmd.match(/Y([\-\d.]+)/);
+      const zm = cmd.match(/Z([\-\d.]+)/);
+      if (xm) curX = parseFloat(xm[1]);
+      if (ym) curY = parseFloat(ym[1]);
+      if (zm) curZ = parseFloat(zm[1]);
+      // Only record positions where pen is down
+      if (curZ <= this.penDownZ) {
+        positions.push({ x: curX, y: curY, z: curZ });
+      }
+    }
+    return positions;
   }
 
-  // === DRAW (iterate active list with pen up/down) ===
+  // === DRAW ===
 
   async draw() {
     const list = window.EnderTrack?.Lists?._activeGroup?.();
@@ -87,15 +80,30 @@ class PlotterModule {
     this.renderUI();
 
     const positions = list.positions;
+    let lastX = null, lastY = null;
+
     for (let i = 0; i < positions.length && !this._stopped; i++) {
       const p = positions[i];
-      // Pen up → move XY → pen down
-      await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penUpZ);
-      if (this._stopped) break;
-      await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penDownZ);
+      // If new stroke (gap from last point), pen up + travel + pen down
+      if (lastX !== null && (Math.abs(p.x - lastX) > 1 || Math.abs(p.y - lastY) > 1)) {
+        await window.EnderTrack?.Movement?.moveAbsolute(lastX, lastY, this.penUpZ);
+        if (this._stopped) break;
+        await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penUpZ);
+        if (this._stopped) break;
+        await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penDownZ);
+      } else if (lastX === null) {
+        // First point: travel + pen down
+        await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penUpZ);
+        if (this._stopped) break;
+        await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penDownZ);
+      } else {
+        // Continuous stroke
+        await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penDownZ);
+      }
+      lastX = p.x; lastY = p.y;
     }
     // Final pen up
-    if (!this._stopped) await window.EnderTrack?.Movement?.moveAbsolute(positions[0]?.x || 0, positions[0]?.y || 0, this.penUpZ);
+    if (!this._stopped) await window.EnderTrack?.Movement?.moveAbsolute(lastX || 0, lastY || 0, this.penUpZ);
 
     this._drawing = false;
     this.renderUI();
@@ -119,32 +127,23 @@ class PlotterModule {
 
     container.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
-        <input type="file" id="plotterFile" accept="image/*,.txt" onchange="EnderTrack.Plotter._onFile(event)"
+        <div style="font-size:10px; color:var(--text-general);">Charger un fichier G-code (.gcode) ou coordonn\u00e9es (.txt)</div>
+        <input type="file" id="plotterFile" accept=".gcode,.gc,.ngc,.txt" onchange="EnderTrack.Plotter._onFile(event)"
           style="font-size:10px; color:var(--text-general);">
         <div style="display:flex; gap:6px; align-items:center;">
-          <label style="font-size:10px; color:var(--text-general); width:50px;">Seuil</label>
-          <input type="range" min="10" max="245" value="${this.threshold}" class="et-slider"
-            oninput="EnderTrack.Plotter.threshold=parseInt(this.value); this.nextElementSibling.textContent=this.value">
-          <span style="font-size:9px; color:var(--coordinates-color); width:24px; text-align:right;">${this.threshold}</span>
-        </div>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="font-size:10px; color:var(--text-general); width:50px;">Échelle</label>
-          <input type="number" value="${this.scale}" min="0.01" step="0.01" onchange="EnderTrack.Plotter.scale=parseFloat(this.value)"
-            style="width:50px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">mm/px</span>
-          <label style="font-size:10px; color:var(--text-general); margin-left:8px;">Z</label>
-          <input type="number" value="${this.penDownZ}" step="0.1" onchange="EnderTrack.Plotter.penDownZ=parseFloat(this.value)"
-            style="width:35px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">↓</span>
+          <label style="font-size:10px; color:var(--text-general); width:50px;">Z pen</label>
+          <input type="number" value="${this.penDownZ}" step="0.5" onchange="EnderTrack.Plotter.penDownZ=parseFloat(this.value)"
+            style="width:40px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">\u2193 down</span>
           <input type="number" value="${this.penUpZ}" step="0.5" onchange="EnderTrack.Plotter.penUpZ=parseFloat(this.value)"
-            style="width:35px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">↑</span>
+            style="width:40px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">\u2191 up</span>
         </div>
-        <div id="plotterInfo" style="font-size:10px; color:var(--text-general);">${pointCount ? pointCount + ' points dans la liste active' : 'Charger un fichier image ou .txt'}</div>
+        <div id="plotterInfo" style="font-size:10px; color:var(--text-general);">${pointCount ? pointCount + ' points' : ''}</div>
         ${this._drawing ? `
-          <button onclick="EnderTrack.Plotter.stop()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">■ Stop</button>
+          <button onclick="EnderTrack.Plotter.stop()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">\u25a0 Stop</button>
         ` : `
-          <button onclick="EnderTrack.Plotter.draw()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;" ${pointCount ? '' : 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4;"'}>🖊️ Draw</button>
+          <button onclick="EnderTrack.Plotter.draw()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;" ${pointCount ? '' : 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4;"'}>\ud83d\udd8a\ufe0f Draw</button>
         `}
       </div>`;
   }
@@ -154,7 +153,7 @@ class PlotterModule {
     if (!file) return;
     const count = await this.loadAndGenerate(file);
     const info = document.getElementById('plotterInfo');
-    if (info) info.textContent = `${count} points générés → liste "${file.name}"`;
+    if (info) info.textContent = count + ' points \u2192 liste "' + file.name + '"';
     this.renderUI();
   }
 }
