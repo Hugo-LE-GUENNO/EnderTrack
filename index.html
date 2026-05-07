@@ -397,10 +397,7 @@
                                   await EnderTrack.Camera.setDriver('simulation');
                                   label = 'Simulation';
                                 }
-                                // Ask for a name
-                                const name = prompt('Nom de la cam\u00e9ra :', label);
-                                if (!name) return;
-                                window._cameras.push({ type, label: name, id: Date.now() });
+                                window._cameras.push({ type, label, id: Date.now() });
                                 window._renderCameras();
                                 await EnderTrack.Camera.startLive();
                                 window._updateCameraLayout();
@@ -460,14 +457,9 @@
                               };
                               window._addLight = (type) => {
                                 document.getElementById('lightTypeMenu').style.display = 'none';
-                                const name = prompt('Nom :', type === 'gpio' ? 'Neopixel' : 'LED');
-                                if (!name) return;
-                                const pin = type === 'gpio' ? (prompt('GPIO Pin :', 'D18') || 'D18') : '';
-                                const totalPixels = parseInt(prompt('Nombre de pixels :', '1')) || 1;
-                                const start = parseInt(prompt('Pixel début (0-based) :', '0')) || 0;
-                                const end = parseInt(prompt('Pixel fin :', String(totalPixels))) || totalPixels;
-                                const id = name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
-                                window._lights.push({ id, name, type, pin, totalPixels, start, end, r: 255, g: 255, b: 255, intensity: 1.0, on: false });
+                                const id = 'light_' + Date.now();
+                                const name = type === 'gpio' ? 'Neopixel' : 'LED';
+                                window._lights.push({ id, name, type, pin: 'D18', totalPixels: 1, start: 0, end: 1, r: 255, g: 255, b: 255, intensity: 1.0, on: false });
                                 if (EnderTrack.Light?.driver?._channels) {
                                   EnderTrack.Light.driver._channels.push({ id, name, type, intensity: 0, on: false });
                                   EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
@@ -500,23 +492,38 @@
                                   <div style="padding:8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px;">
                                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
                                       <div style="width:12px; height:12px; border-radius:50%; background:rgb(${l.r},${l.g},${l.b}); box-shadow:${l.on ? '0 0 6px rgb('+l.r+','+l.g+','+l.b+')' : 'none'}; flex-shrink:0;"></div>
-                                      <span style="font-size:10px; color:var(--text-selected); flex:1;">${l.name}</span>
-                                      <span style="font-size:9px; color:var(--text-general);">${l.type}${l.pin ? ' '+l.pin : ''} · px ${l.start}-${l.end-1}</span>
+                                      <input type="text" value="${l.name}" onchange="window._lights[${i}].name=this.value; EnderTrack.Light._renderNav?.(); EnderTrack.Light._updateStatus?.()"
+                                        style="flex:1; padding:2px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
                                       <button onclick="window._removeLight(${i})" style="padding:2px 5px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:none; color:#ef4444;">✕</button>
+                                    </div>
+                                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+                                      <label style="font-size:9px; color:var(--text-general); width:25px;">Pin</label>
+                                      <select onchange="window._lights[${i}].pin=this.value" style="padding:2px 4px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:9px;">
+                                        <option value="D18" ${l.pin==='D18'?'selected':''}>D18</option>
+                                        <option value="D12" ${l.pin==='D12'?'selected':''}>D12</option>
+                                        <option value="D21" ${l.pin==='D21'?'selected':''}>D21</option>
+                                        <option value="D10" ${l.pin==='D10'?'selected':''}>D10</option>
+                                      </select>
+                                      <label style="font-size:9px; color:var(--text-general);">px</label>
+                                      <input type="number" value="${l.start}" min="0" onchange="window._lights[${i}].start=parseInt(this.value)"
+                                        style="width:30px; padding:2px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:9px; text-align:center;">
+                                      <span style="font-size:9px; color:var(--text-general);">→</span>
+                                      <input type="number" value="${l.end}" min="1" onchange="window._lights[${i}].end=parseInt(this.value)"
+                                        style="width:30px; padding:2px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:9px; text-align:center;">
                                     </div>
                                     <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
                                       <span style="font-size:9px; color:#f66; width:10px;">R</span>
-                                      <input type="range" min="0" max="255" value="${l.r}" oninput="window._setLightRGB(${i},'r',this.value); this.nextElementSibling.textContent=this.value" style="flex:1; height:3px; accent-color:#f44;">
+                                      <input type="range" min="0" max="255" value="${l.r}" oninput="window._setLightRGB(${i},'r',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" style="flex:1; height:3px; accent-color:#f44;">
                                       <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.r}</span>
                                     </div>
                                     <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
                                       <span style="font-size:9px; color:#6f6; width:10px;">G</span>
-                                      <input type="range" min="0" max="255" value="${l.g}" oninput="window._setLightRGB(${i},'g',this.value); this.nextElementSibling.textContent=this.value" style="flex:1; height:3px; accent-color:#4f4;">
+                                      <input type="range" min="0" max="255" value="${l.g}" oninput="window._setLightRGB(${i},'g',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" style="flex:1; height:3px; accent-color:#4f4;">
                                       <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.g}</span>
                                     </div>
                                     <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
                                       <span style="font-size:9px; color:#66f; width:10px;">B</span>
-                                      <input type="range" min="0" max="255" value="${l.b}" oninput="window._setLightRGB(${i},'b',this.value); this.nextElementSibling.textContent=this.value" style="flex:1; height:3px; accent-color:#44f;">
+                                      <input type="range" min="0" max="255" value="${l.b}" oninput="window._setLightRGB(${i},'b',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" style="flex:1; height:3px; accent-color:#44f;">
                                       <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.b}</span>
                                     </div>
                                     <div style="height:8px; border-radius:3px; background:rgb(${l.r},${l.g},${l.b}); opacity:${l.intensity};"></div>
