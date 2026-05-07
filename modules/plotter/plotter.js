@@ -9,7 +9,7 @@ class PlotterModule {
     this.maxPoints = 2000;
     this.invert = false;
     this.flipH = false;
-    this.flipV = false;
+    this.flipV = true;
     this._fileName = '';
     this._drawing = false;
     this._progress = 0;
@@ -93,7 +93,7 @@ class PlotterModule {
       for (const px of row) {
         if (px >= w) continue;
         const srcX = this.flipH ? (w - 1 - px) : px;
-        const srcY = this.flipV ? py : (h - 1 - py);
+        const srcY = this.flipV ? (h - 1 - py) : py;
         if (binary[srcY * w + srcX]) {
           positions.push({ x: px * this.scale, y: py * this.scale, z: this.penDownZ });
         }
@@ -133,7 +133,7 @@ class PlotterModule {
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
         const srcX = this.flipH ? (w - 1 - px) : px;
-        const srcY = this.flipV ? py : (h - 1 - py);
+        const srcY = this.flipV ? (h - 1 - py) : py;
         const v = binary[srcY * w + srcX] ? 255 : 0;
         const di = (py * w + px) * 4;
         imgData.data[di] = v; imgData.data[di+1] = v; imgData.data[di+2] = v; imgData.data[di+3] = 255;
