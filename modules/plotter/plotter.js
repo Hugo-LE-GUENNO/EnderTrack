@@ -290,7 +290,7 @@ class PlotterModule {
         <div style="display:flex; gap:6px; align-items:center;">
           <label style="font-size:10px; color:var(--text-general); width:40px;">mm/px</label>
           <input type="range" min="0.01" max="1" step="0.01" value="${this.scale}" class="et-slider"
-            oninput="EnderTrack.Plotter.scale=parseFloat(this.value); this.nextElementSibling.textContent=this.value">
+            oninput="EnderTrack.Plotter.scale=parseFloat(this.value); this.nextElementSibling.textContent=this.value; EnderTrack.Plotter._processImage()">
           <span style="font-size:9px; color:var(--coordinates-color); width:28px; text-align:right;">${this.scale}</span>
           <button onclick="EnderTrack.Plotter.flipH=!EnderTrack.Plotter.flipH; EnderTrack.Plotter._processImage()"
             style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:${this.flipH ? 'var(--active-element)' : 'var(--app-bg)'}; color:${this.flipH ? 'var(--text-selected)' : 'var(--text-general)'};">FlipH</button>
