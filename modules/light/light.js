@@ -91,9 +91,13 @@ class LightModule {
         #light-nav .light-btn.on { background:var(--active-element); color:var(--text-selected); }
       </style>
       ${lights.map((l, i) => `
-        <div style="display:flex; align-items:center; gap:4px; margin-bottom:3px;">
-          <span style="font-size:9px; color:var(--text-general); flex:1;">${l.name}</span>
-          <button class="light-btn ${l.on ? 'on' : 'off'}" onclick="window._toggleLight(${i})">${l.on ? 'ON' : 'OFF'}</button>
+        <div style="display:flex; align-items:center; gap:4px; margin-bottom:4px;">
+          <div style="width:8px; height:8px; border-radius:50%; background:${l.on ? 'rgb('+l.r+','+l.g+','+l.b+')' : '#444'}; box-shadow:${l.on ? '0 0 4px rgb('+l.r+','+l.g+','+l.b+')' : 'none'}; flex-shrink:0;"></div>
+          <button class="light-btn ${l.on ? 'on' : 'off'}" onclick="window._toggleLight(${i})" style="min-width:50px;">${l.name}</button>
+          <input type="range" min="0" max="100" value="${Math.round((l.intensity||1)*100)}"
+            oninput="window._setLightIntensity(${i}, this.value)"
+            style="flex:1; height:3px; accent-color:var(--active-element);">
+          <span style="font-size:9px; color:var(--coordinates-color); width:24px; text-align:right; font-family:monospace;">${Math.round((l.intensity||1)*100)}%</span>
         </div>
       `).join('')}
     `;
