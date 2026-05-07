@@ -96,7 +96,7 @@ class LightModule {
           <button class="light-btn ${l.on ? 'on' : 'off'}" onclick="window._toggleLight(${i})" style="min-width:50px;">${l.name}</button>
           <input type="range" min="0" max="100" value="${Math.round((l.intensity||1)*100)}"
             oninput="window._setLightIntensity(${i}, this.value)"
-            style="flex:1; height:3px; accent-color:var(--active-element);">
+            class="et-slider">
           <span style="font-size:9px; color:var(--coordinates-color); width:24px; text-align:right; font-family:monospace;">${Math.round((l.intensity||1)*100)}%</span>
         </div>
       `).join('')}

@@ -384,3 +384,40 @@ input[type="text"]:focus {
   background: #444;
   margin: 3px 0;
 }
+
+/* === Global slider style (used by camera, light, and all modules) === */
+input[type="range"].et-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+  flex: 1;
+}
+input[type="range"].et-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--active-element);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+input[type="range"].et-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--active-element);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+/* Color variants for RGB */
+input[type="range"].et-slider-r::-webkit-slider-thumb { background: #f44; }
+input[type="range"].et-slider-r::-moz-range-thumb { background: #f44; }
+input[type="range"].et-slider-g::-webkit-slider-thumb { background: #4c4; }
+input[type="range"].et-slider-g::-moz-range-thumb { background: #4c4; }
+input[type="range"].et-slider-b::-webkit-slider-thumb { background: #48f; }
+input[type="range"].et-slider-b::-moz-range-thumb { background: #48f; }

@@ -513,17 +513,17 @@
                                     </div>
                                     <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
                                       <span style="font-size:9px; color:#f66; width:10px;">R</span>
-                                      <input type="range" min="0" max="255" value="${l.r}" oninput="window._setLightRGB(${i},'r',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" style="flex:1; height:3px; accent-color:#f44;">
+                                      <input type="range" min="0" max="255" value="${l.r}" oninput="window._setLightRGB(${i},'r',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" class="et-slider et-slider-r">
                                       <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.r}</span>
                                     </div>
                                     <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
                                       <span style="font-size:9px; color:#6f6; width:10px;">G</span>
-                                      <input type="range" min="0" max="255" value="${l.g}" oninput="window._setLightRGB(${i},'g',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" style="flex:1; height:3px; accent-color:#4f4;">
+                                      <input type="range" min="0" max="255" value="${l.g}" oninput="window._setLightRGB(${i},'g',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" class="et-slider et-slider-g">
                                       <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.g}</span>
                                     </div>
                                     <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
                                       <span style="font-size:9px; color:#66f; width:10px;">B</span>
-                                      <input type="range" min="0" max="255" value="${l.b}" oninput="window._setLightRGB(${i},'b',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" style="flex:1; height:3px; accent-color:#44f;">
+                                      <input type="range" min="0" max="255" value="${l.b}" oninput="window._setLightRGB(${i},'b',this.value); this.nextElementSibling.textContent=this.value; window._renderLights()" class="et-slider et-slider-b">
                                       <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.b}</span>
                                     </div>
                                     <div style="height:8px; border-radius:3px; background:rgb(${l.r},${l.g},${l.b}); opacity:${l.intensity};"></div>
