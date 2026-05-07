@@ -93,7 +93,7 @@ class PlotterModule {
       for (const px of row) {
         if (px >= w) continue;
         const srcX = this.flipH ? (w - 1 - px) : px;
-        const srcY = this.flipV ? (h - 1 - py) : py;
+        const srcY = this.flipV ? py : (h - 1 - py);
         if (binary[srcY * w + srcX]) {
           positions.push({ x: px * this.scale, y: py * this.scale, z: this.penDownZ });
         }
@@ -133,7 +133,7 @@ class PlotterModule {
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
         const srcX = this.flipH ? (w - 1 - px) : px;
-        const srcY = this.flipV ? (h - 1 - py) : py;
+        const srcY = this.flipV ? py : (h - 1 - py);
         const v = binary[srcY * w + srcX] ? 255 : 0;
         const di = (py * w + px) * 4;
         imgData.data[di] = v; imgData.data[di+1] = v; imgData.data[di+2] = v; imgData.data[di+3] = 255;
@@ -249,9 +249,9 @@ class PlotterModule {
 
         <div style="display:flex; gap:6px; align-items:center;">
           <label style="font-size:10px; color:var(--text-general); width:40px;">mm/px</label>
-          <input type="number" value="${this.scale}" min="0.01" step="0.01"
-            onchange="EnderTrack.Plotter.scale=parseFloat(this.value)"
-            style="width:45px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <input type="range" min="0.01" max="1" step="0.01" value="${this.scale}" class="et-slider"
+            oninput="EnderTrack.Plotter.scale=parseFloat(this.value); this.nextElementSibling.textContent=this.value">
+          <span style="font-size:9px; color:var(--coordinates-color); width:28px; text-align:right;">${this.scale}</span>
           <button onclick="EnderTrack.Plotter.flipH=!EnderTrack.Plotter.flipH; EnderTrack.Plotter._processImage()"
             style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:${this.flipH ? 'var(--active-element)' : 'var(--app-bg)'}; color:${this.flipH ? 'var(--text-selected)' : 'var(--text-general)'};">FlipH</button>
           <button onclick="EnderTrack.Plotter.flipV=!EnderTrack.Plotter.flipV; EnderTrack.Plotter._processImage()"
