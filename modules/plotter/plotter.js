@@ -8,41 +8,37 @@ class PlotterModule {
     this.threshold = 128;
     this.maxPoints = 2000;
     this.invert = false;
+    this.flipH = false;
+    this.flipV = false;
     this._fileName = '';
     this._drawing = false;
     this._progress = 0;
     this._stopped = false;
+    this._file = null;
+    this._imgData = null; // {data, w, h} raw image
   }
 
   // === FILE LOADING ===
 
-  async loadAndGenerate(file) {
-    let positions;
-    if (file.name.endsWith('.gcode') || file.name.endsWith('.gc') || file.name.endsWith('.ngc')) {
-      positions = await this._parseGcode(file);
+  async loadFile(file) {
+    this._file = file;
+    this._fileName = file.name;
+    if (file.name.match(/\.(gcode|gc|ngc)$/i)) {
+      this._imgData = null;
+      const positions = await this._parseGcode(file);
+      this._setList(positions);
     } else if (file.name.endsWith('.txt')) {
-      positions = await this._parseTxt(file);
+      this._imgData = null;
+      const positions = await this._parseTxt(file);
+      this._setList(positions);
     } else {
-      positions = await this._parseImage(file);
+      await this._loadImage(file);
+      this._processImage();
     }
-    if (!positions.length) return 0;
-
-    // Add to Lists module
-    const lists = window.EnderTrack?.Lists;
-    if (lists) {
-      lists.addGroup('Plot: ' + file.name);
-      const g = lists._activeGroup();
-      if (g) {
-        g.positions = positions;
-        lists.save();
-        lists.renderUI();
-        EnderTrack.Canvas?.requestRender?.();
-      }
-    }
-    return positions.length;
+    this.renderUI();
   }
 
-  async _parseImage(file) {
+  async _loadImage(file) {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -51,39 +47,79 @@ class PlotterModule {
         canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-        const data = ctx.getImageData(0, 0, w, h).data;
-
-        // Binarize
-        const binary = new Uint8Array(w * h);
-        for (let i = 0; i < w * h; i++) {
-          const idx = i * 4;
-          const lum = 0.299 * data[idx] + 0.587 * data[idx+1] + 0.114 * data[idx+2];
-          binary[i] = this.invert ? (lum >= this.threshold ? 1 : 0) : (lum < this.threshold ? 1 : 0);
-        }
-
-        // Show binary preview
-        this._showBinaryPreview(binary, w, h);
-
-        // Sample points (limit to maxPoints)
-        const maxPoints = this.maxPoints || 2000;
-        const positions = [];
-        const step = Math.max(1, Math.ceil(Math.sqrt((w * h) / (maxPoints * 2))));
-        for (let y = 0; y < h; y += step) {
-          // Alternate direction for efficient plotting (boustrophedon)
-          const xRange = (y / step) % 2 === 0
-            ? Array.from({length: Math.ceil(w / step)}, (_, i) => i * step)
-            : Array.from({length: Math.ceil(w / step)}, (_, i) => (Math.ceil(w / step) - 1 - i) * step);
-          for (const x of xRange) {
-            if (x < w && binary[y * w + x]) {
-              positions.push({ x: x * this.scale, y: y * this.scale, z: this.penDownZ });
-            }
-          }
-          if (positions.length >= maxPoints) break;
-        }
-        resolve(positions);
+        this._imgData = { data: ctx.getImageData(0, 0, w, h).data, w, h };
+        resolve();
       };
       img.src = URL.createObjectURL(file);
     });
+  }
+
+  _processImage() {
+    if (!this._imgData) return;
+    const { data, w, h } = this._imgData;
+
+    // Binarize
+    const binary = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) {
+      const idx = i * 4;
+      const lum = 0.299 * data[idx] + 0.587 * data[idx+1] + 0.114 * data[idx+2];
+      binary[i] = this.invert ? (lum >= this.threshold ? 1 : 0) : (lum < this.threshold ? 1 : 0);
+    }
+
+    // Apply flip for preview
+    this._showBinaryPreview(binary, w, h);
+  }
+
+  generateList() {
+    if (!this._imgData) return;
+    const { data, w, h } = this._imgData;
+
+    // Build binary with same logic as preview
+    const binary = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) {
+      const idx = i * 4;
+      const lum = 0.299 * data[idx] + 0.587 * data[idx+1] + 0.114 * data[idx+2];
+      binary[i] = this.invert ? (lum >= this.threshold ? 1 : 0) : (lum < this.threshold ? 1 : 0);
+    }
+
+    // Sample from the flipped view (same as preview)
+    const maxPoints = this.maxPoints || 2000;
+    const positions = [];
+    const step = Math.max(1, Math.ceil(Math.sqrt((w * h) / (maxPoints * 2))));
+    for (let py = 0; py < h; py += step) {
+      const row = (py / step) % 2 === 0
+        ? Array.from({length: Math.ceil(w / step)}, (_, i) => i * step)
+        : Array.from({length: Math.ceil(w / step)}, (_, i) => (Math.ceil(w / step) - 1 - i) * step);
+      for (const px of row) {
+        if (px >= w) continue;
+        const srcX = this.flipH ? (w - 1 - px) : px;
+        const srcY = this.flipV ? (h - 1 - py) : py;
+        if (binary[srcY * w + srcX]) {
+          positions.push({ x: px * this.scale, y: py * this.scale, z: this.penDownZ });
+        }
+      }
+      if (positions.length >= maxPoints) break;
+    }
+
+    this._setList(positions);
+    this.renderUI();
+  }
+
+  _setList(positions) {
+    const lists = window.EnderTrack?.Lists;
+    if (!lists) return;
+    // Unpin all existing groups
+    lists.groups.forEach(g => g.pinned = false);
+    // Add new group and pin it
+    lists.addGroup('Plot: ' + this._fileName);
+    const g = lists._activeGroup();
+    if (g) {
+      g.positions = positions;
+      g.pinned = true;
+      lists.save();
+      lists.renderUI();
+      EnderTrack.Canvas?.requestRender?.();
+    }
   }
 
   _showBinaryPreview(binary, w, h) {
@@ -94,16 +130,21 @@ class PlotterModule {
     canvas.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain; image-rendering:pixelated;';
     const ctx = canvas.getContext('2d');
     const imgData = ctx.createImageData(w, h);
-    for (let i = 0; i < w * h; i++) {
-      const v = binary[i] ? 0 : 255;
-      imgData.data[i*4] = v; imgData.data[i*4+1] = v; imgData.data[i*4+2] = v; imgData.data[i*4+3] = 255;
+    for (let py = 0; py < h; py++) {
+      for (let px = 0; px < w; px++) {
+        const srcX = this.flipH ? (w - 1 - px) : px;
+        const srcY = this.flipV ? (h - 1 - py) : py;
+        const v = binary[srcY * w + srcX] ? 0 : 255;
+        const di = (py * w + px) * 4;
+        imgData.data[di] = v; imgData.data[di+1] = v; imgData.data[di+2] = v; imgData.data[di+3] = 255;
+      }
     }
     ctx.putImageData(imgData, 0, 0);
     preview.innerHTML = '';
     preview.appendChild(canvas);
   }
 
-    async _parseTxt(file) {
+  async _parseTxt(file) {
     const text = await file.text();
     const positions = [];
     for (const line of text.trim().split('\n')) {
@@ -121,7 +162,7 @@ class PlotterModule {
     const positions = [];
     let curX = 0, curY = 0, curZ = this.penUpZ;
     for (const line of text.split('\n')) {
-      const cmd = line.trim().split(';')[0]; // remove comments
+      const cmd = line.trim().split(';')[0];
       if (!cmd.startsWith('G0') && !cmd.startsWith('G1')) continue;
       const xm = cmd.match(/X([\-\d.]+)/);
       const ym = cmd.match(/Y([\-\d.]+)/);
@@ -129,7 +170,6 @@ class PlotterModule {
       if (xm) curX = parseFloat(xm[1]);
       if (ym) curY = parseFloat(ym[1]);
       if (zm) curZ = parseFloat(zm[1]);
-      // Only record positions where pen is down
       if (curZ <= this.penDownZ) {
         positions.push({ x: curX, y: curY, z: curZ });
       }
@@ -155,7 +195,6 @@ class PlotterModule {
       const bar = document.querySelector('#plotterContent div[style*="transition:width"]');
       if (bar) bar.style.width = this._progress + '%';
       const p = positions[i];
-      // If new stroke (gap from last point), pen up + travel + pen down
       if (lastX !== null && (Math.abs(p.x - lastX) > 1 || Math.abs(p.y - lastY) > 1)) {
         await window.EnderTrack?.Movement?.moveAbsolute(lastX, lastY, this.penUpZ);
         if (this._stopped) break;
@@ -163,17 +202,14 @@ class PlotterModule {
         if (this._stopped) break;
         await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penDownZ);
       } else if (lastX === null) {
-        // First point: travel + pen down
         await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penUpZ);
         if (this._stopped) break;
         await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penDownZ);
       } else {
-        // Continuous stroke
         await window.EnderTrack?.Movement?.moveAbsolute(p.x, p.y, this.penDownZ);
       }
       lastX = p.x; lastY = p.y;
     }
-    // Final pen up
     if (!this._stopped) await window.EnderTrack?.Movement?.moveAbsolute(lastX || 0, lastY || 0, this.penUpZ);
 
     this._drawing = false;
@@ -195,36 +231,43 @@ class PlotterModule {
 
     const activeList = window.EnderTrack?.Lists?._activeGroup?.();
     const pointCount = activeList?.positions?.length || 0;
+    const hasImage = !!this._imgData;
 
     container.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:6px; padding:8px;">
+
         <input type="file" accept=".gcode,.gc,.ngc,.txt,image/*" onchange="EnderTrack.Plotter._onFile(event)"
           style="font-size:10px; color:var(--text-general);">
 
-        <div id="plotterPreview" style="background:#111; border-radius:4px; min-height:100px; max-height:200px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-          ${this._fileName ? '' : '<span style="font-size:10px; color:#555;">Aper\u00e7u du masque</span>'}
-        </div>
-
+        ${hasImage ? `
         <div style="display:flex; gap:6px; align-items:center;">
           <label style="font-size:10px; color:var(--text-general); width:40px;">Seuil</label>
           <input type="range" min="10" max="245" value="${this.threshold}" class="et-slider"
-            oninput="EnderTrack.Plotter.threshold=parseInt(this.value); this.nextElementSibling.textContent=this.value; EnderTrack.Plotter._reprocess()">
+            oninput="EnderTrack.Plotter.threshold=parseInt(this.value); this.nextElementSibling.textContent=this.value; EnderTrack.Plotter._processImage()">
           <span style="font-size:9px; color:var(--coordinates-color); width:20px; text-align:right;">${this.threshold}</span>
-          <button onclick="EnderTrack.Plotter.invert=!EnderTrack.Plotter.invert; EnderTrack.Plotter._reprocess()"
+        </div>
+
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="font-size:10px; color:var(--text-general); width:40px;">mm/px</label>
+          <input type="number" value="${this.scale}" min="0.01" step="0.01"
+            onchange="EnderTrack.Plotter.scale=parseFloat(this.value)"
+            style="width:45px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <button onclick="EnderTrack.Plotter.flipH=!EnderTrack.Plotter.flipH; EnderTrack.Plotter._processImage()"
+            style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:${this.flipH ? 'var(--active-element)' : 'var(--app-bg)'}; color:${this.flipH ? 'var(--text-selected)' : 'var(--text-general)'};">FlipH</button>
+          <button onclick="EnderTrack.Plotter.flipV=!EnderTrack.Plotter.flipV; EnderTrack.Plotter._processImage()"
+            style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:${this.flipV ? 'var(--active-element)' : 'var(--app-bg)'}; color:${this.flipV ? 'var(--text-selected)' : 'var(--text-general)'};">FlipV</button>
+          <button onclick="EnderTrack.Plotter.invert=!EnderTrack.Plotter.invert; EnderTrack.Plotter._processImage()"
             style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:${this.invert ? 'var(--active-element)' : 'var(--app-bg)'}; color:${this.invert ? 'var(--text-selected)' : 'var(--text-general)'};">Inv</button>
         </div>
+
+        <div id="plotterPreview" style="background:#111; border-radius:4px; min-height:100px; max-height:200px; display:flex; align-items:center; justify-content:center; overflow:hidden;"></div>
+
         <div style="display:flex; gap:6px; align-items:center;">
           <label style="font-size:10px; color:var(--text-general); width:40px;">Max</label>
           <input type="number" value="${this.maxPoints}" min="100" max="10000" step="100"
-            onchange="EnderTrack.Plotter.maxPoints=parseInt(this.value); EnderTrack.Plotter._reprocess()"
+            onchange="EnderTrack.Plotter.maxPoints=parseInt(this.value)"
             style="width:50px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <label style="font-size:10px; color:var(--text-general); margin-left:4px;">mm/px</label>
-          <input type="number" value="${this.scale}" min="0.01" step="0.01"
-            onchange="EnderTrack.Plotter.scale=parseFloat(this.value); EnderTrack.Plotter._reprocess()"
-            style="width:45px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-        </div>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="font-size:10px; color:var(--text-general); width:40px;">Z</label>
+          <label style="font-size:10px; color:var(--text-general); margin-left:4px;">Z</label>
           <input type="number" value="${this.penDownZ}" step="0.5"
             onchange="EnderTrack.Plotter.penDownZ=parseFloat(this.value)"
             style="width:35px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
@@ -234,6 +277,10 @@ class PlotterModule {
             style="width:35px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
           <span style="font-size:9px; color:var(--text-general);">\u2191</span>
         </div>
+
+        <button onclick="EnderTrack.Plotter.generateList()"
+          style="width:100%; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--app-bg); border:1px solid var(--active-element); color:var(--text-general); font-weight:600;">G\u00e9n\u00e9rer liste (${this._imgData ? Math.round(this._imgData.w * this._imgData.h / 1000) + 'kpx' : ''})</button>
+        ` : ''}
 
         ${this._fileName ? `<div style="font-size:10px; color:var(--text-selected);">\ud83d\udd8a\ufe0f ${this._fileName} \u2014 ${pointCount} pts</div>` : ''}
 
@@ -246,22 +293,17 @@ class PlotterModule {
           <button onclick="EnderTrack.Plotter.draw()" style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;" ${pointCount ? '' : 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4;"'}>\ud83d\udd8a\ufe0f Draw</button>
         `}
       </div>`;
+
+    // Re-render preview if image loaded
+    if (hasImage && document.getElementById('plotterPreview')) {
+      this._processImage();
+    }
   }
 
   async _onFile(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    this._file = file;
-    this._fileName = file.name;
-    await this.loadAndGenerate(file);
-    this.renderUI();
-  }
-
-  async _reprocess() {
-    if (this._file) {
-      await this.loadAndGenerate(this._file);
-      this.renderUI();
-    }
+    await this.loadFile(file);
   }
 }
 
