@@ -9,7 +9,7 @@ class PlotterModule {
     this.maxPoints = 2000;
     this.invert = false;
     this.flipH = false;
-    this.flipV = true;
+    this.flipV = false;
     this._fileName = '';
     this._drawing = false;
     this._progress = 0;
@@ -95,7 +95,8 @@ class PlotterModule {
         const srcX = this.flipH ? (w - 1 - px) : px;
         const srcY = this.flipV ? (h - 1 - py) : py;
         if (binary[srcY * w + srcX]) {
-          positions.push({ x: px * this.scale, y: py * this.scale, z: this.penDownZ });
+          const outY = this.flipV ? py : (h - 1 - py);
+          positions.push({ x: px * this.scale, y: outY * this.scale, z: this.penDownZ });
         }
       }
       if (positions.length >= maxPoints) break;
