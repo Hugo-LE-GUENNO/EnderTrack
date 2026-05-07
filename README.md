@@ -1,4 +1,7 @@
-# EnderTrack — v2.4.0
+# EnderTrack — Édition Plotter v1.0.0
+
+> Basé sur [`basic` v2.4.0](/tree/basic). Ajoute un module pen plotter (image → tracé XY).
+> Voir [pltr_toolhead_enderscope](https://github.com/Alienor134/pltr_toolhead_enderscope) pour le hardware.
 
 Contrôleur de position 3D pour platines XYZ motorisées. Simulateur intégré ou pilotage réel via G-code (USB série).
 

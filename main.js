@@ -547,6 +547,8 @@ window.switchTab = (tabId) => {
   } else if (tabId === 'acquisition' && window.EnderTrack?.Scenario) {
     canvas.classList.add('scenario-mode');
     window.EnderTrack.Scenario.activate();
+  } else if (tabId === 'plotter') {
+    window.EnderTrack?.Plotter?.renderUI?.();
   }
   
   // === STEP 5: INIT OVERLAYS/TRACKS ===
