@@ -24,12 +24,16 @@ class PlotterModule {
     if (!positions.length) return 0;
 
     // Add to Lists module
-    const listManager = window.EnderTrack?.Lists?.manager;
-    if (listManager?.createList) {
-      const list = listManager.createList('Plotter — ' + file.name);
-      list.positions = positions;
-      listManager.save?.();
-      window.EnderTrack?.Lists?.renderUI?.();
+    const lists = window.EnderTrack?.Lists;
+    if (lists) {
+      lists.addGroup(file.name);
+      const g = lists._activeGroup();
+      if (g) {
+        g.positions = positions;
+        lists.save();
+        lists.renderUI();
+        EnderTrack.Canvas?.requestRender?.();
+      }
     }
     return positions.length;
   }
