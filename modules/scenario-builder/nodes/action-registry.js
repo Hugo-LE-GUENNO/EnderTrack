@@ -207,6 +207,36 @@ class ActionRegistry {
         return { success: true, stopped: shouldStop };
       }
     });
+
+    this.register({
+      id: 'autofocus',
+      label: '🔍 Autofocus',
+      icon: '🔍',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Autofocus' },
+        { id: 'range', label: 'Range (mm)', type: 'number', default: 0.1, min: 0.01, step: 0.01 },
+        { id: 'steps', label: 'Steps', type: 'number', default: 10, min: 3 },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: true },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
+      ],
+      execute: async (params, ctx) => {
+        // Autofocus: sweep Z range, find best focus (placeholder)
+        const range = parseFloat(params.range) || 0.1;
+        const steps = parseInt(params.steps) || 10;
+        const startZ = (ctx.pos?.z || 0) - range / 2;
+        const stepSize = range / steps;
+        let bestZ = ctx.pos?.z || 0;
+        // TODO: integrate with camera contrast metric
+        for (let i = 0; i <= steps; i++) {
+          const z = startZ + i * stepSize;
+          await ctx.moveAbsolute?.(ctx.pos?.x, ctx.pos?.y, z);
+          await new Promise(r => setTimeout(r, 100));
+        }
+        await ctx.moveAbsolute?.(ctx.pos?.x, ctx.pos?.y, bestZ);
+        return { label: `AF z=${bestZ.toFixed(3)}` };
+      }
+    });
   }
 
   register(actionDef) {

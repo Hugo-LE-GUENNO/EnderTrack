@@ -182,7 +182,7 @@ class ScenarioModule {
   }
 
   _renderPresetsTab(scenarios, current) {
-    if (!this._preset) this._preset = { multipos: false, timelapse: false, zstack: false, mosaic: false };
+    if (!this._preset) this._preset = { multipos: false, timelapse: false, zstack: false, mosaic: false, autofocus: false };
     const p = this._preset;
     const pos = window.EnderTrack?.State?.get?.()?.pos || { x: 0, y: 0, z: 0 };
     if (!this._presetParams) this._presetParams = {
@@ -192,7 +192,8 @@ class ScenarioModule {
       gridX: 3, gridY: 3, overlap: 10,
       exposure: 100000, gain: 1.0,
       lightChannel: '', lightIntensity: 100,
-      format: 'tiff', path: './captures', prefix: 'acq'
+      format: 'tiff', path: './captures', prefix: 'acq',
+      afRange: 0.1, afSteps: 10
     };
     const pp = this._presetParams;
     const channels = window.EnderTrack?.Light?.getChannels?.() || [];
@@ -270,6 +271,20 @@ class ScenarioModule {
       </div>`;
     }
 
+    if (p.autofocus) {
+      paramsHtml += `<div style="padding:6px; background:var(--app-bg); border-radius:4px; margin-top:6px;">
+        <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">🔍 Autofocus</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="font-size:10px; width:40px;">Range</label>
+          <input type="number" value="${pp.afRange || 0.1}" min="0.01" step="0.01" onchange="EnderTrack.Scenario._pp('afRange', parseFloat(this.value))"
+            style="width:50px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">mm</span>
+          <label style="font-size:10px; margin-left:6px;">Steps</label>
+          <input type="number" value="${pp.afSteps || 10}" min="3" onchange="EnderTrack.Scenario._pp('afSteps', parseInt(this.value))"
+            style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+        </div>
+      </div>`;
+    }
     return `
       <div style="display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start;">
         <!-- LEFT: 2x2 icons -->
@@ -278,6 +293,7 @@ class ScenarioModule {
           <button onclick="EnderTrack.Scenario._togglePreset('timelapse', ${!p.timelapse})" style="padding:14px; border:${p.timelapse ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:22px; background:${p.timelapse ? 'var(--app-bg)' : 'transparent'}; text-align:center;" title="Time-lapse">⏱️</button>
           <button onclick="EnderTrack.Scenario._togglePreset('zstack', ${!p.zstack})" style="padding:14px; border:${p.zstack ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:22px; background:${p.zstack ? 'var(--app-bg)' : 'transparent'}; text-align:center;" title="Z-Stack">📚</button>
           <button onclick="EnderTrack.Scenario._togglePreset('mosaic', ${!p.mosaic})" style="padding:14px; border:${p.mosaic ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:22px; background:${p.mosaic ? 'var(--app-bg)' : 'transparent'}; text-align:center;" title="Mosaïque">🧩</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('autofocus', ${!p.autofocus})" style="padding:14px; border:${p.autofocus ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:22px; background:${p.autofocus ? 'var(--app-bg)' : 'transparent'}; text-align:center; grid-column:span 2;" title="Autofocus">🔍</button>
         </div>
         <!-- RIGHT: params -->
         <div style="display:flex; flex-direction:column; gap:6px;">
@@ -342,7 +358,7 @@ class ScenarioModule {
 
   _autoGenerate() {
     const p = this._preset || {};
-    if (!p.multipos && !p.timelapse && !p.zstack && !p.mosaic) return;
+    if (!p.multipos && !p.timelapse && !p.zstack && !p.mosaic && !p.autofocus) return;
     this._generateFromPreset();
   }
 
@@ -358,10 +374,12 @@ class ScenarioModule {
     if (p.mosaic) parts.push('Mosaic');
     if (p.zstack) parts.push('Z-Stack');
     if (p.timelapse) parts.push('Timelapse');
+    if (p.autofocus) parts.push('AF');
     const name = parts.join(' + ');
 
     // Capture block: light on + capture + light off
     const captureActions = [];
+    if (p.autofocus) captureActions.push({ type: 'action', actionId: 'autofocus', params: { range: pp.afRange || 0.1, steps: pp.afSteps || 10, showInLog: true, label: 'AF' } });
     if (pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'set', intensity: pp.lightIntensity || 100, showInLog: false } });
     captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', showInLog: true, label: 'Capture' } });
     if (pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'off', showInLog: false } });
@@ -442,7 +460,13 @@ class ScenarioModule {
     }
 
     const tree = { type: 'root', children: rootChildren };
-    const scenario = manager.createScenario(name);
+    // Update current scenario instead of creating a new one
+    let scenario = manager.getCurrentScenario();
+    if (!scenario) {
+      scenario = manager.createScenario(name);
+    } else {
+      scenario.name = name;
+    }
     scenario.tree = tree;
     manager.save();
     window.EnderTrack.Scenario.updateCanvasOverlay();
