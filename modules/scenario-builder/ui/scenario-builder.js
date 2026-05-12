@@ -6,7 +6,7 @@ class ScenarioBuilder {
     this.selectedPath = null;
     this._undoStack = [];
     this._redoStack = [];
-    this._viewMode = 'build'; // 'build' | 'vars' | 'code'
+    this._viewMode = 'presets'; // 'build' | 'vars' | 'code'
     this._mode = 'build'; // 'build' | 'helper'
     this._buildSubView = 'tree'; // 'tree' | 'watchers'
     this._selectedWatcherIdx = null;
@@ -42,8 +42,7 @@ class ScenarioBuilder {
       // Go back to Fonctionothèque
       const nameEl = document.querySelector('.sb-header-name');
       if (nameEl) nameEl.textContent = this.scenario.name;
-      this._setMode('helper');
-      this._setHelperTab('fonctions');
+      this._setView('vars');
       this._refreshPalette();
       return;
     }
@@ -64,8 +63,7 @@ class ScenarioBuilder {
       this._editingMacroId = me.macroId;
       const nameEl = document.querySelector('.sb-header-name');
       if (nameEl) nameEl.textContent = this.scenario.name;
-      this._setMode('helper');
-      this._setHelperTab('fonctions');
+      this._setView('vars');
       this._refreshPalette();
       return;
     }
@@ -229,7 +227,7 @@ class ScenarioBuilder {
       EnderTrack.MacroRegistry?.save(macro);
       this._editingMacroId = macro.macroId;
       this._refresh();
-      this._setMode("helper"); this._setHelperTab("fonctions");
+      this._setView("vars");
     } else {
       this._refresh();
     }
@@ -284,60 +282,40 @@ class ScenarioBuilder {
     modal.innerHTML = `
       <div class="sb-split-modal">
         <div class="sb-header">
-          <div class="sb-mode-toggle">
-            <button onclick="EnderTrack.ScenarioBuilder._setMode('build')" class="sb-mode-btn ${this._mode !== 'helper' ? 'active' : ''}">🎬 Scénario</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setMode('helper')" class="sb-mode-btn ${this._mode === 'helper' ? 'active' : ''}">🎩 Accessoires</button>
+          <div class="sb-tabs" style="flex:1; border:none; padding:0;">
+            <button onclick="EnderTrack.ScenarioBuilder._setView('props')" class="sb-tab-btn ${this._viewMode === 'props' ? 'active' : ''}">Propri\u00e9t\u00e9s</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('presets')" class="sb-tab-btn ${this._viewMode === 'presets' ? 'active' : ''}">Presets</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('build')" class="sb-tab-btn ${this._viewMode === 'build' ? 'active' : ''}">Avanc\u00e9</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('vars')" class="sb-tab-btn ${this._viewMode === 'vars' ? 'active' : ''}">Variables</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('code')" class="sb-tab-btn ${this._viewMode === 'code' ? 'active' : ''}">Code</button>
           </div>
-          <span style="flex:1"></span>
-          <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-header-close" title="Fermer">✕</button>
-        </div>
-        <div id="sbScenarioBar" class="sb-scenario-bar" style="display:${this._mode !== 'helper' ? 'flex' : 'none'};">
-          <span class="sb-header-name">${this._escapeHtml(this.scenario.name)}</span>
-          <button onclick="EnderTrack.ScenarioBuilder._showScenarioDropdown(event)" class="sb-mini-btn" title="Changer de scénario">▼</button>
-          <span style="flex:1"></span>
-          <button onclick="EnderTrack.ScenarioBuilder._showFileMenu(event)" class="sb-mini-btn" title="Menu">☰</button>
+          <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-header-close" title="Fermer">\u2715</button>
         </div>
         <div class="sb-body">
-          <!-- === BUILD SECTION === -->
-          <div id="sbBuildSection" style="display:${this._mode !== 'helper' ? 'flex' : 'none'}; flex-direction:column; flex:1; overflow:hidden;">
-          <div class="sb-tabs">
-            <button onclick="EnderTrack.ScenarioBuilder._setView('props')" class="sb-tab-btn ${this._viewMode === 'props' ? 'active' : ''}">📋 Propriétés</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setView('build')" class="sb-tab-btn ${this._viewMode === 'build' ? 'active' : ''}">🌳 Constructeur</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setView('vars')" class="sb-tab-btn ${this._viewMode === 'vars' ? 'active' : ''}">📊 Variables</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setView('code')" class="sb-tab-btn ${this._viewMode === 'code' ? 'active' : ''}">📝 Code</button>
-          </div>
           <!-- Build view: 3 columns -->
           <div id="sbBuildView" class="sb-build-view" style="display:${this._viewMode === 'build' ? 'grid' : 'none'};">
             <div id="sbPalette" class="sb-palette"></div>
             <div class="sb-center">
               <div class="sb-sub-toggle">
-                <button onclick="EnderTrack.ScenarioBuilder._setBuildSub('tree')" class="sb-toggle-btn ${this._buildSubView === 'tree' ? 'active' : ''}">🌳 Séquence</button>
-                <button onclick="EnderTrack.ScenarioBuilder._setBuildSub('watchers')" class="sb-toggle-btn ${this._buildSubView === 'watchers' ? 'active' : ''}">👁️ Watchers</button>
+                <button onclick="EnderTrack.ScenarioBuilder._setBuildSub('tree')" class="sb-toggle-btn ${this._buildSubView === 'tree' ? 'active' : ''}">\ud83c\udf33 S\u00e9quence</button>
+                <button onclick="EnderTrack.ScenarioBuilder._setBuildSub('watchers')" class="sb-toggle-btn ${this._buildSubView === 'watchers' ? 'active' : ''}">\ud83d\udc41\ufe0f Watchers</button>
               </div>
               <div id="sbTree" class="sb-tree-zone" onclick="EnderTrack.ScenarioBuilder._deselectNode(event)"></div>
             </div>
             <div id="sbProps" class="sb-props"></div>
           </div>
-          <!-- Vars view: full width -->
+          <!-- Presets view -->
+          <div id="sbPresetsView" class="sb-full-view" style="display:${this._viewMode === 'presets' ? 'block' : 'none'}; padding:12px; overflow-y:auto;"></div>
+          <!-- Vars view -->
           <div id="sbVarsView" class="sb-full-view" style="display:${this._viewMode === 'vars' ? 'block' : 'none'};"></div>
-          <!-- Code view: full width -->
+          <!-- Code view -->
           <div id="sbCodeView" class="sb-full-view" style="display:${this._viewMode === 'code' ? 'block' : 'none'};"></div>
-          <!-- Props view: full width -->
+          <!-- Props view -->
           <div id="sbPropsView" class="sb-full-view" style="display:${this._viewMode === 'props' ? 'block' : 'none'};"></div>
-          </div>
-          <!-- === HELPER SECTION === -->
-          <div id="sbHelperSection" style="display:${this._mode === 'helper' ? 'flex' : 'none'}; flex-direction:column; flex:1; overflow:hidden;">
-            <div class="sb-tabs">
-              <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('globals')" class="sb-tab-btn ${this._helperTab === 'presets' ? 'active' : ''}">🔬 Presets</button>
-              <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('globals')" class="sb-tab-btn ${this._helperTab === 'globals' ? 'active' : ''}">🌐 Variables globales</button>
-              <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('scripts')" class="sb-tab-btn ${this._helperTab === 'scripts' ? 'active' : ''}">🐍 Scripts Python</button>
-              <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('fonctions')" class="sb-tab-btn ${this._helperTab === 'fonctions' ? 'active' : ''}">📦 Fonctionothèque</button>
-            </div>
-            <div id="sbHelperContent" style="flex:1; overflow-y:auto; padding:12px;"></div>
-          </div>
+        </div>
         <div class="sb-footer">
           <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-footer-btn sb-footer-cancel">Annuler</button>
-          <button onclick="EnderTrack.ScenarioBuilder.save()" class="sb-footer-btn sb-footer-save">✔ Enregistrer</button>
+          <button onclick="EnderTrack.ScenarioBuilder.save()" class="sb-footer-btn sb-footer-save">\u2714 Enregistrer</button>
         </div>
       </div>`;
 
@@ -346,13 +324,10 @@ class ScenarioBuilder {
     this._refreshPalette();
     this._refreshTree();
     this._refreshProperties();
-    if (this._mode === 'helper') {
-      this._renderHelperView();
-    } else {
-      if (this._viewMode === 'vars') this._renderVarsView();
-      if (this._viewMode === 'code') this._renderCodeView();
-      if (this._viewMode === 'props') this._renderPropsView();
-    }
+    if (this._viewMode === 'vars') this._renderVarsView();
+    if (this._viewMode === 'code') this._renderCodeView();
+    if (this._viewMode === 'props') this._renderPropsView();
+    if (this._viewMode === 'presets') this._renderPresetsView();
     this._bindKeyboard();
   }
 
@@ -496,19 +471,20 @@ class ScenarioBuilder {
 
   _setView(mode) {
     this._viewMode = mode;
-    ['sbBuildView', 'sbVarsView', 'sbCodeView', 'sbPropsView'].forEach(id => {
+    ['sbBuildView', 'sbVarsView', 'sbCodeView', 'sbPropsView', 'sbPresetsView'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    const activeId = { build: 'sbBuildView', vars: 'sbVarsView', code: 'sbCodeView', props: 'sbPropsView' }[mode];
+    const activeId = { build: 'sbBuildView', vars: 'sbVarsView', code: 'sbCodeView', props: 'sbPropsView', presets: 'sbPresetsView' }[mode];
     const activeEl = document.getElementById(activeId);
     if (activeEl) activeEl.style.display = mode === 'build' ? 'grid' : 'block';
-    document.querySelectorAll('#sbBuildSection > .sb-tabs .sb-tab-btn').forEach(b => b.classList.remove('active'));
-    const idx = { props: 0, build: 1, vars: 2, code: 3 }[mode] || 0;
-    document.querySelectorAll('#sbBuildSection > .sb-tabs .sb-tab-btn')[idx]?.classList.add('active');
+    document.querySelectorAll('.sb-header .sb-tab-btn').forEach(b => b.classList.remove('active'));
+    const idx = { props: 0, presets: 1, build: 2, vars: 3, code: 4 }[mode] || 0;
+    document.querySelectorAll('.sb-header .sb-tab-btn')[idx]?.classList.add('active');
     if (mode === 'vars') this._renderVarsView();
     else if (mode === 'code') this._renderCodeView();
     else if (mode === 'props') this._renderPropsView();
+    else if (mode === 'presets') this._renderPresetsView();
   }
 
   _setBuildSub(sub) {
@@ -1047,7 +1023,6 @@ class ScenarioBuilder {
     const nameEl = document.querySelector('.sb-header-name');
     if (nameEl) nameEl.textContent = this.scenario.name;
     // Switch to Constructeur
-    this._setMode('build');
     this._setView('build');
     this._refreshPalette();
     this._refreshTree();
@@ -1090,7 +1065,17 @@ class ScenarioBuilder {
     this._refreshPalette();
   }
 
-  _insertPreset(type) {
+  _renderPresetsView() {
+    const el = document.getElementById('sbPresetsView');
+    if (!el) return;
+    const html = window.EnderTrack?.Scenario?._renderPresetsTab?.(
+      window.EnderTrack.Scenario.manager?.getAllScenarios() || [],
+      window.EnderTrack.Scenario.manager?.getCurrentScenario()
+    ) || '<div style="color:#888; font-size:11px;">Module Scenario non charg\u00e9</div>';
+    el.innerHTML = html;
+  }
+
+    _insertPreset(type) {
     // Activate preset and generate into current scenario
     if (!window.EnderTrack?.Scenario) return;
     const s = window.EnderTrack.Scenario;
@@ -1919,7 +1904,7 @@ class ScenarioBuilder {
     EnderTrack.MacroRegistry?.save(macro);
     this._editingMacroId = macro.macroId;
     this._refreshPalette();
-    this._setMode("helper"); this._setHelperTab("fonctions");
+    this._setView("vars");
   }
 
   _resetScenario() {
