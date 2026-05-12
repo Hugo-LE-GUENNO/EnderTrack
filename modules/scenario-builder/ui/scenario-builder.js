@@ -1894,7 +1894,6 @@ class ScenarioBuilder {
     this._selectedWatcherIdx = null;
     this._undoStack = [];
     this._redoStack = [];
-    document.querySelector('.sb-header-name').textContent = this.scenario.name;
     EnderTrack.VariableManager?.init?.(this.scenario);
     EnderTrack.Scenario?.updateCanvasOverlay?.();
     this._refreshPalette();
@@ -1903,6 +1902,8 @@ class ScenarioBuilder {
     if (this._viewMode === 'vars') this._renderVarsView();
     if (this._viewMode === 'code') this._renderCodeView();
     if (this._viewMode === 'props') this._renderPropsView();
+    if (this._viewMode === 'manager') this._renderManagerView();
+    EnderTrack.Scenario?.createUI?.();
   }
 
   _newScenario() {
@@ -1920,7 +1921,7 @@ class ScenarioBuilder {
     if (!name || name === this.scenario.name) return;
     this.scenario.name = name;
     EnderTrack.Scenario?.manager?.save?.();
-    document.querySelector('.sb-header-name').textContent = name;
+    const _n = document.querySelector('.sb-header-name'); if (_n) _n.textContent = name;
   }
 
   _exportScenario() {
@@ -1960,7 +1961,7 @@ class ScenarioBuilder {
     const all = mgr.getAllScenarios();
     all.forEach(s => mgr.deleteScenario(s.id));
     this.scenario = mgr.getCurrentScenario();
-    document.querySelector('.sb-header-name').textContent = this.scenario?.name || '';
+    const _n = document.querySelector('.sb-header-name'); if (_n) _n.textContent = this.scenario?.name || '';
     this._refreshTree();
     EnderTrack.Scenario?.updateCanvasOverlay?.();
     EnderTrack.Scenario?.createUI?.();

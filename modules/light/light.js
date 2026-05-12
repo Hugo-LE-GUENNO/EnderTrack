@@ -37,8 +37,8 @@ class LightModule {
     ch.on = ch.intensity > 0;
     if (this.driver?.setChannel) await this.driver.setChannel(channelId, ch.intensity);
     this._updateStatus();
-    return true;
     this._renderNav();
+    return true;
   }
 
   async on(channelId, intensity = 1) {
