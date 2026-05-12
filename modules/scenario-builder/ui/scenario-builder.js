@@ -1781,6 +1781,7 @@ class ScenarioBuilder {
       <div class="sb-menu-item" onclick="EnderTrack.ScenarioBuilder._duplicateScenario()">📋 Copier</div>
       <div class="sb-menu-item" onclick="EnderTrack.ScenarioBuilder._collapseScenarioToFunction()">📦 Créer une fonction</div>
       <div class="sb-menu-item sb-menu-danger" onclick="EnderTrack.ScenarioBuilder._deleteScenario()">🗑️ Supprimer</div>
+      <div class="sb-menu-item sb-menu-danger" onclick="EnderTrack.ScenarioBuilder._deleteAllScenarios()">💥 Tout supprimer</div>
     `;
     const rect = event.currentTarget.getBoundingClientRect();
     menu.style.top = rect.bottom + 4 + 'px';
@@ -1873,6 +1874,21 @@ class ScenarioBuilder {
     const s = mgr.getCurrentScenario();
     if (s) this._switchToScenario(s.id);
     else this.close();
+  }
+
+
+  _deleteAllScenarios() {
+    document.getElementById('sbFileMenu')?.remove();
+    if (!confirm('Supprimer TOUS les scénarios ?')) return;
+    const mgr = EnderTrack.Scenario?.manager;
+    if (!mgr) return;
+    const all = mgr.getAllScenarios();
+    all.forEach(s => mgr.deleteScenario(s.id));
+    this.scenario = mgr.getCurrentScenario();
+    document.querySelector('.sb-header-name').textContent = this.scenario?.name || '';
+    this._refreshTree();
+    EnderTrack.Scenario?.updateCanvasOverlay?.();
+    EnderTrack.Scenario?.createUI?.();
   }
 
   _collapseScenarioToFunction() {

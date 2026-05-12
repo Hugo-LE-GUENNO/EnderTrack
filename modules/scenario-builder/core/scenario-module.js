@@ -195,8 +195,8 @@ class ScenarioModule {
       format: 'tiff', path: './captures', prefix: 'acq'
     };
     const pp = this._presetParams;
-    const channels = window.EnderTrack?.Light?.getChannels() || [];
-    const lists = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+    const channels = window.EnderTrack?.Light?.getChannels?.() || [];
+    const lists = window.EnderTrack?.Lists?.groups || [];
 
     let paramsHtml = '';
 
