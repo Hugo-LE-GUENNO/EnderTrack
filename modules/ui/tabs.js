@@ -194,7 +194,7 @@ class TabManager {
     }
     
     // Activer/désactiver le module Overlays
-    if (window.EnderTrack?.Templates) {
+    if (window.EnderTrack?.Overlays) {
       if (tabId === 'overlays') {
         if (!window.EnderTrack.Overlays.isActive) {
           window.EnderTrack.Overlays.activate();
