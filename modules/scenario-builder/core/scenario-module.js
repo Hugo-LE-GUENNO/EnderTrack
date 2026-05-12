@@ -271,68 +271,51 @@ class ScenarioModule {
     }
 
     return `
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        <!-- Mode toggles -->
+      <div style="display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start;">
+        <!-- LEFT: 2x2 icons -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-          <button onclick="EnderTrack.Scenario._togglePreset('multipos', ${!p.multipos})" style="padding:10px 8px; border:${p.multipos ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:10px; background:${p.multipos ? 'var(--app-bg)' : 'transparent'}; color:var(--text-selected); text-align:center;">📍 Multi-pos</button>
-          <button onclick="EnderTrack.Scenario._togglePreset('timelapse', ${!p.timelapse})" style="padding:10px 8px; border:${p.timelapse ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:10px; background:${p.timelapse ? 'var(--app-bg)' : 'transparent'}; color:var(--text-selected); text-align:center;">⏱️ Time-lapse</button>
-          <button onclick="EnderTrack.Scenario._togglePreset('zstack', ${!p.zstack})" style="padding:10px 8px; border:${p.zstack ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:10px; background:${p.zstack ? 'var(--app-bg)' : 'transparent'}; color:var(--text-selected); text-align:center;">📚 Z-Stack</button>
-          <button onclick="EnderTrack.Scenario._togglePreset('mosaic', ${!p.mosaic})" style="padding:10px 8px; border:${p.mosaic ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:10px; background:${p.mosaic ? 'var(--app-bg)' : 'transparent'}; color:var(--text-selected); text-align:center;">🧩 Mosaïque</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('multipos', ${!p.multipos})" style="padding:14px; border:${p.multipos ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:22px; background:${p.multipos ? 'var(--app-bg)' : 'transparent'}; text-align:center;" title="Multi-pos">📍</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('timelapse', ${!p.timelapse})" style="padding:14px; border:${p.timelapse ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:22px; background:${p.timelapse ? 'var(--app-bg)' : 'transparent'}; text-align:center;" title="Time-lapse">⏱️</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('zstack', ${!p.zstack})" style="padding:14px; border:${p.zstack ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:22px; background:${p.zstack ? 'var(--app-bg)' : 'transparent'}; text-align:center;" title="Z-Stack">📚</button>
+          <button onclick="EnderTrack.Scenario._togglePreset('mosaic', ${!p.mosaic})" style="padding:14px; border:${p.mosaic ? '2px solid var(--active-element)' : '1px solid #444'}; border-radius:6px; cursor:pointer; font-size:22px; background:${p.mosaic ? 'var(--app-bg)' : 'transparent'}; text-align:center;" title="Mosaïque">🧩</button>
         </div>
-
-        ${paramsHtml}
-
-        <!-- Acquisition -->
-        <div style="padding:6px; border-top:1px solid #333; margin-top:4px;">
-          <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">📷 Acquisition</div>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <label style="font-size:10px; width:50px;">Expo</label>
-            <input type="number" value="${pp.exposure}" min="100" step="1000" onchange="EnderTrack.Scenario._pp('exposure', parseInt(this.value))"
-              style="width:70px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-            <span style="font-size:9px; color:var(--text-general);">µs</span>
-            <label style="font-size:10px; margin-left:8px;">Gain</label>
-            <input type="number" value="${pp.gain}" min="1" max="16" step="0.1" onchange="EnderTrack.Scenario._pp('gain', parseFloat(this.value))"
-              style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+        <!-- RIGHT: params -->
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          ${paramsHtml || '<div style="font-size:10px; color:#666; padding:6px;">Sélectionnez un mode</div>'}
+          <div style="padding:6px; background:var(--app-bg); border-radius:4px;">
+            <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">💡 Excitation</div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <select onchange="EnderTrack.Scenario._pp('lightChannel', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+                <option value="">— Aucun —</option>
+                ${channels.map(c => `<option value="${c.id}" ${c.id === pp.lightChannel ? 'selected' : ''}>${c.name}</option>`).join('')}
+              </select>
+              <input type="number" value="${pp.lightIntensity}" min="0" max="100" onchange="EnderTrack.Scenario._pp('lightIntensity', parseInt(this.value))" style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+              <span style="font-size:9px; color:var(--text-general);">%</span>
+            </div>
+          </div>
+          <div style="padding:6px; background:var(--app-bg); border-radius:4px;">
+            <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">📷 Acquisition</div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <label style="font-size:10px;">Expo</label>
+              <input type="number" value="${pp.exposure}" min="100" step="1000" onchange="EnderTrack.Scenario._pp('exposure', parseInt(this.value))" style="width:65px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+              <span style="font-size:9px; color:var(--text-general);">µs</span>
+              <label style="font-size:10px;">Gain</label>
+              <input type="number" value="${pp.gain}" min="1" max="16" step="0.1" onchange="EnderTrack.Scenario._pp('gain', parseFloat(this.value))" style="width:35px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+            </div>
+          </div>
+          <div style="padding:6px; background:var(--app-bg); border-radius:4px;">
+            <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">💾 Sortie</div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <select onchange="EnderTrack.Scenario._pp('format', this.value)" style="padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+                <option value="tiff" ${pp.format === 'tiff' ? 'selected' : ''}>TIFF</option>
+                <option value="png" ${pp.format === 'png' ? 'selected' : ''}>PNG</option>
+                <option value="jpeg" ${pp.format === 'jpeg' ? 'selected' : ''}>JPEG</option>
+              </select>
+              <input type="text" value="${pp.prefix}" onchange="EnderTrack.Scenario._pp('prefix', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="préfixe">
+              <input type="text" value="${pp.path || './captures'}" onchange="EnderTrack.Scenario._pp('path', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="chemin">
+            </div>
           </div>
         </div>
-
-        <!-- Excitation -->
-        <div style="padding:6px;">
-          <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">💡 Excitation</div>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <label style="font-size:10px; width:50px;">Canal</label>
-            <select onchange="EnderTrack.Scenario._pp('lightChannel', this.value)"
-              style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
-              <option value="">— Aucun —</option>
-              ${channels.map(c => `<option value="${c.id}" ${c.id === pp.lightChannel ? 'selected' : ''}>${c.name}</option>`).join('')}
-            </select>
-            <input type="number" value="${pp.lightIntensity}" min="0" max="100" onchange="EnderTrack.Scenario._pp('lightIntensity', parseInt(this.value))"
-              style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-            <span style="font-size:9px; color:var(--text-general);">%</span>
-          </div>
-        </div>
-
-        <!-- Output -->
-        <div style="padding:6px; border-top:1px solid #333;">
-          <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">💾 Sortie</div>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <select onchange="EnderTrack.Scenario._pp('format', this.value)"
-              style="padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
-              <option value="tiff" ${pp.format === 'tiff' ? 'selected' : ''}>TIFF</option>
-              <option value="png" ${pp.format === 'png' ? 'selected' : ''}>PNG</option>
-              <option value="jpeg" ${pp.format === 'jpeg' ? 'selected' : ''}>JPEG</option>
-            </select>
-            <input type="text" value="${pp.prefix}" onchange="EnderTrack.Scenario._pp('prefix', this.value)"
-              style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="préfixe">
-          </div>
-        </div>
-
-        <!-- Generate -->
-        <button onclick="EnderTrack.Scenario._generateFromPreset()"
-          style="width:100%; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600; margin-top:4px;"
-          ${!p.multipos && !p.timelapse && !p.zstack && !p.mosaic ? 'disabled style="width:100%; padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.4; margin-top:4px;"' : ''}>
-          ▶ Générer le scénario
-        </button>
       </div>`;
   }
 

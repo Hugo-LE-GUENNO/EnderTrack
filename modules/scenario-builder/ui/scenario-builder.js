@@ -10,7 +10,7 @@ class ScenarioBuilder {
     this._mode = 'build'; // 'build' | 'helper'
     this._buildSubView = 'tree'; // 'tree' | 'watchers'
     this._selectedWatcherIdx = null;
-    this._openAccordions = { flow: true, actions: true, plugins: false, custom: false, python: false, macros: false };
+    this._openAccordions = { flow: false, actions: false, plugins: false, custom: false, python: false, macros: false };
   }
 
   // === OPEN / CLOSE ===
@@ -283,8 +283,8 @@ class ScenarioBuilder {
       <div class="sb-split-modal">
         <div class="sb-header">
           <div class="sb-tabs" style="flex:1; border:none; padding:0;">
-            <button onclick="EnderTrack.ScenarioBuilder._setView('manager')" class="sb-tab-btn ${this._viewMode === 'manager' ? 'active' : ''}">Sc\u00e9narios</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setView('presets')" class="sb-tab-btn ${this._viewMode === 'presets' ? 'active' : ''}">Presets</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('manager')" class="sb-tab-btn ${this._viewMode === 'manager' ? 'active' : ''}">Fichier</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('presets')" class="sb-tab-btn ${this._viewMode === 'presets' ? 'active' : ''}">Simple</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('build')" class="sb-tab-btn ${this._viewMode === 'build' ? 'active' : ''}">Avanc\u00e9</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('vars')" class="sb-tab-btn ${this._viewMode === 'vars' ? 'active' : ''}">Variables</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('code')" class="sb-tab-btn ${this._viewMode === 'code' ? 'active' : ''}">Code</button>
