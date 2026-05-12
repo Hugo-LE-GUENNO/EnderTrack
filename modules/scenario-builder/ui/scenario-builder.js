@@ -328,6 +328,7 @@ class ScenarioBuilder {
           <!-- === HELPER SECTION === -->
           <div id="sbHelperSection" style="display:${this._mode === 'helper' ? 'flex' : 'none'}; flex-direction:column; flex:1; overflow:hidden;">
             <div class="sb-tabs">
+              <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('presets')" class="sb-tab-btn ${this._helperTab === 'presets' ? 'active' : ''}">🔬 Presets</button>
               <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('globals')" class="sb-tab-btn ${this._helperTab === 'globals' ? 'active' : ''}">🌐 Variables globales</button>
               <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('scripts')" class="sb-tab-btn ${this._helperTab === 'scripts' ? 'active' : ''}">🐍 Scripts Python</button>
               <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('fonctions')" class="sb-tab-btn ${this._helperTab === 'fonctions' ? 'active' : ''}">📦 Fonctionothèque</button>
@@ -536,7 +537,7 @@ class ScenarioBuilder {
   _setHelperTab(tab) {
     this._helperTab = tab;
     document.querySelectorAll('#sbHelperSection .sb-tab-btn').forEach(b => b.classList.remove('active'));
-    const idx = { globals: 0, scripts: 1, fonctions: 2 }[tab] || 0;
+    const idx = { presets: 0, globals: 1, scripts: 2, fonctions: 3 }[tab] || 0;
     document.querySelectorAll('#sbHelperSection .sb-tab-btn')[idx]?.classList.add('active');
     this._renderHelperView();
   }
@@ -546,7 +547,12 @@ class ScenarioBuilder {
     if (!el) return;
     el.style.padding = '12px';
     el.style.overflow = 'auto';
-    if (this._helperTab === 'globals') {
+    if (this._helperTab === 'presets') {
+      el.innerHTML = window.EnderTrack?.Scenario?._renderPresetsTab?.(
+        window.EnderTrack.Scenario.manager?.getAllScenarios() || [],
+        window.EnderTrack.Scenario.manager?.getCurrentScenario()
+      ) || '<div style="color:#888; font-size:11px;">Module Scenario non chargé</div>';
+    } else if (this._helperTab === 'globals') {
       el.innerHTML = this._renderHelperGlobals();
     } else if (this._helperTab === 'scripts') {
       el.style.padding = '0';

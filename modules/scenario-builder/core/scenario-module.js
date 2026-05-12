@@ -135,24 +135,42 @@ class ScenarioModule {
     const container = document.getElementById('acquisitionTabContent');
     if (!container) return;
 
-    if (!this._subTab) this._subTab = 'presets';
     const scenarios = this.manager?.getAllScenarios() || [];
     const current = this.manager?.getCurrentScenario();
+    const actionCount = current ? EnderTrack.TreeUtils.countActions(current.tree) : 0;
 
     container.innerHTML = `
-      <div style="display:flex; flex-direction:column; height:100%;">
-        <!-- Sub-tabs -->
-        <div style="display:flex; gap:2px; padding:6px 8px; border-bottom:1px solid #333;">
-          <button onclick="EnderTrack.Scenario._setSubTab('presets')" style="padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${this._subTab === 'presets' ? 'var(--active-element)' : 'transparent'}; color:${this._subTab === 'presets' ? 'var(--text-selected)' : 'var(--text-general)'};">Presets</button>
-          <button onclick="EnderTrack.Scenario._setSubTab('builder')" style="padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:${this._subTab === 'builder' ? 'var(--active-element)' : 'transparent'}; color:${this._subTab === 'builder' ? 'var(--text-selected)' : 'var(--text-general)'};">Builder</button>
+      <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
+        <!-- Scenario selector -->
+        <select id="sbScenarioSelect" style="width:100%; padding:8px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
+          ${scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '\ud83c\udfac'} ${s.name}</option>`).join('')}
+        </select>
 
+        <!-- Details -->
+        ${current ? `<div style="padding:6px; background:var(--app-bg); border-radius:4px; font-size:10px; color:var(--text-general);">
+          <strong style="color:var(--text-selected);">${current.name}</strong><br>
+          ${actionCount} action${actionCount > 1 ? 's' : ''} ${current.createdAt ? '\u2014 ' + new Date(current.createdAt).toLocaleDateString() : ''}
+        </div>` : ''}
+
+        <!-- Separator -->
+        <div style="border-top:1px solid #333;"></div>
+
+        <!-- Execute -->
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+          <button onclick="EnderTrack.Scenario.executeScenario()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#22c55e; color:#000; font-weight:600;" ${actionCount ? '' : 'disabled style="padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.3;"'}>\u25b6</button>
+          <button id="sbPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\u23f8</button>
+          <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">\u25a0</button>
         </div>
-        <!-- Content -->
-        <div style="flex:1; overflow-y:auto; padding:8px;">
-          ${this._subTab === 'presets' ? this._renderPresetsTab(scenarios, current) : ''}
-          ${this._subTab === 'builder' ? this._renderBuilderTab(scenarios, current) : ''}
-          
+
+        <!-- Separator -->
+        <div style="border-top:1px solid #333;"></div>
+
+        <!-- Edit -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button onclick="EnderTrack.Scenario._openBuilder()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\ud83d\udd27 \u00c9diter</button>
+          <button onclick="EnderTrack.Scenario._newScenario()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">+ Nouveau</button>
         </div>
+        <button onclick="EnderTrack.Scenario._deleteScenario()" style="padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:#888; text-align:left;">\ud83d\uddd1 Supprimer</button>
       </div>`;
 
     document.getElementById('sbScenarioSelect')?.addEventListener('change', e => {
@@ -161,11 +179,6 @@ class ScenarioModule {
       this.updateCanvasOverlay();
       this.createUI();
     });
-  }
-
-  _setSubTab(tab) {
-    this._subTab = tab;
-    this.createUI();
   }
 
   _renderPresetsTab(scenarios, current) {
