@@ -10,7 +10,7 @@ class ScenarioBuilder {
     this._mode = 'build'; // 'build' | 'helper'
     this._buildSubView = 'tree'; // 'tree' | 'watchers'
     this._selectedWatcherIdx = null;
-    this._openAccordions = { imagerie: true, flow: false, actions: false, plugins: false, custom: false, python: false, macros: false };
+    this._openAccordions = { flow: true, actions: true, plugins: false, custom: false, python: false, macros: false };
   }
 
   // === OPEN / CLOSE ===
@@ -282,8 +282,10 @@ class ScenarioBuilder {
     modal.innerHTML = `
       <div class="sb-split-modal">
         <div class="sb-header">
-          <div class="sb-tabs" style="flex:1; border:none; padding:0;">
-            <button onclick="EnderTrack.ScenarioBuilder._setView('props')" class="sb-tab-btn ${this._viewMode === 'props' ? 'active' : ''}">Propri\u00e9t\u00e9s</button>
+          <span class="sb-header-name" style="font-size:11px; color:var(--text-selected); padding:0 8px; white-space:nowrap;">${this._escapeHtml(this.scenario.name)}</span>
+          <button onclick="EnderTrack.ScenarioBuilder._showScenarioDropdown(event)" class="sb-mini-btn" title="Changer">\u25bc</button>
+          <button onclick="EnderTrack.ScenarioBuilder._showFileMenu(event)" class="sb-mini-btn" title="Menu">\u2630</button>
+          <div class="sb-tabs" style="flex:1; border:none; padding:0; margin-left:8px;">
             <button onclick="EnderTrack.ScenarioBuilder._setView('presets')" class="sb-tab-btn ${this._viewMode === 'presets' ? 'active' : ''}">Presets</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('build')" class="sb-tab-btn ${this._viewMode === 'build' ? 'active' : ''}">Avanc\u00e9</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('vars')" class="sb-tab-btn ${this._viewMode === 'vars' ? 'active' : ''}">Variables</button>
@@ -479,7 +481,7 @@ class ScenarioBuilder {
     const activeEl = document.getElementById(activeId);
     if (activeEl) activeEl.style.display = mode === 'build' ? 'grid' : 'block';
     document.querySelectorAll('.sb-header .sb-tab-btn').forEach(b => b.classList.remove('active'));
-    const idx = { props: 0, presets: 1, build: 2, vars: 3, code: 4 }[mode] || 0;
+    const idx = { presets: 0, build: 1, vars: 2, code: 3 }[mode] || 0;
     document.querySelectorAll('.sb-header .sb-tab-btn')[idx]?.classList.add('active');
     if (mode === 'vars') this._renderVarsView();
     else if (mode === 'code') this._renderCodeView();
@@ -1137,16 +1139,7 @@ class ScenarioBuilder {
       (macros.map(m => item(`${m.icon || '📦'} ${m.name}`, `EnderTrack.ScenarioBuilder.addMacroFromLibrary('${m.macroId}')`)).join('') || '') +
       item('📂 Importer macro...', `EnderTrack.ScenarioBuilder._importMacro()`);
 
-    // Imagerie presets (icon-only grid)
-    const imagerieItems = [
-      ['\ud83d\udccd', 'Multi-pos', "EnderTrack.ScenarioBuilder._insertPreset('multipos')"],
-      ['\ud83d\udcda', 'Z-Stack', "EnderTrack.ScenarioBuilder._insertPreset('zstack')"],
-      ['\u23f1\ufe0f', 'Timelapse', "EnderTrack.ScenarioBuilder._insertPreset('timelapse')"],
-      ['\ud83e\udde9', 'Mosaique', "EnderTrack.ScenarioBuilder._insertPreset('mosaic')"],
-    ].map(([icon, label, action]) => `<div class="sb-palette-item" onclick="${action}" title="${label}" style="font-size:18px; text-align:center; padding:8px;">${icon}</div>`).join('');
-
     el.innerHTML =
-      accordion('imagerie', '\ud83d\udd2c', 'Imagerie', imagerieItems, 4) +
       accordion('flow', '\ud83d\udd04', 'Flux', flowItems, loops.length + 1) +
       accordion('actions', '\u26a1', 'Actions', actionItems, coreActions.length) +
       accordion('plugins', '\ud83d\udd0c', 'Plugins', pluginItems, pluginActions.length || null) +

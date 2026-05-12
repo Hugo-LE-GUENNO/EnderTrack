@@ -339,7 +339,12 @@ class ScenarioModule {
   _togglePreset(key, val) {
     if (!this._preset) this._preset = {};
     this._preset[key] = val;
-    this.createUI();
+    // Re-render presets view (in builder if open, or in acquisition tab)
+    if (document.getElementById('sbPresetsView')) {
+      window.EnderTrack.ScenarioBuilder?._renderPresetsView?.();
+    } else {
+      this.createUI();
+    }
   }
 
   _pp(key, val) {
@@ -447,7 +452,11 @@ class ScenarioModule {
     scenario.tree = tree;
     manager.save();
     window.EnderTrack.Scenario.updateCanvasOverlay();
-    this._subTab = 'builder';
+    // Refresh builder tree if open
+    if (window.EnderTrack.ScenarioBuilder?.scenario) {
+      window.EnderTrack.ScenarioBuilder.scenario = scenario;
+      window.EnderTrack.ScenarioBuilder._refreshTree?.();
+    }
     this.createUI();
   }
 
