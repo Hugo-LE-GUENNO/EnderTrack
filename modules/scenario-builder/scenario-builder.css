@@ -182,11 +182,11 @@
 
 /* === Palette items === */
 .sb-palette-item {
-  padding: 5px 10px;
+  padding: 6px 10px;
   margin-bottom: 1px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-general);
   transition: background 0.12s;
 }

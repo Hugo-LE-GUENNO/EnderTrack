@@ -10,7 +10,7 @@ class ScenarioBuilder {
     this._mode = 'build'; // 'build' | 'helper'
     this._buildSubView = 'tree'; // 'tree' | 'watchers'
     this._selectedWatcherIdx = null;
-    this._openAccordions = { flow: true, actions: true, plugins: false, custom: false, python: false, macros: false };
+    this._openAccordions = { imagerie: true, flow: false, actions: false, plugins: false, custom: false, python: false, macros: false };
   }
 
   // === OPEN / CLOSE ===
@@ -328,7 +328,7 @@ class ScenarioBuilder {
           <!-- === HELPER SECTION === -->
           <div id="sbHelperSection" style="display:${this._mode === 'helper' ? 'flex' : 'none'}; flex-direction:column; flex:1; overflow:hidden;">
             <div class="sb-tabs">
-              <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('presets')" class="sb-tab-btn ${this._helperTab === 'presets' ? 'active' : ''}">🔬 Presets</button>
+              <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('globals')" class="sb-tab-btn ${this._helperTab === 'presets' ? 'active' : ''}">🔬 Presets</button>
               <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('globals')" class="sb-tab-btn ${this._helperTab === 'globals' ? 'active' : ''}">🌐 Variables globales</button>
               <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('scripts')" class="sb-tab-btn ${this._helperTab === 'scripts' ? 'active' : ''}">🐍 Scripts Python</button>
               <button onclick="EnderTrack.ScenarioBuilder._setHelperTab('fonctions')" class="sb-tab-btn ${this._helperTab === 'fonctions' ? 'active' : ''}">📦 Fonctionothèque</button>
@@ -537,7 +537,7 @@ class ScenarioBuilder {
   _setHelperTab(tab) {
     this._helperTab = tab;
     document.querySelectorAll('#sbHelperSection .sb-tab-btn').forEach(b => b.classList.remove('active'));
-    const idx = { presets: 0, globals: 1, scripts: 2, fonctions: 3 }[tab] || 0;
+    const idx = { globals: 0, scripts: 1, fonctions: 2 }[tab] || 0;
     document.querySelectorAll('#sbHelperSection .sb-tab-btn')[idx]?.classList.add('active');
     this._renderHelperView();
   }
@@ -1090,7 +1090,20 @@ class ScenarioBuilder {
     this._refreshPalette();
   }
 
-  _refreshPalette() {
+  _insertPreset(type) {
+    // Activate preset and generate into current scenario
+    if (!window.EnderTrack?.Scenario) return;
+    const s = window.EnderTrack.Scenario;
+    if (!s._preset) s._preset = { multipos: false, timelapse: false, zstack: false, mosaic: false };
+    // Reset all, activate selected
+    Object.keys(s._preset).forEach(k => s._preset[k] = false);
+    s._preset[type] = true;
+    s._generateFromPreset();
+    // Refresh tree in builder
+    this._refreshTree();
+  }
+
+    _refreshPalette() {
     const el = document.getElementById('sbPalette');
     if (!el) return;
 
@@ -1139,13 +1152,22 @@ class ScenarioBuilder {
       (macros.map(m => item(`${m.icon || '📦'} ${m.name}`, `EnderTrack.ScenarioBuilder.addMacroFromLibrary('${m.macroId}')`)).join('') || '') +
       item('📂 Importer macro...', `EnderTrack.ScenarioBuilder._importMacro()`);
 
+    // Imagerie presets (icon-only grid)
+    const imagerieItems = [
+      ['\ud83d\udccd', 'Multi-pos', "EnderTrack.ScenarioBuilder._insertPreset('multipos')"],
+      ['\ud83d\udcda', 'Z-Stack', "EnderTrack.ScenarioBuilder._insertPreset('zstack')"],
+      ['\u23f1\ufe0f', 'Timelapse', "EnderTrack.ScenarioBuilder._insertPreset('timelapse')"],
+      ['\ud83e\udde9', 'Mosaique', "EnderTrack.ScenarioBuilder._insertPreset('mosaic')"],
+    ].map(([icon, label, action]) => `<div class="sb-palette-item" onclick="${action}" title="${label}" style="font-size:18px; text-align:center; padding:8px;">${icon}</div>`).join('');
+
     el.innerHTML =
-      accordion('flow', '🔄', 'Flux', flowItems, loops.length + 1) +
-      accordion('actions', '⚡', 'Actions de base', actionItems, coreActions.length) +
-      accordion('plugins', '🔌', 'Plugins', pluginItems, pluginActions.length || null) +
-      accordion('custom', '✏️', 'Custom', customItems) +
-      accordion('python', '🐍', 'Python', pythonItems, scriptActions.length || null) +
-      accordion('macros', '📦', 'Macros', macroItems, macros.length || null);
+      accordion('imagerie', '\ud83d\udd2c', 'Imagerie', imagerieItems, 4) +
+      accordion('flow', '\ud83d\udd04', 'Flux', flowItems, loops.length + 1) +
+      accordion('actions', '\u26a1', 'Actions', actionItems, coreActions.length) +
+      accordion('plugins', '\ud83d\udd0c', 'Plugins', pluginItems, pluginActions.length || null) +
+      accordion('custom', '\u270f\ufe0f', 'Custom', customItems) +
+      accordion('python', '\ud83d\udc0d', 'Python', pythonItems, scriptActions.length || null) +
+      accordion('macros', '\ud83d\udce6', 'Macros', macroItems, macros.length || null);
   }
 
   // === PLUGIN ACTION DISCOVERY ===
