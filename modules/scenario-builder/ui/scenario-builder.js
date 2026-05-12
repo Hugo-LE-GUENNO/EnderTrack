@@ -282,10 +282,8 @@ class ScenarioBuilder {
     modal.innerHTML = `
       <div class="sb-split-modal">
         <div class="sb-header">
-          <span class="sb-header-name" style="font-size:11px; color:var(--text-selected); padding:0 8px; white-space:nowrap;">${this._escapeHtml(this.scenario.name)}</span>
-          <button onclick="EnderTrack.ScenarioBuilder._showScenarioDropdown(event)" class="sb-mini-btn" title="Changer">\u25bc</button>
-          <button onclick="EnderTrack.ScenarioBuilder._showFileMenu(event)" class="sb-mini-btn" title="Menu">\u2630</button>
-          <div class="sb-tabs" style="flex:1; border:none; padding:0; margin-left:8px;">
+          <div class="sb-tabs" style="flex:1; border:none; padding:0;">
+            <button onclick="EnderTrack.ScenarioBuilder._setView('manager')" class="sb-tab-btn ${this._viewMode === 'manager' ? 'active' : ''}">Sc\u00e9narios</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('presets')" class="sb-tab-btn ${this._viewMode === 'presets' ? 'active' : ''}">Presets</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('build')" class="sb-tab-btn ${this._viewMode === 'build' ? 'active' : ''}">Avanc\u00e9</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('vars')" class="sb-tab-btn ${this._viewMode === 'vars' ? 'active' : ''}">Variables</button>
@@ -294,6 +292,8 @@ class ScenarioBuilder {
           <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-header-close" title="Fermer">\u2715</button>
         </div>
         <div class="sb-body">
+          <!-- Manager view -->
+          <div id="sbManagerView" class="sb-full-view" style="display:${this._viewMode === 'manager' ? 'block' : 'none'}; padding:12px; overflow-y:auto;"></div>
           <!-- Build view: 3 columns -->
           <div id="sbBuildView" class="sb-build-view" style="display:${this._viewMode === 'build' ? 'grid' : 'none'};">
             <div id="sbPalette" class="sb-palette"></div>
@@ -330,6 +330,7 @@ class ScenarioBuilder {
     if (this._viewMode === 'code') this._renderCodeView();
     if (this._viewMode === 'props') this._renderPropsView();
     if (this._viewMode === 'presets') this._renderPresetsView();
+    if (this._viewMode === 'manager') this._renderManagerView();
     this._bindKeyboard();
   }
 
@@ -473,20 +474,21 @@ class ScenarioBuilder {
 
   _setView(mode) {
     this._viewMode = mode;
-    ['sbBuildView', 'sbVarsView', 'sbCodeView', 'sbPropsView', 'sbPresetsView'].forEach(id => {
+    ['sbBuildView', 'sbVarsView', 'sbCodeView', 'sbPropsView', 'sbPresetsView', 'sbManagerView'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    const activeId = { build: 'sbBuildView', vars: 'sbVarsView', code: 'sbCodeView', props: 'sbPropsView', presets: 'sbPresetsView' }[mode];
+    const activeId = { build: 'sbBuildView', vars: 'sbVarsView', code: 'sbCodeView', props: 'sbPropsView', presets: 'sbPresetsView', manager: 'sbManagerView' }[mode];
     const activeEl = document.getElementById(activeId);
     if (activeEl) activeEl.style.display = mode === 'build' ? 'grid' : 'block';
     document.querySelectorAll('.sb-header .sb-tab-btn').forEach(b => b.classList.remove('active'));
-    const idx = { presets: 0, build: 1, vars: 2, code: 3 }[mode] || 0;
+    const idx = { manager: 0, presets: 1, build: 2, vars: 3, code: 4 }[mode] || 0;
     document.querySelectorAll('.sb-header .sb-tab-btn')[idx]?.classList.add('active');
     if (mode === 'vars') this._renderVarsView();
     else if (mode === 'code') this._renderCodeView();
     else if (mode === 'props') this._renderPropsView();
     else if (mode === 'presets') this._renderPresetsView();
+    else if (mode === 'manager') this._renderManagerView();
   }
 
   _setBuildSub(sub) {
@@ -1067,7 +1069,80 @@ class ScenarioBuilder {
     this._refreshPalette();
   }
 
-  _renderPresetsView() {
+  _renderManagerView() {
+    const el = document.getElementById('sbManagerView');
+    if (!el) return;
+    const mgr = EnderTrack.Scenario?.manager;
+    if (!mgr) { el.innerHTML = '<div style="color:#888;">Manager non disponible</div>'; return; }
+    const scenarios = mgr.getAllScenarios() || [];
+    const current = mgr.getCurrentScenario();
+
+    el.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:6px;">
+          <button onclick="EnderTrack.ScenarioBuilder._newScenario()" style="padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected);">+ Nouveau</button>
+          <button onclick="EnderTrack.ScenarioBuilder._importScenario()" style="padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);">Charger</button>
+          <button onclick="EnderTrack.ScenarioBuilder._exportScenario()" style="padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);">Sauvegarder</button>
+          <span style="flex:1"></span>
+          <button onclick="EnderTrack.ScenarioBuilder._deleteAllScenarios()" style="padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:transparent; color:#ef4444;">Tout supprimer</button>
+        </div>
+
+        <div style="border:1px solid #333; border-radius:4px; overflow:hidden;">
+          ${scenarios.map(s => {
+            const active = s.id === current?.id;
+            return `<div onclick="EnderTrack.ScenarioBuilder._switchToScenario('${s.id}'); EnderTrack.ScenarioBuilder._renderManagerView();" style="display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; background:${active ? 'var(--app-bg)' : 'transparent'}; border-left:3px solid ${active ? 'var(--active-element)' : 'transparent'};">
+              <span style="font-size:16px;">${s.icon || '\ud83c\udfac'}</span>
+              <span style="flex:1; font-size:11px; color:${active ? 'var(--text-selected)' : 'var(--text-general)'};">${this._escapeHtml(s.name)}</span>
+              <span style="font-size:9px; color:#666;">${EnderTrack.TreeUtils.countActions(s.tree)} actions</span>
+            </div>`;
+          }).join('')}
+        </div>
+
+        ${current ? `
+        <div style="padding:8px; background:var(--app-bg); border-radius:4px; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; gap:6px; align-items:center;">
+            <label style="font-size:10px; color:var(--text-general); width:50px;">Nom</label>
+            <input type="text" value="${this._escapeHtml(current.name)}" onchange="EnderTrack.ScenarioBuilder._renameCurrentTo(this.value)"
+              style="flex:1; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:11px;">
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <label style="font-size:10px; color:var(--text-general); width:50px;">Ic\u00f4ne</label>
+            <input type="text" value="${current.icon || '\ud83c\udfac'}" onchange="EnderTrack.ScenarioBuilder._setCurrentIcon(this.value)"
+              style="width:40px; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:14px; text-align:center;">
+            <label style="font-size:10px; color:var(--text-general); margin-left:8px;">Description</label>
+            <input type="text" value="${this._escapeHtml(current.description || '')}" onchange="EnderTrack.ScenarioBuilder._setCurrentDesc(this.value)"
+              style="flex:1; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="optionnel">
+          </div>
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button onclick="EnderTrack.ScenarioBuilder._duplicateScenario()" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-general);">Dupliquer</button>
+            <button onclick="EnderTrack.ScenarioBuilder._deleteScenario()" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:transparent; color:#ef4444;">Supprimer</button>
+          </div>
+        </div>
+        ` : ''}
+      </div>`;
+  }
+
+  _renameCurrentTo(name) {
+    if (!name) return;
+    const mgr = EnderTrack.Scenario?.manager;
+    if (!mgr) return;
+    mgr.renameScenario(this.scenario.id, name);
+    this.scenario.name = name;
+    EnderTrack.Scenario?.createUI?.();
+  }
+
+  _setCurrentIcon(icon) {
+    this.scenario.icon = icon;
+    EnderTrack.Scenario?.manager?.save?.();
+    EnderTrack.Scenario?.createUI?.();
+  }
+
+  _setCurrentDesc(desc) {
+    this.scenario.description = desc;
+    EnderTrack.Scenario?.manager?.save?.();
+  }
+
+    _renderPresetsView() {
     const el = document.getElementById('sbPresetsView');
     if (!el) return;
     const html = window.EnderTrack?.Scenario?._renderPresetsTab?.(

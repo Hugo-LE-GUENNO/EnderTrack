@@ -339,17 +339,28 @@ class ScenarioModule {
   _togglePreset(key, val) {
     if (!this._preset) this._preset = {};
     this._preset[key] = val;
-    // Re-render presets view (in builder if open, or in acquisition tab)
+    // Re-render presets view
     if (document.getElementById('sbPresetsView')) {
       window.EnderTrack.ScenarioBuilder?._renderPresetsView?.();
     } else {
       this.createUI();
     }
+    // Auto-generate
+    this._autoGenerate();
   }
 
   _pp(key, val) {
     if (!this._presetParams) this._presetParams = {};
     this._presetParams[key] = val;
+    // Debounced auto-generate
+    clearTimeout(this._ppTimer);
+    this._ppTimer = setTimeout(() => this._autoGenerate(), 300);
+  }
+
+  _autoGenerate() {
+    const p = this._preset || {};
+    if (!p.multipos && !p.timelapse && !p.zstack && !p.mosaic) return;
+    this._generateFromPreset();
   }
 
   _generateFromPreset() {
