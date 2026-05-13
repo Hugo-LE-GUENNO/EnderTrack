@@ -178,7 +178,8 @@ class ScenarioModule {
   }
 
   _renderPresetsTab(scenarios, current) {
-    if (!this._preset) this._preset = { multipos: false, timelapse: false, zstack: false, mosaic: false, autofocus: false, useLight: false, useCapture: true };
+    const currentScenario = this.manager?.getCurrentScenario();
+    this._preset = currentScenario?.presetState || { multipos: false, timelapse: false, zstack: false, mosaic: false, autofocus: false, useLight: false, useCapture: true };
     const p = this._preset;
     const pos = window.EnderTrack?.State?.get?.()?.pos || { x: 0, y: 0, z: 0 };
     if (!this._presetParams) this._presetParams = {
@@ -337,8 +338,12 @@ class ScenarioModule {
   }
 
   _togglePreset(key, val) {
-    if (!this._preset) this._preset = {};
-    this._preset[key] = val;
+    const scenario = this.manager?.getCurrentScenario();
+    if (!scenario) return;
+    if (!scenario.presetState) scenario.presetState = { multipos: false, timelapse: false, zstack: false, mosaic: false, autofocus: false, useLight: false, useCapture: true };
+    scenario.presetState[key] = val;
+    this._preset = scenario.presetState;
+    this.manager.save();
     // Re-render presets view
     if (document.getElementById('sbPresetsView')) {
       window.EnderTrack.ScenarioBuilder?._renderPresetsView?.();
