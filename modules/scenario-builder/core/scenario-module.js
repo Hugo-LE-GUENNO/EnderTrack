@@ -337,7 +337,7 @@ class ScenarioModule {
                 </select>
                 <input type="text" value="${pp.prefix}" onchange="EnderTrack.Scenario._pp('prefix', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="préfixe">
                 <input type="text" value="${pp.path || './captures'}" id="sbPathInput" onchange="EnderTrack.Scenario._pp('path', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="chemin">
-                <button onclick="EnderTrack.Scenario._browsePath()" style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-general);" title="Parcourir">📂</button>
+                <button onclick="EnderTrack.Scenario._browsePath()" style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-general);" title="Parcourir">...</button>
               </div>
             </div>` : ''}
           </div>
