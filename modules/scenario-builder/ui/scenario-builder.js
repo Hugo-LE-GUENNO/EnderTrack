@@ -283,41 +283,40 @@ class ScenarioBuilder {
       <div class="sb-split-modal">
         <div class="sb-header">
           <div class="sb-tabs" style="flex:1; border:none; padding:0;">
-            <button onclick="EnderTrack.ScenarioBuilder._setView('manager')" class="sb-tab-btn ${this._viewMode === 'manager' ? 'active' : ''}">Fichier</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setView('presets')" class="sb-tab-btn ${this._viewMode === 'presets' ? 'active' : ''}">Simple</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setView('build')" class="sb-tab-btn ${this._viewMode === 'build' ? 'active' : ''}">Avanc\u00e9</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setView('vars')" class="sb-tab-btn ${this._viewMode === 'vars' ? 'active' : ''}">Variables</button>
-            <button onclick="EnderTrack.ScenarioBuilder._setView('code')" class="sb-tab-btn ${this._viewMode === 'code' ? 'active' : ''}">Code</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('manager')" class="sb-tab-btn ${this._viewMode === 'manager' ? 'active' : ''}" title="Fichier" style="font-size:14px; padding:6px 10px;">\u2630</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('presets')" class="sb-tab-btn ${this._viewMode === 'presets' ? 'active' : ''}">Assist\u00e9</button>
+            <button onclick="EnderTrack.ScenarioBuilder._setView('build')" class="sb-tab-btn ${this._viewMode === 'build' ? 'active' : ''}">D\u00e9taill\u00e9</button>
           </div>
+          <span style="font-size:10px; color:var(--text-general); padding:0 10px; opacity:0.7;">${this._escapeHtml(this.scenario.name)}</span>
           <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-header-close" title="Fermer">\u2715</button>
         </div>
         <div class="sb-body">
           <!-- Manager view -->
           <div id="sbManagerView" class="sb-full-view" style="display:${this._viewMode === 'manager' ? 'block' : 'none'}; padding:12px; overflow-y:auto;"></div>
-          <!-- Build view: 3 columns -->
-          <div id="sbBuildView" class="sb-build-view" style="display:${this._viewMode === 'build' ? 'grid' : 'none'};">
-            <div id="sbPalette" class="sb-palette"></div>
-            <div class="sb-center">
-              <div class="sb-sub-toggle">
-                <button onclick="EnderTrack.ScenarioBuilder._setBuildSub('tree')" class="sb-toggle-btn ${this._buildSubView === 'tree' ? 'active' : ''}">\ud83c\udf33 S\u00e9quence</button>
-                <button onclick="EnderTrack.ScenarioBuilder._setBuildSub('watchers')" class="sb-toggle-btn ${this._buildSubView === 'watchers' ? 'active' : ''}">\ud83d\udc41\ufe0f Watchers</button>
-              </div>
-              <div id="sbTree" class="sb-tree-zone" onclick="EnderTrack.ScenarioBuilder._deselectNode(event)"></div>
-            </div>
-            <div id="sbProps" class="sb-props"></div>
+          <!-- Presets (Assist\u00e9) view -->
+          <div id="sbPresetsView" class="sb-full-view" style="display:${this._viewMode === 'presets' ? 'flex' : 'none'}; flex-direction:column; overflow:hidden;">
+            <div id="sbPresetsContent" style="flex:1; overflow-y:auto; padding:12px;"></div>
+            <div id="sbPresetsCode" style="height:120px; border-top:1px solid #333; overflow-y:auto; padding:8px; font-family:monospace; font-size:10px; color:#888; background:var(--app-bg);"></div>
           </div>
-          <!-- Presets view -->
-          <div id="sbPresetsView" class="sb-full-view" style="display:${this._viewMode === 'presets' ? 'block' : 'none'}; padding:12px; overflow-y:auto;"></div>
-          <!-- Vars view -->
-          <div id="sbVarsView" class="sb-full-view" style="display:${this._viewMode === 'vars' ? 'block' : 'none'};"></div>
-          <!-- Code view -->
-          <div id="sbCodeView" class="sb-full-view" style="display:${this._viewMode === 'code' ? 'block' : 'none'};"></div>
-          <!-- Props view -->
-          <div id="sbPropsView" class="sb-full-view" style="display:${this._viewMode === 'props' ? 'block' : 'none'};"></div>
+          <!-- Build (D\u00e9taill\u00e9) view -->
+          <div id="sbBuildView" class="sb-build-view" style="display:${this._viewMode === 'build' ? 'flex' : 'none'}; flex-direction:column; overflow:hidden;">
+            <div style="flex:1; display:grid; grid-template-columns:180px 1fr 200px; overflow:hidden;">
+              <div id="sbPalette" class="sb-palette"></div>
+              <div class="sb-center">
+                <div class="sb-sub-toggle">
+                  <button onclick="EnderTrack.ScenarioBuilder._setBuildSub('tree')" class="sb-toggle-btn ${this._buildSubView === 'tree' ? 'active' : ''}">S\u00e9quence</button>
+                  <button onclick="EnderTrack.ScenarioBuilder._setBuildSub('watchers')" class="sb-toggle-btn ${this._buildSubView === 'watchers' ? 'active' : ''}">Watchers</button>
+                </div>
+                <div id="sbTree" class="sb-tree-zone" onclick="EnderTrack.ScenarioBuilder._deselectNode(event)"></div>
+              </div>
+              <div id="sbProps" class="sb-props"></div>
+            </div>
+            <div id="sbBuildCode" style="height:120px; border-top:1px solid #333; overflow-y:auto; padding:8px; font-family:monospace; font-size:10px; color:#888; background:var(--app-bg);"></div>
+          </div>
         </div>
         <div class="sb-footer">
-          <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-footer-btn sb-footer-cancel">Annuler</button>
-          <button onclick="EnderTrack.ScenarioBuilder.save()" class="sb-footer-btn sb-footer-save">\u2714 Enregistrer</button>
+          <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-footer-btn sb-footer-cancel">Fermer</button>
+          <button onclick="EnderTrack.ScenarioBuilder.save()" class="sb-footer-btn sb-footer-save">Enregistrer</button>
         </div>
       </div>`;
 
@@ -326,11 +325,9 @@ class ScenarioBuilder {
     this._refreshPalette();
     this._refreshTree();
     this._refreshProperties();
-    if (this._viewMode === 'vars') this._renderVarsView();
-    if (this._viewMode === 'code') this._renderCodeView();
-    if (this._viewMode === 'props') this._renderPropsView();
     if (this._viewMode === 'presets') this._renderPresetsView();
     if (this._viewMode === 'manager') this._renderManagerView();
+    if (this._viewMode === 'build' || this._viewMode === 'presets') this._renderCodePanel();
     this._bindKeyboard();
   }
 
@@ -474,21 +471,19 @@ class ScenarioBuilder {
 
   _setView(mode) {
     this._viewMode = mode;
-    ['sbBuildView', 'sbVarsView', 'sbCodeView', 'sbPropsView', 'sbPresetsView', 'sbManagerView'].forEach(id => {
+    ['sbBuildView', 'sbPresetsView', 'sbManagerView'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    const activeId = { build: 'sbBuildView', vars: 'sbVarsView', code: 'sbCodeView', props: 'sbPropsView', presets: 'sbPresetsView', manager: 'sbManagerView' }[mode];
+    const activeId = { build: 'sbBuildView', presets: 'sbPresetsView', manager: 'sbManagerView' }[mode];
     const activeEl = document.getElementById(activeId);
-    if (activeEl) activeEl.style.display = mode === 'build' ? 'grid' : 'block';
+    if (activeEl) activeEl.style.display = mode === 'build' ? 'flex' : (mode === 'presets' ? 'flex' : 'block');
     document.querySelectorAll('.sb-header .sb-tab-btn').forEach(b => b.classList.remove('active'));
-    const idx = { manager: 0, presets: 1, build: 2, vars: 3, code: 4 }[mode] || 0;
+    const idx = { manager: 0, presets: 1, build: 2 }[mode] || 0;
     document.querySelectorAll('.sb-header .sb-tab-btn')[idx]?.classList.add('active');
-    if (mode === 'vars') this._renderVarsView();
-    else if (mode === 'code') this._renderCodeView();
-    else if (mode === 'props') this._renderPropsView();
-    else if (mode === 'presets') this._renderPresetsView();
+    if (mode === 'presets') this._renderPresetsView();
     else if (mode === 'manager') this._renderManagerView();
+    if (mode === 'build' || mode === 'presets') this._renderCodePanel();
   }
 
   _setBuildSub(sub) {
@@ -1119,6 +1114,24 @@ class ScenarioBuilder {
           </div>
         </div>
         ` : ''}
+
+        <!-- Variables -->
+        <div style="margin-top:8px; padding:8px; background:var(--app-bg); border-radius:4px;">
+          <div style="font-size:10px; color:var(--text-selected); font-weight:600; margin-bottom:6px;">Variables globales (session)</div>
+          <div style="font-size:9px; color:#666; margin-bottom:4px;">Persistantes tant que le serveur tourne</div>
+          <div id="sbGlobalVars" style="font-size:10px; color:var(--text-general);">
+            ${Object.entries(window.EnderTrack?.VariableManager?.getGlobals?.() || {}).map(([k,v]) => `<div style="display:flex; gap:4px;"><span style="color:var(--coordinates-color);">${k}</span> = <span>${v}</span></div>`).join('') || '<span style="color:#555;">Aucune</span>'}
+          </div>
+        </div>
+        ${current ? `
+        <div style="margin-top:6px; padding:8px; background:var(--app-bg); border-radius:4px;">
+          <div style="font-size:10px; color:var(--text-selected); font-weight:600; margin-bottom:6px;">Variables locales (${this._escapeHtml(current.name)})</div>
+          <div style="font-size:9px; color:#666; margin-bottom:4px;">Propres \u00e0 ce sc\u00e9nario</div>
+          <div style="font-size:10px; color:var(--text-general);">
+            ${(current.variables || []).map(v => `<div style="display:flex; gap:4px;"><span style="color:var(--coordinates-color);">${v.name}</span> = <span>${v.default ?? ''}</span></div>`).join('') || '<span style="color:#555;">Aucune</span>'}
+          </div>
+        </div>
+        ` : ''}
       </div>`;
   }
 
@@ -1142,14 +1155,47 @@ class ScenarioBuilder {
     EnderTrack.Scenario?.manager?.save?.();
   }
 
+    _renderCodePanel() {
+    const codeEl = document.getElementById('sbPresetsCode') || document.getElementById('sbBuildCode');
+    const codeEl2 = document.getElementById('sbBuildCode');
+    const codeEl1 = document.getElementById('sbPresetsCode');
+    // Generate simple pseudo-code from tree
+    const scenario = this.scenario;
+    let code = '';
+    if (scenario?.tree?.children) {
+      code = this._treeToCode(scenario.tree.children, 0);
+    }
+    if (codeEl1) codeEl1.textContent = code || '// (vide)';
+    if (codeEl2) codeEl2.textContent = code || '// (vide)';
+  }
+
+  _treeToCode(nodes, indent) {
+    if (!nodes) return '';
+    const pad = '  '.repeat(indent);
+    return nodes.map(n => {
+      if (n.type === 'loop') {
+        const label = n.params?.label || 'boucle';
+        const count = n.params?.countMode === 'list' ? 'liste' : (n.params?.count || '?');
+        return pad + 'pour ' + (n.params?.loopVar || '$i') + ' dans ' + count + ' (' + label + ') {\n' + this._treeToCode(n.children, indent + 1) + pad + '}';
+      } else if (n.type === 'condition') {
+        return pad + 'si (' + (n.params?.expression || '?') + ') {\n' + this._treeToCode(n.children, indent + 1) + pad + '}';
+      } else if (n.type === 'action') {
+        const label = n.params?.label || n.actionId || '?';
+        return pad + label;
+      }
+      return '';
+    }).filter(Boolean).join('\n');
+  }
+
     _renderPresetsView() {
-    const el = document.getElementById('sbPresetsView');
+    const el = document.getElementById('sbPresetsContent');
     if (!el) return;
     const html = window.EnderTrack?.Scenario?._renderPresetsTab?.(
       window.EnderTrack.Scenario.manager?.getAllScenarios() || [],
       window.EnderTrack.Scenario.manager?.getCurrentScenario()
     ) || '<div style="color:#888; font-size:11px;">Module Scenario non charg\u00e9</div>';
     el.innerHTML = html;
+    this._renderCodePanel();
   }
 
     _insertPreset(type) {

@@ -105,7 +105,6 @@
 /* === Build view (3 columns) === */
 .sb-build-view {
   flex: 1;
-  grid-template-columns: 200px 1fr 280px;
   overflow: hidden;
 }
 
