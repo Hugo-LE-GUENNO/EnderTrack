@@ -149,7 +149,7 @@ class DisplayModule {
 
   // === SOURCE ASSIGNMENT ===
 
-  async assignSource(viewportId, source) {
+  assignSource(viewportId, source) {
     const vp = this.viewports.find(v => v.id === viewportId);
     if (!vp) return;
     if (vp.source === source) return;
@@ -189,20 +189,24 @@ class DisplayModule {
     // Camera source: create video element
     if (source && source.startsWith('camera')) {
       const camera = window.EnderTrack?.Camera;
-      // Start live if not already
-      if (camera && !camera.driver?._stream) {
-        await camera.startLive?.();
-      }
+      // Start live if not already, then create video
+      const _createVideo = () => {
+        if (camera?.driver?._stream) {
+          const video = document.createElement('video');
+          video.autoplay = true;
+          video.muted = true;
+          video.playsInline = true;
+          video.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
+          video.srcObject = camera.driver._stream;
+          cell.appendChild(video);
+          video.play().catch(() => {});
+          this._videos.set(viewportId, video);
+        }
+      };
       if (camera?.driver?._stream) {
-        const video = document.createElement('video');
-        video.autoplay = true;
-        video.muted = true;
-        video.playsInline = true;
-        video.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
-        video.srcObject = camera.driver._stream;
-        cell.appendChild(video);
-        video.play().catch(() => {});
-        this._videos.set(viewportId, video);
+        _createVideo();
+      } else if (camera?.startLive) {
+        camera.startLive().then(() => _createVideo());
       }
       // Hide placeholder
       const ph = cell.querySelector(".viewport-placeholder");
