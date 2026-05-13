@@ -190,7 +190,8 @@ class ScenarioModule {
       exposure: 100000, gain: 1.0,
       lightChannel: '', lightIntensity: 100,
       format: 'tiff', path: './captures', prefix: 'acq',
-      afRange: 0.1, afSteps: 10
+      afRange: 0.1, afSteps: 10,
+      cameraId: ''
     };
     const pp = this._presetParams;
     const channels = window.EnderTrack?.Light?.getChannels?.() || [];
@@ -316,22 +317,29 @@ class ScenarioModule {
               <input type="checkbox" ${p.useCapture ? 'checked' : ''} onchange="EnderTrack.Scenario._togglePreset('useCapture', this.checked)" style="margin:0;">
               📷 Acquisition & Sortie
             </label>
-            ${p.useCapture ? `<div style="display:flex; gap:6px; align-items:center;">
-              <label style="font-size:10px;">Expo</label>
-              <input type="number" value="${pp.exposure}" min="100" step="1000" onchange="EnderTrack.Scenario._pp('exposure', parseInt(this.value))" style="width:65px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-              <span style="font-size:9px; color:var(--text-general);">µs</span>
-              <label style="font-size:10px;">Gain</label>
-              <input type="number" value="${pp.gain}" min="1" max="16" step="0.1" onchange="EnderTrack.Scenario._pp('gain', parseFloat(this.value))" style="width:35px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-            </div>
-            <div style="display:flex; gap:6px; align-items:center; margin-top:4px;">
-              <select onchange="EnderTrack.Scenario._pp('format', this.value)" style="padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
-                <option value="tiff" ${pp.format === 'tiff' ? 'selected' : ''}>TIFF</option>
-                <option value="png" ${pp.format === 'png' ? 'selected' : ''}>PNG</option>
-                <option value="jpeg" ${pp.format === 'jpeg' ? 'selected' : ''}>JPEG</option>
+            ${p.useCapture ? `<div style="display:flex; flex-direction:column; gap:4px;">
+              <select onchange="EnderTrack.Scenario._pp('cameraId', this.value); EnderTrack.Scenario._togglePreset('useCapture', true)" style="width:100%; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+                <option value="">— Caméra —</option>
+                ${(window._cameras || []).map(c => `<option value="${c.id}" ${String(c.id) === String(pp.cameraId) ? 'selected' : ''}>${c.label}</option>`).join('')}
               </select>
-              <input type="text" value="${pp.prefix}" onchange="EnderTrack.Scenario._pp('prefix', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="préfixe">
-              <input type="text" value="${pp.path || './captures'}" onchange="EnderTrack.Scenario._pp('path', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="chemin">
+              ${(() => { const cam = (window._cameras || []).find(c => String(c.id) === String(pp.cameraId)); const hasCtrls = cam && (cam.type === 'picamera2' || cam.type === 'simulation'); return hasCtrls ? `<div style="display:flex; gap:6px; align-items:center;">
+                <label style="font-size:10px;">Expo</label>
+                <input type="number" value="${pp.exposure}" min="100" step="1000" onchange="EnderTrack.Scenario._pp('exposure', parseInt(this.value))" style="width:65px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+                <span style="font-size:9px; color:var(--text-general);">µs</span>
+                <label style="font-size:10px;">Gain</label>
+                <input type="number" value="${pp.gain}" min="1" max="16" step="0.1" onchange="EnderTrack.Scenario._pp('gain', parseFloat(this.value))" style="width:35px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+              </div>` : ''; })()}
+              <div style="display:flex; gap:6px; align-items:center;">
+                <select onchange="EnderTrack.Scenario._pp('format', this.value)" style="padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+                  <option value="tiff" ${pp.format === 'tiff' ? 'selected' : ''}>TIFF</option>
+                  <option value="png" ${pp.format === 'png' ? 'selected' : ''}>PNG</option>
+                  <option value="jpeg" ${pp.format === 'jpeg' ? 'selected' : ''}>JPEG</option>
+                </select>
+                <input type="text" value="${pp.prefix}" onchange="EnderTrack.Scenario._pp('prefix', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="préfixe">
+                <input type="text" value="${pp.path || './captures'}" onchange="EnderTrack.Scenario._pp('path', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="chemin">
+              </div>
             </div>` : ''}
+          </div>
           </div>
         </div>
       </div>`;
@@ -387,7 +395,7 @@ class ScenarioModule {
     const captureActions = [];
     if (p.autofocus) captureActions.push({ type: 'action', actionId: 'autofocus', params: { range: pp.afRange || 0.1, steps: pp.afSteps || 10, showInLog: true, label: 'AF' } });
     if (p.useLight && pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'set', intensity: pp.lightIntensity || 100, showInLog: false } });
-    if (p.useCapture) captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', showInLog: true, label: 'Capture' } });
+    if (p.useCapture) captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', cameraId: pp.cameraId || '', showInLog: true, label: 'Capture' } });
     if (p.useLight && pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'off', showInLog: false } });
 
     // Z-stack wrapper
