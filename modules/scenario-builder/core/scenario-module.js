@@ -303,7 +303,7 @@ class ScenarioModule {
             ${p.useLight ? `<div style="display:flex; gap:6px; align-items:center;">
               <select onchange="EnderTrack.Scenario._pp('lightChannel', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
                 <option value="">— Aucun —</option>
-                ${channels.map(c => \`<option value="\${c.id}" \${c.id === pp.lightChannel ? 'selected' : ''}>\${c.name}</option>\`).join('')}
+                ${channels.map(c => `<option value="${c.id}" ${c.id === pp.lightChannel ? 'selected' : ''}>${c.name}</option>`).join('')}
               </select>
               <input type="number" value="${pp.lightIntensity}" min="0" max="100" onchange="EnderTrack.Scenario._pp('lightIntensity', parseInt(this.value))" style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
               <span style="font-size:9px; color:var(--text-general);">%</span>
