@@ -214,7 +214,8 @@ class DisplayModule {
           // Set driver if needed, then start live
           const type = camConfig?.type || 'webcam';
           const driverName = type === 'mjpeg' ? 'mjpeg' : (type === 'picamera2' ? 'simulation' : 'webcam');
-          const setup = camera.driver ? Promise.resolve() : camera.setDriver(driverName);
+          const needSwitch = !camera.driver || camera.driverName !== driverName;
+          const setup = needSwitch ? camera.setDriver(driverName) : Promise.resolve();
           setup.then(() => camera.startLive()).then(() => _createVideo());
         }
       };
