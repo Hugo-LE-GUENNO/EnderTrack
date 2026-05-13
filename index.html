@@ -373,6 +373,23 @@
                             </div>
                             <script>
                               window._cameras = [];
+                              window._savePeripherals = () => {
+                                const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                fetch(url + '/api/sync/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cameras: window._cameras, lights: window._lights || [] }) }).catch(() => {});
+                              };
+                              window._loadPeripherals = async () => {
+                                try {
+                                  const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                  const res = await fetch(url + '/api/sync/config');
+                                  const data = await res.json();
+                                  if (data.cameras?.length) { window._cameras = data.cameras; window._renderCameras?.(); }
+                                  if (data.lights?.length) { window._lights = data.lights; window._renderLights?.(); }
+                                } catch(e) {}
+                              };
+                              setTimeout(() => window._loadPeripherals(), 500);
+                              // Auto-save config every 5s if changed
+                              let _lastSave = '';
+                              setInterval(() => { const s = JSON.stringify({c:window._cameras,l:window._lights||[]}); if (s !== _lastSave) { _lastSave = s; window._savePeripherals(); } }, 5000);
                               window._showCameraTypeMenu = () => {
                                 const m = document.getElementById('cameraTypeMenu');
                                 m.style.display = m.style.display === 'none' ? '' : 'none';
@@ -401,13 +418,13 @@
                                   label = 'Simulation';
                                 }
                                 window._cameras.push({ type, label, id: Date.now() });
-                                window._renderCameras();
+                                window._renderCameras(); window._savePeripherals();
                                 await EnderTrack.Camera.startLive();
                                 window._updateCameraLayout();
                               };
                               window._removeCamera = async (idx) => {
                                 window._cameras.splice(idx, 1);
-                                window._renderCameras();
+                                window._renderCameras(); window._savePeripherals();
                                 // Remove last viewport (shrink)
                                 const display = EnderTrack.Display;
                                 display.setLayout(window._cameras.length + 1);
@@ -467,7 +484,7 @@
                                   EnderTrack.Light.driver._channels.push({ id, name, type, intensity: 0, on: false });
                                   EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
                                 }
-                                window._renderLights();
+                                window._renderLights(); window._savePeripherals();
                                 EnderTrack.Light._renderNav?.();
                                 EnderTrack.Light._updateStatus?.();
                               };
@@ -479,7 +496,7 @@
                                   EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
                                 }
                                 window._lights.splice(idx, 1);
-                                window._renderLights();
+                                window._renderLights(); window._savePeripherals();
                                 EnderTrack.Light._renderNav?.();
                                 EnderTrack.Light._updateStatus?.();
                               };
@@ -501,6 +518,7 @@
                                 if (bar) { bar.style.background = `rgb(${l.r},${l.g},${l.b})`; }
                               };
                               window._renderLights = () => {
+                                window._savePeripherals();
                                 const el = document.getElementById('lightList');
                                 if (!el) return;
                                 el.innerHTML = window._lights.map((l, i) => `
