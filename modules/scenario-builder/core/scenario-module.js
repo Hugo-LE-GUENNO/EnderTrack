@@ -414,7 +414,7 @@ class ScenarioModule {
     const captureActions = [];
     if (p.autofocus) captureActions.push({ type: 'action', actionId: 'autofocus', params: { range: pp.afRange || 0.1, steps: pp.afSteps || 10, showInLog: true, label: 'AF' } });
     if (p.useLight && pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'set', intensity: pp.lightIntensity || 100, showInLog: false } });
-    if (p.useCapture) captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', cameraId: pp.cameraId || '', showInLog: true, label: 'Capture' } });
+    if (p.useCapture) captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', cameraId: pp.cameraId || '', path: pp.path || './captures', showInLog: true, label: 'Capture' } });
     if (p.useLight && pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'off', showInLog: false } });
 
     // Z-stack wrapper

@@ -268,23 +268,40 @@ class CameraModule {
       execute: async (params, context) => {
         const cam = window.EnderTrack.Camera;
         let result;
-        if (cam?.driver) {
-          result = await cam.capture({ format: params.format, storagePath: params.path || './captures' });
-        } else {
-          const video = document.querySelector("video");
-          if (video) {
-            const canvas = document.createElement("canvas");
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext("2d").drawImage(video, 0, 0);
-            const ts = new Date().toISOString().replace(/[:.]/g, "-");
-            const a = document.createElement("a");
-            a.href = canvas.toDataURL("image/png");
-            a.download = "capture_" + ts + ".png";
-            a.click();
-            result = { success: true, path: a.download };
-          } else {
-            result = { success: false, error: "No camera" };
+        // Find the right video source based on cameraId
+        const cameraId = params.cameraId;
+        let video = null;
+        if (cameraId) {
+          // Find video element for this specific camera
+          const videos = document.querySelectorAll(".viewport-cell video");
+          for (const v of videos) {
+            if (v.dataset.cameraId === String(cameraId) || videos.length === 1) { video = v; break; }
           }
+          if (!video) video = document.querySelector("video");
+        } else {
+          video = document.querySelector("video");
+        }
+        if (video && video.readyState >= 2 && video.videoWidth) {
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          canvas.getContext("2d").drawImage(video, 0, 0);
+          const frame = canvas.toDataURL("image/" + (params.format === "jpeg" ? "jpeg" : "png")).split(",")[1];
+          const ts = new Date().toISOString().replace(/[:.]/g, "-");
+          const pos = window.EnderTrack?.State?.get?.()?.pos || {x:0,y:0,z:0};
+          const path = (params.path || "./captures") + "/acq_" + ts + "_X" + pos.x.toFixed(2) + "_Y" + pos.y.toFixed(2) + "_Z" + pos.z.toFixed(2) + "." + (params.format || "png");
+          try {
+            const url = window.ENDERTRACK_SERVER || "http://localhost:5000";
+            const res = await fetch(url + "/api/capture/save", {
+              method: "POST", headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({ frame, path })
+            });
+            const saved = await res.json();
+            result = { success: saved.success, path: saved.path || path };
+          } catch(e) { result = { success: false, error: e.message }; }
+        } else if (cam?.driver) {
+          result = await cam.capture({ format: params.format, storagePath: params.path || "./captures" });
+        } else {
+          result = { success: false, error: "No camera available" };
         }
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
           const msg = result.success ? ("Capture " + (result.path || "OK")) : ("Capture ERR: " + result.error);
