@@ -21,6 +21,8 @@ class CameraModule {
     this.histogram = null;
     this.fastExplore = null;
     this.tiles = [];
+    // Register scenario action early (even without driver)
+    setTimeout(() => this._registerScenarioAction(), 100);
   }
 
   // === DRIVER MANAGEMENT ===
@@ -238,19 +240,41 @@ class CameraModule {
       icon: '📷',
       category: 'camera',
       params: [
-        { id: 'label', label: 'Label', type: 'text', default: 'Capture' },
-        { id: 'format', label: 'Format', type: 'select', options: [
-          { value: 'tiff', label: 'TIFF' },
-          { value: 'png', label: 'PNG' },
-          { value: 'jpeg', label: 'JPEG' }
-        ], default: 'tiff' },
-        { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
+        { id: "label", label: "Label", type: "text", default: "Capture" },
+        { id: "cameraId", label: "Caméra", type: "text", default: "" },
+        { id: "format", label: "Format", type: "select", options: [
+          { value: "tiff", label: "TIFF" },
+          { value: "png", label: "PNG" },
+          { value: "jpeg", label: "JPEG" }
+        ], default: "tiff" },
+        { id: "path", label: "Chemin", type: "text", default: "./captures" },
+        { id: "showInLog", label: "Log", type: "checkbox", default: true }
+      ],
       ],
       execute: async (params, context) => {
-        const result = await window.EnderTrack.Camera.capture({ format: params.format });
+        const cam = window.EnderTrack.Camera;
+        let result;
+        if (cam?.driver) {
+          result = await cam.capture({ format: params.format });
+        } else {
+          const video = document.querySelector("video");
+          if (video) {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext("2d").drawImage(video, 0, 0);
+            const ts = new Date().toISOString().replace(/[:.]/g, "-");
+            const a = document.createElement("a");
+            a.href = canvas.toDataURL("image/png");
+            a.download = "capture_" + ts + ".png";
+            a.click();
+            result = { success: true, path: a.download };
+          } else {
+            result = { success: false, error: "No camera" };
+          }
+        }
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
-          const msg = result.success ? `📷 ${result.path || 'OK'}` : `📷 ❌ ${result.error}`;
-          window.EnderTrack.Scenario.addLog(msg, result.success ? 'info' : 'error');
+          const msg = result.success ? ("Capture " + (result.path || "OK")) : ("Capture ERR: " + result.error);
+          window.EnderTrack.Scenario.addLog(msg, result.success ? "info" : "error");
         }
         return result;
       }

@@ -238,50 +238,9 @@ class ActionRegistry {
       }
     });
 
-    this.register({
-      id: 'capture',
-      label: 'Capture',
-      icon: '\ud83d\udcf7',
-      category: 'core',
-      params: [
-        { id: 'label', label: 'Label', type: 'text', default: 'Capture' },
-        { id: 'cameraId', label: 'Cam\u00e9ra', type: 'text', default: '' },
-        { id: 'format', label: 'Format', type: 'select', options: [{value:'tiff',label:'TIFF'},{value:'png',label:'PNG'},{value:'jpeg',label:'JPEG'}], default: 'tiff' },
-        { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
-      ],
-      execute: async (params, ctx) => {
-        const cam = window.EnderTrack?.Camera;
-        if (cam?.captureFrame) {
-          await cam.captureFrame({ format: params.format || 'tiff', cameraId: params.cameraId });
-        }
-        return { label: 'Capture ' + (params.format || 'tiff') };
-      }
-    });
 
-    this.register({
-      id: 'light_set',
-      label: 'Lumi\u00e8re',
-      icon: '\ud83d\udca1',
-      category: 'core',
-      params: [
-        { id: 'label', label: 'Label', type: 'text', default: 'Light' },
-        { id: 'channel', label: 'Canal', type: 'text', default: '' },
-        { id: 'action', label: 'Action', type: 'select', options: [{value:'set',label:'Allumer'},{value:'off',label:'\u00c9teindre'}], default: 'set' },
-        { id: 'intensity', label: 'Intensit\u00e9 %', type: 'number', default: 100, min: 0, max: 100 },
-        { id: 'showInLog', label: 'Log', type: 'checkbox', default: false }
-      ],
-      execute: async (params, ctx) => {
-        const light = window.EnderTrack?.Light;
-        if (light) {
-          if (params.action === 'off') {
-            await light.off(params.channel);
-          } else {
-            await light.setChannel(params.channel, (params.intensity || 100) / 100);
-          }
-        }
-        return { label: params.action === 'off' ? 'Light OFF' : `Light ${params.intensity}%` };
-      }
-    });
+
+
   }
 
   register(actionDef) {

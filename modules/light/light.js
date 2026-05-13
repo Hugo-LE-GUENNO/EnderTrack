@@ -5,6 +5,7 @@ class LightModule {
     this.driver = null;
     this.driverName = null;
     this.channels = []; // [{id, name, type, intensity, on}]
+    setTimeout(() => this._registerScenarioActions(), 100);
   }
 
   // === DRIVER MANAGEMENT ===
