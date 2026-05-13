@@ -266,20 +266,30 @@ class CameraModule {
         { id: "showInLog", label: "Log", type: "checkbox", default: true }
       ],
       execute: async (params, context) => {
-        const cam = window.EnderTrack.Camera;
         let result;
-        // Find the right video source based on cameraId
-        const cameraId = params.cameraId;
         let video = null;
-        // Find any live video element
-        const allVideos = document.querySelectorAll("video");
-        console.log("[Capture] Found " + allVideos.length + " video elements, ready: " + (video ? "yes " + video.videoWidth + "x" + video.videoHeight : "none"));
-        for (const v of allVideos) {
+        const cam = window.EnderTrack.Camera;
+        // 1. Try existing live video in DOM
+        for (const v of document.querySelectorAll("video")) {
           if (v.readyState >= 2 && v.videoWidth > 0) { video = v; break; }
         }
-        if (video && video.readyState >= 2 && video.videoWidth) {
+        // 2. If none, use driver stream or open webcam
+        if (!video) {
+          try {
+            const stream = cam?.driver?._stream || await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+            const tmp = document.createElement("video");
+            tmp.srcObject = stream;
+            tmp.muted = true;
+            await tmp.play();
+            await new Promise(r => setTimeout(r, 300));
+            if (tmp.videoWidth > 0) video = tmp;
+          } catch(e) {}
+        }
+        // 3. Capture frame
+        if (video && video.videoWidth > 0) {
           const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
           canvas.getContext("2d").drawImage(video, 0, 0);
           const frame = canvas.toDataURL("image/" + (params.format === "jpeg" ? "jpeg" : "png")).split(",")[1];
           const ts = new Date().toISOString().replace(/[:.]/g, "-");
@@ -294,13 +304,11 @@ class CameraModule {
             const saved = await res.json();
             result = { success: saved.success, path: saved.path || path };
           } catch(e) { result = { success: false, error: e.message }; }
-        } else if (cam?.driver && !cameraId) {
-          result = await cam.capture({ format: params.format, storagePath: params.path || "./captures" });
         } else {
           result = { success: false, error: "No camera available" };
         }
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
-          const msg = result.success ? ("Capture " + (result.path || "OK")) : ("Capture ERR: " + result.error);
+          const msg = result.success ? ("Capture " + (result.path || "OK")) : ("Capture ERR: " + (result.error || "?"));
           window.EnderTrack.Scenario.addLog(msg, result.success ? "info" : "error");
         }
         return result;
