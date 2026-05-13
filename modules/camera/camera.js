@@ -271,15 +271,10 @@ class CameraModule {
         // Find the right video source based on cameraId
         const cameraId = params.cameraId;
         let video = null;
-        if (cameraId) {
-          // Find video element for this specific camera
-          const videos = document.querySelectorAll(".viewport-cell video");
-          for (const v of videos) {
-            if (v.dataset.cameraId === String(cameraId) || videos.length === 1) { video = v; break; }
-          }
-          if (!video) video = document.querySelector("video");
-        } else {
-          video = document.querySelector("video");
+        // Find any live video element
+        const allVideos = document.querySelectorAll("video");
+        for (const v of allVideos) {
+          if (v.readyState >= 2 && v.videoWidth > 0) { video = v; break; }
         }
         if (video && video.readyState >= 2 && video.videoWidth) {
           const canvas = document.createElement("canvas");
@@ -298,7 +293,7 @@ class CameraModule {
             const saved = await res.json();
             result = { success: saved.success, path: saved.path || path };
           } catch(e) { result = { success: false, error: e.message }; }
-        } else if (cam?.driver) {
+        } else if (cam?.driver && !cameraId) {
           result = await cam.capture({ format: params.format, storagePath: params.path || "./captures" });
         } else {
           result = { success: false, error: "No camera available" };
