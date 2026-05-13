@@ -72,9 +72,24 @@ class CameraModule {
     if (!p.path) {
       const ts = new Date().toISOString().replace(/[:.]/g, '-');
       const pos = window.EnderTrack?.State?.get?.()?.pos || { x: 0, y: 0, z: 0 };
-      p.path = `${this.config.storagePath}/acq_${ts}_X${pos.x.toFixed(2)}_Y${pos.y.toFixed(2)}_Z${pos.z.toFixed(2)}.${p.format}`;
+      p.path = `${p.storagePath || this.config.storagePath || './captures'}/acq_${ts}_X${pos.x.toFixed(2)}_Y${pos.y.toFixed(2)}_Z${pos.z.toFixed(2)}.${p.format || 'png'}`;
     }
-    return await this.driver.capture(p);
+    const result = await this.driver.capture(p);
+    if (result.success && result.frame) {
+      // Save to server
+      try {
+        const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const res = await fetch(url + '/api/capture/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ frame: result.frame, path: p.path })
+        });
+        const saved = await res.json();
+        result.path = saved.path || p.path;
+      } catch (e) {
+        result.error = 'Save failed: ' + e.message;
+      }
+    }
+    return result;
   }
 
   async startLive() {
@@ -254,7 +269,7 @@ class CameraModule {
         const cam = window.EnderTrack.Camera;
         let result;
         if (cam?.driver) {
-          result = await cam.capture({ format: params.format });
+          result = await cam.capture({ format: params.format, storagePath: params.path || './captures' });
         } else {
           const video = document.querySelector("video");
           if (video) {

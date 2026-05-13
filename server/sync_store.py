@@ -161,3 +161,24 @@ def register_routes(app):
                 result[name] = data
         return jsonify(result)
 
+
+    # --- Capture save ---
+
+    @app.route('/api/capture/save', methods=['POST'])
+    def _save_capture():
+        import base64, os
+        data = request.get_json()
+        if not data or not data.get('frame') or not data.get('path'):
+            return jsonify({'success': False, 'error': 'Missing frame or path'}), 400
+        path = data['path']
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        # Decode base64 frame and save
+        try:
+            frame_data = base64.b64decode(data['frame'])
+            with open(path, 'wb') as f:
+                f.write(frame_data)
+            print(f"  📷 Capture sauvegardée: {path}")
+            return jsonify({'success': True, 'path': path})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
