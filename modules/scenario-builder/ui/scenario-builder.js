@@ -1103,11 +1103,7 @@ class ScenarioBuilder {
               style="flex:1; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:11px;">
           </div>
           <div style="display:flex; gap:6px; align-items:center;">
-            <label style="font-size:10px; color:var(--text-general); width:50px;">Ic\u00f4ne</label>
             <button onclick="EnderTrack.ScenarioBuilder._showIconPicker()" style="width:36px; height:36px; padding:0; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:18px; background:${current.color || 'var(--container-bg)'}; text-align:center; line-height:36px;">${current.icon || '\ud83c\udfac'}</button>
-            <label style="font-size:10px; color:var(--text-general); margin-left:6px;">Couleur</label>
-            <input type="color" value="${current.color || '#2a2a2a'}" onchange="EnderTrack.ScenarioBuilder._setCurrentColor(this.value)"
-              style="width:28px; height:28px; padding:0; border:1px solid #444; border-radius:4px; cursor:pointer; background:none;">
             <input type="text" value="${this._escapeHtml(current.description || '')}" onchange="EnderTrack.ScenarioBuilder._setCurrentDesc(this.value)"
               style="flex:1; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="description">
           </div>
@@ -1183,7 +1179,10 @@ class ScenarioBuilder {
     const picker = document.createElement('div');
     picker.id = 'sbIconPicker';
     picker.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--column-bg); border:1px solid #444; border-radius:8px; padding:12px; z-index:6000; box-shadow:0 4px 20px rgba(0,0,0,0.5);';
-    picker.innerHTML = `<div style="font-size:10px; color:var(--text-general); margin-bottom:8px;">Choisir une ic\u00f4ne</div>
+    picker.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:10px; color:var(--text-general);">Ic\u00f4ne & couleur</span>
+        <input type="color" value="${this.scenario.color || '#2a2a2a'}" onchange="EnderTrack.ScenarioBuilder._setCurrentColor(this.value)" style="width:24px; height:24px; padding:0; border:1px solid #444; border-radius:4px; cursor:pointer; background:none;">
+      </div>
       <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px;">
         ${icons.map(i => `<button onclick="EnderTrack.ScenarioBuilder._setCurrentIcon('${i}'); document.getElementById('sbIconPicker').remove()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:20px; background:var(--app-bg); transition:background 0.1s;" onmouseenter="this.style.background='var(--active-element)'" onmouseleave="this.style.background='var(--app-bg)'">${i}</button>`).join('')}
       </div>

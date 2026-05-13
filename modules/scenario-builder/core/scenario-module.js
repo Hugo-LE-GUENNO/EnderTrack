@@ -147,9 +147,13 @@ class ScenarioModule {
         </select>
 
         <!-- Details -->
-        ${current ? `<div style="padding:6px; background:var(--app-bg); border-radius:4px; font-size:10px; color:var(--text-general);">
-          <strong style="color:var(--text-selected);">${current.name}</strong><br>
-          ${actionCount} action${actionCount > 1 ? 's' : ''} ${current.createdAt ? '\u2014 ' + new Date(current.createdAt).toLocaleDateString() : ''}
+        ${current ? `<div style="padding:6px; background:var(--app-bg); border-radius:4px; font-size:10px; color:var(--text-general); display:flex; gap:8px; align-items:center;">
+          <span style="font-size:18px; width:30px; height:30px; line-height:30px; text-align:center; border-radius:4px; background:${current.color || 'transparent'};">${current.icon || '\ud83c\udfac'}</span>
+          <div style="flex:1;">
+            <strong style="color:var(--text-selected);">${current.name}</strong>
+            ${current.description ? `<div style="font-size:9px; color:#888; margin-top:2px;">${current.description}</div>` : ''}
+            ${(current.fields || []).length ? `<div style="font-size:9px; color:#666; margin-top:2px;">${current.fields.map(f => f.label + ': ' + f.value).join(' \u2022 ')}</div>` : ''}
+          </div>
         </div>` : ''}
 
         <!-- Separator -->
