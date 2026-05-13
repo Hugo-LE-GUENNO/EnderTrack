@@ -207,6 +207,7 @@ class DisplayModule {
       };
 
       const _ensureLive = () => {
+        console.log("[Display] _ensureLive: driver=", camera?.driverName, "stream=", !!camera?.driver?._stream, "camConfig=", camConfig);
         if (camera?.driver?._stream) {
           _createVideo();
         } else if (camera) {
