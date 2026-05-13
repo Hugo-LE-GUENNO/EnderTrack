@@ -313,7 +313,7 @@ class ScenarioBuilder {
           </div>
         </div>
         <div class="sb-footer">
-          <button onclick="EnderTrack.ScenarioBuilder._toggleCode()" class="sb-footer-btn" style="opacity:0.6;" title="Afficher/masquer le code">&lt;/&gt;</button>
+          <button id="sbCodeToggleBtn" onclick="EnderTrack.ScenarioBuilder._toggleCode()" class="sb-footer-btn" style="opacity:0.6; display:${this._viewMode === 'build' ? 'inline-block' : 'none'};" title="Afficher/masquer le code">&lt;/&gt;</button>
           <span style="flex:1"></span>
           <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-footer-btn sb-footer-cancel">Fermer</button>
           <button onclick="EnderTrack.ScenarioBuilder.save()" class="sb-footer-btn sb-footer-save">Enregistrer</button>
@@ -480,6 +480,8 @@ class ScenarioBuilder {
     document.querySelectorAll('.sb-header .sb-tab-btn').forEach(b => b.classList.remove('active'));
     const idx = { manager: 0, presets: 1, build: 2 }[mode] || 0;
     document.querySelectorAll('.sb-header .sb-tab-btn')[idx]?.classList.add('active');
+    const codeBtn = document.getElementById('sbCodeToggleBtn'); if (codeBtn) codeBtn.style.display = mode === 'build' ? 'inline-block' : 'none';
+    if (mode !== 'build' && this._codeVisible) { this._codeVisible = false; document.getElementById('sbCodeFull')?.remove(); this._setView(mode); return; }
     if (mode === 'presets') this._renderPresetsView();
     else if (mode === 'manager') this._renderManagerView();
 
