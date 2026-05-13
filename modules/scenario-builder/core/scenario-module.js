@@ -336,7 +336,8 @@ class ScenarioModule {
                   <option value="jpeg" ${pp.format === 'jpeg' ? 'selected' : ''}>JPEG</option>
                 </select>
                 <input type="text" value="${pp.prefix}" onchange="EnderTrack.Scenario._pp('prefix', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="préfixe">
-                <input type="text" value="${pp.path || './captures'}" onchange="EnderTrack.Scenario._pp('path', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="chemin">
+                <input type="text" value="${pp.path || './captures'}" id="sbPathInput" onchange="EnderTrack.Scenario._pp('path', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="chemin">
+                <button onclick="EnderTrack.Scenario._browsePath()" style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-general);" title="Parcourir">📂</button>
               </div>
             </div>` : ''}
           </div>
@@ -360,6 +361,22 @@ class ScenarioModule {
     }
     // Auto-generate
     this._autoGenerate();
+  }
+
+  async _browsePath() {
+    try {
+      const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      const res = await fetch(url + '/api/fs/dialog/directory', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Dossier de capture', initialDir: this._presetParams?.path || '.' })
+      });
+      const data = await res.json();
+      if (data.path) {
+        this._pp('path', data.path);
+        const el = document.getElementById('sbPathInput');
+        if (el) el.value = data.path;
+      }
+    } catch (e) { /* dialog cancelled or server unavailable */ }
   }
 
   _pp(key, val) {
