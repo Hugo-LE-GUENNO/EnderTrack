@@ -189,7 +189,9 @@ class DisplayModule {
     // Camera source: create video element
     if (source && source.startsWith('camera')) {
       const camera = window.EnderTrack?.Camera;
-      // Start live if not already, then create video
+      const camIdx = parseInt(source.split(':')[1]) || 0;
+      const camConfig = (window._cameras || [])[camIdx];
+
       const _createVideo = () => {
         if (camera?.driver?._stream) {
           const video = document.createElement('video');
@@ -203,11 +205,19 @@ class DisplayModule {
           this._videos.set(viewportId, video);
         }
       };
-      if (camera?.driver?._stream) {
-        _createVideo();
-      } else if (camera?.startLive) {
-        camera.startLive().then(() => _createVideo());
-      }
+
+      const _ensureLive = () => {
+        if (camera?.driver?._stream) {
+          _createVideo();
+        } else if (camera) {
+          // Set driver if needed, then start live
+          const type = camConfig?.type || 'webcam';
+          const driverName = type === 'mjpeg' ? 'mjpeg' : (type === 'picamera2' ? 'simulation' : 'webcam');
+          const setup = camera.driver ? Promise.resolve() : camera.setDriver(driverName);
+          setup.then(() => camera.startLive()).then(() => _createVideo());
+        }
+      };
+      _ensureLive();
       // Hide placeholder
       const ph = cell.querySelector(".viewport-placeholder");
       if (ph) ph.style.display = 'none';
