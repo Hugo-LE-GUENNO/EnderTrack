@@ -1102,11 +1102,12 @@ class ScenarioBuilder {
           </div>
           <div style="display:flex; gap:6px; align-items:center;">
             <label style="font-size:10px; color:var(--text-general); width:50px;">Ic\u00f4ne</label>
-            <input type="text" value="${current.icon || '\ud83c\udfac'}" onchange="EnderTrack.ScenarioBuilder._setCurrentIcon(this.value)"
-              style="width:40px; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:14px; text-align:center;">
-            <label style="font-size:10px; color:var(--text-general); margin-left:8px;">Description</label>
+            <button onclick="EnderTrack.ScenarioBuilder._showIconPicker()" style="width:36px; height:36px; padding:0; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:18px; background:${current.color || 'var(--container-bg)'}; text-align:center; line-height:36px;">${current.icon || '\ud83c\udfac'}</button>
+            <label style="font-size:10px; color:var(--text-general); margin-left:6px;">Couleur</label>
+            <input type="color" value="${current.color || '#2a2a2a'}" onchange="EnderTrack.ScenarioBuilder._setCurrentColor(this.value)"
+              style="width:28px; height:28px; padding:0; border:1px solid #444; border-radius:4px; cursor:pointer; background:none;">
             <input type="text" value="${this._escapeHtml(current.description || '')}" onchange="EnderTrack.ScenarioBuilder._setCurrentDesc(this.value)"
-              style="flex:1; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="optionnel">
+              style="flex:1; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="description">
           </div>
           <div style="display:flex; gap:6px; margin-top:4px;">
             <button onclick="EnderTrack.ScenarioBuilder._duplicateScenario()" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-general);">Dupliquer</button>
@@ -1147,7 +1148,37 @@ class ScenarioBuilder {
   _setCurrentIcon(icon) {
     this.scenario.icon = icon;
     EnderTrack.Scenario?.manager?.save?.();
+    this._renderManagerView();
     EnderTrack.Scenario?.createUI?.();
+  }
+
+  _setCurrentColor(color) {
+    this.scenario.color = color;
+    EnderTrack.Scenario?.manager?.save?.();
+    this._renderManagerView();
+    EnderTrack.Scenario?.createUI?.();
+  }
+
+  _showIconPicker() {
+    document.getElementById('sbIconPicker')?.remove();
+    const icons = [
+      '\ud83d\udd2c', '\ud83e\uddea', '\ud83d\udcf7', '\ud83c\udf1f', '\ud83d\udca1',
+      '\ud83e\uddb4', '\ud83e\udde0', '\ud83c\udf3f', '\ud83d\udc1b', '\ud83e\uddec',
+      '\ud83d\udd0d', '\ud83c\udfaf', '\ud83d\udcca', '\ud83d\udcc8', '\u2b50',
+      '\ud83d\udcda', '\ud83d\udccd', '\u23f1\ufe0f', '\ud83e\udde9', '\ud83c\udfac',
+      '\ud83d\udee0\ufe0f', '\u2699\ufe0f', '\ud83d\ude80', '\ud83c\udf0a', '\ud83d\udd25',
+      '\u2744\ufe0f', '\ud83c\udf08', '\ud83d\udc8e', '\ud83e\uddca', '\ud83c\udf40'
+    ];
+    const picker = document.createElement('div');
+    picker.id = 'sbIconPicker';
+    picker.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--column-bg); border:1px solid #444; border-radius:8px; padding:12px; z-index:6000; box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+    picker.innerHTML = `<div style="font-size:10px; color:var(--text-general); margin-bottom:8px;">Choisir une ic\u00f4ne</div>
+      <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px;">
+        ${icons.map(i => `<button onclick="EnderTrack.ScenarioBuilder._setCurrentIcon('${i}'); document.getElementById('sbIconPicker').remove()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:20px; background:var(--app-bg); transition:background 0.1s;" onmouseenter="this.style.background='var(--active-element)'" onmouseleave="this.style.background='var(--app-bg)'">${i}</button>`).join('')}
+      </div>`;
+    document.body.appendChild(picker);
+    const close = (e) => { if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener('mousedown', close); } };
+    setTimeout(() => document.addEventListener('mousedown', close), 0);
   }
 
   _setCurrentDesc(desc) {
