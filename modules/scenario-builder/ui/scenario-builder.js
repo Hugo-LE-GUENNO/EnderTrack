@@ -296,7 +296,7 @@ class ScenarioBuilder {
           <!-- Presets (Assist\u00e9) view -->
           <div id="sbPresetsView" class="sb-full-view" style="display:${this._viewMode === 'presets' ? 'flex' : 'none'}; flex-direction:column; overflow:hidden;">
             <div id="sbPresetsContent" style="flex:1; overflow-y:auto; padding:12px;"></div>
-            <div id="sbPresetsCode" style="height:120px; border-top:1px solid #333; overflow-y:auto; padding:8px; font-family:monospace; font-size:10px; color:#888; background:var(--app-bg);"></div>
+            <div id="sbPresetsCode" style="display:none; height:50%; border-top:1px solid #333; overflow:hidden;"></div>
           </div>
           <!-- Build (D\u00e9taill\u00e9) view -->
           <div id="sbBuildView" class="sb-build-view" style="display:${this._viewMode === 'build' ? 'flex' : 'none'}; flex-direction:column; overflow:hidden;">
@@ -311,10 +311,12 @@ class ScenarioBuilder {
               </div>
               <div id="sbProps" class="sb-props"></div>
             </div>
-            <div id="sbBuildCode" style="height:120px; border-top:1px solid #333; overflow-y:auto; padding:8px; font-family:monospace; font-size:10px; color:#888; background:var(--app-bg);"></div>
+            <div id="sbBuildCode" style="display:none; height:50%; border-top:1px solid #333; overflow:hidden;"></div>
           </div>
         </div>
         <div class="sb-footer">
+          <button onclick="EnderTrack.ScenarioBuilder._toggleCode()" class="sb-footer-btn" style="opacity:0.6;" title="Afficher/masquer le code">&lt;/&gt;</button>
+          <span style="flex:1"></span>
           <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-footer-btn sb-footer-cancel">Fermer</button>
           <button onclick="EnderTrack.ScenarioBuilder.save()" class="sb-footer-btn sb-footer-save">Enregistrer</button>
         </div>
@@ -327,7 +329,6 @@ class ScenarioBuilder {
     this._refreshProperties();
     if (this._viewMode === 'presets') this._renderPresetsView();
     if (this._viewMode === 'manager') this._renderManagerView();
-    if (this._viewMode === 'build' || this._viewMode === 'presets') this._renderCodePanel();
     this._bindKeyboard();
   }
 
@@ -483,7 +484,7 @@ class ScenarioBuilder {
     document.querySelectorAll('.sb-header .sb-tab-btn')[idx]?.classList.add('active');
     if (mode === 'presets') this._renderPresetsView();
     else if (mode === 'manager') this._renderManagerView();
-    if (mode === 'build' || mode === 'presets') this._renderCodePanel();
+
   }
 
   _setBuildSub(sub) {
@@ -1145,10 +1146,8 @@ class ScenarioBuilder {
 
   _renameCurrentTo(name) {
     if (!name) return;
-    const mgr = EnderTrack.Scenario?.manager;
-    if (!mgr) return;
-    mgr.renameScenario(this.scenario.id, name);
     this.scenario.name = name;
+    EnderTrack.Scenario?.manager?.save?.();
     const _n = document.querySelector('.sb-header-name'); if (_n) _n.textContent = name;
     EnderTrack.Scenario?.createUI?.();
   }
@@ -1221,6 +1220,15 @@ class ScenarioBuilder {
     this._renderManagerView();
   }
 
+  _toggleCode() {
+    this._codeVisible = !this._codeVisible;
+    const el1 = document.getElementById('sbPresetsCode');
+    const el2 = document.getElementById('sbBuildCode');
+    if (el1) el1.style.display = this._codeVisible ? 'block' : 'none';
+    if (el2) el2.style.display = this._codeVisible ? 'block' : 'none';
+    if (this._codeVisible) this._renderCodePanel();
+  }
+
   _renderCodePanel() {
     const el1 = document.getElementById('sbPresetsCode');
     const el2 = document.getElementById('sbBuildCode');
@@ -1242,7 +1250,7 @@ class ScenarioBuilder {
       window.EnderTrack.Scenario.manager?.getCurrentScenario()
     ) || '<div style="color:#888; font-size:11px;">Module Scenario non charg\u00e9</div>';
     el.innerHTML = html;
-    this._renderCodePanel();
+    if (this._codeVisible) this._renderCodePanel();
   }
 
     _insertPreset(type) {
@@ -1993,7 +2001,7 @@ class ScenarioBuilder {
     this._refreshPalette();
     this._refreshTree();
     this._refreshProperties();
-    this._renderCodePanel();
+    if (this._codeVisible) this._renderCodePanel();
     if (this._viewMode === 'manager') this._renderManagerView();
     if (this._viewMode === 'presets') this._renderPresetsView();
     EnderTrack.Scenario?.createUI?.();
