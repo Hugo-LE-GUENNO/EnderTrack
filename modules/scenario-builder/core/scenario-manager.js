@@ -160,12 +160,31 @@ class ScenarioManager {
         currentScenarioId: this.currentScenarioId
       };
       localStorage.setItem('endertrack_scenarios', JSON.stringify(data));
+      // Sync to server
+      const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      fetch(url + '/api/sync/scenarios', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(() => {});
     } catch (error) {
       console.error('Failed to save scenarios:', error);
     }
   }
 
   loadFromStorage() {
+    const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(url + '/api/sync/scenarios', { signal: AbortSignal.timeout(2000) })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        if (data.scenarios?.length) {
+          this.scenarios = new Map(data.scenarios);
+          this.currentScenarioId = data.currentScenarioId;
+        } else { this._loadLocal(); }
+      })
+      .catch(() => this._loadLocal());
+  }
+
+  _loadLocal() {
     try {
       const stored = localStorage.getItem('endertrack_scenarios');
       if (stored) {
@@ -173,21 +192,11 @@ class ScenarioManager {
         this.scenarios = new Map(data.scenarios);
         this.currentScenarioId = data.currentScenarioId;
       }
-      
-      // Créer un scénario par défaut si aucun n'existe
-      if (this.scenarios.size === 0) {
-        this.createScenario('Scénario 1');
-      }
+      if (this.scenarios.size === 0) this.createScenario('Scenario 1');
     } catch (error) {
       console.error('Failed to load scenarios:', error);
-      this.createScenario('Scénario 1');
+      this.createScenario('Scenario 1');
     }
-  }
-
-  clear() {
-    this.scenarios.clear();
-    this.createScenario('Scénario 1');
-    this.save();
   }
 }
 

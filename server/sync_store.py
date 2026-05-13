@@ -182,3 +182,16 @@ def register_routes(app):
             return jsonify({'success': True, 'path': path})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
+
+    # --- Scenarios ---
+
+    @app.route('/api/sync/scenarios', methods=['GET'])
+    def _get_scenarios():
+        data = _read('scenarios')
+        return jsonify(data or {})
+
+    @app.route('/api/sync/scenarios', methods=['POST'])
+    def _set_scenarios():
+        data = request.get_json()
+        _write('scenarios', data)
+        return jsonify({'success': True})
