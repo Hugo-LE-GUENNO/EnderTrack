@@ -256,7 +256,7 @@ class CameraModule {
       category: 'camera',
       params: [
         { id: "label", label: "Label", type: "text", default: "Capture" },
-        { id: "cameraId", label: "Caméra", type: "text", default: "" },
+        { id: "cameraId", label: "Caméra", type: "select", options: (window._cameras || []).map(c => ({ value: String(c.id), label: c.label })), default: "" },
         { id: "format", label: "Format", type: "select", options: [
           { value: "tiff", label: "TIFF" },
           { value: "png", label: "PNG" },
@@ -273,6 +273,7 @@ class CameraModule {
         let video = null;
         // Find any live video element
         const allVideos = document.querySelectorAll("video");
+        console.log("[Capture] Found " + allVideos.length + " video elements, ready: " + (video ? "yes " + video.videoWidth + "x" + video.videoHeight : "none"));
         for (const v of allVideos) {
           if (v.readyState >= 2 && v.videoWidth > 0) { video = v; break; }
         }

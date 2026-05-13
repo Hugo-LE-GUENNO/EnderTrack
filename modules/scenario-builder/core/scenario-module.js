@@ -195,6 +195,8 @@ class ScenarioModule {
     };
     const pp = this._presetParams;
     const channels = window.EnderTrack?.Light?.getChannels?.() || [];
+    const cameras = window._cameras || [];
+    if (p.useCapture && !pp.cameraId && cameras.length) pp.cameraId = String(cameras[0].id);
     const lists = window.EnderTrack?.Lists?.groups || [];
 
     let paramsHtml = '';
