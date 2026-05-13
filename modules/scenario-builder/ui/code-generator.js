@@ -152,6 +152,15 @@ class CodeGenerator {
       case 'tempobed_wait':
         code += `${spaces}await waitForBedTemp(${action.params?.temp || 60}, ${action.params?.tolerance || 2});\n`;
         break;
+      case 'capture':
+        code += `${spaces}await capture({ format: '${action.params?.format || 'tiff'}' });\n`;
+        break;
+      case 'autofocus':
+        code += `${spaces}await autofocus({ range: ${action.params?.range || 0.1}, steps: ${action.params?.steps || 10} });\n`;
+        break;
+      case 'light_set':
+        code += `${spaces}await setLight('${action.params?.channel || ''}', ${action.params?.intensity || 100});\n`;
+        break;
       default:
         code += `${spaces}// ${actionDef?.label || action.actionId}(${JSON.stringify(action.params || {})})\n`;
     }

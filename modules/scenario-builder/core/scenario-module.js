@@ -478,6 +478,7 @@ class ScenarioModule {
     if (window.EnderTrack.ScenarioBuilder?.scenario) {
       window.EnderTrack.ScenarioBuilder.scenario = scenario;
       window.EnderTrack.ScenarioBuilder._refreshTree?.();
+      window.EnderTrack.ScenarioBuilder._renderCodePanel?.();
     }
     this.createUI();
   }

@@ -287,7 +287,7 @@ class ScenarioBuilder {
             <button onclick="EnderTrack.ScenarioBuilder._setView('presets')" class="sb-tab-btn ${this._viewMode === 'presets' ? 'active' : ''}">Assist\u00e9</button>
             <button onclick="EnderTrack.ScenarioBuilder._setView('build')" class="sb-tab-btn ${this._viewMode === 'build' ? 'active' : ''}">D\u00e9taill\u00e9</button>
           </div>
-          <span style="font-size:10px; color:var(--text-general); padding:0 10px; opacity:0.7;">${this._escapeHtml(this.scenario.name)}</span>
+          <span class="sb-header-name" style="font-size:10px; color:var(--text-general); padding:0 10px; opacity:0.7;">${this._escapeHtml(this.scenario.name)}</span>
           <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-header-close" title="Fermer">\u2715</button>
         </div>
         <div class="sb-body">
@@ -1149,6 +1149,7 @@ class ScenarioBuilder {
     if (!mgr) return;
     mgr.renameScenario(this.scenario.id, name);
     this.scenario.name = name;
+    const _n = document.querySelector('.sb-header-name'); if (_n) _n.textContent = name;
     EnderTrack.Scenario?.createUI?.();
   }
 
@@ -1220,7 +1221,7 @@ class ScenarioBuilder {
     this._renderManagerView();
   }
 
-    _renderCodePanel() {
+  _renderCodePanel() {
     const el1 = document.getElementById('sbPresetsCode');
     const el2 = document.getElementById('sbBuildCode');
     const js = window.EnderTrack?.CodeGenerator?.generate?.(this.scenario) || '// (vide)';
@@ -1233,7 +1234,7 @@ class ScenarioBuilder {
     if (el2) el2.innerHTML = html;
   }
 
-    _renderPresetsView() {
+  _renderPresetsView() {
     const el = document.getElementById('sbPresetsContent');
     if (!el) return;
     const html = window.EnderTrack?.Scenario?._renderPresetsTab?.(
@@ -1986,15 +1987,15 @@ class ScenarioBuilder {
     this._selectedWatcherIdx = null;
     this._undoStack = [];
     this._redoStack = [];
+    const _n = document.querySelector('.sb-header-name'); if (_n) _n.textContent = this.scenario.name;
     EnderTrack.VariableManager?.init?.(this.scenario);
     EnderTrack.Scenario?.updateCanvasOverlay?.();
     this._refreshPalette();
     this._refreshTree();
     this._refreshProperties();
-    if (this._viewMode === 'vars') this._renderVarsView();
-    if (this._viewMode === 'code') this._renderCodeView();
-    if (this._viewMode === 'props') this._renderPropsView();
+    this._renderCodePanel();
     if (this._viewMode === 'manager') this._renderManagerView();
+    if (this._viewMode === 'presets') this._renderPresetsView();
     EnderTrack.Scenario?.createUI?.();
   }
 
