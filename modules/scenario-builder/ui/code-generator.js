@@ -162,3 +162,68 @@ class CodeGenerator {
 
 window.EnderTrack = window.EnderTrack || {};
 window.EnderTrack.CodeGenerator = CodeGenerator;
+
+// Python code generator
+class PythonCodeGenerator {
+  static generate(scenario) {
+    if (!scenario || !scenario.tree) return '# Aucun scénario';
+    let code = `# Scénario: ${scenario.name}\n`;
+    if (scenario.description) code += `# ${scenario.description}\n`;
+    code += '\nimport asyncio\nfrom endertrack import stage, camera, light\n\n';
+    code += 'async def run():\n';
+    code += this.generateNode(scenario.tree, 1);
+    code += '\nasyncio.run(run())\n';
+    return code;
+  }
+
+  static generateNode(node, indent = 0) {
+    const pad = '    '.repeat(indent);
+    let code = '';
+    if (node.type === 'root') {
+      node.children?.forEach(c => { code += this.generateNode(c, indent); });
+    } else if (node.type === 'loop') {
+      const v = (node.params?.loopVar || '$i').replace('$', '');
+      const mode = node.params?.countMode || 'number';
+      let limit = mode === 'list' ? `len(positions['${node.params?.countListId || '?'}'])` : (node.params?.count || 1);
+      if (node.loopId === 'while') {
+        code += `${pad}# ${node.params?.label || 'Tant que'}\n`;
+        code += `${pad}while ${node.params?.condition || 'True'}:\n`;
+      } else {
+        code += `${pad}# ${node.params?.label || 'Répéter'}\n`;
+        code += `${pad}for ${v} in range(${limit}):\n`;
+      }
+      node.children?.forEach(c => { code += this.generateNode(c, indent + 1); });
+    } else if (node.type === 'condition') {
+      node.branches?.forEach((b, i) => {
+        const kw = i === 0 ? 'if' : (b.condition === null ? 'else' : 'elif');
+        code += `${pad}${kw}${b.condition ? ' ' + b.condition : ''}:\n`;
+        b.actions?.forEach(a => { code += this.generateAction(a, indent + 1); });
+      });
+    } else if (node.type === 'action') {
+      code += this.generateAction(node, indent);
+    }
+    return code;
+  }
+
+  static generateAction(action, indent = 0) {
+    const pad = '    '.repeat(indent);
+    switch (action.actionId) {
+      case 'move':
+        if (action.params?.moveType === 'relative') return `${pad}await stage.move_relative(${action.params?.dx||0}, ${action.params?.dy||0}, ${action.params?.dz||0})\n`;
+        if (action.params?.absSource === 'list') {
+          const idx = (action.params?.listIndex || '$i').replace('$', '');
+          return `${pad}await stage.move_to(positions['${action.params?.listId}'][${idx}])\n`;
+        }
+        return `${pad}await stage.move_to(${action.params?.x||0}, ${action.params?.y||0}, ${action.params?.z||0})\n`;
+      case 'wait': return `${pad}await asyncio.sleep(${action.params?.duration||1})\n`;
+      case 'capture': return `${pad}await camera.capture(format='${action.params?.format||'tiff'}')\n`;
+      case 'autofocus': return `${pad}await camera.autofocus(range=${action.params?.range||0.1}, steps=${action.params?.steps||10})\n`;
+      case 'light_set': return `${pad}await light.set('${action.params?.channel||''}', ${action.params?.intensity||100})\n`;
+      case 'log': return `${pad}print("${action.params?.message||''}")\n`;
+      case 'stop': return `${pad}return  # STOP\n`;
+      default: return `${pad}# ${action.params?.label || action.actionId}\n`;
+    }
+  }
+}
+
+window.EnderTrack.PythonCodeGenerator = PythonCodeGenerator;

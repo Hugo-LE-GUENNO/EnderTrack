@@ -1085,10 +1085,12 @@ class ScenarioBuilder {
         <div style="border:1px solid #333; border-radius:4px; overflow:hidden;">
           ${scenarios.map(s => {
             const active = s.id === current?.id;
-            return `<div onclick="EnderTrack.ScenarioBuilder._switchToScenario('${s.id}'); EnderTrack.ScenarioBuilder._renderManagerView();" style="display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; background:${active ? 'var(--app-bg)' : 'transparent'}; border-left:3px solid ${active ? 'var(--active-element)' : 'transparent'};">
-              <span style="font-size:16px;">${s.icon || '\ud83c\udfac'}</span>
-              <span style="flex:1; font-size:11px; color:${active ? 'var(--text-selected)' : 'var(--text-general)'};">${this._escapeHtml(s.name)}</span>
-              <span style="font-size:9px; color:#666;">${EnderTrack.TreeUtils.countActions(s.tree)} actions</span>
+            return `<div onclick="EnderTrack.ScenarioBuilder._switchToScenario('${s.id}'); EnderTrack.ScenarioBuilder._renderManagerView();" style="display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; background:${active ? 'var(--app-bg)' : 'transparent'}; border-left:3px solid ${s.color || (active ? 'var(--active-element)' : 'transparent')};">
+              <span style="font-size:16px; width:28px; height:28px; line-height:28px; text-align:center; border-radius:4px; background:${s.color || 'transparent'};">${s.icon || '\ud83c\udfac'}</span>
+              <div style="flex:1; overflow:hidden;">
+                <div style="font-size:11px; color:${active ? 'var(--text-selected)' : 'var(--text-general)'};">${this._escapeHtml(s.name)}</div>
+                ${s.description ? `<div style="font-size:9px; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${this._escapeHtml(s.description)}</div>` : ''}
+              </div>
             </div>`;
           }).join('')}
         </div>
@@ -1109,7 +1111,16 @@ class ScenarioBuilder {
             <input type="text" value="${this._escapeHtml(current.description || '')}" onchange="EnderTrack.ScenarioBuilder._setCurrentDesc(this.value)"
               style="flex:1; padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;" placeholder="description">
           </div>
-          <div style="display:flex; gap:6px; margin-top:4px;">
+          <!-- Custom fields -->
+          <div style="margin-top:4px;">
+            ${(current.fields || []).map((f, i) => `<div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
+              <input type="text" value="${this._escapeHtml(f.label)}" onchange="EnderTrack.ScenarioBuilder._updateField(${i}, 'label', this.value)" style="width:60px; padding:2px 4px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:9px;">
+              <input type="text" value="${this._escapeHtml(f.value)}" onchange="EnderTrack.ScenarioBuilder._updateField(${i}, 'value', this.value)" style="flex:1; padding:2px 4px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:9px;">
+              <button onclick="EnderTrack.ScenarioBuilder._removeField(${i})" style="border:none; background:none; color:#666; cursor:pointer; font-size:10px;">x</button>
+            </div>`).join('')}
+            <button onclick="EnderTrack.ScenarioBuilder._addField()" style="padding:2px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">+ champ</button>
+          </div>
+          <div style="display:flex; gap:6px; margin-top:6px;">
             <button onclick="EnderTrack.ScenarioBuilder._duplicateScenario()" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-general);">Dupliquer</button>
             <button onclick="EnderTrack.ScenarioBuilder._deleteScenario()" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:transparent; color:#ef4444;">Supprimer</button>
           </div>
@@ -1175,6 +1186,10 @@ class ScenarioBuilder {
     picker.innerHTML = `<div style="font-size:10px; color:var(--text-general); margin-bottom:8px;">Choisir une ic\u00f4ne</div>
       <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px;">
         ${icons.map(i => `<button onclick="EnderTrack.ScenarioBuilder._setCurrentIcon('${i}'); document.getElementById('sbIconPicker').remove()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:20px; background:var(--app-bg); transition:background 0.1s;" onmouseenter="this.style.background='var(--active-element)'" onmouseleave="this.style.background='var(--app-bg)'">${i}</button>`).join('')}
+      </div>
+      <div style="margin-top:8px; display:flex; gap:6px; align-items:center;">
+        <input type="text" id="sbCustomIcon" placeholder="Coller ici" style="flex:1; padding:4px 6px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:14px; text-align:center;">
+        <button onclick="const v=document.getElementById('sbCustomIcon').value; if(v) { EnderTrack.ScenarioBuilder._setCurrentIcon(v); document.getElementById('sbIconPicker').remove(); }" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--active-element); color:var(--text-selected);">OK</button>
       </div>`;
     document.body.appendChild(picker);
     const close = (e) => { if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener('mousedown', close); } };
@@ -1186,36 +1201,37 @@ class ScenarioBuilder {
     EnderTrack.Scenario?.manager?.save?.();
   }
 
-    _renderCodePanel() {
-    const codeEl = document.getElementById('sbPresetsCode') || document.getElementById('sbBuildCode');
-    const codeEl2 = document.getElementById('sbBuildCode');
-    const codeEl1 = document.getElementById('sbPresetsCode');
-    // Generate simple pseudo-code from tree
-    const scenario = this.scenario;
-    let code = '';
-    if (scenario?.tree?.children) {
-      code = this._treeToCode(scenario.tree.children, 0);
-    }
-    if (codeEl1) codeEl1.textContent = code || '// (vide)';
-    if (codeEl2) codeEl2.textContent = code || '// (vide)';
+  _addField() {
+    if (!this.scenario.fields) this.scenario.fields = [];
+    this.scenario.fields.push({ label: '', value: '' });
+    EnderTrack.Scenario?.manager?.save?.();
+    this._renderManagerView();
   }
 
-  _treeToCode(nodes, indent) {
-    if (!nodes) return '';
-    const pad = '  '.repeat(indent);
-    return nodes.map(n => {
-      if (n.type === 'loop') {
-        const label = n.params?.label || 'boucle';
-        const count = n.params?.countMode === 'list' ? 'liste' : (n.params?.count || '?');
-        return pad + 'pour ' + (n.params?.loopVar || '$i') + ' dans ' + count + ' (' + label + ') {\n' + this._treeToCode(n.children, indent + 1) + pad + '}';
-      } else if (n.type === 'condition') {
-        return pad + 'si (' + (n.params?.expression || '?') + ') {\n' + this._treeToCode(n.children, indent + 1) + pad + '}';
-      } else if (n.type === 'action') {
-        const label = n.params?.label || n.actionId || '?';
-        return pad + label;
-      }
-      return '';
-    }).filter(Boolean).join('\n');
+  _updateField(idx, key, val) {
+    if (!this.scenario.fields?.[idx]) return;
+    this.scenario.fields[idx][key] = val;
+    EnderTrack.Scenario?.manager?.save?.();
+  }
+
+  _removeField(idx) {
+    if (!this.scenario.fields) return;
+    this.scenario.fields.splice(idx, 1);
+    EnderTrack.Scenario?.manager?.save?.();
+    this._renderManagerView();
+  }
+
+    _renderCodePanel() {
+    const el1 = document.getElementById('sbPresetsCode');
+    const el2 = document.getElementById('sbBuildCode');
+    const js = window.EnderTrack?.CodeGenerator?.generate?.(this.scenario) || '// (vide)';
+    const py = window.EnderTrack?.PythonCodeGenerator?.generate?.(this.scenario) || '# (vide)';
+    const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; height:100%; background:#333;">
+      <pre style="margin:0; padding:6px; overflow:auto; background:var(--app-bg); white-space:pre-wrap;">${this._escapeHtml(js)}</pre>
+      <pre style="margin:0; padding:6px; overflow:auto; background:var(--app-bg); white-space:pre-wrap;">${this._escapeHtml(py)}</pre>
+    </div>`;
+    if (el1) el1.innerHTML = html;
+    if (el2) el2.innerHTML = html;
   }
 
     _renderPresetsView() {
