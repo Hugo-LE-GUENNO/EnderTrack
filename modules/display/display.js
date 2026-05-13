@@ -149,7 +149,7 @@ class DisplayModule {
 
   // === SOURCE ASSIGNMENT ===
 
-  assignSource(viewportId, source) {
+  async assignSource(viewportId, source) {
     const vp = this.viewports.find(v => v.id === viewportId);
     if (!vp) return;
     if (vp.source === source) return;
@@ -189,6 +189,10 @@ class DisplayModule {
     // Camera source: create video element
     if (source && source.startsWith('camera')) {
       const camera = window.EnderTrack?.Camera;
+      // Start live if not already
+      if (camera && !camera.driver?._stream) {
+        await camera.startLive?.();
+      }
       if (camera?.driver?._stream) {
         const video = document.createElement('video');
         video.autoplay = true;
