@@ -250,7 +250,6 @@ class CameraModule {
         { id: "path", label: "Chemin", type: "text", default: "./captures" },
         { id: "showInLog", label: "Log", type: "checkbox", default: true }
       ],
-      ],
       execute: async (params, context) => {
         const cam = window.EnderTrack.Camera;
         let result;
