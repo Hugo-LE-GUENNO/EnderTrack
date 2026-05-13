@@ -138,26 +138,24 @@ class ScenarioModule {
     const scenarios = this.manager?.getAllScenarios() || [];
     const current = this.manager?.getCurrentScenario();
     const actionCount = current ? EnderTrack.TreeUtils.countActions(current.tree) : 0;
+    const hasScenarios = scenarios.length > 0;
 
     container.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
         <!-- Scenario selector -->
         <select id="sbScenarioSelect" style="width:100%; padding:8px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
-          ${scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '\ud83c\udfac'} ${s.name}</option>`).join('')}
+          ${hasScenarios ? scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '\ud83c\udfac'} ${s.name}</option>`).join('') : '<option value="_new">+ Nouveau sc\u00e9nario</option>'}
         </select>
 
-        <!-- Details -->
-        ${current ? `<div style="padding:6px; background:var(--app-bg); border-radius:4px; font-size:10px; color:var(--text-general); display:flex; gap:8px; align-items:center;">
-          <span style="font-size:18px; width:30px; height:30px; line-height:30px; text-align:center; border-radius:4px; background:${current.color || 'transparent'};">${current.icon || '\ud83c\udfac'}</span>
+        <!-- Details (click to open builder) -->
+        <div onclick="EnderTrack.Scenario._openBuilder()" style="padding:8px; background:var(--app-bg); border-radius:4px; font-size:10px; color:var(--text-general); display:flex; gap:8px; align-items:center; cursor:pointer; transition:background 0.15s;" onmouseenter="this.style.background='var(--container-bg)'" onmouseleave="this.style.background='var(--app-bg)'">
+          ${current ? `<span style="font-size:18px; width:30px; height:30px; line-height:30px; text-align:center; border-radius:4px; background:${current.color || 'transparent'};">${current.icon || '\ud83c\udfac'}</span>
           <div style="flex:1;">
             <strong style="color:var(--text-selected);">${current.name}</strong>
             ${current.description ? `<div style="font-size:9px; color:#888; margin-top:2px;">${current.description}</div>` : ''}
             ${(current.fields || []).length ? `<div style="font-size:9px; color:#666; margin-top:2px;">${current.fields.map(f => f.label + ': ' + f.value).join(' \u2022 ')}</div>` : ''}
-          </div>
-        </div>` : ''}
-
-        <!-- Separator -->
-        <div style="border-top:1px solid #333;"></div>
+          </div>` : `<span style="color:#888;">Nouveau...</span>`}
+        </div>
 
         <!-- Execute -->
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
@@ -165,19 +163,13 @@ class ScenarioModule {
           <button id="sbPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\u23f8</button>
           <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">\u25a0</button>
         </div>
-
-        <!-- Separator -->
-        <div style="border-top:1px solid #333;"></div>
-
-        <!-- Edit -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-          <button onclick="EnderTrack.Scenario._openBuilder()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\ud83d\udd27 \u00c9diter</button>
-          <button onclick="EnderTrack.Scenario._newScenario()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">+ Nouveau</button>
-        </div>
-        <button onclick="EnderTrack.Scenario._deleteScenario()" style="padding:6px; border:none; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:#888; text-align:left;">\ud83d\uddd1 Supprimer</button>
       </div>`;
 
     document.getElementById('sbScenarioSelect')?.addEventListener('change', e => {
+      if (e.target.value === '_new') {
+        this._openBuilder();
+        return;
+      }
       this.manager.setCurrentScenario(e.target.value);
       EnderTrack.VariableManager?.init?.(this.manager.getCurrentScenario());
       this.updateCanvasOverlay();
