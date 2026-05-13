@@ -296,7 +296,6 @@ class ScenarioBuilder {
           <!-- Presets (Assist\u00e9) view -->
           <div id="sbPresetsView" class="sb-full-view" style="display:${this._viewMode === 'presets' ? 'flex' : 'none'}; flex-direction:column; overflow:hidden;">
             <div id="sbPresetsContent" style="flex:1; overflow-y:auto; padding:12px;"></div>
-            <div id="sbPresetsCode" style="display:none; height:50%; border-top:1px solid #333; overflow:hidden;"></div>
           </div>
           <!-- Build (D\u00e9taill\u00e9) view -->
           <div id="sbBuildView" class="sb-build-view" style="display:${this._viewMode === 'build' ? 'flex' : 'none'}; flex-direction:column; overflow:hidden;">
@@ -311,7 +310,6 @@ class ScenarioBuilder {
               </div>
               <div id="sbProps" class="sb-props"></div>
             </div>
-            <div id="sbBuildCode" style="display:none; height:50%; border-top:1px solid #333; overflow:hidden;"></div>
           </div>
         </div>
         <div class="sb-footer">
@@ -1222,24 +1220,37 @@ class ScenarioBuilder {
 
   _toggleCode() {
     this._codeVisible = !this._codeVisible;
-    const el1 = document.getElementById('sbPresetsCode');
-    const el2 = document.getElementById('sbBuildCode');
-    if (el1) el1.style.display = this._codeVisible ? 'block' : 'none';
-    if (el2) el2.style.display = this._codeVisible ? 'block' : 'none';
-    if (this._codeVisible) this._renderCodePanel();
+    const body = document.querySelector('#sbModal .sb-body');
+    if (!body) return;
+    if (this._codeVisible) {
+      // Hide all views, show code fullscreen
+      ['sbManagerView', 'sbPresetsView', 'sbBuildView'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.style.display = 'none';
+      });
+      let codeEl = document.getElementById('sbCodeFull');
+      if (!codeEl) {
+        codeEl = document.createElement('div');
+        codeEl.id = 'sbCodeFull';
+        codeEl.style.cssText = 'flex:1; overflow:hidden; display:grid; grid-template-columns:1fr 1fr; gap:1px; background:#333;';
+        body.appendChild(codeEl);
+      }
+      codeEl.style.display = 'grid';
+      this._renderCodePanel();
+    } else {
+      // Remove code fullscreen, restore current view
+      document.getElementById('sbCodeFull')?.remove();
+      this._setView(this._viewMode);
+    }
   }
 
   _renderCodePanel() {
-    const el1 = document.getElementById('sbPresetsCode');
-    const el2 = document.getElementById('sbBuildCode');
+    const el = document.getElementById('sbCodeFull');
+    if (!el) return;
     const js = window.EnderTrack?.CodeGenerator?.generate?.(this.scenario) || '// (vide)';
     const py = window.EnderTrack?.PythonCodeGenerator?.generate?.(this.scenario) || '# (vide)';
-    const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; height:100%; background:#333;">
-      <pre style="margin:0; padding:6px; overflow:auto; background:var(--app-bg); white-space:pre-wrap;">${this._escapeHtml(js)}</pre>
-      <pre style="margin:0; padding:6px; overflow:auto; background:var(--app-bg); white-space:pre-wrap;">${this._escapeHtml(py)}</pre>
-    </div>`;
-    if (el1) el1.innerHTML = html;
-    if (el2) el2.innerHTML = html;
+    el.innerHTML = `
+      <pre style="margin:0; padding:8px; overflow:auto; background:var(--app-bg); white-space:pre-wrap; font-size:11px; color:#ccc;">${this._escapeHtml(js)}</pre>
+      <pre style="margin:0; padding:8px; overflow:auto; background:var(--app-bg); white-space:pre-wrap; font-size:11px; color:#ccc;">${this._escapeHtml(py)}</pre>`;
   }
 
   _renderPresetsView() {
