@@ -201,6 +201,8 @@ class ScenarioModule {
 
     // Dynamic params based on checked modes
     if (p.multipos) {
+      // Auto-select first list if none selected
+      if (!pp.listId && lists.length) pp.listId = String(lists[0].id);
       paramsHtml += `<div style="padding:6px; background:var(--app-bg); border-radius:4px; margin-top:6px;">
         <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">📍 Multi-positions</div>
         <div style="display:flex; gap:6px; align-items:center;">
