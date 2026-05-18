@@ -157,6 +157,7 @@
                 <!-- Settings Panel -->
                 <div class="tab-panel" id="settingsTabContent">
 
+                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Périphériques</div>
                     <!-- Platine XYZ - Connexion -->
                     <details open>
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 Platine XYZ — Connexion</summary>
@@ -216,145 +217,6 @@
                         </div>
                     </details>
 
-                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Général</div>
-                    <!-- Platine XYZ - Zone de travail -->
-                    <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📐 Platine XYZ — Zone de travail</summary>
-                        <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
-
-                            <!-- Hidden profile elements for compatibility -->
-                            <div id="selectedProfile" style="display:none;"><strong id="profileName"></strong><span id="profileDimensions"></span></div>
-
-                            <!-- Tableau Axe / Dim / Min / Max -->
-                            <table style="width:100%; border-collapse:collapse; font-size:11px;">
-                                <thead>
-                                    <tr style="color:var(--text-general); font-size:10px;">
-                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
-                                        <th style="text-align:center; padding:2px 4px;">Dimension</th>
-                                        <th style="text-align:center; padding:2px 4px;">Min</th>
-                                        <th style="text-align:center; padding:2px 4px;">Max</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">X</td>
-                                        <td style="padding:2px;"><input type="number" id="plateauX" value="220" min="10" step="1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                        <td style="padding:2px;"><input type="number" id="xMin" value="0" step="0.1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                        <td style="padding:2px;"><input type="number" id="xMax" value="220" step="0.1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Y</td>
-                                        <td style="padding:2px;"><input type="number" id="plateauY" value="220" min="10" step="1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                        <td style="padding:2px;"><input type="number" id="yMin" value="0" step="0.1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                        <td style="padding:2px;"><input type="number" id="yMax" value="220" step="0.1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Z</td>
-                                        <td style="padding:2px;"><input type="number" id="plateauZ" value="250" min="10" step="1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                        <td style="padding:2px;"><input type="number" id="zMin" value="0" step="0.1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                        <td style="padding:2px;"><input type="number" id="zMax" value="250" step="0.1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <!-- Orientation -->
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <span style="font-size:10px; color:var(--text-general);">Orientation</span>
-                                <div style="display:flex; gap:3px;">
-                                    <button class="axis-btn" data-x="left" data-y="up" onclick="setAxisOrientation('left','up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↖</button>
-                                    <button class="axis-btn active" data-x="right" data-y="up" onclick="setAxisOrientation('right','up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↗</button>
-                                    <button class="axis-btn" data-x="left" data-y="down" onclick="setAxisOrientation('left','down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↙</button>
-                                    <button class="axis-btn" data-x="right" data-y="down" onclick="setAxisOrientation('right','down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↘</button>
-                                </div>
-                                
-                                <div style="display:flex; gap:3px;">
-                                    <button class="axis-btn active" data-z="up" onclick="setZOrientation('up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;">↑</button>
-                                    <button class="axis-btn" data-z="down" onclick="setZOrientation('down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;">↓</button>
-                                </div>
-                            </div>
-                        </div>
-                    </details>
-
-                    <!-- Calques -->
-
-
-                    <!-- Navigation -->
-                    <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🧭 Navigation</summary>
-                        <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
-
-                            <!-- Tableau Axe / Lock / Home XY / Home XYZ -->
-                            <table style="width:100%; border-collapse:collapse; font-size:11px;">
-                                <thead>
-                                    <tr style="color:var(--text-general); font-size:10px;">
-                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
-                                        <th style="text-align:center; padding:2px 4px; width:36px;">Lock</th>
-                                        <th style="text-align:center; padding:2px 4px;">Home XY</th>
-                                        <th style="text-align:center; padding:2px 4px;">Home XYZ</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">X</td>
-                                        <td style="padding:2px; text-align:center;"><button id="configLockX" onclick="toggleLock('X'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">X</button></td>
-                                        <td style="padding:2px;"><input type="number" id="homeXY_X" value="0" step="0.1" onchange="updateHomePosition('xy')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                        <td style="padding:2px;"><input type="number" id="homeXYZ_X" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Y</td>
-                                        <td style="padding:2px; text-align:center;"><button id="configLockY" onclick="toggleLock('Y'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Y</button></td>
-                                        <td style="padding:2px;"><input type="number" id="homeXY_Y" value="0" step="0.1" onchange="updateHomePosition('xy')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                        <td style="padding:2px;"><input type="number" id="homeXYZ_Y" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Z</td>
-                                        <td style="padding:2px; text-align:center;"><button id="configLockZ" onclick="toggleLock('Z'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Z</button></td>
-                                        <td style="padding:2px; text-align:center; color:var(--text-general); font-size:10px;">—</td>
-                                        <td style="padding:2px;"><input type="number" id="homeXYZ_Z" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <!-- Couplage XY -->
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <button id="configCoupleXY" onclick="toggleCoupling(); updateConfigLocks()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔗 Coupler XY</button>
-                            </div>
-                        </div>
-                    </details>
-
-                    <!-- Stockage -->
-                    <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💾 Stockage</summary>
-                        <div style="padding:8px; display:flex; flex-direction:column; gap:6px;">
-                            <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-general);">
-                                <div style="width:6px; height:6px; border-radius:50%; background:var(--success); flex-shrink:0;"></div>
-                                localStorage actif
-                                <span id="storageSizeLabel" style="margin-left:auto; opacity:0.5; font-family:monospace;"></span>
-                            </div>
-                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                                <button onclick="saveAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Exporter</button>
-                                <button onclick="loadStorageFromFile()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Importer</button>
-                                <button onclick="resetAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Réinitialiser</button>
-                            </div>
-                            <div style="display:flex; gap:4px; margin-top:4px;">
-                                <button onclick="clearHistory()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Reset tracks</button>
-                            </div>
-                        </div>
-                    </details>
-
-                    <div id="viewportConfigContainer" style="display:none;"></div>
-
-                    <!-- Séparateur avant plugins -->
-                    <div style="border-top:1px solid var(--border); margin:8px 0;"></div>
-
-                    <!-- Zone injection plugins -->
-                    <div id="configPluginZone"></div>
-
-                    <!-- Séparateur avant extensions -->
-                    <div style="border-top:1px solid var(--border); margin:8px 0;"></div>
-
-                    <!-- Camera -->
-                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Périphériques</div>
                     <details>
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📷 Caméras</summary>
                         <div style="padding:8px;" id="cameraSettingsContent">
@@ -583,6 +445,144 @@
                         </div>
                     </details>
 
+                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Général</div>
+                    <!-- Platine XYZ - Zone de travail -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📐 Platine XYZ — Zone de travail</summary>
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
+
+                            <!-- Hidden profile elements for compatibility -->
+                            <div id="selectedProfile" style="display:none;"><strong id="profileName"></strong><span id="profileDimensions"></span></div>
+
+                            <!-- Tableau Axe / Dim / Min / Max -->
+                            <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                                <thead>
+                                    <tr style="color:var(--text-general); font-size:10px;">
+                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
+                                        <th style="text-align:center; padding:2px 4px;">Dimension</th>
+                                        <th style="text-align:center; padding:2px 4px;">Min</th>
+                                        <th style="text-align:center; padding:2px 4px;">Max</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">X</td>
+                                        <td style="padding:2px;"><input type="number" id="plateauX" value="220" min="10" step="1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="xMin" value="0" step="0.1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="xMax" value="220" step="0.1" oninput="validateCoordinateRange('x')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Y</td>
+                                        <td style="padding:2px;"><input type="number" id="plateauY" value="220" min="10" step="1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="yMin" value="0" step="0.1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="yMax" value="220" step="0.1" oninput="validateCoordinateRange('y')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Z</td>
+                                        <td style="padding:2px;"><input type="number" id="plateauZ" value="250" min="10" step="1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="zMin" value="0" step="0.1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="zMax" value="250" step="0.1" oninput="validateCoordinateRange('z')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Orientation -->
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <span style="font-size:10px; color:var(--text-general);">Orientation</span>
+                                <div style="display:flex; gap:3px;">
+                                    <button class="axis-btn" data-x="left" data-y="up" onclick="setAxisOrientation('left','up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↖</button>
+                                    <button class="axis-btn active" data-x="right" data-y="up" onclick="setAxisOrientation('right','up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↗</button>
+                                    <button class="axis-btn" data-x="left" data-y="down" onclick="setAxisOrientation('left','down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↙</button>
+                                    <button class="axis-btn" data-x="right" data-y="down" onclick="setAxisOrientation('right','down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:11px;">↘</button>
+                                </div>
+                                
+                                <div style="display:flex; gap:3px;">
+                                    <button class="axis-btn active" data-z="up" onclick="setZOrientation('up')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;">↑</button>
+                                    <button class="axis-btn" data-z="down" onclick="setZOrientation('down')" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;">↓</button>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Calques -->
+
+
+                    <!-- Navigation -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🧭 Navigation</summary>
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
+
+                            <!-- Tableau Axe / Lock / Home XY / Home XYZ -->
+                            <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                                <thead>
+                                    <tr style="color:var(--text-general); font-size:10px;">
+                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
+                                        <th style="text-align:center; padding:2px 4px; width:36px;">Lock</th>
+                                        <th style="text-align:center; padding:2px 4px;">Home XY</th>
+                                        <th style="text-align:center; padding:2px 4px;">Home XYZ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">X</td>
+                                        <td style="padding:2px; text-align:center;"><button id="configLockX" onclick="toggleLock('X'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">X</button></td>
+                                        <td style="padding:2px;"><input type="number" id="homeXY_X" value="0" step="0.1" onchange="updateHomePosition('xy')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="homeXYZ_X" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Y</td>
+                                        <td style="padding:2px; text-align:center;"><button id="configLockY" onclick="toggleLock('Y'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Y</button></td>
+                                        <td style="padding:2px;"><input type="number" id="homeXY_Y" value="0" step="0.1" onchange="updateHomePosition('xy')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                        <td style="padding:2px;"><input type="number" id="homeXYZ_Y" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:var(--text-selected); font-weight:600; padding:3px 4px;">Z</td>
+                                        <td style="padding:2px; text-align:center;"><button id="configLockZ" onclick="toggleLock('Z'); updateConfigLocks()" style="width:100%; padding:3px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Z</button></td>
+                                        <td style="padding:2px; text-align:center; color:var(--text-general); font-size:10px;">—</td>
+                                        <td style="padding:2px;"><input type="number" id="homeXYZ_Z" value="0" step="0.1" onchange="updateHomePosition('xyz')" style="width:100%; padding:4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); text-align:center; font-size:11px; font-family:monospace;"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Couplage XY -->
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button id="configCoupleXY" onclick="toggleCoupling(); updateConfigLocks()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔗 Coupler XY</button>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Stockage -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💾 Stockage</summary>
+                        <div style="padding:8px; display:flex; flex-direction:column; gap:6px;">
+                            <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-general);">
+                                <div style="width:6px; height:6px; border-radius:50%; background:var(--success); flex-shrink:0;"></div>
+                                localStorage actif
+                                <span id="storageSizeLabel" style="margin-left:auto; opacity:0.5; font-family:monospace;"></span>
+                            </div>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                <button onclick="saveAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Exporter</button>
+                                <button onclick="loadStorageFromFile()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Importer</button>
+                                <button onclick="resetAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Réinitialiser</button>
+                            </div>
+                            <div style="display:flex; gap:4px; margin-top:4px;">
+                                <button onclick="clearHistory()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Reset tracks</button>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div id="viewportConfigContainer" style="display:none;"></div>
+
+                    <!-- Séparateur avant plugins -->
+                    <div style="border-top:1px solid var(--border); margin:8px 0;"></div>
+
+                    <!-- Zone injection plugins -->
+                    <div id="configPluginZone"></div>
+
+                    <!-- Séparateur avant extensions -->
+                    <div style="border-top:1px solid var(--border); margin:8px 0;"></div>
+
+                    <!-- Camera -->
                     <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Extensions</div>
                     <!-- Extensions (toujours en dernier) -->
                     <details>
