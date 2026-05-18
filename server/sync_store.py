@@ -195,3 +195,33 @@ def register_routes(app):
         data = request.get_json()
         _write('scenarios', data)
         return jsonify({'success': True})
+
+    # --- Gallery ---
+
+    @app.route('/api/gallery', methods=['GET'])
+    def _gallery_list():
+        import os, glob
+        capture_dir = os.path.join(os.getcwd(), 'captures')
+        if not os.path.isdir(capture_dir):
+            return jsonify({'files': []})
+        files = []
+        for ext in ['*.png', '*.jpg', '*.jpeg', '*.tiff', '*.tif']:
+            for f in glob.glob(os.path.join(capture_dir, '**', ext), recursive=True):
+                stat = os.stat(f)
+                files.append({
+                    'path': os.path.relpath(f, os.getcwd()),
+                    'name': os.path.basename(f),
+                    'size': stat.st_size,
+                    'mtime': stat.st_mtime
+                })
+        files.sort(key=lambda x: x['mtime'], reverse=True)
+        return jsonify({'files': files})
+
+    @app.route('/api/gallery/thumb/<path:filepath>', methods=['GET'])
+    def _gallery_thumb(filepath):
+        import os
+        from flask import send_file
+        full = os.path.join(os.getcwd(), filepath)
+        if os.path.isfile(full):
+            return send_file(full, mimetype='image/png')
+        return '', 404

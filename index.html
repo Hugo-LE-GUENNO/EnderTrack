@@ -62,9 +62,10 @@
                 <button class="tab-btn" id="acquisitionTab" onclick="switchTab('acquisition')">
                     Acquisition
                 </button>
-                <button class="tab-btn" id="overlaysTab" onclick="switchTab('overlays')">
-                    Calques
+                <button class="tab-btn" id="imageTab" onclick="switchTab('image')">
+                    Image
                 </button>
+
             </div>
             <div style="flex:1"></div>
             <button id="layoutBtn" onclick="EnderTrack.Display._showLayoutMenuFromBtn(this)" style="background:none; border:none; cursor:pointer; font-size:16px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Layout" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">⊞</button>
@@ -504,9 +505,6 @@
                         </div>
                     </details>
 
-                    <!-- Calques -->
-
-
                     <!-- Navigation -->
                     <details>
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🧭 Navigation</summary>
@@ -552,6 +550,17 @@
                     </details>
 
                     <!-- Stockage -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🖼 Calques / Overlays</summary>
+                        <div id="overlaysTabContent" style="padding:8px;">
+                            <label style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-general); padding:4px 0; border-bottom:1px solid #333; margin-bottom:6px;">
+                                <input type="checkbox" id="cameraLayerEnabled" onchange="if(window.EnderTrack.ImageManager) window.EnderTrack.ImageManager.cameraLayerEnabled=this.checked" style="margin:0;">
+                                Calque caméra automatique sur canvas
+                            </label>
+                            <!-- Overlays interface renders here -->
+                        </div>
+                    </details>
+
                     <details>
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💾 Stockage</summary>
                         <div style="padding:8px; display:flex; flex-direction:column; gap:6px;">
@@ -614,10 +623,24 @@
                     <!-- Scenario Builder interface -->
                 </div>
 
-                <!-- Calques Panel -->
-                <div class="tab-panel" id="overlaysTabContent">
-                    <!-- Overlays/Calques interface renders here -->
+                <!-- Image Panel -->
+                <div class="tab-panel" id="imageTabContent">
+                    <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
+                        <div style="font-size:10px; color:var(--text-general); opacity:0.6;">Calque caméra sur canvas</div>
+                        <div id="imageLayerTable">
+                            <!-- Image layer table renders here -->
+                            <div style="text-align:center; color:#555; font-size:10px; padding:12px;">Aucune image</div>
+                        </div>
+                        <div style="border-top:1px solid #333; padding-top:8px;">
+                            <div style="font-size:10px; color:var(--text-general); opacity:0.6; margin-bottom:4px;">Galerie</div>
+                            <div id="imageGalleryList">
+                                <!-- Gallery list renders here -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+
                 
 
 
@@ -658,6 +681,9 @@
         <div class="right-panel" style="display:flex; flex-direction:column;">
 
             <!-- Plugin zone (right panel) - top -->
+
+            <!-- Image metadata panel -->
+            <div id="imageMetadataPanel" style="padding:8px; display:none;"></div>
             <div id="rightPluginZone"></div>
 
             <!-- Widget Status - always at bottom -->
@@ -799,6 +825,7 @@
     <script src="modules/scenario-builder/ui/variable-manager.js"></script>
     <script src="modules/scenario-builder/ui/code-generator.js"></script>
     <script src="modules/scenario-builder/ui/scenario-builder.js"></script>
+    <script src="modules/image/image-manager.js"></script>
     <script src="modules/scenario-builder/core/scenario-module.js"></script>
 
     <!-- Camera -->

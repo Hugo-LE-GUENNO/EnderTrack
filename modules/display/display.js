@@ -207,7 +207,6 @@ class DisplayModule {
       };
 
       const _ensureLive = () => {
-        console.log("[Display] _ensureLive: driver=", camera?.driverName, "stream=", !!camera?.driver?._stream, "camConfig=", camConfig);
         if (camera?.driver?._stream) {
           _createVideo();
         } else if (camera) {
@@ -223,6 +222,14 @@ class DisplayModule {
       // Hide placeholder
       const ph = cell.querySelector(".viewport-placeholder");
       if (ph) ph.style.display = 'none';
+      return;
+    }
+
+    // Gallery source
+    if (source === 'gallery') {
+      const ph = cell.querySelector(".viewport-placeholder");
+      if (ph) ph.style.display = 'none';
+      window.EnderTrack?.ImageManager?.renderInViewport?.(cell);
       return;
     }
 
@@ -243,6 +250,7 @@ class DisplayModule {
     (window._cameras || []).forEach((c, i) => {
       sources.push({ id: 'camera:' + i, label: '\ud83d\udcf7 ' + c.label });
     });
+    sources.push({ id: 'gallery', label: '\ud83d\uddbc Galerie' });
 
     const vp = this.viewports.find(v => v.id === viewportId);
     sources.forEach(s => {

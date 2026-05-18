@@ -90,6 +90,17 @@ class TabManager {
       isActive: false,
       module: 'Lists'
     });
+
+    this.activeTabs.set('image', {
+      id: 'image',
+      name: 'Image',
+      icon: '🖼',
+      type: 'core',
+      element: document.getElementById('imageTab'),
+      content: document.getElementById('imageTabContent'),
+      isActive: false,
+      module: 'ImageManager'
+    });
     
     // Register default plugin tabs (will be managed by plugin system)
     const defaultPlugins = ['sequences', 'drivers', 'enderman'];
@@ -206,6 +217,15 @@ class TabManager {
       }
     }
     
+
+    // Activate/deactivate ImageManager
+    if (window.EnderTrack?.ImageManager) {
+      if (tabId === 'image') {
+        window.EnderTrack.ImageManager.activate();
+      } else {
+        window.EnderTrack.ImageManager.deactivate();
+      }
+    }
     // Force canvas re-render
     if (window.EnderTrack?.Canvas?.requestRender) {
       window.EnderTrack.Canvas.requestRender();
@@ -215,27 +235,25 @@ class TabManager {
   updateRightPanel(tabId) {
     const rightPanel = document.querySelector('.right-panel');
     if (!rightPanel) return;
-    
     const graphsSection = rightPanel.querySelector('.graphs-section');
     const historySection = rightPanel.querySelector('.history-section');
     const scenarioOutput = document.getElementById('scenarioOutputSection');
-    
+    const imageMetadata = document.getElementById('imageMetadataPanel');
     if (tabId === 'acquisition') {
-      // Masquer historique et graphiques
       if (graphsSection) graphsSection.style.display = 'none';
       if (historySection) historySection.style.display = 'none';
-      
-      // Afficher section scénario
-      if (window.ScenarioModule) {
-        window.ScenarioModule.showScenarioOutput();
-      }
+      if (imageMetadata) imageMetadata.style.display = 'none';
+      if (window.ScenarioModule) window.ScenarioModule.showScenarioOutput();
+    } else if (tabId === 'image') {
+      if (graphsSection) graphsSection.style.display = 'none';
+      if (historySection) historySection.style.display = 'none';
+      if (scenarioOutput) scenarioOutput.style.display = 'none';
+      if (imageMetadata) imageMetadata.style.display = 'block';
     } else {
-      // Afficher historique et graphiques
       if (graphsSection) graphsSection.style.display = 'block';
       if (historySection) historySection.style.display = 'block';
-      
-      // Masquer section scénario
       if (scenarioOutput) scenarioOutput.style.display = 'none';
+      if (imageMetadata) imageMetadata.style.display = 'none';
     }
   }
 
