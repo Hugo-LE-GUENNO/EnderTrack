@@ -165,10 +165,21 @@ class CameraModule {
   async saveLive() {
     const frame = await this.getFrame();
     if (!frame?.frame) return;
-    const a = document.createElement('a');
-    a.href = 'data:image/jpeg;base64,' + frame.frame;
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    a.download = 'capture_' + ts + '.jpg';
+    const pos = window.EnderTrack?.State?.get?.()?.pos || {x:0,y:0,z:0};
+    const path = './captures/snap_' + ts + '_X' + pos.x.toFixed(2) + '_Y' + pos.y.toFixed(2) + '_Z' + pos.z.toFixed(2) + '.png';
+    // Save to server (for gallery)
+    try {
+      const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      await fetch(url + '/api/capture/save', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ frame: frame.frame, path })
+      });
+    } catch(e) {}
+    // Also download locally
+    const a = document.createElement('a');
+    a.href = 'data:image/png;base64,' + frame.frame;
+    a.download = path.split('/').pop();
     a.click();
   }
 
