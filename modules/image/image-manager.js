@@ -9,8 +9,25 @@ class ImageManager {
     this.isActive = false;
   }
 
-  activate() { this.isActive = true; this.renderUI(); this.loadGallery(); }
-  deactivate() { this.isActive = false; }
+  activate() {
+    this.isActive = true;
+    this.renderUI();
+    this.loadGallery();
+    this._renderMetadata();
+    this._onKey = (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); this.selectGalleryImage(Math.max(0, this._galleryIdx - 1)); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); this.selectGalleryImage(Math.min(this.gallery.length - 1, this._galleryIdx + 1)); }
+    };
+    document.addEventListener('keydown', this._onKey);
+    if (window.EnderTrack?.Canvas) window.EnderTrack.Canvas.clickAndGoEnabled = false;
+  }
+
+  deactivate() {
+    this.isActive = false;
+    if (this._onKey) { document.removeEventListener('keydown', this._onKey); this._onKey = null; }
+    if (window.EnderTrack?.Canvas) window.EnderTrack.Canvas.clickAndGoEnabled = true;
+  }
 
   // === GALLERY ===
 
@@ -175,22 +192,23 @@ class ImageManager {
   }
 
   _renderMetadata() {
-    // Update right panel with image metadata
     const panel = document.getElementById('imageMetadataPanel');
     if (!panel) return;
+    panel.style.display = 'block';
     const img = this.getSelectedImage();
-    if (!img) { panel.innerHTML = ''; return; }
-
-    // Parse position from filename (acq_..._X50.00_Y80.00_Z7.00.png)
+    if (!img) { panel.innerHTML = '<div style="font-size:10px; color:#555; padding:8px;">Aucune image</div>'; return; }
     const match = img.name.match(/X([\d.]+)_Y([\d.]+)_Z([\d.]+)/);
     const pos = match ? { x: match[1], y: match[2], z: match[3] } : null;
-
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gallery/thumb/' + img.path;
     panel.innerHTML = `
-      <div style="font-size:10px; color:var(--text-general); display:flex; flex-direction:column; gap:4px;">
-        <strong style="color:var(--text-selected);">${img.name}</strong>
-        ${pos ? `<div>Position: X${pos.x} Y${pos.y} Z${pos.z}</div>` : ''}
-        <div>Taille: ${(img.size / 1024).toFixed(1)} Ko</div>
-        <div>Date: ${new Date(img.mtime * 1000).toLocaleString()}</div>
+      <div style="display:flex; flex-direction:column; gap:6px; padding:4px;">
+        <img src="${url}" style="width:100%; max-height:120px; object-fit:contain; border-radius:4px; background:#000;">
+        <div style="font-size:10px; color:var(--text-general); display:flex; flex-direction:column; gap:3px;">
+          <strong style="color:var(--text-selected); word-break:break-all;">${img.name}</strong>
+          ${pos ? `<div style="font-family:monospace; color:var(--coordinates-color);">X${pos.x} Y${pos.y} Z${pos.z}</div>` : ''}
+          <div>Taille: ${(img.size / 1024).toFixed(1)} Ko</div>
+          <div>Date: ${new Date(img.mtime * 1000).toLocaleString()}</div>
+        </div>
       </div>`;
   }
 }
