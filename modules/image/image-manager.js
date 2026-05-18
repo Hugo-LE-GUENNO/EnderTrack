@@ -197,3 +197,9 @@ class ImageManager {
 
 window.EnderTrack = window.EnderTrack || {};
 window.EnderTrack.ImageManager = new ImageManager();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => { EnderTrack.ImageManager.renderUI(); EnderTrack.ImageManager.loadGallery(); });
+} else {
+  setTimeout(() => { EnderTrack.ImageManager.renderUI(); EnderTrack.ImageManager.loadGallery(); }, 200);
+}
