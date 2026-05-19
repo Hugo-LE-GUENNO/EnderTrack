@@ -145,14 +145,11 @@ class DisplayModule {
     if (video) { video.srcObject = null; video.remove(); this._videos.delete(id); }
     const timer = this._timers.get(id);
     if (timer) { clearInterval(timer); this._timers.delete(id); }
-    // Remove any injected content (gallery, etc) but keep canvas and z-panel
+    // Remove gallery wrapper if present
     const cell = id === 0 ? this._stageWrap : this._cells.get(id);
     if (cell) {
-      Array.from(cell.children).forEach(child => {
-        if (!child.classList.contains('main-canvas') && child.id !== 'zVisualizationPanel' && !child.classList.contains('viewport-placeholder')) {
-          child.remove();
-        }
-      });
+      const gw = cell.querySelector('.gallery-viewport-wrap');
+      if (gw) gw.remove();
     }
   }
 
@@ -182,7 +179,6 @@ class DisplayModule {
     if (!cell) return;
 
     // Stage source: move main-canvas + z-panel into this cell
-      console.log("[Display] renderSource stage: cell=", cell?.className, "mainCanvas=", !!document.querySelector(".main-canvas"), "children=", cell?.children?.length);
     if (source === 'stage') {
       const mainCanvas = document.querySelector('.main-canvas');
       const zPanel = document.getElementById('zVisualizationPanel');

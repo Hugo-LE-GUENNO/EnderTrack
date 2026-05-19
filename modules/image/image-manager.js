@@ -104,13 +104,21 @@ class ImageManager {
   // === VIEWPORT SOURCE ===
 
   renderInViewport(container) {
+    // Use a dedicated wrapper to avoid destroying other content (canvas, z-panel)
+    let wrap = container.querySelector('.gallery-viewport-wrap');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'gallery-viewport-wrap';
+      wrap.style.cssText = 'position:absolute; inset:0; z-index:10;';
+      container.appendChild(wrap);
+    }
     const img = this.getSelectedImage();
     if (!img) {
-      container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#555;font-size:11px;">Aucune image</div>';
+      wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#555;font-size:11px;">Aucune image</div>';
       return;
     }
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gallery/thumb/' + img.path;
-    container.innerHTML = `
+    wrap.innerHTML = `
       <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; background:#000;">
         <img src="${url}" style="flex:1; object-fit:contain; min-height:0;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 8px; background:#1a1a1a; font-size:10px; color:var(--text-general);">
