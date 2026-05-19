@@ -553,7 +553,6 @@ class EnderscopeConnection {
       if (result.success) {
         return true;
       }
-      }
       return false;
     } catch (error) {
       return false;
