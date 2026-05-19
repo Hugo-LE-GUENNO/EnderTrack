@@ -176,13 +176,15 @@ class DisplayModule {
     if (source === 'stage') {
       const mainCanvas = document.querySelector('.main-canvas');
       const zPanel = document.getElementById('zVisualizationPanel');
-      if (mainCanvas && !cell.contains(mainCanvas)) {
+      if (mainCanvas) {
         cell.appendChild(mainCanvas);
+        mainCanvas.style.display = '';
         if (zPanel) cell.appendChild(zPanel);
       }
       // Hide placeholder
       const ph = cell.querySelector(".viewport-placeholder");
       if (ph) ph.style.display = 'none';
+      setTimeout(() => { window.dispatchEvent(new Event('resize')); EnderTrack.Canvas?.requestRender?.(); }, 50);
       return;
     }
 
