@@ -23,9 +23,9 @@ class MovementEngine {
             if (!this._isLocalMove) this._remoteMove(evt.data);
           } else if (evt.type === 'position:moved') {
             // Server-side move completed — snap to final position
-            this._remoteArrive(evt.data);
+            if (!this._isLocalMove) this._remoteArrive(evt.data);
           } else if (evt.type === 'position:arrived') {
-            this._remoteArrive(evt.data);
+            if (!this._isLocalMove) this._remoteArrive(evt.data);
           } else if (evt.type === 'sync:overlays') {
             if (window.EnderTrack?.Overlays) {
               window.EnderTrack.Overlays._loadFromData(evt.data);

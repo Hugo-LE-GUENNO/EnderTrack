@@ -11,22 +11,20 @@ class ImageManager {
 
   activate() {
     this.isActive = true;
-    console.log("[ImageManager] activate called");
     this.renderUI();
     this.loadGallery();
     this._renderMetadata();
     this._onKey = (e) => {
       if (e.target.tagName === 'INPUT') return;
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault();
         e.stopImmediatePropagation();
-        if (e.key === 'ArrowLeft') this.selectGalleryImage(Math.max(0, this._galleryIdx - 1));
+        if (e.key === 'ArrowUp') this.selectGalleryImage(Math.max(0, this._galleryIdx - 1));
         else this.selectGalleryImage(Math.min(this.gallery.length - 1, this._galleryIdx + 1));
       }
     };
     document.addEventListener('keydown', this._onKey, true);
     if (window.EnderTrack?.Canvas) window.EnderTrack.Canvas.clickAndGoEnabled = false;
-    console.log("[ImageManager] deactivate called");
   }
 
   deactivate() {
