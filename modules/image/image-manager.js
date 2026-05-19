@@ -204,10 +204,8 @@ class ImageManager {
     if (!img) { panel.innerHTML = '<div style="font-size:10px; color:#555; padding:8px;">Aucune image</div>'; return; }
     const match = img.name.match(/X([\d.]+)_Y([\d.]+)_Z([\d.]+)/);
     const pos = match ? { x: match[1], y: match[2], z: match[3] } : null;
-    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gallery/thumb/' + img.path;
     panel.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:6px; padding:4px;">
-        <img src="${url}" style="width:100%; max-height:120px; object-fit:contain; border-radius:4px; background:#000;">
         <div style="font-size:10px; color:var(--text-general); display:flex; flex-direction:column; gap:3px;">
           <strong style="color:var(--text-selected); word-break:break-all;">${img.name}</strong>
           ${pos ? `<div style="font-family:monospace; color:var(--coordinates-color);">X${pos.x} Y${pos.y} Z${pos.z}</div>` : ''}
