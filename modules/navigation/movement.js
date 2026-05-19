@@ -12,6 +12,13 @@ class MovementEngine {
 
   _setupSSE() {
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+    // Load tracks from server on init
+    fetch(url + '/api/sync/tracks').then(r => r.json()).then(data => {
+      if (data?.positionHistory?.length || data?.continuousTrack?.length) {
+        EnderTrack.State.update({ positionHistory: data.positionHistory || [], continuousTrack: data.continuousTrack || [] });
+        EnderTrack.Canvas?.requestRender?.();
+      }
+    }).catch(() => {});
     try {
       const es = new EventSource(url + '/api/events');
       this._sse = es;
