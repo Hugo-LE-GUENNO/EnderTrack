@@ -364,7 +364,9 @@ class MovementEngine {
     this._cancelAnim();
     const roundedPos = EnderTrack.Math.roundPoint(finalPos);
     EnderTrack.State.update({ pos: roundedPos, isMoving: false });
-    // Sync absolute inputs to final position (clears yellow cross)
+    this.isMoving = false;
+    // Keep _isLocalMove true briefly to ignore late SSE events
+    setTimeout(() => { this._isLocalMove = false; }, 500);    // Sync absolute inputs to final position (clears yellow cross)
     const ix = document.getElementById('inputX');
     const iy = document.getElementById('inputY');
     const iz = document.getElementById('inputZ');
@@ -373,8 +375,6 @@ class MovementEngine {
     if (iz) iz.value = roundedPos.z.toFixed(2);
     EnderTrack.Events.notifyListeners('position:changed', roundedPos);
     if (success) EnderTrack.State.recordFinalPosition?.(roundedPos);
-    this.isMoving = false;
-    this._isLocalMove = false;
     this._broadcast('position:arrived', { x: roundedPos.x, y: roundedPos.y, z: roundedPos.z });
     // Persist position to server
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state/patch';
