@@ -244,16 +244,16 @@ class ImageManager {
     if (!this._histogram) this._histogram = new HistClass();
     // Rebuild DOM only if canvas gone
     if (!document.getElementById("gallery-hist-canvas")) {
-      container.innerHTML = '
+      container.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
           <span style="font-size:9px; color:var(--text-general);">Histogram</span>
           <div style="display:flex; gap:2px; align-items:center;">
             <span id="gallery-hist-info" style="font-family:monospace; font-size:9px; color:var(--text-general);">-</span>
-            <button onclick="EnderTrack.ImageManager._histogram.setMode(\'auto\')" id="gallery-hist-auto" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">A</button>
-            <button onclick="EnderTrack.ImageManager._histogram.setMode(\'manual\')" id="gallery-hist-manual" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--app-bg); color:var(--text-general);">M</button>
+            <button onclick="EnderTrack.ImageManager._histogram.setMode('auto')" id="gallery-hist-auto" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">A</button>
+            <button onclick="EnderTrack.ImageManager._histogram.setMode('manual')" id="gallery-hist-manual" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--app-bg); color:var(--text-general);">M</button>
           </div>
         </div>
-        <canvas id="gallery-hist-canvas" width="200" height="70" style="width:100%; height:70px; border-radius:4px; background:#111; cursor:default;"></canvas>';
+        <canvas id="gallery-hist-canvas" width="200" height="70" style="width:100%; height:70px; border-radius:4px; background:#111; cursor:default;"></canvas>`;
       this._histogram.canvas = document.getElementById("gallery-hist-canvas");
       this._histogram.ctx = this._histogram.canvas.getContext("2d");
       this._histogram._setupEvents();
