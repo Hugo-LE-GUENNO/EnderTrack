@@ -325,33 +325,11 @@ class ImageManager {
         const def = window.CameraLUTs?.[renderer.lutId];
         return def ? def.generate() : null;
       };
-      // Override options menu LUT callback
-      const origShowOptions = this._histogram._showOptionsMenu.bind(this._histogram);
+      // Override options menu to use GalleryRenderer
       this._histogram._showOptionsMenu = (x, y) => {
-        origShowOptions(x, y);
-        // Patch LUT click handlers after menu is created
-        setTimeout(() => {
-          const menu = document.getElementById('enderpicam-options-menu');
-          if (!menu) return;
-          menu.querySelectorAll('div').forEach(row => {
-            const orig = row.onclick;
-            if (!orig) return;
-            row.onclick = null;
-            row.addEventListener('click', () => {
-              // Find which LUT was clicked by checking text
-              const luts = window.CameraLUTs || {};
-              for (const [id, def] of Object.entries(luts)) {
-                if (row.textContent.includes(def.name)) {
-                  window.EnderTrack.GalleryRenderer.setLut(id);
-                  this._histogram._redraw();
-                  menu.remove();
-                  return;
-                }
-              }
-            });
-          });
-        }, 10);
+        window.EnderTrack?.ImageManager?._showRendererMenu?.(x, y);
       };
+    }
     }
     // Get image URL (support stack pages)
     const base = window.ENDERTRACK_SERVER || "http://localhost:5000";

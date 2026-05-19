@@ -61,19 +61,26 @@ class StackViewer {
       wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#555;font-size:11px;">Erreur stack</div>';
       return;
     }
-
-    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
-    const imgUrl = url + '/api/stack/page?file=' + encodeURIComponent(this._file) + '&index=' + this._index;
-
     wrap.innerHTML = `
-      <img id="stackImg" src="${imgUrl}" style="flex:1; object-fit:contain; min-height:0; background:#000;">
+      <canvas id="stackDisplayCanvas" style="flex:1; object-fit:contain; min-height:0; background:#000; image-rendering:pixelated;"></canvas>
       <div style="padding:4px 8px; background:#1a1a1a; display:flex; align-items:center; gap:8px;">
         <input type="range" id="stackSlider" min="0" max="${info.pages - 1}" value="${this._index}"
           oninput="EnderTrack.StackViewer.setIndex(parseInt(this.value))"
           style="flex:1; height:4px; cursor:pointer;">
         <span style="font-size:10px; color:var(--text-general); min-width:50px; text-align:right;" id="stackLabel">${this._index + 1} / ${info.pages}</span>
       </div>`;
-
+    // Setup renderer on this canvas
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (renderer) {
+      renderer.setDisplayCanvas(document.getElementById("stackDisplayCanvas"));
+      renderer.loadRaw(this._file, this._index);
+    }
+    // Mouse wheel
+    wrap.onwheel = (e) => { e.preventDefault(); this.setIndex(this._index + (e.deltaY > 0 ? 1 : -1)); };
+    // Right-click for LUT
+    const canvas = document.getElementById("stackDisplayCanvas");
+    if (canvas) canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.ImageManager?._showRendererMenu?.(e.clientX, e.clientY); };
+  }
     // Mouse wheel navigation
     wrap.onwheel = (e) => {
       e.preventDefault();
@@ -83,15 +90,14 @@ class StackViewer {
   }
 
   _updateImage() {
-    const img = document.getElementById('stackImg');
-    const slider = document.getElementById('stackSlider');
-    const label = document.getElementById('stackLabel');
-    if (!img || !this._file) return;
-
-    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
-    img.src = url + '/api/stack/page?file=' + encodeURIComponent(this._file) + '&index=' + this._index;
+    const slider = document.getElementById("stackSlider");
+    const label = document.getElementById("stackLabel");
+    if (!this._file) return;
+    // Update renderer with raw data
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (renderer) renderer.loadRaw(this._file, this._index);
     if (slider) slider.value = this._index;
-    if (label) label.textContent = (this._index + 1) + ' / ' + this._info.pages;
+    if (label) label.textContent = (this._index + 1) + " / " + this._info.pages;
   }
 
   // Update gallery viewport if stack source is active
