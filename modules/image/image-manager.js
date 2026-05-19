@@ -237,35 +237,46 @@ class ImageManager {
   }
 
   _updateHistogram(img) {
-    const container = document.getElementById('galleryHistContainer');
+    const container = document.getElementById("galleryHistContainer");
     if (!container) return;
-    // Create histogram instance if needed
-    if (!this._histogram) {
-      this._histogram = new (window.CameraHistogram || window.EnderpicamHistogram)();
-      container.innerHTML = `
+    const HistClass = window.CameraHistogram || window.EnderpicamHistogram;
+    if (!HistClass) return;
+    if (!this._histogram) this._histogram = new HistClass();
+    // Rebuild DOM only if canvas gone
+    if (!document.getElementById("gallery-hist-canvas")) {
+      container.innerHTML = '
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
           <span style="font-size:9px; color:var(--text-general);">Histogram</span>
-          <span id="gallery-hist-info" style="font-family:monospace; font-size:9px; color:var(--text-general);">-</span>
+          <div style="display:flex; gap:2px; align-items:center;">
+            <span id="gallery-hist-info" style="font-family:monospace; font-size:9px; color:var(--text-general);">-</span>
+            <button onclick="EnderTrack.ImageManager._histogram.setMode(\'auto\')" id="gallery-hist-auto" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">A</button>
+            <button onclick="EnderTrack.ImageManager._histogram.setMode(\'manual\')" id="gallery-hist-manual" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--app-bg); color:var(--text-general);">M</button>
+          </div>
         </div>
-        <canvas id="gallery-hist-canvas" width="200" height="70" style="width:100%; height:70px; border-radius:4px; background:#111; cursor:default;"></canvas>`;
-      this._histogram.canvas = document.getElementById('gallery-hist-canvas');
-      this._histogram.ctx = this._histogram.canvas.getContext('2d');
+        <canvas id="gallery-hist-canvas" width="200" height="70" style="width:100%; height:70px; border-radius:4px; background:#111; cursor:default;"></canvas>';
+      this._histogram.canvas = document.getElementById("gallery-hist-canvas");
+      this._histogram.ctx = this._histogram.canvas.getContext("2d");
       this._histogram._setupEvents();
     }
-    // Load image and compute histogram
-    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gallery/thumb/' + img.path;
+    // Get image URL (support stack pages)
+    const base = window.ENDERTRACK_SERVER || "http://localhost:5000";
+    let url;
+    if ((img.name.endsWith(".tiff") || img.name.endsWith(".tif")) && window.EnderTrack?.StackViewer?._file === img.path) {
+      url = base + "/api/stack/page?file=" + encodeURIComponent(img.path) + "&index=" + (window.EnderTrack.StackViewer._index || 0);
+    } else {
+      url = base + "/api/gallery/thumb/" + img.path;
+    }
     const image = new Image();
-    image.crossOrigin = 'anonymous';
+    image.crossOrigin = "anonymous";
     image.onload = () => {
       const w = Math.min(image.width, 320), h = Math.min(image.height, 240);
-      const offscreen = document.createElement('canvas');
+      const offscreen = document.createElement("canvas");
       offscreen.width = w; offscreen.height = h;
-      const ctx = offscreen.getContext('2d');
+      const ctx = offscreen.getContext("2d");
       ctx.drawImage(image, 0, 0, w, h);
-      const data = ctx.getImageData(0, 0, w, h).data;
-      this._histogram.updateFromImageData(data, true);
-      const info = document.getElementById('gallery-hist-info');
-      if (info) { const r = this._histogram.getContrastRange(); info.textContent = r.min + ' - ' + r.max; }
+      this._histogram.updateFromImageData(ctx.getImageData(0, 0, w, h).data, true);
+      const info = document.getElementById("gallery-hist-info");
+      if (info) { const r = this._histogram.getContrastRange(); info.textContent = r.min + " - " + r.max; }
     };
     image.src = url;
   }

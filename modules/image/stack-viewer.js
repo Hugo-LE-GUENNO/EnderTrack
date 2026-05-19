@@ -25,6 +25,9 @@ class StackViewer {
     if (!this._info) return;
     this._index = Math.max(0, Math.min(idx, this._info.pages - 1));
     this._updateImage();
+    // Update histogram for current page
+    const img = window.EnderTrack?.ImageManager?.getSelectedImage?.();
+    if (img) window.EnderTrack?.ImageManager?._updateHistogram?.(img);
   }
 
   renderInViewport(container) {
