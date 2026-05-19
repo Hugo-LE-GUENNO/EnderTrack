@@ -748,6 +748,7 @@ window.clearHistory = () => {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (window.EnderTrack?.Scenario?.isExecuting) return;
     if (window.EnderTrack?.Movement?.isMoving) return;
+    if (window.EnderTrack?.ImageManager?.isActive) return;
 
     // Z movement (immediate, no combo needed)
     if (e.key === 'PageUp') { e.preventDefault(); EnderTrack.Navigation?.moveDirection?.('zUp'); return; }

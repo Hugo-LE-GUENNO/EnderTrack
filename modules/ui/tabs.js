@@ -222,6 +222,8 @@ class TabManager {
     if (window.EnderTrack?.ImageManager) {
       if (tabId === 'image') {
         window.EnderTrack.ImageManager.activate();
+        // Disable keyboard navigation for stage
+        if (window.EnderTrack?.KeyboardManager) window.EnderTrack.KeyboardManager.isActive = false;
       } else {
         window.EnderTrack.ImageManager.deactivate();
       }

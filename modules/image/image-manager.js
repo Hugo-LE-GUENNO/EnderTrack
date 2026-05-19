@@ -26,7 +26,8 @@ class ImageManager {
   deactivate() {
     this.isActive = false;
     if (this._onKey) { document.removeEventListener('keydown', this._onKey); this._onKey = null; }
-    if (window.EnderTrack?.Canvas) window.EnderTrack.Canvas.clickAndGoEnabled = true;
+    const panel = document.getElementById('imageMetadataPanel');
+    if (panel) panel.style.display = 'none';
   }
 
   // === GALLERY ===
