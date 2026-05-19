@@ -551,12 +551,8 @@ class EnderscopeConnection {
       }
       
       if (result.success) {
-        if (window.EnderTrack?.State) {
-          window.EnderTrack.State.update({ pos: { x, y, z } });
-          window.EnderTrack.State.recordFinalPosition({ x, y, z });
-        }
-        await this.getPosition();
         return true;
+      }
       }
       return false;
     } catch (error) {
@@ -585,17 +581,6 @@ class EnderscopeConnection {
       }
       
       if (result.success) {
-        const currentState = window.EnderTrack?.State?.get();
-        if (currentState) {
-          const newPos = {
-            x: currentState.pos.x + dx,
-            y: currentState.pos.y + dy,
-            z: currentState.pos.z + dz
-          };
-          window.EnderTrack.State.update({ pos: newPos });
-          window.EnderTrack.State.recordFinalPosition(newPos);
-        }
-        await this.getPosition();
         return true;
       }
       return false;
