@@ -154,6 +154,22 @@ class ImageManager {
     }
 
   }
+  _toggleAutoContrast() {
+    if (!this._histogram) return;
+    const isAuto = this._histogram.mode === 'auto';
+    this._histogram.setMode(isAuto ? 'manual' : 'auto');
+    const btn = document.getElementById('gallery-hist-auto');
+    if (btn) {
+      btn.style.background = this._histogram.mode === 'auto' ? 'var(--active-element)' : 'var(--app-bg)';
+      btn.style.color = this._histogram.mode === 'auto' ? 'var(--text-selected)' : 'var(--text-general)';
+    }
+    if (this._histogram.mode === 'auto') {
+      const r = this._histogram.getContrastRange();
+      const renderer = window.EnderTrack?.GalleryRenderer;
+      if (renderer) renderer.setContrast(r.min, r.max);
+    }
+  }
+
   _showRendererMenu(x, y) {
     document.getElementById('gallery-renderer-menu')?.remove();
     const renderer = window.EnderTrack?.GalleryRenderer;
@@ -300,8 +316,7 @@ class ImageManager {
           <span style="font-size:9px; color:var(--text-general);">Histogram</span>
           <div style="display:flex; gap:2px; align-items:center;">
             <span id="gallery-hist-info" style="font-family:monospace; font-size:9px; color:var(--text-general);">-</span>
-            <button onclick="EnderTrack.ImageManager._histogram.setMode('auto')" id="gallery-hist-auto" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">A</button>
-            <button onclick="EnderTrack.ImageManager._histogram.setMode('manual')" id="gallery-hist-manual" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--app-bg); color:var(--text-general);">M</button>
+            <button onclick="EnderTrack.ImageManager._toggleAutoContrast()" id="gallery-hist-auto" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">Auto</button>
           </div>
         </div>
         <canvas id="gallery-hist-canvas" width="200" height="70" style="width:100%; height:70px; border-radius:4px; background:#111; cursor:default;"></canvas>`;
