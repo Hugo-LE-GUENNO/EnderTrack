@@ -16,16 +16,20 @@ class ImageManager {
     this._renderMetadata();
     this._onKey = (e) => {
       if (e.target.tagName === 'INPUT') return;
-      if (e.key === 'ArrowLeft') { e.preventDefault(); this.selectGalleryImage(Math.max(0, this._galleryIdx - 1)); }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); this.selectGalleryImage(Math.min(this.gallery.length - 1, this._galleryIdx + 1)); }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (e.key === 'ArrowLeft') this.selectGalleryImage(Math.max(0, this._galleryIdx - 1));
+        else this.selectGalleryImage(Math.min(this.gallery.length - 1, this._galleryIdx + 1));
+      }
     };
-    document.addEventListener('keydown', this._onKey);
+    document.addEventListener('keydown', this._onKey, true);
     if (window.EnderTrack?.Canvas) window.EnderTrack.Canvas.clickAndGoEnabled = false;
   }
 
   deactivate() {
     this.isActive = false;
-    if (this._onKey) { document.removeEventListener('keydown', this._onKey); this._onKey = null; }
+    if (this._onKey) { document.removeEventListener('keydown', this._onKey, true); this._onKey = null; }
     const panel = document.getElementById('imageMetadataPanel');
     if (panel) panel.style.display = 'none';
   }
