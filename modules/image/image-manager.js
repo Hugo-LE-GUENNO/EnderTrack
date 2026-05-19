@@ -308,7 +308,12 @@ class ImageManager {
     if (!container) return;
     const HistClass = window.CameraHistogram || window.EnderpicamHistogram;
     if (!HistClass) return;
-    if (!this._histogram) this._histogram = new HistClass();
+    if (!this._histogram) {
+      this._histogram = new HistClass();
+      this._histogram.mode = 'manual';
+      this._histogram.manualMin = 0;
+      this._histogram.manualMax = 255;
+    }
     // Rebuild DOM only if canvas gone
     if (!document.getElementById("gallery-hist-canvas")) {
       container.innerHTML = `
@@ -316,7 +321,7 @@ class ImageManager {
           <span style="font-size:9px; color:var(--text-general);">Histogram</span>
           <div style="display:flex; gap:2px; align-items:center;">
             <span id="gallery-hist-info" style="font-family:monospace; font-size:9px; color:var(--text-general);">-</span>
-            <button onclick="EnderTrack.ImageManager._toggleAutoContrast()" id="gallery-hist-auto" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">Auto</button>
+            <button onclick="EnderTrack.ImageManager._toggleAutoContrast()" id="gallery-hist-auto" style="font-size:8px; padding:1px 4px; border:none; border-radius:2px; cursor:pointer; background:var(--app-bg); color:var(--text-general);">Auto</button>
           </div>
         </div>
         <canvas id="gallery-hist-canvas" width="200" height="70" style="width:100%; height:70px; border-radius:4px; background:#111; cursor:default;"></canvas>`;
@@ -362,10 +367,14 @@ class ImageManager {
       const ctx = offscreen.getContext("2d");
       ctx.drawImage(image, 0, 0, w, h);
       this._histogram.updateFromImageData(ctx.getImageData(0, 0, w, h).data, true);
-      const r = this._histogram.getContrastRange();
+      // Don't apply auto-contrast by default — show image as-is
       const renderer = window.EnderTrack?.GalleryRenderer;
-      if (renderer) renderer.setContrast(r.min, r.max);
+      if (renderer && this._histogram.mode === 'auto') {
+        // Full range = no stretch
+        renderer.setContrast(0, 255);
+      }
       const info = document.getElementById("gallery-hist-info");
+      const r = this._histogram.getContrastRange();
       if (info) info.textContent = r.min + " - " + r.max;
     };
     image.src = url;
