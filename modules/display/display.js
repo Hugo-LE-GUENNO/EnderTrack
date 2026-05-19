@@ -269,7 +269,6 @@ class DisplayModule {
       sources.push({ id: 'camera:' + i, label: '\ud83d\udcf7 ' + c.label });
     });
     sources.push({ id: 'gallery', label: '\ud83d\uddbc Galerie' });
-    sources.push({ id: 'stack', label: '\ud83d\udcda Stack' });
 
     const vp = this.viewports.find(v => v.id === viewportId);
     sources.forEach(s => {
