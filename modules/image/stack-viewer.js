@@ -25,7 +25,12 @@ class StackViewer {
     if (!this._info) return;
     this._index = Math.max(0, Math.min(idx, this._info.pages - 1));
     this._updateImage();
-    // Update histogram for current page
+    // Update renderer with raw data for this page
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (renderer && this._file) {
+      renderer.loadRaw(this._file, this._index);
+    }
+    // Update histogram
     const img = window.EnderTrack?.ImageManager?.getSelectedImage?.();
     if (img) window.EnderTrack?.ImageManager?._updateHistogram?.(img);
   }

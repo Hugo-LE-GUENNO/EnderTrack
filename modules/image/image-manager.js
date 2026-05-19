@@ -142,10 +142,54 @@ class ImageManager {
     if (renderer) {
       const canvas = document.getElementById("galleryDisplayCanvas");
       renderer.setDisplayCanvas(canvas);
-      renderer.loadImage(url);
+      // Use raw endpoint for TIFF, standard for PNG/JPG
+      const img2 = this.getSelectedImage();
+      if (img2 && (img2.name.endsWith('.tiff') || img2.name.endsWith('.tif'))) {
+        renderer.loadRaw(img2.path, 0);
+      } else {
+        renderer.loadImage(url);
+      }
+      // Right-click on canvas for RGB/LUT options
+      canvas.oncontextmenu = (e) => { e.preventDefault(); this._showRendererMenu(e.clientX, e.clientY); };
     }
 
   }
+  _showRendererMenu(x, y) {
+    document.getElementById('gallery-renderer-menu')?.remove();
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (!renderer) return;
+    const luts = window.CameraLUTs || {};
+    const menu = document.createElement('div');
+    menu.id = 'gallery-renderer-menu';
+    menu.style.cssText = `position:fixed; left:${x}px; top:${y}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:120px;`;
+    // RGB toggle
+    if (renderer._channels >= 3) {
+      const rgbRow = document.createElement('div');
+      rgbRow.style.cssText = 'padding:4px 10px; font-size:11px; cursor:pointer; color:var(--text-general);';
+      rgbRow.innerHTML = `<span style="width:14px; display:inline-block;">${renderer.rgbMode ? '\u2713' : ''}</span>RGB`;
+      rgbRow.onmouseenter = () => rgbRow.style.background = 'var(--app-bg)';
+      rgbRow.onmouseleave = () => rgbRow.style.background = '';
+      rgbRow.onclick = () => { renderer.setRgbMode(!renderer.rgbMode); menu.remove(); };
+      menu.appendChild(rgbRow);
+      const sep = document.createElement('div');
+      sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
+      menu.appendChild(sep);
+    }
+    // LUT options
+    for (const [id, def] of Object.entries(luts)) {
+      const row = document.createElement('div');
+      const active = id === renderer.lutId && !renderer.rgbMode;
+      row.style.cssText = `padding:4px 10px; font-size:11px; cursor:pointer; color:${active ? 'var(--text-selected)' : 'var(--text-general)'}; background:${active ? 'var(--active-element)' : 'transparent'};`;
+      row.textContent = def.name;
+      row.onmouseenter = () => { if (!active) row.style.background = 'var(--app-bg)'; };
+      row.onmouseleave = () => { if (!active) row.style.background = ''; };
+      row.onclick = () => { renderer.setLut(id); if (this._histogram) this._histogram._redraw(); menu.remove(); };
+      menu.appendChild(row);
+    }
+    document.body.appendChild(menu);
+    setTimeout(() => { const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('mousedown', close); } }; document.addEventListener('mousedown', close); }, 0);
+  }
+
   _updateGalleryViewport() {
     // Find viewport with gallery source and re-render
     const display = window.EnderTrack?.Display;

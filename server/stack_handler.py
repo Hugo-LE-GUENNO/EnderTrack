@@ -119,3 +119,49 @@ def register_routes(app):
             return jsonify({'error': 'Pillow not installed'}), 500
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/stack/raw', methods=['GET'])
+    def _stack_raw():
+        """Serve raw pixel data as binary (uint8 or uint16) with metadata header."""
+        filepath = request.args.get('file', '')
+        index = int(request.args.get('index', 0))
+
+        if not filepath:
+            return jsonify({'error': 'No file specified'}), 400
+
+        full = os.path.join(os.getcwd(), filepath)
+        if not os.path.isfile(full):
+            return jsonify({'error': 'File not found'}), 404
+
+        try:
+            from PIL import Image
+            import numpy as np
+            img = Image.open(full)
+            img.seek(index)
+            frame = img.copy()
+            arr = np.array(frame)
+
+            # Determine if grayscale or RGB
+            if arr.ndim == 2:
+                channels = 1
+                dtype = 'uint16' if arr.dtype == np.uint16 else 'uint8'
+            else:
+                channels = arr.shape[2]
+                dtype = 'uint8'
+
+            # Send as JSON with base64-encoded raw data
+            import base64
+            raw_bytes = arr.tobytes()
+            return jsonify({
+                'width': arr.shape[1],
+                'height': arr.shape[0],
+                'channels': channels,
+                'dtype': dtype,
+                'data': base64.b64encode(raw_bytes).decode('ascii')
+            })
+        except ImportError:
+            return jsonify({'error': 'Pillow/numpy not installed'}), 500
+        except EOFError:
+            return jsonify({'error': f'Page {index} not found'}), 404
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
