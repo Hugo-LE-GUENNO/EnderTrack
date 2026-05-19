@@ -130,14 +130,20 @@ class ImageManager {
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gallery/thumb/' + img.path;
     wrap.innerHTML = `
       <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; background:#000;">
-        <img src="${url}" style="flex:1; object-fit:contain; min-height:0;">
+        <canvas id="galleryDisplayCanvas" style="flex:1; object-fit:contain; min-height:0; image-rendering:pixelated;"></canvas>
         <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 8px; background:#1a1a1a; font-size:10px; color:var(--text-general);">
           <button onclick="EnderTrack.ImageManager.selectGalleryImage(${this._galleryIdx - 1 >= 0 ? this._galleryIdx - 1 : 0})" style="border:none;background:none;color:var(--text-general);cursor:pointer;font-size:14px;">&#9664;</button>
           <span>${img.name} (${this._galleryIdx + 1}/${this.gallery.length})</span>
           <button onclick="EnderTrack.ImageManager.selectGalleryImage(${Math.min(this._galleryIdx + 1, this.gallery.length - 1)})" style="border:none;background:none;color:var(--text-general);cursor:pointer;font-size:14px;">&#9654;</button>
         </div>
       </div>`;
-  }
+    // Load image into renderer
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (renderer) {
+      const canvas = document.getElementById("galleryDisplayCanvas");
+      renderer.setDisplayCanvas(canvas);
+      renderer.loadImage(url);
+    }
 
   _updateGalleryViewport() {
     // Find viewport with gallery source and re-render
@@ -257,6 +263,50 @@ class ImageManager {
       this._histogram.canvas = document.getElementById("gallery-hist-canvas");
       this._histogram.ctx = this._histogram.canvas.getContext("2d");
       this._histogram._setupEvents();
+      // Hook: sync renderer when histogram changes
+      const origRedraw = this._histogram._redraw.bind(this._histogram);
+      this._histogram._redraw = () => {
+        origRedraw();
+        const r = this._histogram.getContrastRange();
+        const renderer = window.EnderTrack?.GalleryRenderer;
+        if (renderer) { renderer.setContrast(r.min, r.max); }
+        const info = document.getElementById('gallery-hist-info');
+        if (info) info.textContent = r.min + ' - ' + r.max;
+      };
+      // Override LUT access for gallery context
+      this._histogram._getCurrentLut = () => {
+        const renderer = window.EnderTrack?.GalleryRenderer;
+        if (!renderer || renderer.lutId === 'gray') return null;
+        const def = window.CameraLUTs?.[renderer.lutId];
+        return def ? def.generate() : null;
+      };
+      // Override options menu LUT callback
+      const origShowOptions = this._histogram._showOptionsMenu.bind(this._histogram);
+      this._histogram._showOptionsMenu = (x, y) => {
+        origShowOptions(x, y);
+        // Patch LUT click handlers after menu is created
+        setTimeout(() => {
+          const menu = document.getElementById('enderpicam-options-menu');
+          if (!menu) return;
+          menu.querySelectorAll('div').forEach(row => {
+            const orig = row.onclick;
+            if (!orig) return;
+            row.onclick = null;
+            row.addEventListener('click', () => {
+              // Find which LUT was clicked by checking text
+              const luts = window.CameraLUTs || {};
+              for (const [id, def] of Object.entries(luts)) {
+                if (row.textContent.includes(def.name)) {
+                  window.EnderTrack.GalleryRenderer.setLut(id);
+                  this._histogram._redraw();
+                  menu.remove();
+                  return;
+                }
+              }
+            });
+          });
+        }, 10);
+      };
     }
     // Get image URL (support stack pages)
     const base = window.ENDERTRACK_SERVER || "http://localhost:5000";
@@ -275,8 +325,11 @@ class ImageManager {
       const ctx = offscreen.getContext("2d");
       ctx.drawImage(image, 0, 0, w, h);
       this._histogram.updateFromImageData(ctx.getImageData(0, 0, w, h).data, true);
+      const r = this._histogram.getContrastRange();
+      const renderer = window.EnderTrack?.GalleryRenderer;
+      if (renderer) renderer.setContrast(r.min, r.max);
       const info = document.getElementById("gallery-hist-info");
-      if (info) { const r = this._histogram.getContrastRange(); info.textContent = r.min + " - " + r.max; }
+      if (info) info.textContent = r.min + " - " + r.max;
     };
     image.src = url;
   }
