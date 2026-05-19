@@ -145,6 +145,15 @@ class DisplayModule {
     if (video) { video.srcObject = null; video.remove(); this._videos.delete(id); }
     const timer = this._timers.get(id);
     if (timer) { clearInterval(timer); this._timers.delete(id); }
+    // Remove any injected content (gallery, etc) but keep canvas and z-panel
+    const cell = id === 0 ? this._stageWrap : this._cells.get(id);
+    if (cell) {
+      Array.from(cell.children).forEach(child => {
+        if (!child.classList.contains('main-canvas') && child.id !== 'zVisualizationPanel' && !child.classList.contains('viewport-placeholder')) {
+          child.remove();
+        }
+      });
+    }
   }
 
   // === SOURCE ASSIGNMENT ===
