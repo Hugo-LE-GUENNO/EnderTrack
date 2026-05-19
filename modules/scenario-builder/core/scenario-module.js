@@ -15,7 +15,7 @@ class ScenarioModule {
   async init() {
     this.manager = new window.EnderTrack.ScenarioManager();
     this._executor = new window.EnderTrack.ScenarioExecutor();
-    this.isActive = true;
+    this.isActive = false;
     this.updateCanvasOverlay();
     this.createUI();
     return true;

@@ -16,7 +16,7 @@ class MovementEngine {
     fetch(url + '/api/sync/tracks').then(r => r.json()).then(data => {
       if (data?.positionHistory?.length || data?.continuousTrack?.length) {
         EnderTrack.State.update({ positionHistory: data.positionHistory || [], continuousTrack: data.continuousTrack || [] });
-        EnderTrack.Canvas?.requestRender?.();
+        setTimeout(() => EnderTrack.Canvas?.requestRender?.(), 200);
       }
     }).catch(() => {});
     try {
