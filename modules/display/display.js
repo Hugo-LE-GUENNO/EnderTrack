@@ -182,6 +182,7 @@ class DisplayModule {
     if (!cell) return;
 
     // Stage source: move main-canvas + z-panel into this cell
+      console.log("[Display] renderSource stage: cell=", cell?.className, "mainCanvas=", !!document.querySelector(".main-canvas"), "children=", cell?.children?.length);
     if (source === 'stage') {
       const mainCanvas = document.querySelector('.main-canvas');
       const zPanel = document.getElementById('zVisualizationPanel');
