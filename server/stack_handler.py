@@ -1,0 +1,121 @@
+# server/stack_handler.py — Multi-page TIFF stack reader
+"""
+Serves individual pages from multi-page TIFF files for the Stack Viewer.
+Uses Pillow (PIL) for TIFF reading.
+"""
+
+import os
+import io
+import json
+from flask import request, jsonify, send_file
+
+def register_routes(app):
+    """Register stack-related API routes."""
+
+    @app.route('/api/stack/info', methods=['GET'])
+    def _stack_info():
+        """Get metadata about a TIFF stack (number of pages, dimensions)."""
+        filepath = request.args.get('file', '')
+        if not filepath:
+            return jsonify({'error': 'No file specified'}), 400
+
+        full = os.path.join(os.getcwd(), filepath)
+        if not os.path.isfile(full):
+            return jsonify({'error': 'File not found'}), 404
+
+        try:
+            from PIL import Image
+            img = Image.open(full)
+            n_pages = 0
+            try:
+                while True:
+                    n_pages += 1
+                    img.seek(n_pages)
+            except EOFError:
+                pass
+
+            img.seek(0)
+            width, height = img.size
+            mode = img.mode
+
+            return jsonify({
+                'file': filepath,
+                'pages': n_pages,
+                'width': width,
+                'height': height,
+                'mode': mode
+            })
+        except ImportError:
+            return jsonify({'error': 'Pillow not installed'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/stack/page', methods=['GET'])
+    def _stack_page():
+        """Serve a single page from a multi-page TIFF as PNG."""
+        filepath = request.args.get('file', '')
+        index = int(request.args.get('index', 0))
+
+        if not filepath:
+            return jsonify({'error': 'No file specified'}), 400
+
+        full = os.path.join(os.getcwd(), filepath)
+        if not os.path.isfile(full):
+            return jsonify({'error': 'File not found'}), 404
+
+        try:
+            from PIL import Image
+            img = Image.open(full)
+            img.seek(index)
+
+            # Convert to RGB if needed for PNG output
+            frame = img.copy()
+            if frame.mode == 'I;16':
+                # 16-bit → 8-bit (auto-scale)
+                import numpy as np
+                arr = np.array(frame)
+                arr = ((arr - arr.min()) / max(1, arr.max() - arr.min()) * 255).astype('uint8')
+                frame = Image.fromarray(arr)
+            elif frame.mode not in ('RGB', 'RGBA', 'L'):
+                frame = frame.convert('L')
+
+            buf = io.BytesIO()
+            frame.save(buf, format='PNG')
+            buf.seek(0)
+            return send_file(buf, mimetype='image/png')
+        except ImportError:
+            return jsonify({'error': 'Pillow not installed'}), 500
+        except EOFError:
+            return jsonify({'error': f'Page {index} not found'}), 404
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/stack/create', methods=['POST'])
+    def _stack_create():
+        """Create a multi-page TIFF from a list of capture files."""
+        data = request.get_json()
+        if not data or not data.get('files') or not data.get('output'):
+            return jsonify({'error': 'Missing files or output path'}), 400
+
+        files = data['files']
+        output = data['output']
+
+        try:
+            from PIL import Image
+            frames = []
+            for f in files:
+                full = os.path.join(os.getcwd(), f)
+                if os.path.isfile(full):
+                    frames.append(Image.open(full))
+
+            if not frames:
+                return jsonify({'error': 'No valid files'}), 400
+
+            os.makedirs(os.path.dirname(os.path.abspath(output)), exist_ok=True)
+            frames[0].save(output, save_all=True, append_images=frames[1:], compression='tiff_deflate')
+            print(f"  📚 Stack créé: {output} ({len(frames)} pages)")
+            return jsonify({'success': True, 'path': output, 'pages': len(frames)})
+        except ImportError:
+            return jsonify({'error': 'Pillow not installed'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500

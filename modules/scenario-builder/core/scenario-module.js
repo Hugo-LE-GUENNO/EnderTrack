@@ -89,12 +89,37 @@ class ScenarioModule {
 
     await this._executor.executeTree(scenario.tree, scenario.watchers);
 
+    // Generate multi-page TIFF from captures if applicable
+    await this._generateStack(scenario);
+
     EnderTrack.Events?.emit?.('scenario:completed', {
       scenarioName: scenario.name,
       duration: this._executor.getElapsedTime()
     });
     this._showRightPanel(false);
     this.createUI();
+  }
+
+  async _generateStack(scenario) {
+    // Collect recent captures and create a multi-page TIFF
+    try {
+      const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      const res = await fetch(url + '/api/gallery');
+      const data = await res.json();
+      const files = (data.files || []).filter(f => f.name.endsWith('.png') || f.name.endsWith('.jpg'));
+      if (files.length < 2) return;
+      // Use files from this session (last N minutes)
+      const cutoff = Date.now() / 1000 - 600; // last 10 min
+      const recent = files.filter(f => f.mtime > cutoff);
+      if (recent.length < 2) return;
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      const output = './captures/' + (scenario.name || 'stack').replace(/[^a-zA-Z0-9]/g, '_') + '_' + ts + '.tiff';
+      await fetch(url + '/api/stack/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: recent.map(f => f.path), output })
+      });
+      this.addLog('\ud83d\udcda Stack: ' + output, 'info');
+    } catch(e) {}
   }
 
   stopExecution() {

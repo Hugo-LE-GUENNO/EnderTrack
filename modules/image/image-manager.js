@@ -50,8 +50,12 @@ class ImageManager {
     this._galleryIdx = idx;
     this._renderGallery();
     this._renderMetadata();
-    // Update viewport if gallery source is active
     this._updateGalleryViewport();
+    // If TIFF selected, open in stack viewer
+    const img = this.getSelectedImage();
+    if (img && (img.name.endsWith('.tiff') || img.name.endsWith('.tif'))) {
+      window.EnderTrack?.StackViewer?.open?.(img.path);
+    }
   }
 
   getSelectedImage() {

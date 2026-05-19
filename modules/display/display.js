@@ -145,11 +145,13 @@ class DisplayModule {
     if (video) { video.srcObject = null; video.remove(); this._videos.delete(id); }
     const timer = this._timers.get(id);
     if (timer) { clearInterval(timer); this._timers.delete(id); }
-    // Remove gallery wrapper if present
+    // Remove gallery/stack wrapper if present
     const cell = id === 0 ? this._stageWrap : this._cells.get(id);
     if (cell) {
       const gw = cell.querySelector('.gallery-viewport-wrap');
       if (gw) gw.remove();
+      const sw = cell.querySelector('.stack-viewport-wrap');
+      if (sw) sw.remove();
     }
   }
 
@@ -241,6 +243,14 @@ class DisplayModule {
       return;
     }
 
+    // Stack source
+    if (source === 'stack') {
+      const ph = cell.querySelector(".viewport-placeholder");
+      if (ph) ph.style.display = 'none';
+      window.EnderTrack?.StackViewer?.renderInViewport?.(cell);
+      return;
+    }
+
     // No source — show placeholder
     const ph = cell.querySelector(".viewport-placeholder");
     if (ph) ph.style.display = '';
@@ -259,6 +269,7 @@ class DisplayModule {
       sources.push({ id: 'camera:' + i, label: '\ud83d\udcf7 ' + c.label });
     });
     sources.push({ id: 'gallery', label: '\ud83d\uddbc Galerie' });
+    sources.push({ id: 'stack', label: '\ud83d\udcda Stack' });
 
     const vp = this.viewports.find(v => v.id === viewportId);
     sources.forEach(s => {
