@@ -81,14 +81,6 @@ class StackViewer {
     const canvas = document.getElementById("stackDisplayCanvas");
     if (canvas) canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.ImageManager?._showRendererMenu?.(e.clientX, e.clientY); };
   }
-    // Mouse wheel navigation
-    wrap.onwheel = (e) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? 1 : -1;
-      this.setIndex(this._index + delta);
-    };
-  }
-
   _updateImage() {
     const slider = document.getElementById("stackSlider");
     const label = document.getElementById("stackLabel");

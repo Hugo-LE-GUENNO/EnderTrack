@@ -330,7 +330,6 @@ class ImageManager {
         window.EnderTrack?.ImageManager?._showRendererMenu?.(x, y);
       };
     }
-    }
     // Get image URL (support stack pages)
     const base = window.ENDERTRACK_SERVER || "http://localhost:5000";
     let url;
