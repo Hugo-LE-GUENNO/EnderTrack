@@ -145,6 +145,7 @@ class ImageManager {
       renderer.loadImage(url);
     }
 
+  }
   _updateGalleryViewport() {
     // Find viewport with gallery source and re-render
     const display = window.EnderTrack?.Display;
