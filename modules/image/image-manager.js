@@ -11,6 +11,7 @@ class ImageManager {
 
   activate() {
     this.isActive = true;
+    console.log("[ImageManager] activate called");
     this.renderUI();
     this.loadGallery();
     this._renderMetadata();
@@ -25,6 +26,7 @@ class ImageManager {
     };
     document.addEventListener('keydown', this._onKey, true);
     if (window.EnderTrack?.Canvas) window.EnderTrack.Canvas.clickAndGoEnabled = false;
+    console.log("[ImageManager] deactivate called");
   }
 
   deactivate() {
