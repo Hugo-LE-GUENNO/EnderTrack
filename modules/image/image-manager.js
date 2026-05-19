@@ -230,49 +230,44 @@ class ImageManager {
           <div>Taille: ${(img.size / 1024).toFixed(1)} Ko</div>
           <div>Date: ${new Date(img.mtime * 1000).toLocaleString()}</div>
         </div>
-        <canvas id="galleryHistCanvas" width="200" height="60" style="width:100%; height:60px; border-radius:4px; background:#111;"></canvas>
+        <div id="galleryHistContainer"></div>
       </div>`;
-    // Compute histogram from image
-    this._computeHistogram(img);
+    // Use CameraHistogram for full-featured histogram
+    this._updateHistogram(img);
   }
 
-  _computeHistogram(img) {
+  _updateHistogram(img) {
+    const container = document.getElementById('galleryHistContainer');
+    if (!container) return;
+    // Create histogram instance if needed
+    if (!this._histogram) {
+      this._histogram = new (window.CameraHistogram || window.EnderpicamHistogram)();
+      container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:9px; color:var(--text-general);">Histogram</span>
+          <span id="gallery-hist-info" style="font-family:monospace; font-size:9px; color:var(--text-general);">-</span>
+        </div>
+        <canvas id="gallery-hist-canvas" width="200" height="70" style="width:100%; height:70px; border-radius:4px; background:#111; cursor:default;"></canvas>`;
+      this._histogram.canvas = document.getElementById('gallery-hist-canvas');
+      this._histogram.ctx = this._histogram.canvas.getContext('2d');
+      this._histogram._setupEvents();
+    }
+    // Load image and compute histogram
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gallery/thumb/' + img.path;
     const image = new Image();
     image.crossOrigin = 'anonymous';
     image.onload = () => {
-      const canvas = document.createElement('canvas');
       const w = Math.min(image.width, 320), h = Math.min(image.height, 240);
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
+      const offscreen = document.createElement('canvas');
+      offscreen.width = w; offscreen.height = h;
+      const ctx = offscreen.getContext('2d');
       ctx.drawImage(image, 0, 0, w, h);
       const data = ctx.getImageData(0, 0, w, h).data;
-      const hist = new Uint32Array(256);
-      for (let i = 0; i < data.length; i += 16) {
-        hist[Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2])]++;
-      }
-      this._drawHistogram(hist);
+      this._histogram.updateFromImageData(data, true);
+      const info = document.getElementById('gallery-hist-info');
+      if (info) { const r = this._histogram.getContrastRange(); info.textContent = r.min + ' - ' + r.max; }
     };
     image.src = url;
-  }
-
-  _drawHistogram(hist) {
-    const c = document.getElementById('galleryHistCanvas');
-    if (!c) return;
-    const ctx = c.getContext('2d');
-    const W = c.width, H = c.height;
-    ctx.clearRect(0, 0, W, H);
-    let max = 1;
-    for (let i = 1; i < 255; i++) max = Math.max(max, Math.log1p(hist[i]));
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    for (let i = 0; i < 256; i++) {
-      ctx.lineTo((i / 255) * W, H - (Math.log1p(hist[i]) / max) * H);
-    }
-    ctx.lineTo(W, H);
-    ctx.closePath();
-    ctx.fill();
   }
 }
 
