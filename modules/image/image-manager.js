@@ -2,11 +2,12 @@
 
 class ImageManager {
   constructor() {
-    this.layers = []; // [{id, src, x, y, width, height, opacity, visible, timestamp, name}]
-    this.gallery = []; // [{path, name, size, mtime}]
+    this.layers = [];
+    this.gallery = [];
     this.selectedId = null;
     this._galleryIdx = 0;
     this.isActive = false;
+    this._imageSettings = {}; // {path: {min, max, lutId, rgbMode}}
   }
 
   activate() {
@@ -47,14 +48,45 @@ class ImageManager {
   }
 
   selectGalleryImage(idx) {
+    // Save current image settings before switching
+    this._saveCurrentSettings();
     this._galleryIdx = idx;
     this._renderGallery();
     this._renderMetadata();
     this._updateGalleryViewport();
+    // Restore settings for new image
+    this._restoreSettings();
     // If TIFF selected, open in stack viewer
     const img = this.getSelectedImage();
     if (img && (img.name.endsWith('.tiff') || img.name.endsWith('.tif'))) {
       window.EnderTrack?.StackViewer?.open?.(img.path);
+    }
+  }
+
+  _saveCurrentSettings() {
+    const img = this.getSelectedImage();
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (!img || !renderer) return;
+    this._imageSettings[img.path] = {
+      min: renderer.min,
+      max: renderer.max,
+      lutId: renderer.lutId,
+      rgbMode: renderer.rgbMode
+    };
+  }
+
+  _restoreSettings() {
+    const img = this.getSelectedImage();
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (!img || !renderer) return;
+    const s = this._imageSettings[img.path];
+    if (s) {
+      renderer.min = s.min;
+      renderer.max = s.max;
+      renderer.lutId = s.lutId;
+      renderer.rgbMode = s.rgbMode;
+      const def = window.CameraLUTs?.[s.lutId];
+      renderer._lutTable = def ? def.generate() : null;
     }
   }
 

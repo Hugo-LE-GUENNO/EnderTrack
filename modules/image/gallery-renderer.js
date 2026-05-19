@@ -78,11 +78,12 @@ class GalleryRenderer {
 
       // Decode base64 raw data
       const binary = atob(data.data);
-      const bytes = new Uint8Array(binary.length);
+      const buffer = new ArrayBuffer(binary.length);
+      const bytes = new Uint8Array(buffer);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
       if (data.dtype === 'uint16') {
-        const u16 = new Uint16Array(bytes.buffer);
+        const u16 = new Uint16Array(buffer);
         this._rawPixels = new Float32Array(u16.length);
         for (let i = 0; i < u16.length; i++) this._rawPixels[i] = u16[i];
       } else {
@@ -91,6 +92,15 @@ class GalleryRenderer {
       }
 
       this.rgbMode = this._channels >= 3;
+      // For 16-bit: auto-contrast by default (otherwise image is black)
+      if (data.dtype === 'uint16') {
+        const stats = this.getRawStats();
+        this.min = stats.min;
+        this.max = stats.max;
+      } else {
+        this.min = 0;
+        this.max = 255;
+      }
       this.render();
       return true;
     } catch(e) { return false; }
