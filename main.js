@@ -486,6 +486,11 @@ window.switchTab = (tabId) => {
   }
   if (window.EnderTrack?.ImageManager?.isActive) {
     window.EnderTrack.ImageManager.deactivate();
+    // Single viewport: switch back to stage
+    const display = window.EnderTrack?.Display;
+    if (display && display.viewports.length === 1 && display.viewports[0].source === 'gallery') {
+      display.assignSource(0, 'stage');
+    }
   }
   
   // Reset canvas
@@ -548,6 +553,11 @@ window.switchTab = (tabId) => {
     window.EnderTrack.Scenario.activate();
   } else if (tabId === 'image' && window.EnderTrack?.ImageManager) {
     window.EnderTrack.ImageManager.activate();
+    // Single viewport: switch to gallery
+    const display = window.EnderTrack?.Display;
+    if (display && display.viewports.length === 1) {
+      display.assignSource(0, 'gallery');
+    }
   }
   
   // === STEP 5: INIT OVERLAYS/TRACKS ===
