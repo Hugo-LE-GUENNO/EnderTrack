@@ -1,6 +1,6 @@
 {
   "name": "endertrack",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Contrôleur de position 3D pour platines XYZ motorisées",
   "main": "main.js",
   "scripts": {
@@ -18,5 +18,6 @@
     "stage-control"
   ],
   "author": "Hugo Le Guenno",
-  "license": "GPL-3.0"
+  "license": "GPL-3.0",
+  "edition": "imagerie"
 }

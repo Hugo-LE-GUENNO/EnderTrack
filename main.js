@@ -484,6 +484,9 @@ window.switchTab = (tabId) => {
   if (window.EnderTrack?.Scenario?.isActive && !window.EnderTrack.Scenario.isExecuting) {
     window.EnderTrack.Scenario.deactivate();
   }
+  if (window.EnderTrack?.ImageManager?.isActive) {
+    window.EnderTrack.ImageManager.deactivate();
+  }
   
   // Reset canvas
   const canvas = window.EnderTrack?.Canvas?.getCanvas();
@@ -543,6 +546,8 @@ window.switchTab = (tabId) => {
   } else if (tabId === 'acquisition' && window.EnderTrack?.Scenario) {
     canvas.classList.add('scenario-mode');
     window.EnderTrack.Scenario.activate();
+  } else if (tabId === 'image' && window.EnderTrack?.ImageManager) {
+    window.EnderTrack.ImageManager.activate();
   }
   
   // === STEP 5: INIT OVERLAYS/TRACKS ===

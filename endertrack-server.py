@@ -58,8 +58,11 @@ def get_clients():
 import json as _json
 _pkg = os.path.join(PROJECT_ROOT, 'package.json')
 try:
-    with open(_pkg) as _f: VERSION = _json.load(_f)['version']
-except: VERSION = '?'
+    with open(_pkg) as _f:
+        _pkgdata = _json.load(_f)
+        VERSION = _pkgdata['version']
+        EDITION = _pkgdata.get('edition', '')
+except: VERSION = '?'; EDITION = ''
 
 # ─── Enregistrement des modules ──────────────────────────────────────────────
 
@@ -105,7 +108,8 @@ from server import network_config
 
 if __name__ == '__main__':
     print()
-    print(f"  🔬 Bienvenue sur EnderTrack v{VERSION}")
+    edition_str = f" — {EDITION}" if EDITION else ""
+    print(f"  🔬 Bienvenue sur EnderTrack v{VERSION}{edition_str}")
     print()
     print(f"  🌐 {network_config.HOST}:{network_config.PORT}")
     if network_config.HOST == '0.0.0.0':
