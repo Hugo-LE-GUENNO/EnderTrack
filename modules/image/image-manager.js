@@ -452,17 +452,31 @@ class ImageManager {
     if (!img) { panel.innerHTML = '<div style="font-size:10px; color:#555; padding:8px;">Aucune image</div>'; return; }
     const match = img.name.match(/X([\d.]+)_Y([\d.]+)_Z([\d.]+)/);
     const pos = match ? { x: match[1], y: match[2], z: match[3] } : null;
+    // Stack dimension info
+    const sv = window.EnderTrack?.StackViewer;
+    const dims = sv?._dims;
+    const ds = sv?._dimState || {};
+    let dimInfo = '';
+    if (dims && dims.pages > 1) {
+      const parts = [];
+      if (dims.sizeC > 1) parts.push(`C: ${(ds.c||0)+1}/${dims.sizeC}`);
+      if (dims.sizeZ > 1) parts.push(`Z: ${(ds.z||0)+1}/${dims.sizeZ}`);
+      if (dims.sizeT > 1) parts.push(`T: ${(ds.t||0)+1}/${dims.sizeT}`);
+      if (dims.bitDepth) parts.push(`${dims.bitDepth}-bit`);
+      if (dims.pixelSize) parts.push(`${dims.pixelSize.toFixed(3)} ${dims.unit || '\u00b5m'}/px`);
+      dimInfo = parts.join(' \u2022 ');
+    }
     panel.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:6px; padding:4px;">
         <div style="font-size:10px; color:var(--text-general); display:flex; flex-direction:column; gap:3px;">
           <strong style="color:var(--text-selected); word-break:break-all;">${img.name}</strong>
           ${pos ? `<div style="font-family:monospace; color:var(--coordinates-color);">X${pos.x} Y${pos.y} Z${pos.z}</div>` : ''}
+          ${dimInfo ? `<div style="font-size:9px; color:var(--coordinates-color);">${dimInfo}</div>` : ''}
           <div>Taille: ${(img.size / 1024).toFixed(1)} Ko</div>
           <div>Date: ${new Date(img.mtime * 1000).toLocaleString()}</div>
         </div>
         <div id="galleryHistContainer"></div>
       </div>`;
-    // Ensure histogram DOM is built (but don't load image data — _loadAndDisplay handles that)
     this._ensureHistogramDOM();
   }
 
