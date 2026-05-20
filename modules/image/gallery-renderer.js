@@ -57,6 +57,10 @@ class GalleryRenderer {
             this._rawPixels[i * 3 + 2] = data[i * 4 + 2];
           }
         }
+        this._dataMin = 0;
+        this._dataMax = 255;
+        this.min = 0;
+        this.max = 255;
         if (!this._skipAutoRender) this.render();
         resolve(true);
       };
@@ -98,9 +102,13 @@ class GalleryRenderer {
       // For 16-bit: auto-contrast by default (otherwise image is black)
       if (data.dtype === 'uint16') {
         const stats = this.getRawStats();
+        this._dataMin = stats.min;
+        this._dataMax = stats.max;
         this.min = stats.min;
         this.max = stats.max;
       } else {
+        this._dataMin = 0;
+        this._dataMax = 255;
         this.min = 0;
         this.max = 255;
       }
@@ -110,9 +118,11 @@ class GalleryRenderer {
   }
 
   setContrast(min, max) {
-    this.min = (min / 255) * this._maxVal;
-    this.max = (max / 255) * this._maxVal;
-    // Throttle render to 1 per frame (avoids lag during fast drag)
+    // min/max from histogram (0-255) mapped to actual data range
+    const dataMin = this._dataMin || 0;
+    const dataMax = this._dataMax || this._maxVal;
+    this.min = dataMin + (min / 255) * (dataMax - dataMin);
+    this.max = dataMin + (max / 255) * (dataMax - dataMin);
     if (!this._renderPending) {
       this._renderPending = true;
       requestAnimationFrame(() => { this._renderPending = false; this.render(); });

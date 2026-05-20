@@ -321,6 +321,24 @@ class ImageManager {
       sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
       menu.appendChild(sep);
     }
+    // Log scale toggle
+    const logRow = document.createElement('div');
+    logRow.style.cssText = 'padding:4px 10px; font-size:11px; cursor:pointer; color:var(--text-general);';
+    logRow.innerHTML = `<span style="width:14px; display:inline-block;">${this._histogram?.logScale ? '\u2713' : ''}</span>Log scale`;
+    logRow.onmouseenter = () => logRow.style.background = 'var(--app-bg)';
+    logRow.onmouseleave = () => logRow.style.background = '';
+    logRow.onclick = () => { if (this._histogram) { this._histogram.logScale = !this._histogram.logScale; this._histogram._redraw(); } menu.remove(); };
+    menu.appendChild(logRow);
+    // Data range info
+    if (renderer._dtype === 'uint16') {
+      const infoRow = document.createElement('div');
+      infoRow.style.cssText = 'padding:4px 10px; font-size:9px; color:#888;';
+      infoRow.textContent = `16-bit [${Math.round(renderer._dataMin)}-${Math.round(renderer._dataMax)}]`;
+      menu.appendChild(infoRow);
+    }
+    const sep2 = document.createElement('div');
+    sep2.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
+    menu.appendChild(sep2);
     // LUT options
     for (const [id, def] of Object.entries(luts)) {
       const row = document.createElement('div');
@@ -477,7 +495,7 @@ class ImageManager {
         const renderer = window.EnderTrack?.GalleryRenderer;
         if (renderer) { renderer.setContrast(r.min, r.max); }
         const info = document.getElementById('gallery-hist-info');
-        if (info) info.textContent = r.min + ' - ' + r.max;
+        if (info) { const ren = window.EnderTrack?.GalleryRenderer; if (ren && ren._dtype === 'uint16') { info.textContent = Math.round(ren.min) + ' - ' + Math.round(ren.max); } else { info.textContent = r.min + ' - ' + r.max; } }
         this._saveCurrentSettings();
       };
       this._histogram._getCurrentLut = () => {
