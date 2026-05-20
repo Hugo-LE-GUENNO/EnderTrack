@@ -46,7 +46,17 @@ class CameraModule {
       if (!this.histogram && window.CameraHistogram) {
         this.histogram = new window.CameraHistogram();
         this.histogram.inject();
-        // Live histogram: contrast/LUT apply to live viewport only (not gallery)
+        // Live histogram: contrast/LUT apply to live viewport only
+        const origRedraw = this.histogram._redraw.bind(this.histogram);
+        this.histogram._redraw = () => {
+          origRedraw();
+          const tab = window.EnderTrack?.State?.get?.()?.activeTab;
+          if (tab === 'navigation' || !tab) {
+            const r = this.histogram.getContrastRange();
+            const renderer = window.EnderTrack?.GalleryRenderer;
+            if (renderer) renderer.setContrast(r.min, r.max);
+          }
+        };
         this.histogram._getCurrentLut = () => {
           if (!this._liveLutId || this._liveLutId === 'gray') return null;
           const def = window.CameraLUTs?.[this._liveLutId];
@@ -153,7 +163,7 @@ class CameraModule {
       row.textContent = def.name;
       row.onmouseenter = () => { if (!active) row.style.background = 'var(--app-bg)'; };
       row.onmouseleave = () => { if (!active) row.style.background = ''; };
-      row.onclick = () => { this._liveLutId = id; this.histogram?._redraw?.(); menu.remove(); };
+      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.GalleryRenderer; if (renderer) renderer.setLut(id); this.histogram?._redraw?.(); menu.remove(); };
       menu.appendChild(row);
     }
     document.body.appendChild(menu);
