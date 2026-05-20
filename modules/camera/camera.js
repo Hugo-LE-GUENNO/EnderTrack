@@ -357,7 +357,7 @@ class CameraModule {
         liveRenderer._lutTable = def ? def.generate() : null;
         if (this.histogram) {
           this.histogram.manualMin = Math.round((this._liveSettings.min / 255) * 255);
-          this.histogram.manualMax = Math.round((this._liveSettings.max / renderer._maxVal) * 255);
+          this.histogram.manualMax = Math.round((this._liveSettings.max / 255) * 255);
           this.histogram._redraw();
         }
       }
