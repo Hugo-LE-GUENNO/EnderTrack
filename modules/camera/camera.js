@@ -313,7 +313,7 @@ class CameraModule {
     // Save current renderer state before switching
     if (renderer) {
       if (vp.source?.startsWith('camera')) {
-        this._liveSettings = { min: renderer.min, max: renderer.max, lutId: renderer.lutId, rgbMode: renderer.rgbMode };
+        this._liveSettings = { min: renderer.min, max: renderer.max, lutId: this._liveLutId || 'gray', rgbMode: renderer.rgbMode };
       } else if (vp.source === 'gallery') {
         window.EnderTrack?.ImageManager?._saveCurrentSettings?.();
       }
@@ -330,6 +330,7 @@ class CameraModule {
         renderer.max = this._liveSettings.max;
         renderer.lutId = this._liveSettings.lutId;
         renderer.rgbMode = this._liveSettings.rgbMode;
+        this._liveLutId = this._liveSettings.lutId;
         const def = window.CameraLUTs?.[this._liveSettings.lutId];
         renderer._lutTable = def ? def.generate() : null;
         if (this.histogram) {
