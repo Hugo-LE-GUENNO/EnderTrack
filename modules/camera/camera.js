@@ -53,8 +53,8 @@ class CameraModule {
           const tab = window.EnderTrack?.State?.get?.()?.activeTab;
           if (tab === 'navigation' || !tab) {
             const r = this.histogram.getContrastRange();
-            const renderer = window.EnderTrack?.GalleryRenderer;
-            if (renderer) renderer.setContrast(r.min, r.max);
+            const renderer = window.EnderTrack?.LiveRenderer;
+            if (renderer) { renderer.setContrast(r.min, r.max); renderer.enabled = true; }
           }
         };
         this.histogram._getCurrentLut = () => {
@@ -175,7 +175,7 @@ class CameraModule {
       row.textContent = def.name;
       row.onmouseenter = () => { if (!active) row.style.background = 'var(--app-bg)'; };
       row.onmouseleave = () => { if (!active) row.style.background = ''; };
-      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.GalleryRenderer; if (renderer) renderer.setLut(id); this.histogram?._redraw?.(); menu.remove(); };
+      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.LiveRenderer; if (renderer) { renderer.setLut(id); renderer.enabled = true; }; this.histogram?._redraw?.(); menu.remove(); };
       menu.appendChild(row);
     }
     document.body.appendChild(menu);
@@ -326,16 +326,16 @@ class CameraModule {
     const hasCamera = cameras.length && this.driverName !== 'simulation';
     if (!display) return;
 
-    const renderer = window.EnderTrack?.GalleryRenderer;
+    const liveRenderer = window.EnderTrack?.LiveRenderer;
     const multiVp = display.viewports.length > 1;
     const targetVp = multiVp ? 1 : 0;
     const vp = display.viewports[targetVp];
     if (!vp) return;
 
     // Save current renderer state before switching
-    if (renderer) {
+    if (liveRenderer) {
       if (vp.source?.startsWith('camera')) {
-        this._liveSettings = { min: renderer.min, max: renderer.max, lutId: this._liveLutId || 'gray', rgbMode: renderer.rgbMode };
+        this._liveSettings = { min: liveRenderer.min, max: liveRenderer.max, lutId: this._liveLutId || 'gray' };
       } else if (vp.source === 'gallery') {
         window.EnderTrack?.ImageManager?._saveCurrentSettings?.();
       }
@@ -347,16 +347,16 @@ class CameraModule {
       if (metaPanel) metaPanel.style.display = 'none';
       if (hasCamera && vp.source !== 'camera:0') display.assignSource(targetVp, 'camera:0');
       // Restore live histogram settings
-      if (renderer && this._liveSettings) {
-        renderer.min = this._liveSettings.min;
-        renderer.max = this._liveSettings.max;
-        renderer.lutId = this._liveSettings.lutId;
-        renderer.rgbMode = this._liveSettings.rgbMode;
+      if (liveRenderer && this._liveSettings) {
+        liveRenderer.min = this._liveSettings.min;
+        liveRenderer.max = this._liveSettings.max;
+        liveRenderer.lutId = this._liveSettings.lutId;
+        liveRenderer.enabled = this._liveSettings.rgbMode;
         this._liveLutId = this._liveSettings.lutId;
         const def = window.CameraLUTs?.[this._liveSettings.lutId];
-        renderer._lutTable = def ? def.generate() : null;
+        liveRenderer._lutTable = def ? def.generate() : null;
         if (this.histogram) {
-          this.histogram.manualMin = Math.round((this._liveSettings.min / renderer._maxVal) * 255);
+          this.histogram.manualMin = Math.round((this._liveSettings.min / 255) * 255);
           this.histogram.manualMax = Math.round((this._liveSettings.max / renderer._maxVal) * 255);
           this.histogram._redraw();
         }

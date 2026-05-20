@@ -145,6 +145,8 @@ class DisplayModule {
     if (video) { video.srcObject = null; video.remove(); this._videos.delete(id); }
     const timer = this._timers.get(id);
     if (timer) { cancelAnimationFrame(timer); clearInterval(timer); this._timers.delete(id); }
+    // Stop LiveRenderer
+    window.EnderTrack?.LiveRenderer?.stop?.();
     // Remove live canvas
     const cell = id === 0 ? this._stageWrap : this._cells.get(id);
     if (cell) {
@@ -235,52 +237,20 @@ class DisplayModule {
         this._liveOverlay = overlay;
 
         // Right-click for LUT menu
-        canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.ImageManager?._showRendererMenu?.(e.clientX, e.clientY); };
+        canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.Camera?._showLiveLutMenu?.(e.clientX, e.clientY); };
         // Double-click for fullscreen toggle
         canvas.ondblclick = () => {
           if (document.fullscreenElement) document.exitFullscreen();
           else canvas.requestFullscreen?.();
         };
 
-        // Render loop: video → GalleryRenderer → canvas (throttled to ~15fps)
-        const renderer = window.EnderTrack?.GalleryRenderer;
-        if (renderer) renderer.setDisplayCanvas(canvas);
-        let lastRender = 0;
-        const offscreen = document.createElement('canvas');
-        const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
-
-        const renderFrame = (ts) => {
-          if (!video.srcObject) return;
-          this._timers.set(viewportId, requestAnimationFrame(renderFrame));
-          if (video.readyState < 2) return;
-          if (ts - lastRender < 66) return; // ~15fps
-          lastRender = ts;
-          const w = video.videoWidth, h = video.videoHeight;
-          if (!w || !h) return;
-          if (offscreen.width !== w) { offscreen.width = w; offscreen.height = h; }
-          offCtx.drawImage(video, 0, 0);
-          const data = offCtx.getImageData(0, 0, w, h).data;
-          if (renderer) {
-            renderer._width = w;
-            renderer._height = h;
-            renderer._channels = 3;
-            renderer._dtype = 'uint8';
-            renderer._maxVal = 255;
-            if (!renderer._rawPixels || renderer._rawPixels.length !== w * h * 3) {
-              renderer._rawPixels = new Float32Array(w * h * 3);
-            }
-            const raw = renderer._rawPixels;
-            for (let i = 0, j = 0; i < w * h; i++, j += 4) {
-              raw[i * 3] = data[j];
-              raw[i * 3 + 1] = data[j + 1];
-              raw[i * 3 + 2] = data[j + 2];
-            }
-            renderer.render();
-          }
-        };
-        // Start after video is ready
-        const startLoop = () => { this._timers.set(viewportId, requestAnimationFrame(renderFrame)); };
-        video.addEventListener('loadeddata', startLoop, { once: true });
+        // Connect LiveRenderer
+        const liveRenderer = window.EnderTrack?.LiveRenderer;
+        if (liveRenderer) {
+          liveRenderer.setVideo(video);
+          liveRenderer.setCanvas(canvas);
+          liveRenderer.start();
+        }
         if (video.readyState >= 2) startLoop();
       };
 
