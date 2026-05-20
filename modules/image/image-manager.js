@@ -232,9 +232,12 @@ class ImageManager {
     }
     // If TIFF, delegate to StackViewer
     if (img.name.endsWith('.tiff') || img.name.endsWith('.tif')) {
-      window.EnderTrack?.StackViewer?.open?.(img.path);
       wrap.remove();
-      window.EnderTrack?.StackViewer?.renderInViewport?.(container);
+      const sv = window.EnderTrack?.StackViewer;
+      if (sv) {
+        sv._container = container;
+        sv.open(img.path).then(() => sv.renderInViewport(container));
+      }
       return;
     }
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gallery/thumb/' + img.path;

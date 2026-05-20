@@ -141,13 +141,17 @@ def register_routes(app):
             frame = img.copy()
             arr = np.array(frame)
 
+            # Ensure native byte order (little-endian on x86)
+            if arr.dtype.byteorder == '>' or (arr.dtype.byteorder == '=' and np.dtype(arr.dtype).byteorder == '>'):
+                arr = arr.astype(arr.dtype.newbyteorder('<'))
+
             # Determine if grayscale or RGB
             if arr.ndim == 2:
                 channels = 1
-                dtype = 'uint16' if arr.dtype == np.uint16 else 'uint8'
+                dtype = 'uint16' if arr.dtype.itemsize == 2 else 'uint8'
             else:
                 channels = arr.shape[2]
-                dtype = 'uint8'
+                dtype = 'uint16' if arr.dtype.itemsize == 2 else 'uint8'
 
             # Send as JSON with base64-encoded raw data
             import base64

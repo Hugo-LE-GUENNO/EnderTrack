@@ -156,6 +156,18 @@ class CameraModule {
     const menu = document.createElement('div');
     menu.id = 'live-lut-menu';
     menu.style.cssText = `position:fixed; left:${x}px; top:${y}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:120px;`;
+    // Log scale toggle
+    const logRow = document.createElement('div');
+    logRow.style.cssText = 'padding:4px 10px; font-size:11px; cursor:pointer; color:var(--text-general);';
+    logRow.innerHTML = `<span style="width:14px; display:inline-block;">${this.histogram?.logScale ? '\u2713' : ''}</span>Log scale`;
+    logRow.onmouseenter = () => logRow.style.background = 'var(--app-bg)';
+    logRow.onmouseleave = () => logRow.style.background = '';
+    logRow.onclick = () => { if (this.histogram) { this.histogram.logScale = !this.histogram.logScale; this.histogram._redraw(); } menu.remove(); };
+    menu.appendChild(logRow);
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
+    menu.appendChild(sep);
+    // LUT options
     for (const [id, def] of Object.entries(luts)) {
       const active = id === this._liveLutId;
       const row = document.createElement('div');
