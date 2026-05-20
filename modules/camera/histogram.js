@@ -42,10 +42,8 @@ class CameraHistogram {
             onclick="EnderTrack.Camera.histogram.showValueInput()"
             style="font-family:var(--font-mono); font-size:9px; color:var(--text-general); cursor:pointer; padding:1px 4px; border-radius:3px;"
             title="Click to edit values">—</span>
-          <button id="enderpicam-hist-auto" onclick="EnderTrack.Camera.histogram.setMode('auto')"
-            style="font-size:9px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">A</button>
-          <button id="enderpicam-hist-manual" onclick="EnderTrack.Camera.histogram.setMode('manual')"
-            style="font-size:9px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; background:var(--app-bg); color:var(--text-general);">M</button>
+          <button id="enderpicam-hist-auto" onclick="EnderTrack.Camera.histogram.toggleAuto()"
+            style="font-size:9px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">Auto</button>
         </div>
       </div>
       <canvas id="enderpicam-hist-canvas" width="220" height="80"
@@ -72,8 +70,12 @@ class CameraHistogram {
         return;
       }
 
-      // Auto mode = locked
-      if (this.mode === 'auto') return;
+      // Auto mode: clicking switches to manual automatically
+      if (this.mode === 'auto') {
+        this.manualMin = this.autoMin;
+        this.manualMax = this.autoMax;
+        this.setMode('manual');
+      }
 
       // Middle click = slide window
       if (e.button === 1) {
@@ -93,6 +95,21 @@ class CameraHistogram {
     });
 
     c.addEventListener('mousemove', (e) => {
+      if (!this._dragging) {
+        c.style.cursor = this.mode === 'manual' ? 'crosshair' : 'default';
+      }
+    });
+
+    const stopDrag = () => {
+      this._dragging = null;
+      this._slideStart = null;
+      if (this.canvas) this.canvas.style.cursor = this.mode === 'manual' ? 'crosshair' : 'default';
+    };
+    document.addEventListener('mouseup', stopDrag);
+
+    // Track mouse outside canvas while dragging
+    document.addEventListener('mousemove', (e) => {
+      if (!this._dragging || !this.canvas) return;
       if (this._dragging === 'slide') {
         const dx = e.clientX - this._slideStart.x;
         const rect = this.canvas.getBoundingClientRect();
@@ -107,22 +124,16 @@ class CameraHistogram {
         this._redraw();
       } else if (this._dragging === 'min' || this._dragging === 'max') {
         this._applyDrag(this._eventToValue(e));
-      } else {
-        c.style.cursor = this.mode === 'manual' ? 'crosshair' : 'default';
       }
     });
 
-    const stopDrag = () => {
-      this._dragging = null;
-      this._slideStart = null;
-      if (this.canvas) this.canvas.style.cursor = this.mode === 'manual' ? 'crosshair' : 'default';
-    };
-    c.addEventListener('mouseup', stopDrag);
-    c.addEventListener('mouseleave', stopDrag);
-
     c.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (this.mode === 'auto') return;
+      if (this.mode === 'auto') {
+        this.manualMin = this.autoMin;
+        this.manualMax = this.autoMax;
+        this.setMode('manual');
+      }
       const step = 1;
       const dir = e.deltaY > 0 ? -1 : 1; // down = narrow, up = widen
       if (e.shiftKey) {
@@ -154,7 +165,11 @@ class CameraHistogram {
     } else if (this._dragging === 'max') {
       this.manualMax = Math.max(val, this.manualMin + 1);
     }
-    this._redraw();
+    // Throttle redraw during drag to avoid lag
+    if (!this._dragThrottle) {
+      this._dragThrottle = true;
+      requestAnimationFrame(() => { this._dragThrottle = false; this._redraw(); });
+    }
   }
 
   _redraw() {
@@ -289,17 +304,28 @@ class CameraHistogram {
     this.ctx = null;
   }
 
+  toggleAuto() {
+    if (this.mode === 'auto') {
+      this.manualMin = this.autoMin;
+      this.manualMax = this.autoMax;
+      this.setMode('manual');
+    } else {
+      this.setMode('auto');
+    }
+  }
+
   setMode(mode) {
     this.mode = mode;
     const autoBtn = document.getElementById('enderpicam-hist-auto');
-    const manualBtn = document.getElementById('enderpicam-hist-manual');
     if (autoBtn) {
       autoBtn.style.background = mode === 'auto' ? 'var(--active-element)' : 'var(--app-bg)';
       autoBtn.style.color = mode === 'auto' ? 'var(--text-selected)' : 'var(--text-general)';
     }
-    if (manualBtn) {
-      manualBtn.style.background = mode === 'manual' ? 'var(--active-element)' : 'var(--app-bg)';
-      manualBtn.style.color = mode === 'manual' ? 'var(--text-selected)' : 'var(--text-general)';
+    // Also update gallery auto button if present
+    const galBtn = document.getElementById('gallery-hist-auto');
+    if (galBtn) {
+      galBtn.style.background = mode === 'auto' ? 'var(--active-element)' : 'var(--app-bg)';
+      galBtn.style.color = mode === 'auto' ? 'var(--text-selected)' : 'var(--text-general)';
     }
     if (this.canvas) this.canvas.style.cursor = mode === 'manual' ? 'crosshair' : 'default';
     this._redraw();

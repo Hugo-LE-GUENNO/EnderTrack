@@ -42,7 +42,10 @@ class GalleryRenderer {
           if (data[i] !== data[i+1] || data[i] !== data[i+2]) { isGray = false; break; }
         }
         this._channels = isGray ? 1 : 3;
-        this.rgbMode = !isGray;
+        // Only set rgbMode if no saved settings are active
+        if (this.lutId === 'gray' && this.min === 0 && this.max === 255) {
+          this.rgbMode = !isGray;
+        }
         // Store raw as float for uniform processing
         this._rawPixels = new Float32Array(this._width * this._height * (isGray ? 1 : 3));
         for (let i = 0; i < this._width * this._height; i++) {
@@ -54,7 +57,7 @@ class GalleryRenderer {
             this._rawPixels[i * 3 + 2] = data[i * 4 + 2];
           }
         }
-        this.render();
+        if (!this._skipAutoRender) this.render();
         resolve(true);
       };
       img.onerror = () => resolve(false);
@@ -101,16 +104,19 @@ class GalleryRenderer {
         this.min = 0;
         this.max = 255;
       }
-      this.render();
+      if (!this._skipAutoRender) this.render();
       return true;
     } catch(e) { return false; }
   }
 
   setContrast(min, max) {
-    // Scale min/max to raw range
     this.min = (min / 255) * this._maxVal;
     this.max = (max / 255) * this._maxVal;
-    this.render();
+    // Throttle render to 1 per frame (avoids lag during fast drag)
+    if (!this._renderPending) {
+      this._renderPending = true;
+      requestAnimationFrame(() => { this._renderPending = false; this.render(); });
+    }
   }
 
   setLut(lutId) {

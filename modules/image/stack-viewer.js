@@ -79,7 +79,13 @@ class StackViewer {
     wrap.onwheel = (e) => { e.preventDefault(); this.setIndex(this._index + (e.deltaY > 0 ? 1 : -1)); };
     // Right-click for LUT
     const canvas = document.getElementById("stackDisplayCanvas");
-    if (canvas) canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.ImageManager?._showRendererMenu?.(e.clientX, e.clientY); };
+    if (canvas) {
+      canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.ImageManager?._showRendererMenu?.(e.clientX, e.clientY); };
+      canvas.ondblclick = () => {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else canvas.requestFullscreen?.();
+      };
+    }
   }
   _updateImage() {
     const slider = document.getElementById("stackSlider");

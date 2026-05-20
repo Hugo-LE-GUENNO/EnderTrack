@@ -144,10 +144,14 @@ class DisplayModule {
     const video = this._videos.get(id);
     if (video) { video.srcObject = null; video.remove(); this._videos.delete(id); }
     const timer = this._timers.get(id);
-    if (timer) { clearInterval(timer); this._timers.delete(id); }
-    // Remove gallery/stack wrapper if present
+    if (timer) { cancelAnimationFrame(timer); clearInterval(timer); this._timers.delete(id); }
+    // Remove live canvas
     const cell = id === 0 ? this._stageWrap : this._cells.get(id);
     if (cell) {
+      const liveCanvas = cell.querySelector('#liveDisplayCanvas');
+      if (liveCanvas) liveCanvas.remove();
+      const liveOverlay = cell.querySelector('#liveOverlayBadge');
+      if (liveOverlay) liveOverlay.remove();
       const gw = cell.querySelector('.gallery-viewport-wrap');
       if (gw) gw.remove();
       const sw = cell.querySelector('.stack-viewport-wrap');
@@ -196,36 +200,99 @@ class DisplayModule {
       return;
     }
 
-    // Camera source: create video element
+    // Camera source: video + processed canvas (LUT/contrast via GalleryRenderer)
     if (source && source.startsWith('camera')) {
       const camera = window.EnderTrack?.Camera;
       const camIdx = parseInt(source.split(':')[1]) || 0;
       const camConfig = (window._cameras || [])[camIdx];
 
-      const _createVideo = () => {
-        if (camera?.driver?._stream) {
-          const video = document.createElement('video');
-          video.autoplay = true;
-          video.muted = true;
-          video.playsInline = true;
-          video.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
-          video.srcObject = camera.driver._stream;
-          cell.appendChild(video);
-          video.play().catch(() => {});
-          this._videos.set(viewportId, video);
-        }
+      const _createLiveView = () => {
+        if (!camera?.driver?._stream) return;
+        // Hidden video for stream source
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.style.cssText = 'position:absolute; opacity:0; pointer-events:none; width:0; height:0;';
+        video.srcObject = camera.driver._stream;
+        cell.appendChild(video);
+        video.play().catch(() => {});
+        this._videos.set(viewportId, video);
+
+        // Visible canvas for processed output
+        const canvas = document.createElement('canvas');
+        canvas.id = 'liveDisplayCanvas';
+        canvas.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000; image-rendering:pixelated;';
+        cell.appendChild(canvas);
+
+        // LIVE / REC overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'liveOverlayBadge';
+        overlay.style.cssText = 'position:absolute; top:8px; left:8px; z-index:20; display:flex; gap:6px; pointer-events:none;';
+        overlay.innerHTML = '<span id="liveBadge" style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(34,197,94,0.85); color:#000;">LIVE</span>';
+        cell.appendChild(overlay);
+        // Update overlay when recording state changes
+        this._liveOverlay = overlay;
+
+        // Right-click for LUT menu
+        canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.ImageManager?._showRendererMenu?.(e.clientX, e.clientY); };
+        // Double-click for fullscreen toggle
+        canvas.ondblclick = () => {
+          if (document.fullscreenElement) document.exitFullscreen();
+          else canvas.requestFullscreen?.();
+        };
+
+        // Render loop: video → GalleryRenderer → canvas (throttled to ~15fps)
+        const renderer = window.EnderTrack?.GalleryRenderer;
+        if (renderer) renderer.setDisplayCanvas(canvas);
+        let lastRender = 0;
+        const offscreen = document.createElement('canvas');
+        const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
+
+        const renderFrame = (ts) => {
+          if (!video.srcObject) return;
+          this._timers.set(viewportId, requestAnimationFrame(renderFrame));
+          if (video.readyState < 2) return;
+          if (ts - lastRender < 66) return; // ~15fps
+          lastRender = ts;
+          const w = video.videoWidth, h = video.videoHeight;
+          if (!w || !h) return;
+          if (offscreen.width !== w) { offscreen.width = w; offscreen.height = h; }
+          offCtx.drawImage(video, 0, 0);
+          const data = offCtx.getImageData(0, 0, w, h).data;
+          if (renderer) {
+            renderer._width = w;
+            renderer._height = h;
+            renderer._channels = 3;
+            renderer._dtype = 'uint8';
+            renderer._maxVal = 255;
+            if (!renderer._rawPixels || renderer._rawPixels.length !== w * h * 3) {
+              renderer._rawPixels = new Float32Array(w * h * 3);
+            }
+            const raw = renderer._rawPixels;
+            for (let i = 0, j = 0; i < w * h; i++, j += 4) {
+              raw[i * 3] = data[j];
+              raw[i * 3 + 1] = data[j + 1];
+              raw[i * 3 + 2] = data[j + 2];
+            }
+            renderer.render();
+          }
+        };
+        // Start after video is ready
+        const startLoop = () => { this._timers.set(viewportId, requestAnimationFrame(renderFrame)); };
+        video.addEventListener('loadeddata', startLoop, { once: true });
+        if (video.readyState >= 2) startLoop();
       };
 
       const _ensureLive = () => {
         if (camera?.driver?._stream) {
-          _createVideo();
+          _createLiveView();
         } else if (camera) {
-          // Set driver if needed, then start live
           const type = camConfig?.type || 'webcam';
           const driverName = type === 'mjpeg' ? 'mjpeg' : (type === 'picamera2' ? 'simulation' : 'webcam');
           const needSwitch = !camera.driver || camera.driverName !== driverName;
           const setup = needSwitch ? camera.setDriver(driverName) : Promise.resolve();
-          setup.then(() => camera.startLive()).then(() => _createVideo());
+          setup.then(() => camera.startLive()).then(() => _createLiveView());
         }
       };
       _ensureLive();

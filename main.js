@@ -536,6 +536,8 @@ window.switchTab = (tabId) => {
     if (window.EnderTrack?.Canvas) {
       window.EnderTrack.Canvas.clickAndGoEnabled = true;
     }
+    // Switch viewport to live camera if available
+    window.EnderTrack?.Camera?.switchViewportForTab?.('navigation');
   } else if (tabId === 'overlays' && window.EnderTrack?.Overlays) {
     window.EnderTrack.Overlays.activate();
   } else if (tabId === 'settings') {
@@ -553,11 +555,11 @@ window.switchTab = (tabId) => {
     window.EnderTrack.Scenario.activate();
   } else if (tabId === 'image' && window.EnderTrack?.ImageManager) {
     window.EnderTrack.ImageManager.activate();
-    // Single viewport: switch to gallery
-    const display = window.EnderTrack?.Display;
-    if (display && display.viewports.length === 1) {
-      display.assignSource(0, 'gallery');
-    }
+    // Switch viewport to gallery
+    window.EnderTrack?.Camera?.switchViewportForTab?.('image');
+  } else {
+    // Other tabs: back to stage viewport, hide histograms
+    window.EnderTrack?.Camera?.switchViewportForTab?.(tabId);
   }
   
   // === STEP 5: INIT OVERLAYS/TRACKS ===

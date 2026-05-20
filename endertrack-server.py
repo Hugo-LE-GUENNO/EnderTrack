@@ -114,9 +114,11 @@ if __name__ == '__main__':
     edition_str = f" — {EDITION}" if EDITION else ""
     print(f"  🔬 Bienvenue sur EnderTrack v{VERSION}{edition_str}")
     print()
-    print(f"  🌐 {network_config.HOST}:{network_config.PORT}")
+    local_url = f"http://127.0.0.1:{network_config.PORT}"
+    print(f"  🌐 Local: \033]8;;{local_url}\033\\{local_url}\033]8;;\033\\")
     if network_config.HOST == '0.0.0.0':
-        print(f"  🌐 LAN: http://{network_config.get_local_ip()}:{network_config.PORT}")
+        lan_url = f"http://{network_config.get_local_ip()}:{network_config.PORT}"
+        print(f"  🌐 LAN:   \033]8;;{lan_url}\033\\{lan_url}\033]8;;\033\\")
     elif network_config.HOST == '127.0.0.1':
         print(f"  💡 Accès réseau ? → python3 endertrack-server.py --lan")
     print()

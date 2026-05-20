@@ -8,6 +8,8 @@ class ImageManager {
     this._galleryIdx = 0;
     this.isActive = false;
     this._imageSettings = {}; // {path: {min, max, lutId, rgbMode}}
+    // Load persisted settings
+    try { this._imageSettings = JSON.parse(localStorage.getItem('endertrack_img_settings') || '{}'); } catch {}
   }
 
   activate() {
@@ -15,6 +17,7 @@ class ImageManager {
     this.renderUI();
     this.loadGallery();
     this._renderMetadata();
+    this._loadAndDisplay();
     this._onKey = (e) => {
       if (e.target.tagName === 'INPUT') return;
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -48,19 +51,85 @@ class ImageManager {
   }
 
   selectGalleryImage(idx) {
-    // Save current image settings before switching
     this._saveCurrentSettings();
     this._galleryIdx = idx;
     this._renderGallery();
     this._renderMetadata();
-    this._updateGalleryViewport();
-    // Restore settings for new image
-    this._restoreSettings();
-    // If TIFF selected, open in stack viewer
+    this._loadAndDisplay();
+  }
+
+  // Single load path: load image → apply settings → render → update histogram
+  async _loadAndDisplay() {
     const img = this.getSelectedImage();
-    if (img && (img.name.endsWith('.tiff') || img.name.endsWith('.tif'))) {
-      window.EnderTrack?.StackViewer?.open?.(img.path);
+    if (!img) return;
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (!renderer) return;
+
+    // Get saved settings for this image
+    const s = this._imageSettings[img.path];
+
+    // Pre-apply settings so renderer uses them on render
+    if (s) {
+      renderer.min = s.min;
+      renderer.max = s.max;
+      renderer.lutId = s.lutId;
+      renderer.rgbMode = s.rgbMode;
+      const def = window.CameraLUTs?.[s.lutId];
+      renderer._lutTable = def ? def.generate() : null;
+    } else {
+      renderer.min = 0; renderer.max = 255;
+      renderer.lutId = 'gray'; renderer.rgbMode = false;
+      renderer._lutTable = null;
     }
+
+    // Sync histogram min/max
+    if (this._histogram) {
+      this._histogram.manualMin = s ? Math.round((s.min / (renderer._maxVal || 255)) * 255) : 0;
+      this._histogram.manualMax = s ? Math.round((s.max / (renderer._maxVal || 255)) * 255) : 255;
+    }
+
+    // Load image (single load, no auto-render)
+    renderer._skipAutoRender = true;
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    const isTiff = img.name.endsWith('.tiff') || img.name.endsWith('.tif');
+    if (isTiff) {
+      await renderer.loadRaw(img.path, window.EnderTrack?.StackViewer?._index || 0);
+      window.EnderTrack?.StackViewer?.open?.(img.path);
+    } else {
+      await renderer.loadImage(base + '/api/gallery/thumb/' + img.path);
+    }
+    renderer._skipAutoRender = false;
+
+    // Now render once with correct settings
+    renderer.render();
+
+    // Update histogram from loaded raw data
+    if (this._histogram && renderer._rawPixels) {
+      const data = new Uint8ClampedArray(renderer._width * renderer._height * 4);
+      const ch = renderer._channels;
+      for (let i = 0; i < renderer._width * renderer._height; i++) {
+        if (ch >= 3) {
+          data[i*4] = Math.min(255, renderer._rawPixels[i*3]);
+          data[i*4+1] = Math.min(255, renderer._rawPixels[i*3+1]);
+          data[i*4+2] = Math.min(255, renderer._rawPixels[i*3+2]);
+        } else {
+          const v = Math.min(255, renderer._rawPixels[i]);
+          data[i*4] = v; data[i*4+1] = v; data[i*4+2] = v;
+        }
+        data[i*4+3] = 255;
+      }
+      this._histogram.updateFromImageData(data, renderer._channels === 1);
+    }
+
+    // Update info label
+    const info = document.getElementById('gallery-hist-info');
+    if (info && this._histogram) {
+      const r = this._histogram.getContrastRange();
+      info.textContent = r.min + ' - ' + r.max;
+    }
+
+    // Update viewport display canvas
+    this._updateGalleryViewport();
   }
 
   _saveCurrentSettings() {
@@ -73,6 +142,8 @@ class ImageManager {
       lutId: renderer.lutId,
       rgbMode: renderer.rgbMode
     };
+    // Persist to localStorage
+    try { localStorage.setItem('endertrack_img_settings', JSON.stringify(this._imageSettings)); } catch {}
   }
 
   _restoreSettings() {
@@ -87,6 +158,13 @@ class ImageManager {
       renderer.rgbMode = s.rgbMode;
       const def = window.CameraLUTs?.[s.lutId];
       renderer._lutTable = def ? def.generate() : null;
+      // Sync histogram UI
+      if (this._histogram) {
+        this._histogram.manualMin = Math.round((s.min / renderer._maxVal) * 255);
+        this._histogram.manualMax = Math.round((s.max / renderer._maxVal) * 255);
+      }
+      // Apply to image
+      renderer.render();
     }
   }
 
@@ -176,13 +254,33 @@ class ImageManager {
       renderer.setDisplayCanvas(canvas);
       // Use raw endpoint for TIFF, standard for PNG/JPG
       const img2 = this.getSelectedImage();
+      const imgSettings = img2 ? this._imageSettings[img2.path] : null;
+      // Skip auto-render in loadImage — we'll render after applying settings
+      renderer._skipAutoRender = true;
+      const applyAfterLoad = () => {
+        renderer._skipAutoRender = false;
+        if (imgSettings) {
+          renderer.min = imgSettings.min;
+          renderer.max = imgSettings.max;
+          renderer.lutId = imgSettings.lutId;
+          renderer.rgbMode = imgSettings.rgbMode;
+          const def = window.CameraLUTs?.[imgSettings.lutId];
+          renderer._lutTable = def ? def.generate() : null;
+        }
+        renderer.render();
+      };
       if (img2 && (img2.name.endsWith('.tiff') || img2.name.endsWith('.tif'))) {
-        renderer.loadRaw(img2.path, 0);
+        renderer.loadRaw(img2.path, 0).then(applyAfterLoad);
       } else {
-        renderer.loadImage(url);
+        renderer.loadImage(url).then(applyAfterLoad);
       }
       // Right-click on canvas for RGB/LUT options
       canvas.oncontextmenu = (e) => { e.preventDefault(); this._showRendererMenu(e.clientX, e.clientY); };
+      // Double-click for fullscreen toggle
+      canvas.ondblclick = () => {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else canvas.requestFullscreen?.();
+      };
     }
 
   }
@@ -239,13 +337,25 @@ class ImageManager {
   }
 
   _updateGalleryViewport() {
-    // Find viewport with gallery source and re-render
     const display = window.EnderTrack?.Display;
     if (!display) return;
+    const renderer = window.EnderTrack?.GalleryRenderer;
     display.viewports.forEach(vp => {
       if (vp.source === 'gallery') {
         const cell = vp.id === 0 ? display._stageWrap : display._cells.get(vp.id);
-        if (cell) this.renderInViewport(cell);
+        if (!cell) return;
+        // Reuse existing canvas or create one
+        let canvas = cell.querySelector('#galleryDisplayCanvas');
+        if (!canvas) {
+          // First time: build viewport
+          this.renderInViewport(cell);
+          return;
+        }
+        // Canvas exists: just re-render with current data
+        if (renderer) {
+          renderer.setDisplayCanvas(canvas);
+          if (renderer._rawPixels) renderer.render();
+        }
       }
     });
   }
@@ -331,23 +441,23 @@ class ImageManager {
         </div>
         <div id="galleryHistContainer"></div>
       </div>`;
-    // Use CameraHistogram for full-featured histogram
-    this._updateHistogram(img);
+    // Ensure histogram DOM is built (but don't load image data — _loadAndDisplay handles that)
+    this._ensureHistogramDOM();
   }
 
-  _updateHistogram(img) {
-    const container = document.getElementById("galleryHistContainer");
+  _ensureHistogramDOM() {
+    const container = document.getElementById('galleryHistContainer');
     if (!container) return;
-    const HistClass = window.CameraHistogram || window.EnderpicamHistogram;
+    const HistClass = window.CameraHistogram;
     if (!HistClass) return;
     if (!this._histogram) {
       this._histogram = new HistClass();
       this._histogram.mode = 'manual';
       this._histogram.manualMin = 0;
       this._histogram.manualMax = 255;
+      this._histSetup = false;
     }
-    // Rebuild DOM only if canvas gone
-    if (!document.getElementById("gallery-hist-canvas")) {
+    if (!this._histSetup || !document.getElementById('gallery-hist-canvas')) {
       container.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
           <span style="font-size:9px; color:var(--text-general);">Histogram</span>
@@ -357,10 +467,9 @@ class ImageManager {
           </div>
         </div>
         <canvas id="gallery-hist-canvas" width="200" height="70" style="width:100%; height:70px; border-radius:4px; background:#111; cursor:default;"></canvas>`;
-      this._histogram.canvas = document.getElementById("gallery-hist-canvas");
-      this._histogram.ctx = this._histogram.canvas.getContext("2d");
+      this._histogram.canvas = document.getElementById('gallery-hist-canvas');
+      this._histogram.ctx = this._histogram.canvas.getContext('2d');
       this._histogram._setupEvents();
-      // Hook: sync renderer when histogram changes
       const origRedraw = this._histogram._redraw.bind(this._histogram);
       this._histogram._redraw = () => {
         origRedraw();
@@ -369,47 +478,19 @@ class ImageManager {
         if (renderer) { renderer.setContrast(r.min, r.max); }
         const info = document.getElementById('gallery-hist-info');
         if (info) info.textContent = r.min + ' - ' + r.max;
+        this._saveCurrentSettings();
       };
-      // Override LUT access for gallery context
       this._histogram._getCurrentLut = () => {
         const renderer = window.EnderTrack?.GalleryRenderer;
         if (!renderer || renderer.lutId === 'gray') return null;
         const def = window.CameraLUTs?.[renderer.lutId];
         return def ? def.generate() : null;
       };
-      // Override options menu to use GalleryRenderer
       this._histogram._showOptionsMenu = (x, y) => {
         window.EnderTrack?.ImageManager?._showRendererMenu?.(x, y);
       };
+      this._histSetup = true;
     }
-    // Get image URL (support stack pages)
-    const base = window.ENDERTRACK_SERVER || "http://localhost:5000";
-    let url;
-    if ((img.name.endsWith(".tiff") || img.name.endsWith(".tif")) && window.EnderTrack?.StackViewer?._file === img.path) {
-      url = base + "/api/stack/page?file=" + encodeURIComponent(img.path) + "&index=" + (window.EnderTrack.StackViewer._index || 0);
-    } else {
-      url = base + "/api/gallery/thumb/" + img.path;
-    }
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => {
-      const w = Math.min(image.width, 320), h = Math.min(image.height, 240);
-      const offscreen = document.createElement("canvas");
-      offscreen.width = w; offscreen.height = h;
-      const ctx = offscreen.getContext("2d");
-      ctx.drawImage(image, 0, 0, w, h);
-      this._histogram.updateFromImageData(ctx.getImageData(0, 0, w, h).data, true);
-      // Don't apply auto-contrast by default — show image as-is
-      const renderer = window.EnderTrack?.GalleryRenderer;
-      if (renderer && this._histogram.mode === 'auto') {
-        // Full range = no stretch
-        renderer.setContrast(0, 255);
-      }
-      const info = document.getElementById("gallery-hist-info");
-      const r = this._histogram.getContrastRange();
-      if (info) info.textContent = r.min + " - " + r.max;
-    };
-    image.src = url;
   }
 }
 

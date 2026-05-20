@@ -242,9 +242,26 @@
                                   const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
                                   const res = await fetch(url + '/api/sync/config');
                                   const data = await res.json();
-                                  if (data.cameras?.length) { window._cameras = data.cameras; window._renderCameras?.(); }
+                                  if (data.cameras?.length) {
+                                    window._cameras = data.cameras;
+                                    window._renderCameras?.();
+                                    // Auto-init first camera driver + live
+                                    setTimeout(() => window._initSavedCameras(), 1000);
+                                  }
                                   if (data.lights?.length) { window._lights = data.lights; window._renderLights?.(); }
                                 } catch(e) {}
+                              };
+                              window._initSavedCameras = async () => {
+                                if (!window._cameras?.length) return;
+                                const cam = window._cameras[0];
+                                const camera = window.EnderTrack?.Camera;
+                                if (!camera) return;
+                                const type = cam.type || 'webcam';
+                                const driverName = type === 'mjpeg' ? 'mjpeg' : (type === 'picamera2' ? 'simulation' : 'webcam');
+                                await camera.setDriver(driverName);
+                                if (type === 'mjpeg' && cam.streamUrl) await camera.configure({ streamUrl: cam.streamUrl });
+                                if (type === 'webcam' && cam.deviceId) await camera.configure({ deviceId: cam.deviceId });
+                                window._updateCameraLayout();
                               };
                               setTimeout(() => window._loadPeripherals(), 500);
                               // Auto-save config every 5s if changed

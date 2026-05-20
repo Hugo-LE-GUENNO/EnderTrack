@@ -42,12 +42,37 @@ class CameraModule {
       this._updateStatus();
       this._renderNav();
       // Init histogram and fast-explore if available
-      if (!this.histogram && window.EnderTrack?.CameraHistogram) {
-        this.histogram = new window.EnderTrack.CameraHistogram();
+      if (!this.histogram && window.CameraHistogram) {
+        this.histogram = new window.CameraHistogram();
         this.histogram.inject();
+        // Hook: LUT changes from histogram apply to live viewport too
+        const origRedraw = this.histogram._redraw.bind(this.histogram);
+        this.histogram._redraw = () => {
+          origRedraw();
+          const tab = window.EnderTrack?.State?.get?.()?.activeTab;
+          if (tab === 'navigation') {
+            const r = this.histogram.getContrastRange();
+            const renderer = window.EnderTrack?.GalleryRenderer;
+            if (renderer) renderer.setContrast(r.min, r.max);
+          }
+        };
+        this.histogram._showOptionsMenu = (x, y) => {
+          window.EnderTrack?.ImageManager?._showRendererMenu?.(x, y);
+        };
+        this.histogram._getCurrentLut = () => {
+          const renderer = window.EnderTrack?.GalleryRenderer;
+          if (!renderer || renderer.lutId === 'gray') return null;
+          const def = window.CameraLUTs?.[renderer.lutId];
+          return def ? def.generate() : null;
+        };
       }
-      if (!this.fastExplore && window.EnderTrack?.CameraFastExplore) {
-        this.fastExplore = new window.EnderTrack.CameraFastExplore(this);
+      if (!this.fastExplore && window.CameraFastExplore) {
+        this.fastExplore = new window.CameraFastExplore(this);
+      }
+      // Auto-start live if real camera
+      if (name !== 'simulation' && !this.live) {
+        await this.startLive();
+        this._startLiveHistogram();
       }
     }
     return ok;
@@ -141,24 +166,15 @@ class CameraModule {
     const recording = this._recording;
     this._navEl.innerHTML = `
       <style>
-        #camera-nav .cam-btn { padding:5px 8px; border:none; border-radius:4px; cursor:pointer; font-size:10px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; }
+        #camera-nav .cam-btn { padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-size:11px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; font-weight:500; }
         #camera-nav .cam-btn:hover { background:var(--active-element); color:var(--text-selected); }
-        #camera-nav .cam-btn.rec { background:#ef4444; color:#fff; }
+        #camera-nav .cam-btn.rec { background:#ef4444; color:#fff; animation:recBlink 1s ease-in-out infinite; }
+        @keyframes recBlink { 50% { opacity:0.7; } }
       </style>
-      ${cameras.map((cam, i) => `
-        <div style="margin-bottom:6px;">
-          <div style="font-size:10px; color:var(--text-selected); margin-bottom:3px;">${cam.label}</div>
-          <div style="display:flex; gap:4px;">
-            ${this.live ? `
-              <button class="cam-btn" onclick="EnderTrack.Camera.stopLive()">Stop</button>
-              <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">Save</button>
-              <button class="cam-btn ${recording ? 'rec' : ''}" onclick="EnderTrack.Camera.toggleRecord()">${recording ? '\u23f9 Rec' : '\u23fa Rec'}</button>
-            ` : `
-              <button class="cam-btn" onclick="window._liveAndSplit()">Live</button>
-            `}
-          </div>
-        </div>
-      `).join('')}
+      <div style="display:flex; gap:4px;">
+        <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">\ud83d\udcf7 Photo</button>
+        <button class="cam-btn ${recording ? 'rec' : ''}" onclick="EnderTrack.Camera.toggleRecord()">${recording ? '\u23f9 Stop' : '\ud83c\udfac Vid\u00e9o'}</button>
+      </div>
     `;
   }
 
@@ -206,6 +222,7 @@ class CameraModule {
     this._mediaRecorder.start();
     this._recording = true;
     this._renderNav();
+    this._updateLiveOverlay();
   }
 
   stopRecord() {
@@ -214,6 +231,17 @@ class CameraModule {
     }
     this._recording = false;
     this._renderNav();
+    this._updateLiveOverlay();
+  }
+
+  _updateLiveOverlay() {
+    const overlay = document.getElementById('liveOverlayBadge');
+    if (!overlay) return;
+    if (this._recording) {
+      overlay.innerHTML = '<span style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(34,197,94,0.85); color:#000;">LIVE</span><span style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(239,68,68,0.9); color:#fff; animation:recBlink 1s ease-in-out infinite;">REC</span>';
+    } else {
+      overlay.innerHTML = '<span style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(34,197,94,0.85); color:#000;">LIVE</span>';
+    }
   }
   // === IMAGE PROCESSING ===
 
@@ -235,6 +263,97 @@ class CameraModule {
     if (!luts || !this.lutId || this.lutId === 'none') { this._lutTable = null; return; }
     const def = luts[this.lutId];
     this._lutTable = def ? def.generate() : null;
+  }
+
+  // Live histogram: periodically grab frame and update histogram
+  _startLiveHistogram() {
+    if (this._liveHistTimer) return;
+    this._liveHistTimer = setInterval(() => {
+      if (!this.live || !this.histogram) return;
+      const tab = window.EnderTrack?.State?.get?.()?.activeTab;
+      if (tab !== 'navigation') return;
+      this.getFrame().then(f => {
+        if (f?.frame) this.histogram.updateFromBase64(f.frame);
+      }).catch(() => {});
+    }, 1000);
+  }
+
+  _stopLiveHistogram() {
+    if (this._liveHistTimer) { clearInterval(this._liveHistTimer); this._liveHistTimer = null; }
+  }
+
+  // Show/hide histogram based on active tab
+  showHistogram(show) {
+    if (this.histogram?.el) this.histogram.el.style.display = show ? '' : 'none';
+  }
+
+  // Switch viewport source based on active tab
+  switchViewportForTab(tabId) {
+    const display = window.EnderTrack?.Display;
+    const cameras = window._cameras || [];
+    const hasCamera = cameras.length && this.driverName !== 'simulation';
+    if (!display) return;
+
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    const multiVp = display.viewports.length > 1;
+    const targetVp = multiVp ? 1 : 0;
+    const vp = display.viewports[targetVp];
+    if (!vp) return;
+
+    // Save current renderer state before switching
+    if (renderer) {
+      if (vp.source?.startsWith('camera')) {
+        this._liveSettings = { min: renderer.min, max: renderer.max, lutId: renderer.lutId, rgbMode: renderer.rgbMode };
+      } else if (vp.source === 'gallery') {
+        window.EnderTrack?.ImageManager?._saveCurrentSettings?.();
+      }
+    }
+
+    if (tabId === 'navigation') {
+      this.showHistogram(hasCamera);
+      const metaPanel = document.getElementById('imageMetadataPanel');
+      if (metaPanel) metaPanel.style.display = 'none';
+      if (hasCamera && vp.source !== 'camera:0') display.assignSource(targetVp, 'camera:0');
+      // Restore live histogram settings
+      if (renderer && this._liveSettings) {
+        renderer.min = this._liveSettings.min;
+        renderer.max = this._liveSettings.max;
+        renderer.lutId = this._liveSettings.lutId;
+        renderer.rgbMode = this._liveSettings.rgbMode;
+        const def = window.CameraLUTs?.[this._liveSettings.lutId];
+        renderer._lutTable = def ? def.generate() : null;
+        if (this.histogram) {
+          this.histogram.manualMin = Math.round((this._liveSettings.min / renderer._maxVal) * 255);
+          this.histogram.manualMax = Math.round((this._liveSettings.max / renderer._maxVal) * 255);
+          this.histogram._redraw();
+        }
+      }
+    } else if (tabId === 'image') {
+      this.showHistogram(false);
+      // Restore gallery image settings into renderer before showing
+      const imgMgr = window.EnderTrack?.ImageManager;
+      const renderer = window.EnderTrack?.GalleryRenderer;
+      if (imgMgr && renderer) {
+        const img = imgMgr.getSelectedImage();
+        const s = img ? imgMgr._imageSettings[img.path] : null;
+        if (s) {
+          renderer.min = s.min;
+          renderer.max = s.max;
+          renderer.lutId = s.lutId;
+          renderer.rgbMode = s.rgbMode;
+          const def = window.CameraLUTs?.[s.lutId];
+          renderer._lutTable = def ? def.generate() : null;
+        } else {
+          renderer.min = 0; renderer.max = 255;
+          renderer.lutId = 'gray'; renderer.rgbMode = false;
+          renderer._lutTable = null;
+        }
+      }
+      if (vp.source !== 'gallery') display.assignSource(targetVp, 'gallery');
+    } else {
+      this.showHistogram(false);
+      if (!multiVp && vp.source !== 'stage') display.assignSource(0, 'stage');
+    }
   }
 
   // === STATUS WIDGET ===
