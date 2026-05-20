@@ -13,9 +13,13 @@ class StackViewer {
     this._index = 0;
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
     try {
+      // Get basic info
       const res = await fetch(url + '/api/stack/info?file=' + encodeURIComponent(filepath));
       this._info = await res.json();
       if (this._info.error) { console.warn('[Stack]', this._info.error); return false; }
+      // Get dimension metadata
+      const dimRes = await fetch(url + '/api/stack/dimensions?file=' + encodeURIComponent(filepath));
+      this._dims = await dimRes.json();
       this._renderViewport();
       return true;
     } catch(e) { return false; }
@@ -25,12 +29,30 @@ class StackViewer {
     if (!this._info) return;
     this._index = Math.max(0, Math.min(idx, this._info.pages - 1));
     this._updateImage();
-    // Update renderer with raw data for this page
-    const renderer = window.EnderTrack?.GalleryRenderer;
-    if (renderer && this._file) {
-      renderer.loadRaw(this._file, this._index);
-    }
-    // Update histogram
+    const img = window.EnderTrack?.ImageManager?.getSelectedImage?.();
+    if (img) window.EnderTrack?.ImageManager?._updateHistogram?.(img);
+  }
+
+  _setDim(dim, val) {
+    if (!this._dims) return;
+    if (!this._dimState) this._dimState = { c: 0, z: 0, t: 0 };
+    this._dimState[dim] = val;
+    // Calculate page index from dimension state (order: XYCZT)
+    const c = this._dimState.c || 0;
+    const z = this._dimState.z || 0;
+    const t = this._dimState.t || 0;
+    const sizeC = this._dims.sizeC || 1;
+    const sizeZ = this._dims.sizeZ || 1;
+    // XYCZT order: index = c + sizeC * (z + sizeZ * t)
+    this._index = c + sizeC * (z + sizeZ * t);
+    this._updateImage();
+    // Update labels
+    const lc = document.getElementById('stackLabelC');
+    const lz = document.getElementById('stackLabelZ');
+    const lt = document.getElementById('stackLabelT');
+    if (lc) lc.textContent = c + 1;
+    if (lz) lz.textContent = z + 1;
+    if (lt) lt.textContent = t + 1;
     const img = window.EnderTrack?.ImageManager?.getSelectedImage?.();
     if (img) window.EnderTrack?.ImageManager?._updateHistogram?.(img);
   }
@@ -62,12 +84,18 @@ class StackViewer {
       return;
     }
     wrap.innerHTML = `
+    // Build dimension-aware sliders
+    const dims = this._dims || {};
+    const sizeC = dims.sizeC || 1, sizeZ = dims.sizeZ || 1, sizeT = dims.sizeT || 1;
+    let slidersHtml = "";
+    if (sizeC > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><span style="font-size:9px; color:#888; width:12px;">C</span><input type="range" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeZ > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><span style="font-size:9px; color:#888; width:12px;">Z</span><input type="range" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeT > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><span style="font-size:9px; color:#888; width:12px;">T</span><input type="range" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (!slidersHtml) slidersHtml = `<div style="display:flex; align-items:center; gap:4px;"><input type="range" id="stackSlider" min="0" max="${info.pages-1}" value="${this._index}" oninput="EnderTrack.StackViewer.setIndex(parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabel" style="font-size:9px; color:var(--text-general); width:40px; text-align:right;">${this._index+1}/${info.pages}</span></div>`;
+    wrap.innerHTML = `
       <canvas id="stackDisplayCanvas" style="flex:1; object-fit:contain; min-height:0; background:#000; image-rendering:pixelated;"></canvas>
-      <div style="padding:4px 8px; background:#1a1a1a; display:flex; align-items:center; gap:8px;">
-        <input type="range" id="stackSlider" min="0" max="${info.pages - 1}" value="${this._index}"
-          oninput="EnderTrack.StackViewer.setIndex(parseInt(this.value))"
-          style="flex:1; height:4px; cursor:pointer;">
-        <span style="font-size:10px; color:var(--text-general); min-width:50px; text-align:right;" id="stackLabel">${this._index + 1} / ${info.pages}</span>
+      <div style="padding:4px 8px; background:#1a1a1a; display:flex; flex-direction:column; gap:2px;">
+        ${slidersHtml}
       </div>`;
     // Setup renderer on this canvas
     const renderer = window.EnderTrack?.GalleryRenderer;
