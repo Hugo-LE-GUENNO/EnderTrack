@@ -83,8 +83,6 @@ class StackViewer {
       wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#555;font-size:11px;">Erreur stack</div>';
       return;
     }
-    wrap.innerHTML = `
-    // Build dimension-aware sliders
     const dims = this._dims || {};
     const sizeC = dims.sizeC || 1, sizeZ = dims.sizeZ || 1, sizeT = dims.sizeT || 1;
     let slidersHtml = "";
