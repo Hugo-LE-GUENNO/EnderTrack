@@ -19,6 +19,7 @@ class CameraModule {
     this.lutId = 'gray';
     this._lutTable = null;
     this.histogram = null;
+    this._liveLutId = 'gray';
     this.fastExplore = null;
     this.tiles = [];
     // Register scenario action early (even without driver)
@@ -45,25 +46,14 @@ class CameraModule {
       if (!this.histogram && window.CameraHistogram) {
         this.histogram = new window.CameraHistogram();
         this.histogram.inject();
-        // Hook: LUT changes from histogram apply to live viewport too
-        const origRedraw = this.histogram._redraw.bind(this.histogram);
-        this.histogram._redraw = () => {
-          origRedraw();
-          const tab = window.EnderTrack?.State?.get?.()?.activeTab;
-          if (tab === 'navigation') {
-            const r = this.histogram.getContrastRange();
-            const renderer = window.EnderTrack?.GalleryRenderer;
-            if (renderer) renderer.setContrast(r.min, r.max);
-          }
+        // Live histogram: contrast/LUT apply to live viewport only (not gallery)
+        this.histogram._getCurrentLut = () => {
+          if (!this._liveLutId || this._liveLutId === 'gray') return null;
+          const def = window.CameraLUTs?.[this._liveLutId];
+          return def ? def.generate() : null;
         };
         this.histogram._showOptionsMenu = (x, y) => {
-          window.EnderTrack?.ImageManager?._showRendererMenu?.(x, y);
-        };
-        this.histogram._getCurrentLut = () => {
-          const renderer = window.EnderTrack?.GalleryRenderer;
-          if (!renderer || renderer.lutId === 'gray') return null;
-          const def = window.CameraLUTs?.[renderer.lutId];
-          return def ? def.generate() : null;
+          this._showLiveLutMenu(x, y);
         };
       }
       if (!this.fastExplore && window.CameraFastExplore) {
@@ -149,6 +139,26 @@ class CameraModule {
   _emitFrame(frame) { this._frameListeners.forEach(fn => fn(frame)); }
 
   // === NAV CONTROLS ===
+
+  _showLiveLutMenu(x, y) {
+    document.getElementById('live-lut-menu')?.remove();
+    const luts = window.CameraLUTs || {};
+    const menu = document.createElement('div');
+    menu.id = 'live-lut-menu';
+    menu.style.cssText = `position:fixed; left:${x}px; top:${y}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:120px;`;
+    for (const [id, def] of Object.entries(luts)) {
+      const active = id === this._liveLutId;
+      const row = document.createElement('div');
+      row.style.cssText = `padding:4px 10px; font-size:11px; cursor:pointer; color:${active ? 'var(--text-selected)' : 'var(--text-general)'}; background:${active ? 'var(--active-element)' : 'transparent'};`;
+      row.textContent = def.name;
+      row.onmouseenter = () => { if (!active) row.style.background = 'var(--app-bg)'; };
+      row.onmouseleave = () => { if (!active) row.style.background = ''; };
+      row.onclick = () => { this._liveLutId = id; this.histogram?._redraw?.(); menu.remove(); };
+      menu.appendChild(row);
+    }
+    document.body.appendChild(menu);
+    setTimeout(() => { const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('mousedown', close); } }; document.addEventListener('mousedown', close); }, 0);
+  }
 
   _renderNav() {
     const zone = document.getElementById('navPluginZone');
