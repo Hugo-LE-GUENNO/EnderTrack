@@ -43,7 +43,8 @@ def register_routes(app):
                 'pages': n_pages,
                 'width': width,
                 'height': height,
-                'mode': mode
+                'mode': mode,
+                'fileSize': os.path.getsize(full)
             })
         except ImportError:
             return jsonify({'error': 'Pillow not installed'}), 500
@@ -117,6 +118,45 @@ def register_routes(app):
             return jsonify({'success': True, 'path': output, 'pages': len(frames)})
         except ImportError:
             return jsonify({'error': 'Pillow not installed'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/stack/settings', methods=['GET'])
+    def _stack_settings_get():
+        """Load per-channel display settings for a stack file."""
+        filepath = request.args.get('file', '')
+        if not filepath:
+            return jsonify({}), 200
+        settings_file = os.path.join(os.getcwd(), '.stack_settings.json')
+        try:
+            if os.path.isfile(settings_file):
+                with open(settings_file, 'r') as f:
+                    all_settings = json.load(f)
+                return jsonify(all_settings.get(filepath, {}))
+        except:
+            pass
+        return jsonify({}), 200
+
+    @app.route('/api/stack/settings', methods=['POST'])
+    def _stack_settings_save():
+        """Save per-channel display settings for a stack file."""
+        data = request.get_json()
+        if not data or not data.get('file'):
+            return jsonify({'error': 'No file specified'}), 400
+        filepath = data['file']
+        settings_file = os.path.join(os.getcwd(), '.stack_settings.json')
+        try:
+            all_settings = {}
+            if os.path.isfile(settings_file):
+                with open(settings_file, 'r') as f:
+                    all_settings = json.load(f)
+            all_settings[filepath] = {
+                'channels': data.get('channels', {}),
+                'composite': data.get('composite', False)
+            }
+            with open(settings_file, 'w') as f:
+                json.dump(all_settings, f, indent=2)
+            return jsonify({'success': True})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 

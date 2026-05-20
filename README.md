@@ -1,4 +1,4 @@
-# EnderTrack — Édition Imagerie v1.0.0
+# EnderTrack — Édition Imagerie v1.2.0
 
 > Basé sur [`basic` v2.4.0](/tree/basic). Ajoute caméra, éclairage, acquisition et scénarios avancés.
 
@@ -20,6 +20,12 @@ Ouvrir http://localhost:5000 — c'est tout. Les dépendances sont incluses dans
 - **Tactile** — fonctionne sur tablette et smartphone (pan, zoom, tap)
 - **Responsive** — s'adapte du grand écran au smartphone portrait
 - **Plugins** — système extensible, déposer un dossier dans `plugins/`
+- **Galerie & Stack Viewer** — navigation multi-dimensionnelle (C/Z/T), 8-bit et 16-bit TIFF
+- **Contraste par canal** — LUT et min/max indépendants par canal, persistés sur le serveur
+- **Mode Composite** — superposition additive de tous les canaux avec leurs LUT respectives
+- **Histogramme temps réel** — données brutes de chaque slice, barres min/max interactives
+- **Debounce intelligent** — chargement instantané (petit fichier) ou différé (>50 Mo / >500 Mo)
+- **Live Renderer** — pipeline séparé pour le flux caméra (contraste/LUT temps réel)
 
 ## Onglets
 

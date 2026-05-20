@@ -16,3 +16,4 @@ ENDERTRACK_CONTEXTE*.txt
 .idea/
 data/
 captures/
+.stack_settings.json

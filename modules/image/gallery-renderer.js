@@ -15,6 +15,7 @@ class GalleryRenderer {
     this.min = 0;
     this.max = 255;
     this.rgbMode = false; // true = show as RGB (no LUT), false = grayscale + LUT
+    this._keepContrast = false; // When true, loadRaw won't reset min/max (Z/T navigation)
   }
 
   setDisplayCanvas(canvas) {
@@ -98,19 +99,27 @@ class GalleryRenderer {
         for (let i = 0; i < bytes.length; i++) this._rawPixels[i] = bytes[i];
       }
 
-      this.rgbMode = this._channels >= 3;
-      // For 16-bit: auto-contrast by default (otherwise image is black)
+      // For 16-bit: always update dataMin/dataMax for current slice
       if (data.dtype === 'uint16') {
         const stats = this.getRawStats();
         this._dataMin = stats.min;
         this._dataMax = stats.max;
-        this.min = stats.min;
-        this.max = stats.max;
       } else {
         this._dataMin = 0;
         this._dataMax = 255;
-        this.min = 0;
-        this.max = 255;
+      }
+      // Only reset display settings on channel change (not Z/T navigation)
+      if (!this._keepContrast) {
+        this.rgbMode = this._channels >= 3;
+        this.lutId = 'gray';
+        this._lutTable = null;
+        if (data.dtype === 'uint16') {
+          this.min = this._dataMin;
+          this.max = this._dataMax;
+        } else {
+          this.min = 0;
+          this.max = 255;
+        }
       }
       if (!this._skipAutoRender) this.render();
       return true;
@@ -118,15 +127,26 @@ class GalleryRenderer {
   }
 
   setContrast(min, max) {
-    // min/max from histogram (0-255) mapped to actual data range
     const dataMin = this._dataMin || 0;
     const dataMax = this._dataMax || this._maxVal;
     this.min = dataMin + (min / 255) * (dataMax - dataMin);
     this.max = dataMin + (max / 255) * (dataMax - dataMin);
     if (!this._renderPending) {
       this._renderPending = true;
-      requestAnimationFrame(() => { this._renderPending = false; this.render(); });
+      requestAnimationFrame(() => {
+        this._renderPending = false;
+        const sv = window.EnderTrack?.StackViewer;
+        if (sv?._composite) {
+          sv._saveChannelSettings();
+          sv._renderComposite();
+        } else {
+          this.render();
+        }
+      });
     }
+    const sv = window.EnderTrack?.StackViewer;
+    sv?._saveChannelSettings?.();
+    sv?._persistSettings?.();
   }
 
   setLut(lutId) {
@@ -134,12 +154,23 @@ class GalleryRenderer {
     const def = window.CameraLUTs?.[lutId];
     this._lutTable = def ? def.generate() : null;
     this.rgbMode = false;
-    this.render();
+    const sv = window.EnderTrack?.StackViewer;
+    if (sv?._composite) {
+      sv._saveChannelSettings();
+      sv._renderComposite();
+    } else {
+      this.render();
+    }
+    sv?._saveChannelSettings?.();
+    sv?._persistSettings?.();
   }
 
   setRgbMode(enabled) {
     this.rgbMode = enabled;
     this.render();
+    const sv = window.EnderTrack?.StackViewer;
+    sv?._saveChannelSettings?.();
+    sv?._persistSettings?.();
   }
 
   // Get raw pixel stats for histogram

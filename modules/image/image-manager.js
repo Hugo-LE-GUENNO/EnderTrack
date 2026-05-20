@@ -474,7 +474,7 @@ class ImageManager {
         <div style="font-size:10px; color:var(--text-general); display:flex; flex-direction:column; gap:3px;">
           <strong style="color:var(--text-selected); word-break:break-all;">${img.name}</strong>
           ${pos ? `<div style="font-family:monospace; color:var(--coordinates-color);">X${pos.x} Y${pos.y} Z${pos.z}</div>` : ''}
-          ${dimInfo ? `<div style="font-size:9px; color:var(--coordinates-color);">${dimInfo}</div>` : ''}
+          ${dimInfo ? `<div id="metaDimInfo" style="font-size:9px; color:var(--coordinates-color);">${dimInfo}</div>` : '<div id="metaDimInfo" style="font-size:9px; color:var(--coordinates-color);"></div>'}
           ${extraInfo ? `<div style="font-size:9px; color:#666;">${extraInfo}</div>` : ""}
           <div>Taille: ${(img.size / 1024).toFixed(1)} Ko</div>
           <div>Date: ${new Date(img.mtime * 1000).toLocaleString()}</div>
@@ -512,6 +512,7 @@ class ImageManager {
       const origRedraw = this._histogram._redraw.bind(this._histogram);
       this._histogram._redraw = () => {
         origRedraw();
+        if (this._histogram._skipCallback) return;
         const r = this._histogram.getContrastRange();
         const renderer = window.EnderTrack?.GalleryRenderer;
         if (renderer) { renderer.setContrast(r.min, r.max); }
