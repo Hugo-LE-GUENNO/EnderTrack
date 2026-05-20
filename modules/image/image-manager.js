@@ -233,6 +233,9 @@ class ImageManager {
     // If TIFF, delegate to StackViewer
     if (img.name.endsWith('.tiff') || img.name.endsWith('.tif')) {
       wrap.remove();
+      // Remove old stack wrap if file changed
+      const oldStack = container.querySelector('.stack-viewport-wrap');
+      if (oldStack) oldStack.remove();
       const sv = window.EnderTrack?.StackViewer;
       if (sv) {
         sv._container = container;
@@ -240,6 +243,9 @@ class ImageManager {
       }
       return;
     }
+    // Not TIFF: remove stack wrap if present
+    const stackWrap = container.querySelector('.stack-viewport-wrap');
+    if (stackWrap) stackWrap.remove();
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gallery/thumb/' + img.path;
     wrap.innerHTML = `
       <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; background:#000;">
@@ -360,23 +366,12 @@ class ImageManager {
   _updateGalleryViewport() {
     const display = window.EnderTrack?.Display;
     if (!display) return;
-    const renderer = window.EnderTrack?.GalleryRenderer;
     display.viewports.forEach(vp => {
       if (vp.source === 'gallery') {
         const cell = vp.id === 0 ? display._stageWrap : display._cells.get(vp.id);
         if (!cell) return;
-        // Reuse existing canvas or create one
-        let canvas = cell.querySelector('#galleryDisplayCanvas');
-        if (!canvas) {
-          // First time: build viewport
-          this.renderInViewport(cell);
-          return;
-        }
-        // Canvas exists: just re-render with current data
-        if (renderer) {
-          renderer.setDisplayCanvas(canvas);
-          if (renderer._rawPixels) renderer.render();
-        }
+        // Always rebuild — renderInViewport handles TIFF vs PNG
+        this.renderInViewport(cell);
       }
     });
   }
@@ -457,6 +452,7 @@ class ImageManager {
     const dims = sv?._dims;
     const ds = sv?._dimState || {};
     let dimInfo = '';
+    let extraInfo = '';
     if (dims && dims.pages > 1) {
       const parts = [];
       if (dims.sizeC > 1) parts.push(`C: ${(ds.c||0)+1}/${dims.sizeC}`);
@@ -465,6 +461,13 @@ class ImageManager {
       if (dims.bitDepth) parts.push(`${dims.bitDepth}-bit`);
       if (dims.pixelSize) parts.push(`${dims.pixelSize.toFixed(3)} ${dims.unit || '\u00b5m'}/px`);
       dimInfo = parts.join(' \u2022 ');
+      // Extra info line
+      const extra = [];
+      if (dims.width && dims.height) extra.push(`${dims.width}\u00d7${dims.height}`);
+      if (dims.dataMin !== undefined) extra.push(`[${dims.dataMin}-${dims.dataMax}]`);
+      if (dims.source) extra.push(dims.source);
+      if (dims.dimensionOrder) extra.push(dims.dimensionOrder);
+      extraInfo = extra.join(' \u2022 ');
     }
     panel.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:6px; padding:4px;">
@@ -472,6 +475,7 @@ class ImageManager {
           <strong style="color:var(--text-selected); word-break:break-all;">${img.name}</strong>
           ${pos ? `<div style="font-family:monospace; color:var(--coordinates-color);">X${pos.x} Y${pos.y} Z${pos.z}</div>` : ''}
           ${dimInfo ? `<div style="font-size:9px; color:var(--coordinates-color);">${dimInfo}</div>` : ''}
+          ${extraInfo ? `<div style="font-size:9px; color:#666;">${extraInfo}</div>` : ""}
           <div>Taille: ${(img.size / 1024).toFixed(1)} Ko</div>
           <div>Date: ${new Date(img.mtime * 1000).toLocaleString()}</div>
         </div>

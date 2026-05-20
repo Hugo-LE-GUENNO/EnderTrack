@@ -96,6 +96,14 @@ def get_tiff_dimensions(filepath):
             dims['sizeT'] = int(ij['frames'])
         if 'unit' in ij:
             dims['unit'] = ij['unit']
+        if 'min' in ij:
+            dims['dataMin'] = float(ij['min'])
+        if 'max' in ij:
+            dims['dataMax'] = float(ij['max'])
+        if 'mode' in ij:
+            dims['mode'] = ij['mode']
+        if 'finterval' in ij:
+            dims['frameInterval'] = float(ij['finterval'])
 
         # Deduce dimension order
         c, z, t = dims['sizeC'], dims['sizeZ'], dims['sizeT']
