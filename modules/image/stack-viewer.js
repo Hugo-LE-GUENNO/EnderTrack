@@ -221,8 +221,8 @@ class StackViewer {
     const dims = this._dims || {};
     const sizeC = dims.sizeC || 1, sizeZ = dims.sizeZ || 1, sizeT = dims.sizeT || 1;
     let slidersHtml = "";
-    if (sizeC > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><span style="font-size:9px; color:#888; width:12px;">C</span><input type="range" id="stackSliderC" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span><label style="font-size:9px; color:#888; display:flex; align-items:center; gap:2px; margin-left:4px;"><input type="checkbox" id="stackComposite" onchange="EnderTrack.StackViewer._toggleComposite(this.checked)" style="margin:0; width:10px; height:10px;"${this._composite ? ' checked' : ''}>Comp</label></div>`;
-    if (sizeZ > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><span style="font-size:9px; color:#888; width:12px;">Z</span><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeC > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px; margin-bottom:2px;"><span style="font-size:9px; color:#888; width:12px;">C</span><input type="range" id="stackSliderC" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span><label style="font-size:9px; color:#888; display:flex; align-items:center; gap:2px; margin-left:4px;"><input type="checkbox" id="stackComposite" onchange="EnderTrack.StackViewer._toggleComposite(this.checked)" style="margin:0; width:10px; height:10px;"${this._composite ? ' checked' : ''}>Comp</label></div>`;
+    if (sizeZ > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px; margin-bottom:2px;"><button id="stackZBtn" onclick="EnderTrack.StackViewer._toggleProjection()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showProjectionMenu(event)" style="border:none; background:${this._projecting ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: projection, Clic droit: type">Z</button><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px;"${this._projecting ? ' disabled' : ''}><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
     if (sizeT > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><button id="stackPlayBtn" onclick="EnderTrack.StackViewer._togglePlay()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showPlaySettings(event)" style="border:none; background:none; color:var(--text-general); cursor:pointer; font-size:11px; width:14px; padding:0;" title="Clic: lecture, Clic droit: FPS">\u25B6</button><input type="range" id="stackSliderT" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
     if (!slidersHtml) slidersHtml = `<div style="display:flex; align-items:center; gap:4px;"><input type="range" id="stackSlider" min="0" max="${info.pages-1}" value="${this._index}" oninput="EnderTrack.StackViewer.setIndex(parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabel" style="font-size:9px; color:var(--text-general); width:40px; text-align:right;">${this._index+1}/${info.pages}</span></div>`;
     wrap.innerHTML = `
@@ -249,8 +249,24 @@ class StackViewer {
         if (this._composite) this._renderComposite();
       });
     }
-    // Mouse wheel
-    wrap.onwheel = (e) => { e.preventDefault(); this.setIndex(this._index + (e.deltaY > 0 ? 1 : -1)); };
+    // Mouse wheel: scroll the hovered slider
+    wrap.onwheel = (e) => {
+      e.preventDefault();
+      if (this._projecting) return;
+      const target = e.target;
+      if (target.id === 'stackSliderC' || target.closest?.('[id=stackSliderC]')) {
+        this._setDim('c', Math.max(0, Math.min((this._dims?.sizeC||1)-1, (this._dimState?.c||0) + (e.deltaY > 0 ? 1 : -1))));
+      } else if (target.id === 'stackSliderT' || target.closest?.('[id=stackSliderT]')) {
+        this._setDim('t', Math.max(0, Math.min((this._dims?.sizeT||1)-1, (this._dimState?.t||0) + (e.deltaY > 0 ? 1 : -1))));
+      } else {
+        // Default: scroll Z (or generic index)
+        if (this._dims?.sizeZ > 1) {
+          this._setDim('z', Math.max(0, Math.min((this._dims.sizeZ)-1, (this._dimState?.z||0) + (e.deltaY > 0 ? 1 : -1))));
+        } else {
+          this.setIndex(this._index + (e.deltaY > 0 ? 1 : -1));
+        }
+      }
+    };
     // Right-click for LUT
     const canvas = document.getElementById("stackDisplayCanvas");
     if (canvas) {
@@ -458,6 +474,113 @@ class StackViewer {
       this._stopPlay();
       this._togglePlay();
     }
+  }
+
+  // === Z PROJECTION ===
+
+  _toggleProjection() {
+    this._projecting = !this._projecting;
+    const btn = document.getElementById('stackZBtn');
+    const slider = document.getElementById('stackSliderZ');
+    if (btn) btn.style.background = this._projecting ? 'var(--active-element)' : 'none';
+    if (slider) slider.disabled = this._projecting;
+    if (this._projecting) {
+      this._renderProjection();
+    } else {
+      this._doLoad(false); // back to normal slice view
+    }
+  }
+
+  _showProjectionMenu(e) {
+    document.getElementById('stack-proj-menu')?.remove();
+    const types = ['max', 'min', 'mean', 'median', 'std'];
+    const current = this._projType || 'max';
+    const menu = document.createElement('div');
+    menu.id = 'stack-proj-menu';
+    menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY - 80}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:80px;`;
+    types.forEach(t => {
+      const row = document.createElement('div');
+      row.style.cssText = `padding:4px 10px; font-size:11px; cursor:pointer; color:${t === current ? 'var(--text-selected)' : 'var(--text-general)'}; background:${t === current ? 'var(--active-element)' : 'transparent'};`;
+      row.textContent = t.toUpperCase();
+      row.onmouseenter = () => { if (t !== current) row.style.background = 'var(--app-bg)'; };
+      row.onmouseleave = () => { if (t !== current) row.style.background = ''; };
+      row.onclick = () => { this._projType = t; menu.remove(); if (this._projecting) this._renderProjection(); };
+      menu.appendChild(row);
+    });
+    document.body.appendChild(menu);
+    setTimeout(() => { const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } }; document.addEventListener('mousedown', close); }, 0);
+  }
+
+  async _renderProjection() {
+    if (!this._file || !this._dims) return;
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (!renderer) return;
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    const sizeZ = this._dims.sizeZ || 1;
+    const sizeC = this._dims.sizeC || 1;
+    const c = this._dimState?.c || 0;
+    const t = this._dimState?.t || 0;
+    const type = this._projType || 'max';
+
+    // Load all Z slices for current C and T
+    const slices = [];
+    for (let z = 0; z < sizeZ; z++) {
+      const idx = c + sizeC * (z + sizeZ * t);
+      const res = await fetch(base + '/api/stack/raw?file=' + encodeURIComponent(this._file) + '&index=' + idx);
+      const data = await res.json();
+      if (data.error) continue;
+      const binary = atob(data.data);
+      const buffer = new ArrayBuffer(binary.length);
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      let pixels;
+      if (data.dtype === 'uint16') {
+        const u16 = new Uint16Array(buffer);
+        pixels = new Float32Array(u16.length);
+        for (let i = 0; i < u16.length; i++) pixels[i] = u16[i];
+      } else {
+        pixels = new Float32Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) pixels[i] = bytes[i];
+      }
+      slices.push(pixels);
+    }
+    if (!slices.length) return;
+
+    const nPx = slices[0].length;
+    const result = new Float32Array(nPx);
+
+    if (type === 'max') {
+      result.fill(-Infinity);
+      for (const s of slices) for (let i = 0; i < nPx; i++) if (s[i] > result[i]) result[i] = s[i];
+    } else if (type === 'min') {
+      result.fill(Infinity);
+      for (const s of slices) for (let i = 0; i < nPx; i++) if (s[i] < result[i]) result[i] = s[i];
+    } else if (type === 'mean') {
+      for (const s of slices) for (let i = 0; i < nPx; i++) result[i] += s[i];
+      for (let i = 0; i < nPx; i++) result[i] /= slices.length;
+    } else if (type === 'std') {
+      const mean = new Float32Array(nPx);
+      for (const s of slices) for (let i = 0; i < nPx; i++) mean[i] += s[i];
+      for (let i = 0; i < nPx; i++) mean[i] /= slices.length;
+      for (const s of slices) for (let i = 0; i < nPx; i++) result[i] += (s[i] - mean[i]) ** 2;
+      for (let i = 0; i < nPx; i++) result[i] = Math.sqrt(result[i] / slices.length);
+    } else if (type === 'median') {
+      for (let i = 0; i < nPx; i++) {
+        const vals = slices.map(s => s[i]).sort((a, b) => a - b);
+        result[i] = vals[Math.floor(vals.length / 2)];
+      }
+    }
+
+    // Display projection using renderer
+    renderer._rawPixels = result;
+    renderer._width = renderer._width; // keep same dimensions
+    renderer._height = renderer._height;
+    renderer._channels = 1;
+    const stats = renderer.getRawStats();
+    renderer._dataMin = stats.min;
+    renderer._dataMax = stats.max;
+    renderer.render();
+    this._refreshHistogram();
   }
 
   // === MISC ===
