@@ -221,9 +221,9 @@ class StackViewer {
     const dims = this._dims || {};
     const sizeC = dims.sizeC || 1, sizeZ = dims.sizeZ || 1, sizeT = dims.sizeT || 1;
     let slidersHtml = "";
-    if (sizeC > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px; margin-bottom:2px;"><span style="font-size:9px; color:#888; width:12px;">C</span><input type="range" id="stackSliderC" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span><label style="font-size:9px; color:#888; display:flex; align-items:center; gap:2px; margin-left:4px;"><input type="checkbox" id="stackComposite" onchange="EnderTrack.StackViewer._toggleComposite(this.checked)" style="margin:0; width:10px; height:10px;"${this._composite ? ' checked' : ''}>Comp</label></div>`;
-    if (sizeZ > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px; margin-bottom:2px;"><button id="stackZBtn" onclick="EnderTrack.StackViewer._toggleProjection()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showProjectionMenu(event)" style="border:none; background:${this._projecting ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: projection, Clic droit: type">Z</button><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px;"${this._projecting ? ' disabled' : ''}><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
-    if (sizeT > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><button id="stackPlayBtn" onclick="EnderTrack.StackViewer._togglePlay()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showPlaySettings(event)" style="border:none; background:none; color:var(--text-general); cursor:pointer; font-size:11px; width:14px; padding:0;" title="Clic: lecture, Clic droit: FPS">\u25B6</button><input type="range" id="stackSliderT" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeC > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px; margin-bottom:4px;"><span style="font-size:9px; color:#888; width:12px;">C</span><input type="range" id="stackSliderC" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span><label style="font-size:9px; color:#888; display:flex; align-items:center; gap:2px; margin-left:4px;"><input type="checkbox" id="stackComposite" onchange="EnderTrack.StackViewer._toggleComposite(this.checked)" style="margin:0; width:10px; height:10px;"${this._composite ? ' checked' : ''}>Comp</label></div>`;
+    if (sizeZ > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px; margin-bottom:4px;"><button id="stackZBtn" onclick="EnderTrack.StackViewer._toggleProjection()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showProjectionMenu(event)" style="border:none; background:${this._projecting ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: projection, Clic droit: type">Z</button><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"${this._projecting ? ' disabled' : ''}><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeT > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><button id="stackPlayBtn" onclick="EnderTrack.StackViewer._togglePlay()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showPlaySettings(event)" style="border:none; background:none; color:var(--text-general); cursor:pointer; font-size:11px; width:14px; padding:0;" title="Clic: lecture, Clic droit: FPS">\u25B6</button><input type="range" id="stackSliderT" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
     if (!slidersHtml) slidersHtml = `<div style="display:flex; align-items:center; gap:4px;"><input type="range" id="stackSlider" min="0" max="${info.pages-1}" value="${this._index}" oninput="EnderTrack.StackViewer.setIndex(parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabel" style="font-size:9px; color:var(--text-general); width:40px; text-align:right;">${this._index+1}/${info.pages}</span></div>`;
     wrap.innerHTML = `
       <canvas id="stackDisplayCanvas" style="flex:1; object-fit:contain; min-height:0; background:#000; image-rendering:pixelated;"></canvas>
@@ -519,69 +519,115 @@ class StackViewer {
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     const sizeZ = this._dims.sizeZ || 1;
     const sizeC = this._dims.sizeC || 1;
-    const c = this._dimState?.c || 0;
-    const t = this._dimState?.t || 0;
+    const sizeT = this._dims.sizeT || 1;
     const type = this._projType || 'max';
 
-    // Load all Z slices for current C and T
-    const slices = [];
-    for (let z = 0; z < sizeZ; z++) {
-      const idx = c + sizeC * (z + sizeZ * t);
-      const res = await fetch(base + '/api/stack/raw?file=' + encodeURIComponent(this._file) + '&index=' + idx);
-      const data = await res.json();
-      if (data.error) continue;
-      const binary = atob(data.data);
-      const buffer = new ArrayBuffer(binary.length);
-      const bytes = new Uint8Array(buffer);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      let pixels;
-      if (data.dtype === 'uint16') {
-        const u16 = new Uint16Array(buffer);
-        pixels = new Float32Array(u16.length);
-        for (let i = 0; i < u16.length; i++) pixels[i] = u16[i];
-      } else {
-        pixels = new Float32Array(bytes.length);
-        for (let i = 0; i < bytes.length; i++) pixels[i] = bytes[i];
+    // Project over all Z, for each C and each T
+    const projectedChannels = [];
+    for (let c = 0; c < sizeC; c++) {
+      // Collect all Z slices for this channel (across all T if sizeT > 1)
+      const slices = [];
+      for (let t = 0; t < sizeT; t++) {
+        for (let z = 0; z < sizeZ; z++) {
+          const idx = c + sizeC * (z + sizeZ * t);
+          const res = await fetch(base + '/api/stack/raw?file=' + encodeURIComponent(this._file) + '&index=' + idx);
+          const data = await res.json();
+          if (data.error) continue;
+          const binary = atob(data.data);
+          const buffer = new ArrayBuffer(binary.length);
+          const bytes = new Uint8Array(buffer);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          let pixels;
+          if (data.dtype === 'uint16') {
+            const u16 = new Uint16Array(buffer);
+            pixels = new Float32Array(u16.length);
+            for (let i = 0; i < u16.length; i++) pixels[i] = u16[i];
+          } else {
+            pixels = new Float32Array(bytes.length);
+            for (let i = 0; i < bytes.length; i++) pixels[i] = bytes[i];
+          }
+          slices.push(pixels);
+        }
       }
-      slices.push(pixels);
+      if (!slices.length) continue;
+      const nPx = slices[0].length;
+      const result = new Float32Array(nPx);
+      if (type === 'max') {
+        result.fill(-Infinity);
+        for (const s of slices) for (let i = 0; i < nPx; i++) if (s[i] > result[i]) result[i] = s[i];
+      } else if (type === 'min') {
+        result.fill(Infinity);
+        for (const s of slices) for (let i = 0; i < nPx; i++) if (s[i] < result[i]) result[i] = s[i];
+      } else if (type === 'mean') {
+        for (const s of slices) for (let i = 0; i < nPx; i++) result[i] += s[i];
+        for (let i = 0; i < nPx; i++) result[i] /= slices.length;
+      } else if (type === 'std') {
+        const mean = new Float32Array(nPx);
+        for (const s of slices) for (let i = 0; i < nPx; i++) mean[i] += s[i];
+        for (let i = 0; i < nPx; i++) mean[i] /= slices.length;
+        for (const s of slices) for (let i = 0; i < nPx; i++) result[i] += (s[i] - mean[i]) ** 2;
+        for (let i = 0; i < nPx; i++) result[i] = Math.sqrt(result[i] / slices.length);
+      } else if (type === 'median') {
+        for (let i = 0; i < nPx; i++) {
+          const vals = slices.map(s => s[i]).sort((a, b) => a - b);
+          result[i] = vals[Math.floor(vals.length / 2)];
+        }
+      }
+      projectedChannels.push({ pixels: result, settings: this._channelSettings?.[c] });
     }
-    if (!slices.length) return;
 
-    const nPx = slices[0].length;
-    const result = new Float32Array(nPx);
+    if (!projectedChannels.length) return;
+    const w = renderer._width, h = renderer._height;
+    const canvas = renderer._displayCanvas;
+    if (!canvas) return;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    const out = ctx.createImageData(w, h);
+    const dst = out.data;
+    const nPx = w * h;
 
-    if (type === 'max') {
-      result.fill(-Infinity);
-      for (const s of slices) for (let i = 0; i < nPx; i++) if (s[i] > result[i]) result[i] = s[i];
-    } else if (type === 'min') {
-      result.fill(Infinity);
-      for (const s of slices) for (let i = 0; i < nPx; i++) if (s[i] < result[i]) result[i] = s[i];
-    } else if (type === 'mean') {
-      for (const s of slices) for (let i = 0; i < nPx; i++) result[i] += s[i];
-      for (let i = 0; i < nPx; i++) result[i] /= slices.length;
-    } else if (type === 'std') {
-      const mean = new Float32Array(nPx);
-      for (const s of slices) for (let i = 0; i < nPx; i++) mean[i] += s[i];
-      for (let i = 0; i < nPx; i++) mean[i] /= slices.length;
-      for (const s of slices) for (let i = 0; i < nPx; i++) result[i] += (s[i] - mean[i]) ** 2;
-      for (let i = 0; i < nPx; i++) result[i] = Math.sqrt(result[i] / slices.length);
-    } else if (type === 'median') {
+    if (sizeC === 1) {
+      // Single channel: use renderer settings
+      const px = projectedChannels[0].pixels;
+      let mn = Infinity, mx = -Infinity;
+      for (let i = 0; i < nPx; i++) { if (px[i] < mn) mn = px[i]; if (px[i] > mx) mx = px[i]; }
+      const min = renderer.min !== undefined ? renderer.min : mn;
+      const max = renderer.max !== undefined ? renderer.max : mx;
+      const range = Math.max(1, max - min);
+      const lut = renderer._lutTable;
       for (let i = 0; i < nPx; i++) {
-        const vals = slices.map(s => s[i]).sort((a, b) => a - b);
-        result[i] = vals[Math.floor(vals.length / 2)];
+        const stretched = Math.max(0, Math.min(255, Math.round(((px[i] - min) / range) * 255)));
+        if (lut) { dst[i*4] = lut[stretched][0]; dst[i*4+1] = lut[stretched][1]; dst[i*4+2] = lut[stretched][2]; }
+        else { dst[i*4] = stretched; dst[i*4+1] = stretched; dst[i*4+2] = stretched; }
+        dst[i*4+3] = 255;
+      }
+    } else {
+      // Multi-channel: composite additive
+      for (let ci = 0; ci < projectedChannels.length; ci++) {
+        const ch = projectedChannels[ci];
+        const s = ch.settings || {};
+        const px = ch.pixels;
+        let mn = Infinity, mx = -Infinity;
+        for (let i = 0; i < nPx; i++) { if (px[i] < mn) mn = px[i]; if (px[i] > mx) mx = px[i]; }
+        const min = s.min !== undefined ? s.min : mn;
+        const max = s.max !== undefined ? s.max : mx;
+        const range = Math.max(1, max - min);
+        const lutId = s.lutId || 'gray';
+        const def = window.CameraLUTs?.[lutId];
+        const lut = def ? def.generate() : null;
+        for (let i = 0; i < nPx; i++) {
+          const stretched = Math.max(0, Math.min(255, Math.round(((px[i] - min) / range) * 255)));
+          let r, g, b;
+          if (lut) { r = lut[stretched][0]; g = lut[stretched][1]; b = lut[stretched][2]; }
+          else { r = stretched; g = stretched; b = stretched; }
+          dst[i*4] = Math.min(255, (dst[i*4] || 0) + r);
+          dst[i*4+1] = Math.min(255, (dst[i*4+1] || 0) + g);
+          dst[i*4+2] = Math.min(255, (dst[i*4+2] || 0) + b);
+          dst[i*4+3] = 255;
+        }
       }
     }
-
-    // Display projection using renderer
-    renderer._rawPixels = result;
-    renderer._width = renderer._width; // keep same dimensions
-    renderer._height = renderer._height;
-    renderer._channels = 1;
-    const stats = renderer.getRawStats();
-    renderer._dataMin = stats.min;
-    renderer._dataMax = stats.max;
-    renderer.render();
-    this._refreshHistogram();
+    ctx.putImageData(out, 0, 0);
   }
 
   // === MISC ===
