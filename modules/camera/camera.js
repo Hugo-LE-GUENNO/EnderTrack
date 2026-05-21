@@ -20,6 +20,8 @@ class CameraModule {
     this._lutTable = null;
     this.histogram = null;
     this._liveLutId = 'gray';
+    this._liveSettings = null;
+    this._loadLiveSettings();
     this.fastExplore = null;
     this.tiles = [];
     // Register scenario action early (even without driver)
@@ -55,6 +57,7 @@ class CameraModule {
             const r = this.histogram.getContrastRange();
             const renderer = window.EnderTrack?.LiveRenderer;
             if (renderer) { renderer.setContrast(r.min, r.max); renderer.enabled = true; }
+            this._saveLiveSettings();
           }
         };
         this.histogram._getCurrentLut = () => {
@@ -175,7 +178,7 @@ class CameraModule {
       row.textContent = def.name;
       row.onmouseenter = () => { if (!active) row.style.background = 'var(--app-bg)'; };
       row.onmouseleave = () => { if (!active) row.style.background = ''; };
-      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.LiveRenderer; if (renderer) { renderer.setLut(id); renderer.enabled = true; }; this.histogram?._redraw?.(); menu.remove(); };
+      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.LiveRenderer; if (renderer) { renderer.setLut(id); renderer.enabled = true; }; this.histogram?._redraw?.(); this._saveLiveSettings(); menu.remove(); };
       menu.appendChild(row);
     }
     document.body.appendChild(menu);
@@ -351,11 +354,12 @@ class CameraModule {
         liveRenderer.min = this._liveSettings.min;
         liveRenderer.max = this._liveSettings.max;
         liveRenderer.lutId = this._liveSettings.lutId;
-        liveRenderer.enabled = this._liveSettings.rgbMode;
+        liveRenderer.enabled = this._liveSettings.lutId !== 'gray';
         this._liveLutId = this._liveSettings.lutId;
         const def = window.CameraLUTs?.[this._liveSettings.lutId];
         liveRenderer._lutTable = def ? def.generate() : null;
         if (this.histogram) {
+          this.histogram.mode = this._liveSettings.autoContrast ? 'auto' : 'manual';
           this.histogram.manualMin = Math.round((this._liveSettings.min / 255) * 255);
           this.histogram.manualMax = Math.round((this._liveSettings.max / 255) * 255);
           this.histogram._redraw();
@@ -477,6 +481,37 @@ class CameraModule {
         return result;
       }
     });
+  }
+
+  async _loadLiveSettings() {
+    try {
+      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      const res = await fetch(base + '/api/live/settings');
+      const data = await res.json();
+      if (data && data.lutId) {
+        this._liveSettings = data;
+        this._liveLutId = data.lutId;
+      }
+    } catch {}
+  }
+
+  _saveLiveSettings() {
+    const renderer = window.EnderTrack?.LiveRenderer;
+    if (!renderer) return;
+    this._liveSettings = {
+      min: renderer.min, max: renderer.max,
+      lutId: this._liveLutId || 'gray',
+      autoContrast: this.histogram?.mode === 'auto'
+    };
+    clearTimeout(this._liveSettingsTimer);
+    this._liveSettingsTimer = setTimeout(() => {
+      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      fetch(base + '/api/live/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this._liveSettings)
+      }).catch(() => {});
+    }, 1000);
   }
 }
 

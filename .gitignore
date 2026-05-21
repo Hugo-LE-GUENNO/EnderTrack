@@ -18,3 +18,4 @@ data/
 captures/
 .stack_settings.json
 .gallery_settings.json
+.live_settings.json

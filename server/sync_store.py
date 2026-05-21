@@ -253,3 +253,31 @@ def register_routes(app):
             return jsonify({'success': True})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/live/settings', methods=['GET'])
+    def _live_settings_get():
+        """Load live renderer display settings."""
+        import json
+        settings_file = os.path.join(os.getcwd(), '.live_settings.json')
+        try:
+            if os.path.isfile(settings_file):
+                with open(settings_file, 'r') as f:
+                    return jsonify(json.load(f))
+        except:
+            pass
+        return jsonify({})
+
+    @app.route('/api/live/settings', methods=['POST'])
+    def _live_settings_save():
+        """Save live renderer display settings."""
+        import json
+        data = request.get_json()
+        if data is None:
+            return jsonify({'error': 'No data'}), 400
+        settings_file = os.path.join(os.getcwd(), '.live_settings.json')
+        try:
+            with open(settings_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
