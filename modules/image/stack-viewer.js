@@ -144,7 +144,6 @@ class StackViewer {
 
   // Called ONLY by user actions (setLut, setContrast via histogram drag)
   saveCurrentChannel() {
-    if (!this._dims || this._dims.sizeC <= 1) return;
     const renderer = window.EnderTrack?.GalleryRenderer;
     if (!renderer || !this._dimState) return;
     const c = this._dimState.c;
@@ -236,16 +235,14 @@ class StackViewer {
       renderer.setDisplayCanvas(document.getElementById("stackDisplayCanvas"));
       renderer._keepContrast = false;
       renderer.loadRaw(this._file, this._index).then(() => {
-        // For multi-C: apply saved settings for channel 0
-        if (this._dims?.sizeC > 1) {
-          const s = this._channelSettings?.[0];
-          if (s) {
-            renderer.min = s.min; renderer.max = s.max;
-            renderer.lutId = s.lutId; renderer.rgbMode = s.rgbMode;
-            const def = window.CameraLUTs?.[s.lutId];
-            renderer._lutTable = def ? def.generate() : null;
-            renderer.render();
-          }
+        // Apply saved settings (works for all stacks, not just multi-C)
+        const s = this._channelSettings?.[this._dimState?.c || 0];
+        if (s) {
+          renderer.min = s.min; renderer.max = s.max;
+          renderer.lutId = s.lutId; renderer.rgbMode = s.rgbMode;
+          const def = window.CameraLUTs?.[s.lutId];
+          renderer._lutTable = def ? def.generate() : null;
+          renderer.render();
         }
         this._refreshHistogram();
         if (this._composite) this._renderComposite();
