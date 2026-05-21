@@ -54,8 +54,7 @@ class ImageManager {
     this._saveCurrentSettings();
     this._galleryIdx = idx;
     this._renderGallery();
-    this._renderMetadata();
-    this._loadAndDisplay();
+    this._loadAndDisplay().then(() => this._renderMetadata());
   }
 
   // Single load path: load image → apply settings → render → update histogram
@@ -96,7 +95,6 @@ class ImageManager {
       const sv = window.EnderTrack?.StackViewer;
       if (sv && sv._file !== img.path) {
         await sv.open(img.path);
-        this._renderMetadata(); // refresh with new dims
       }
       await renderer.loadRaw(img.path, sv?._index || 0);
     } else {
