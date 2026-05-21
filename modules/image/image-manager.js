@@ -452,9 +452,10 @@ class ImageManager {
     if (!img) { panel.innerHTML = '<div style="font-size:10px; color:#555; padding:8px;">Aucune image</div>'; return; }
     const match = img.name.match(/X([\d.]+)_Y([\d.]+)_Z([\d.]+)/);
     const pos = match ? { x: match[1], y: match[2], z: match[3] } : null;
-    // Stack dimension info
+    // Stack dimension info (only for TIFF files)
+    const isTiff = img.name.endsWith('.tiff') || img.name.endsWith('.tif');
     const sv = window.EnderTrack?.StackViewer;
-    const dims = sv?._dims;
+    const dims = (isTiff && sv?._file === img.path) ? sv?._dims : null;
     const ds = sv?._dimState || {};
     let dimInfo = '';
     let extraInfo = '';
