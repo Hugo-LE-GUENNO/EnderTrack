@@ -202,7 +202,7 @@ def register_routes(app):
                         img.seek(idx)
                         arr = np.array(img.copy(), dtype=np.float32)
                         if arr.ndim == 3:
-                            arr = arr[:,:,0]
+                            arr = 0.299 * arr[:,:,0] + 0.587 * arr[:,:,1] + 0.114 * arr[:,:,2]
                         slices.append(arr)
                     if not slices:
                         continue
