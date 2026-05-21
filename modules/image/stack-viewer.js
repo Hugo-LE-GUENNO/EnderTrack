@@ -135,6 +135,7 @@ class StackViewer {
       wrap.style.cssText = 'position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; background:#000;';
       container.appendChild(wrap);
     }
+    wrap.dataset.file = this._file || '';
 
     if (!this._file) {
       wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#555;font-size:11px;">Aucun stack ouvert</div>';
@@ -245,6 +246,7 @@ class StackViewer {
       min: renderer.min, max: renderer.max,
       lutId: renderer.lutId, rgbMode: renderer.rgbMode
     };
+    console.log('[Stack] SAVE ch', c, JSON.stringify(this._channelSettings[c]));
   }
 
   _restoreChannelSettings(skipRender) {
@@ -252,6 +254,7 @@ class StackViewer {
     if (!renderer || !this._dimState) return;
     const c = this._dimState.c;
     const s = this._channelSettings?.[c];
+    console.log('[Stack] RESTORE ch', c, JSON.stringify(s));
     if (s) {
       renderer.min = s.min;
       renderer.max = s.max;

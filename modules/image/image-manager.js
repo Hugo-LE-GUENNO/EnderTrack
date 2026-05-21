@@ -233,11 +233,12 @@ class ImageManager {
     // If TIFF, delegate to StackViewer
     if (img.name.endsWith('.tiff') || img.name.endsWith('.tif')) {
       wrap.remove();
-      // Remove old stack wrap if file changed
-      const oldStack = container.querySelector('.stack-viewport-wrap');
-      if (oldStack) oldStack.remove();
       const sv = window.EnderTrack?.StackViewer;
       if (sv) {
+        const existingWrap = container.querySelector('.stack-viewport-wrap');
+        // Skip rebuild only if wrap belongs to same file
+        if (existingWrap && existingWrap.dataset.file === img.path) return;
+        if (existingWrap) existingWrap.remove();
         sv._container = container;
         sv.open(img.path).then(() => sv.renderInViewport(container));
       }
@@ -459,15 +460,14 @@ class ImageManager {
       if (dims.sizeZ > 1) parts.push(`Z: ${(ds.z||0)+1}/${dims.sizeZ}`);
       if (dims.sizeT > 1) parts.push(`T: ${(ds.t||0)+1}/${dims.sizeT}`);
       dimInfo = parts.join(' \u2022 ');
-      // Extra info line
-      const extra = [];
-      if (dims.width && dims.height) extra.push(`${dims.width}\u00d7${dims.height}`);
-      if (dims.bitDepth) extra.push(`${dims.bitDepth}-bit`);
-      if (dims.sizeC > 1 && dims.channels?.length) extra.push(dims.channels.join('/'));
-      if (dims.pixelSize) extra.push(`${dims.pixelSize.toFixed(3)} ${dims.unit || '\u00b5m'}/px`);
-      if (dims.dataMin !== undefined) extra.push(`[${dims.dataMin}-${dims.dataMax}]`);
-      if (dims.source) extra.push(dims.source);
-      extraInfo = extra.join(' \u2022 ');
+      // Table rows
+      const rows = [];
+      if (dims.width && dims.height) rows.push(['Taille', `${dims.width} \u00d7 ${dims.height}`]);
+      if (dims.bitDepth) rows.push(['Profondeur', `${dims.bitDepth}-bit`]);
+      if (dims.pixelSize) rows.push(['Pixel', `${dims.pixelSize.toFixed(3)} ${dims.unit || '\u00b5m'}`]);
+      if (dims.voxelDepth) rows.push(['Voxel Z', `${dims.voxelDepth.toFixed(3)} ${dims.unit || '\u00b5m'}`]);
+      if (dims.frameInterval && dims.frameInterval !== 1) rows.push(['Intervalle T', `${dims.frameInterval} s`]);
+      extraInfo = rows.map(([k, v]) => `<tr><td style="padding:1px 6px 1px 0; color:#666;">${k}</td><td style="padding:1px 0; color:var(--text-general);">${v}</td></tr>`).join('');
     }
     panel.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:6px; padding:4px;">
@@ -475,9 +475,8 @@ class ImageManager {
           <strong style="color:var(--text-selected); word-break:break-all;">${img.name}</strong>
           ${pos ? `<div style="font-family:monospace; color:var(--coordinates-color);">X${pos.x} Y${pos.y} Z${pos.z}</div>` : ''}
           ${dimInfo ? `<div id="metaDimInfo" style="font-size:9px; color:var(--coordinates-color);">${dimInfo}</div>` : '<div id="metaDimInfo" style="font-size:9px; color:var(--coordinates-color);"></div>'}
-          ${extraInfo ? `<div style="font-size:9px; color:#666;">${extraInfo}</div>` : ""}
-          <div>Taille: ${(img.size / 1024).toFixed(1)} Ko</div>
-          <div>Date: ${new Date(img.mtime * 1000).toLocaleString()}</div>
+          ${extraInfo ? `<table style="font-size:9px; border-collapse:collapse; margin-top:2px;">${extraInfo}</table>` : ""}
+          <div style="font-size:9px; color:#555;">${(img.size / 1024).toFixed(1)} Ko \u2022 ${new Date(img.mtime * 1000).toLocaleString()}</div>
         </div>
         <div id="galleryHistContainer"></div>
       </div>`;

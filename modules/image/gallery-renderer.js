@@ -149,8 +149,15 @@ class GalleryRenderer {
         }
       });
     }
+    // Only save min/max, not LUT (LUT saved via setLut only)
     const sv = window.EnderTrack?.StackViewer;
-    sv?._saveChannelSettings?.();
+    if (sv && !sv._switching && sv._dimState !== undefined) {
+      const c = sv._dimState?.c;
+      if (c !== undefined && sv._channelSettings?.[c]) {
+        sv._channelSettings[c].min = this.min;
+        sv._channelSettings[c].max = this.max;
+      }
+    }
     sv?._persistSettings?.();
   }
 
@@ -166,7 +173,16 @@ class GalleryRenderer {
     } else {
       this.render();
     }
-    sv?._saveChannelSettings?.();
+    // Save LUT for current channel directly
+    if (sv && !sv._switching && sv._channelSettings && sv._dimState) {
+      const c = sv._dimState.c;
+      if (sv._channelSettings[c]) {
+        sv._channelSettings[c].lutId = lutId;
+        sv._channelSettings[c].rgbMode = false;
+      } else {
+        sv._channelSettings[c] = { min: this.min, max: this.max, lutId, rgbMode: false };
+      }
+    }
     sv?._persistSettings?.();
   }
 
@@ -174,7 +190,10 @@ class GalleryRenderer {
     this.rgbMode = enabled;
     this.render();
     const sv = window.EnderTrack?.StackViewer;
-    sv?._saveChannelSettings?.();
+    if (sv && !sv._switching && sv._channelSettings && sv._dimState) {
+      const c = sv._dimState.c;
+      if (sv._channelSettings[c]) sv._channelSettings[c].rgbMode = enabled;
+    }
     sv?._persistSettings?.();
   }
 
@@ -203,6 +222,8 @@ class GalleryRenderer {
     const range = Math.max(1, max - min);
     const lut = this._lutTable;
     const nPx = w * h;
+
+    console.log('[Renderer] render w=', w, 'h=', h, 'ch=', this._channels, 'rgb=', this.rgbMode, 'min=', min, 'max=', max, 'lut=', this.lutId, 'rawLen=', this._rawPixels.length, 'expected=', nPx * (this._channels >= 3 ? 3 : 1));
 
     if (this.rgbMode && this._channels >= 3) {
       // RGB mode: apply contrast per channel, no LUT

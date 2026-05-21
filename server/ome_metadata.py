@@ -104,6 +104,8 @@ def get_tiff_dimensions(filepath):
             dims['mode'] = ij['mode']
         if 'finterval' in ij:
             dims['frameInterval'] = float(ij['finterval'])
+        if 'spacing' in ij:
+            dims['voxelDepth'] = float(ij['spacing'])
 
         # Deduce dimension order
         c, z, t = dims['sizeC'], dims['sizeZ'], dims['sizeT']
