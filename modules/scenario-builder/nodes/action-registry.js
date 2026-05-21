@@ -254,9 +254,11 @@ class ActionRegistry {
         { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
       ],
       execute: async (params, context) => {
+        console.log('[capture action] ENTER');
         const camera = window.EnderTrack?.Camera;
         if (!camera) return { success: false, error: 'No camera' };
         const result = await camera.capture({ format: params.format || 'tiff' });
+        console.log('[capture action] result:', result?.success, result?.path);
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
           window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `\ud83d\udcf7 ${result.path || 'capture'}`, context), 'info');
         }
