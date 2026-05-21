@@ -167,6 +167,15 @@ class CameraModule {
     logRow.onmouseleave = () => logRow.style.background = '';
     logRow.onclick = () => { if (this.histogram) { this.histogram.logScale = !this.histogram.logScale; this.histogram._redraw(); } menu.remove(); };
     menu.appendChild(logRow);
+    // RGB toggle
+    const renderer = window.EnderTrack?.LiveRenderer;
+    const rgbRow = document.createElement('div');
+    rgbRow.style.cssText = 'padding:4px 10px; font-size:11px; cursor:pointer; color:var(--text-general);';
+    rgbRow.innerHTML = `<span style="width:14px; display:inline-block;">${!renderer?.enabled ? '\u2713' : ''}</span>RGB (no LUT)`;
+    rgbRow.onmouseenter = () => rgbRow.style.background = 'var(--app-bg)';
+    rgbRow.onmouseleave = () => rgbRow.style.background = '';
+    rgbRow.onclick = () => { if (renderer) { renderer.enabled = false; this._liveLutId = 'gray'; } this.histogram?._redraw?.(); this._saveLiveSettings(); menu.remove(); };
+    menu.appendChild(rgbRow);
     const sep = document.createElement('div');
     sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
     menu.appendChild(sep);
