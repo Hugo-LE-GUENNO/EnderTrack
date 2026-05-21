@@ -493,14 +493,10 @@ class StackViewer {
 
   _toggleProjection() {
     this._projecting = !this._projecting;
-    const btn = document.getElementById('stackZBtn');
-    const slider = document.getElementById('stackSliderZ');
-    const label = document.getElementById('stackLabelZ');
-    if (btn) btn.style.background = this._projecting ? 'var(--active-element)' : 'none';
-    if (slider) { slider.disabled = this._projecting; slider.style.opacity = this._projecting ? '0.3' : '1'; slider.style.pointerEvents = this._projecting ? 'none' : ''; }
-    if (label) label.textContent = this._projecting ? (this._projType || 'MAX').toUpperCase() : ((this._dimState?.z || 0) + 1);
     if (this._projecting) {
-      // Show loading then precompute all projections
+      // Rebuild viewport to show projection label instead of slider
+      this._renderViewport();
+      // Show loading then precompute
       const canvas = document.getElementById('stackDisplayCanvas');
       if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -513,7 +509,8 @@ class StackViewer {
       }
       setTimeout(() => this._precomputeAndShow(), 50);
     } else {
-      this._doLoad(false);
+      // Rebuild viewport to restore slider, then load current slice
+      this._renderViewport();
     }
   }
 
