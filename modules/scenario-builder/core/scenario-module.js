@@ -89,9 +89,6 @@ class ScenarioModule {
 
     await this._executor.executeTree(scenario.tree, scenario.watchers);
 
-    // Generate multi-page TIFF from captures if applicable
-    await this._generateStack(scenario);
-
     EnderTrack.Events?.emit?.('scenario:completed', {
       scenarioName: scenario.name,
       duration: this._executor.getElapsedTime()
