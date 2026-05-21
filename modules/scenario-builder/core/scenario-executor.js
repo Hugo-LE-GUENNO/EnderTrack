@@ -380,6 +380,7 @@ class ScenarioExecutor {
     
     const actionDef = window.EnderTrack?.ActionRegistry?.get(actionNode.actionId);
     if (!actionDef) {
+      console.warn('[Executor] Action not found:', actionNode.actionId, 'Available:', window.EnderTrack?.ActionRegistry?.getAllActions?.()?.map(a => a.id));
       return;
     }
     
