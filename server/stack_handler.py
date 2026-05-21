@@ -108,6 +108,7 @@ def register_routes(app):
         unit = meta.get('unit', 'micron')
         spacing = meta.get('spacing', None)
         finterval = meta.get('finterval', None)
+        grayscale = meta.get('grayscale', True)  # Convert to grayscale by default
 
         try:
             from PIL import Image
@@ -120,8 +121,10 @@ def register_routes(app):
                 for full in candidates:
                     if os.path.isfile(full):
                         img = Image.open(full)
-                        if img.mode in ('RGBA', 'RGB', 'PA'):
+                        if grayscale and img.mode in ('RGBA', 'RGB', 'PA'):
                             img = img.convert('L')
+                        elif img.mode == 'RGBA':
+                            img = img.convert('RGB')
                         frames.append(img)
                         break
 

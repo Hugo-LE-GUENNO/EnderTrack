@@ -326,6 +326,7 @@ class ActionRegistry {
         { id: 'spacing', label: 'Z step (\u00b5m)', type: 'number', default: 0, min: 0, step: 0.01 },
         { id: 'finterval', label: 'T interval (s)', type: 'number', default: 0, min: 0, step: 0.1 },
         { id: 'pixelSize', label: 'Pixel size (\u00b5m)', type: 'number', default: 0, min: 0, step: 0.001 },
+        { id: 'grayscale', label: 'Grayscale', type: 'checkbox', default: true },
         { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: true }
       ],
       execute: async (params, context) => {
@@ -343,6 +344,7 @@ class ActionRegistry {
         if (params.finterval > 0) metadata.finterval = params.finterval;
         if (params.pixelSize > 0) metadata.pixelSize = params.pixelSize;
         metadata.unit = 'micron';
+        metadata.grayscale = params.grayscale !== false;
         const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
         const res = await fetch(url + '/api/stack/create', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
