@@ -285,7 +285,7 @@ class StackViewer {
     // Right-click for LUT
     const canvas = document.getElementById("stackDisplayCanvas");
     if (canvas) {
-      canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.ImageManager?._showRendererMenu?.(e.clientX, e.clientY); };
+      canvas.oncontextmenu = (e) => { e.preventDefault(); };
       canvas.ondblclick = () => {
         if (document.fullscreenElement) document.exitFullscreen();
         else canvas.requestFullscreen?.();
