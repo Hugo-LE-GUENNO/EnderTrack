@@ -519,6 +519,25 @@ class ScenarioModule {
       }
     }
 
+    // Add create_stack at the end to assemble captures into one multi-TIFF
+    const stackMeta = {};
+    if (p.zstack) {
+      const steps = Math.max(1, Math.round(Math.abs(pp.zEnd - pp.zStart) / Math.max(0.001, pp.zStep)));
+      stackMeta.sizeZ = steps + 1;
+      stackMeta.spacing = pp.zStep;
+    }
+    if (p.timelapse) {
+      stackMeta.sizeT = pp.count || 10;
+      stackMeta.finterval = pp.interval || 10;
+    }
+    const stackName = (name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
+    rootChildren.push({ type: 'action', actionId: 'create_stack', params: {
+      label: 'Cr\u00e9er Stack', name: stackName,
+      sizeC: stackMeta.sizeC || 1, sizeZ: stackMeta.sizeZ || 1, sizeT: stackMeta.sizeT || 1,
+      spacing: stackMeta.spacing || 0, finterval: stackMeta.finterval || 0,
+      pixelSize: pp.pixelSize || 0, showInLog: true
+    }});
+
     const tree = { type: 'root', children: rootChildren };
     // Update current scenario instead of creating a new one
     let scenario = manager.getCurrentScenario();
