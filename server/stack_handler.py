@@ -163,6 +163,17 @@ def register_routes(app):
             frames[0].save(output, save_all=True, append_images=frames[1:],
                            compression='tiff_deflate', tiffinfo=ifd)
             print(f"  Stack: {output} ({n_pages}p, {sizeC}C {sizeZ}Z {sizeT}T)")
+
+            # Clean up individual capture files
+            for f in files:
+                candidates = [f, os.path.join(os.getcwd(), f), os.path.normpath(f)]
+                for full in candidates:
+                    if os.path.isfile(full) and os.path.abspath(full) != os.path.abspath(output):
+                        try:
+                            os.remove(full)
+                        except:
+                            pass
+                        break
             return jsonify({'success': True, 'path': output, 'pages': n_pages,
                            'sizeC': sizeC, 'sizeZ': sizeZ, 'sizeT': sizeT})
         except ImportError:
