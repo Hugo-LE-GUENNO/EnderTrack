@@ -289,7 +289,7 @@ class ImageManager {
         renderer.loadImage(url).then(applyAfterLoad);
       }
       // Right-click on canvas for RGB/LUT options
-      canvas.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); };
+      canvas.oncontextmenu = null; // let it bubble to viewport for source selection
       // Double-click for fullscreen toggle
       canvas.ondblclick = () => {
         if (document.fullscreenElement) document.exitFullscreen();

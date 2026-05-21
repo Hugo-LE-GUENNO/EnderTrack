@@ -236,8 +236,8 @@ class DisplayModule {
         // Update overlay when recording state changes
         this._liveOverlay = overlay;
 
-        // Right-click for LUT menu
-        canvas.oncontextmenu = (e) => { e.preventDefault(); window.EnderTrack?.Camera?._showLiveLutMenu?.(e.clientX, e.clientY); };
+        // Right-click: let it bubble to viewport for source selection
+        canvas.oncontextmenu = null;
         // Double-click for fullscreen toggle
         canvas.ondblclick = () => {
           if (document.fullscreenElement) document.exitFullscreen();
