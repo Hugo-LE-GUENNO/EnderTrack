@@ -160,6 +160,9 @@ def register_routes(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    # Cache for projections: {(filepath, c, t, type): result_json}
+    _projection_cache = {}
+
     @app.route('/api/stack/projection', methods=['GET'])
     def _stack_projection():
         """Compute and cache a Z-projection for a given channel and timepoint."""
@@ -175,27 +178,29 @@ def register_routes(app):
         if not os.path.isfile(full):
             return jsonify({'error': 'File not found'}), 404
 
+        # Check cache
+        cache_key = (filepath, c, t, proj_type)
+        if cache_key in _projection_cache:
+            return jsonify(_projection_cache[cache_key])
+
         try:
             from PIL import Image
             import numpy as np
             import base64
 
             img = Image.open(full)
-            # Get dimensions
             from server.ome_metadata import get_tiff_dimensions
             dims = get_tiff_dimensions(full)
             sizeC = dims.get('sizeC', 1)
             sizeZ = dims.get('sizeZ', 1)
-            sizeT = dims.get('sizeT', 1)
 
-            # Collect all Z slices for this C and T
             slices = []
             for z in range(sizeZ):
                 idx = c + sizeC * (z + sizeZ * t)
                 img.seek(idx)
                 arr = np.array(img.copy(), dtype=np.float32)
                 if arr.ndim == 3:
-                    arr = arr[:,:,0]  # take first channel if RGB page
+                    arr = arr[:,:,0]
                 slices.append(arr)
 
             if not slices:
@@ -215,24 +220,26 @@ def register_routes(app):
             else:
                 result = np.max(stack, axis=0)
 
-            # Determine dtype
             orig_dtype = 'uint16' if dims.get('bitDepth', 8) > 8 else 'uint8'
             if orig_dtype == 'uint16':
                 out = result.astype(np.uint16)
             else:
                 out = np.clip(result, 0, 255).astype(np.uint8)
 
-            # Ensure native byte order
             if out.dtype.byteorder == '>' or (out.dtype.byteorder == '=' and np.dtype(out.dtype).byteorder == '>'):
                 out = out.astype(out.dtype.newbyteorder('<'))
 
-            return jsonify({
+            response = {
                 'width': out.shape[1],
                 'height': out.shape[0],
                 'channels': 1,
                 'dtype': orig_dtype,
                 'data': base64.b64encode(out.tobytes()).decode('ascii')
-            })
+            }
+            # Cache result
+            _projection_cache[cache_key] = response
+            print(f'  \U0001f4ca Projection cached: {filepath} C{c} T{t} {proj_type}')
+            return jsonify(response)
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
