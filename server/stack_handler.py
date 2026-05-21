@@ -115,13 +115,15 @@ def register_routes(app):
 
             frames = []
             for f in files:
-                full = os.path.join(os.getcwd(), f)
-                if os.path.isfile(full):
-                    img = Image.open(full)
-                    # Convert RGBA/RGB to grayscale for scientific stacks
-                    if img.mode in ('RGBA', 'RGB', 'PA'):
-                        img = img.convert('L')
-                    frames.append(img)
+                # Try multiple path resolutions
+                candidates = [f, os.path.join(os.getcwd(), f), os.path.normpath(f)]
+                for full in candidates:
+                    if os.path.isfile(full):
+                        img = Image.open(full)
+                        if img.mode in ('RGBA', 'RGB', 'PA'):
+                            img = img.convert('L')
+                        frames.append(img)
+                        break
 
             if not frames:
                 return jsonify({'error': 'No valid files'}), 400

@@ -214,7 +214,7 @@ class ScenarioModule {
       gridX: 3, gridY: 3, overlap: 10,
       exposure: 100000, gain: 1.0,
       lightChannel: '', lightIntensity: 100,
-      format: 'tiff', path: './captures', prefix: 'acq',
+      format: 'png', path: './captures', prefix: 'acq',
       afRange: 0.1, afSteps: 10,
       cameraId: ''
     };
