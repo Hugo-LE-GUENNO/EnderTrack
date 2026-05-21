@@ -160,10 +160,11 @@ class CameraHistogram {
   }
 
   _applyDrag(val) {
+    val = Math.max(0, Math.min(255, val));
     if (this._dragging === 'min') {
-      this.manualMin = Math.min(val, this.manualMax - 1);
+      this.manualMin = Math.max(0, Math.min(val, this.manualMax - 1));
     } else if (this._dragging === 'max') {
-      this.manualMax = Math.max(val, this.manualMin + 1);
+      this.manualMax = Math.min(255, Math.max(val, this.manualMin + 1));
     }
     // Throttle redraw during drag to avoid lag
     if (!this._dragThrottle) {

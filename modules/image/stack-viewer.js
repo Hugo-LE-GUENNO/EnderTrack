@@ -81,13 +81,13 @@ class StackViewer {
     const fileSize = this._info?.fileSize || 0;
     if (channelChanged) {
       // Always debounce channel changes to avoid race conditions
-      this._loadTimer = setTimeout(() => this._updateImage(channelChanged), 80);
+      this._loadTimer = setTimeout(() => this._updateImage(true), 120);
     } else if (fileSize > 500 * 1024 * 1024) {
-      this._loadTimer = setTimeout(() => this._updateImage(channelChanged), 500);
+      this._loadTimer = setTimeout(() => this._updateImage(false), 500);
     } else if (fileSize > 50 * 1024 * 1024) {
-      this._loadTimer = setTimeout(() => this._updateImage(channelChanged), 150);
+      this._loadTimer = setTimeout(() => this._updateImage(false), 150);
     } else {
-      this._updateImage(channelChanged);
+      this._updateImage(false);
     }
   }
 
@@ -316,8 +316,9 @@ class StackViewer {
     }
     // Sync histogram min/max bars to current renderer contrast
     const hist = mgr._histogram;
-    hist.manualMin = Math.round(((renderer.min - dMin) / dRange) * 255);
-    hist.manualMax = Math.round(((renderer.max - dMin) / dRange) * 255);
+    hist.manualMin = Math.max(0, Math.min(255, Math.round(((renderer.min - dMin) / dRange) * 255)));
+    hist.manualMax = Math.max(0, Math.min(255, Math.round(((renderer.max - dMin) / dRange) * 255)));
+    if (hist.manualMin >= hist.manualMax) hist.manualMax = Math.min(255, hist.manualMin + 1);
     // Update histogram data without triggering _redraw callbacks
     hist._skipCallback = true;
     hist.updateFromImageData(data, ch === 1);

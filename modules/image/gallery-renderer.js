@@ -120,6 +120,9 @@ class GalleryRenderer {
           this.min = 0;
           this.max = 255;
         }
+      } else {
+        // Always sync rgbMode with actual data (RGB file must show as RGB)
+        if (this._channels >= 3) this.rgbMode = true;
       }
       if (!this._skipAutoRender) this.render();
       return true;
