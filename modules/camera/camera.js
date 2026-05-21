@@ -56,7 +56,7 @@ class CameraModule {
           if (tab === 'navigation' || !tab) {
             const r = this.histogram.getContrastRange();
             const renderer = window.EnderTrack?.LiveRenderer;
-            if (renderer) { renderer.setContrast(r.min, r.max); renderer.enabled = true; }
+            if (renderer) { renderer.setContrast(r.min, r.max); if (this._liveLutId && this._liveLutId !== 'gray') renderer.enabled = true; }
             this._saveLiveSettings();
           }
         };
@@ -174,7 +174,7 @@ class CameraModule {
     rgbRow.innerHTML = `<span style="width:14px; display:inline-block;">${!renderer?.enabled ? '\u2713' : ''}</span>RGB (no LUT)`;
     rgbRow.onmouseenter = () => rgbRow.style.background = 'var(--app-bg)';
     rgbRow.onmouseleave = () => rgbRow.style.background = '';
-    rgbRow.onclick = () => { if (renderer) { renderer.enabled = false; renderer.lutId = 'gray'; renderer._lutTable = null; } this._liveLutId = 'gray'; this.histogram?._redraw?.(); this._saveLiveSettings(); menu.remove(); };
+    rgbRow.onclick = () => { if (renderer) { renderer.enabled = false; renderer.lutId = 'gray'; renderer._lutTable = null; } this._liveLutId = 'gray'; this._saveLiveSettings(); menu.remove(); };
     menu.appendChild(rgbRow);
     const sep = document.createElement('div');
     sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
