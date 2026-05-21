@@ -238,6 +238,125 @@ class ActionRegistry {
       }
     });
 
+    // 📷 Capture
+    this.register({
+      id: 'capture',
+      label: '\ud83d\udcf7 Capture',
+      icon: '\ud83d\udcf7',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Capture' },
+        { id: 'format', label: 'Format', type: 'select', options: [
+          { value: 'tiff', label: 'TIFF (16-bit)' },
+          { value: 'png', label: 'PNG (8-bit)' }
+        ], default: 'tiff' },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: true },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
+      ],
+      execute: async (params, context) => {
+        const camera = window.EnderTrack?.Camera;
+        if (!camera) return { success: false, error: 'No camera' };
+        const result = await camera.capture({ format: params.format || 'tiff' });
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `\ud83d\udcf7 ${result.path || 'capture'}`, context), 'info');
+        }
+        // Store path for stack creation
+        if (context && result.path) {
+          if (!context._captures) context._captures = [];
+          context._captures.push(result.path);
+        }
+        return { success: true, path: result.path };
+      }
+    });
+
+    // \ud83d\udca1 Channel (excitation)
+    this.register({
+      id: 'channel',
+      label: '\ud83d\udca1 Channel',
+      icon: '\ud83d\udca1',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Channel' },
+        { id: 'channelName', label: 'Nom du canal', type: 'text', default: 'CH1', placeholder: 'GFP, DAPI, BF...' },
+        { id: 'ledId', label: 'LED/Source', type: 'text', default: '', placeholder: 'ID du p\u00e9riph\u00e9rique' },
+        { id: 'intensity', label: 'Intensit\u00e9 (%)', type: 'number', default: 100, min: 0, max: 100 },
+        { id: 'exposure', label: 'Exposition (ms)', type: 'number', default: 100, min: 1 },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
+      ],
+      execute: async (params, context) => {
+        // Set excitation source
+        if (params.ledId) {
+          const peripherals = window.EnderTrack?.State?.get?.()?.peripherals || [];
+          const led = peripherals.find(p => p.id === params.ledId || p.name === params.ledId);
+          // TODO: send command to LED controller
+        }
+        // Set camera exposure
+        const camera = window.EnderTrack?.Camera;
+        if (camera && params.exposure) {
+          camera.config.exposure = params.exposure * 1000; // ms to us
+        }
+        // Store channel info in context
+        if (context) {
+          context._currentChannel = params.channelName || 'CH1';
+          if (!context._channelNames) context._channelNames = [];
+          if (!context._channelNames.includes(context._currentChannel)) {
+            context._channelNames.push(context._currentChannel);
+          }
+        }
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `\ud83d\udca1 ${params.channelName}`, context), 'info');
+        }
+        return { success: true, channel: params.channelName };
+      }
+    });
+
+    // \ud83d\udcda Cr\u00e9er Stack
+    this.register({
+      id: 'create_stack',
+      label: '\ud83d\udcda Cr\u00e9er Stack',
+      icon: '\ud83d\udcda',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Cr\u00e9er Stack' },
+        { id: 'name', label: 'Nom du fichier', type: 'text', default: 'acquisition', placeholder: 'nom_sans_extension' },
+        { id: 'sizeC', label: 'Canaux (C)', type: 'number', default: 1, min: 1 },
+        { id: 'sizeZ', label: 'Slices (Z)', type: 'number', default: 1, min: 1 },
+        { id: 'sizeT', label: 'Frames (T)', type: 'number', default: 1, min: 1 },
+        { id: 'spacing', label: 'Z step (\u00b5m)', type: 'number', default: 0, min: 0, step: 0.01 },
+        { id: 'finterval', label: 'T interval (s)', type: 'number', default: 0, min: 0, step: 0.1 },
+        { id: 'pixelSize', label: 'Pixel size (\u00b5m)', type: 'number', default: 0, min: 0, step: 0.001 },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: true }
+      ],
+      execute: async (params, context) => {
+        const captures = context?._captures || [];
+        if (captures.length === 0) return { success: false, error: 'No captures' };
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        const name = (params.name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const output = `./captures/${name}_${ts}.tif`;
+        const metadata = {
+          sizeC: parseInt(params.sizeC) || 1,
+          sizeZ: parseInt(params.sizeZ) || 1,
+          sizeT: parseInt(params.sizeT) || 1
+        };
+        if (params.spacing > 0) metadata.spacing = params.spacing;
+        if (params.finterval > 0) metadata.finterval = params.finterval;
+        if (params.pixelSize > 0) metadata.pixelSize = params.pixelSize;
+        metadata.unit = 'micron';
+        const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const res = await fetch(url + '/api/stack/create', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: captures, output, metadata })
+        });
+        const result = await res.json();
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(`\ud83d\udcda ${output} (${captures.length} pages)`, 'info');
+        }
+        // Clear captures for next stack
+        if (context) context._captures = [];
+        return { success: true, path: output, ...result };
+      }
+    });
 
 
 

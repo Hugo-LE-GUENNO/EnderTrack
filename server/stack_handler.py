@@ -93,16 +93,26 @@ def register_routes(app):
 
     @app.route('/api/stack/create', methods=['POST'])
     def _stack_create():
-        """Create a multi-page TIFF from a list of capture files."""
+        """Create a multi-page TIFF with ImageJ metadata."""
         data = request.get_json()
-        if not data or not data.get('files') or not data.get('output'):
-            return jsonify({'error': 'Missing files or output path'}), 400
+        if not data or not data.get('output'):
+            return jsonify({'error': 'Missing output path'}), 400
 
-        files = data['files']
+        files = data.get('files', [])
         output = data['output']
+        meta = data.get('metadata', {})
+        sizeC = meta.get('sizeC', 1)
+        sizeZ = meta.get('sizeZ', 1)
+        sizeT = meta.get('sizeT', 1)
+        pixelSize = meta.get('pixelSize', None)
+        unit = meta.get('unit', 'micron')
+        spacing = meta.get('spacing', None)
+        finterval = meta.get('finterval', None)
 
         try:
             from PIL import Image
+            from PIL.TiffImagePlugin import ImageFileDirectory_v2
+
             frames = []
             for f in files:
                 full = os.path.join(os.getcwd(), f)
@@ -112,10 +122,39 @@ def register_routes(app):
             if not frames:
                 return jsonify({'error': 'No valid files'}), 400
 
+            n_pages = len(frames)
+            if sizeC * sizeZ * sizeT != n_pages:
+                if sizeC == 1 and sizeZ == 1 and sizeT == 1:
+                    sizeZ = n_pages
+
+            # Build ImageJ description
+            desc = ['ImageJ=1.54p', f'images={n_pages}']
+            if sizeC > 1: desc.append(f'channels={sizeC}')
+            if sizeZ > 1: desc.append(f'slices={sizeZ}')
+            if sizeT > 1: desc.append(f'frames={sizeT}')
+            if sizeC > 1: desc.append('mode=color')
+            if unit: desc.append(f'unit={unit}')
+            if spacing: desc.append(f'spacing={spacing}')
+            if finterval: desc.append(f'finterval={finterval}')
+            desc.append('loop=false')
+            description = '\n'.join(desc) + '\n'
+
             os.makedirs(os.path.dirname(os.path.abspath(output)), exist_ok=True)
-            frames[0].save(output, save_all=True, append_images=frames[1:], compression='tiff_deflate')
-            print(f"  📚 Stack créé: {output} ({len(frames)} pages)")
-            return jsonify({'success': True, 'path': output, 'pages': len(frames)})
+
+            # Save with ImageDescription metadata
+            ifd = ImageFileDirectory_v2()
+            ifd[270] = description
+            if pixelSize and pixelSize > 0:
+                res_val = 1.0 / pixelSize
+                ifd[282] = res_val  # XResolution
+                ifd[283] = res_val  # YResolution
+                ifd[296] = 1  # ResolutionUnit = No unit (use description)
+
+            frames[0].save(output, save_all=True, append_images=frames[1:],
+                           compression='tiff_deflate', tiffinfo=ifd)
+            print(f"  Stack: {output} ({n_pages}p, {sizeC}C {sizeZ}Z {sizeT}T)")
+            return jsonify({'success': True, 'path': output, 'pages': n_pages,
+                           'sizeC': sizeC, 'sizeZ': sizeZ, 'sizeT': sizeT})
         except ImportError:
             return jsonify({'error': 'Pillow not installed'}), 500
         except Exception as e:
