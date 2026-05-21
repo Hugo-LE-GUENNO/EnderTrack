@@ -466,9 +466,21 @@ class ImageManager {
       const rows = [];
       if (dims.width && dims.height) rows.push(['Taille', `${dims.width} \u00d7 ${dims.height}`]);
       if (dims.bitDepth) rows.push(['Profondeur', `${dims.bitDepth}-bit`]);
-      if (dims.pixelSize) rows.push(['Pixel', `${dims.pixelSize.toFixed(3)} ${dims.unit || '\u00b5m'}`]);
-      if (dims.voxelDepth) rows.push(['Voxel Z', `${dims.voxelDepth.toFixed(3)} ${dims.unit || '\u00b5m'}`]);
-      if (dims.frameInterval && dims.frameInterval !== 1) rows.push(['Intervalle T', `${dims.frameInterval} s`]);
+      if (dims.pixelSize) rows.push(['Pixel XY', `${dims.pixelSize.toFixed(3)} ${dims.unit || '\u00b5m'}`]);
+      if (dims.sizeZ > 1 && dims.voxelDepth) {
+        const zTotal = (dims.voxelDepth * (dims.sizeZ - 1)).toFixed(2);
+        rows.push(['Z step', `${dims.voxelDepth.toFixed(3)} ${dims.unit || '\u00b5m'}`]);
+        rows.push(['Z total', `${zTotal} ${dims.unit || '\u00b5m'} (${dims.sizeZ} slices)`]);
+      } else if (dims.sizeZ > 1) {
+        rows.push(['Z', `${dims.sizeZ} slices`]);
+      }
+      if (dims.sizeT > 1 && dims.frameInterval) {
+        const tTotal = (dims.frameInterval * (dims.sizeT - 1)).toFixed(1);
+        rows.push(['T step', `${dims.frameInterval} s`]);
+        rows.push(['T total', `${tTotal} s (${dims.sizeT} frames)`]);
+      } else if (dims.sizeT > 1) {
+        rows.push(['T', `${dims.sizeT} frames`]);
+      }
       extraInfo = rows.map(([k, v]) => `<tr><td style="padding:1px 6px 1px 0; color:#666;">${k}</td><td style="padding:1px 0; color:var(--text-general);">${v}</td></tr>`).join('');
     }
     panel.innerHTML = `
