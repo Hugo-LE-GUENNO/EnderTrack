@@ -93,6 +93,11 @@ class StackViewer {
 
   _doLoad(channelChanged) {
     if (!this._file) return;
+    // If projecting and navigating T (not channel change), re-render projection
+    if (this._projecting && !channelChanged) {
+      this._renderProjection();
+      return;
+    }
     this._loadId = (this._loadId || 0) + 1;
     const myId = this._loadId;
 
@@ -250,19 +255,19 @@ class StackViewer {
         if (this._composite) this._renderComposite();
       });
     }
-    // Mouse wheel: scroll the hovered slider
+    // Mouse wheel: scroll the hovered slider row
     wrap.onwheel = (e) => {
       e.preventDefault();
-      if (this._projecting) return;
-      const target = e.target;
-      if (target.id === 'stackSliderC' || target.closest?.('[id=stackSliderC]')) {
+      const row = e.target.closest?.('.stack-slider-row');
+      if (row?.querySelector('#stackSliderC')) {
         this._setDim('c', Math.max(0, Math.min((this._dims?.sizeC||1)-1, (this._dimState?.c||0) + (e.deltaY > 0 ? 1 : -1))));
-      } else if (target.id === 'stackSliderT' || target.closest?.('[id=stackSliderT]')) {
+      } else if (row?.querySelector('#stackSliderT')) {
         this._setDim('t', Math.max(0, Math.min((this._dims?.sizeT||1)-1, (this._dimState?.t||0) + (e.deltaY > 0 ? 1 : -1))));
       } else {
-        // Default: scroll Z (or generic index)
-        if (this._dims?.sizeZ > 1) {
+        if (this._dims?.sizeZ > 1 && !this._projecting) {
           this._setDim('z', Math.max(0, Math.min((this._dims.sizeZ)-1, (this._dimState?.z||0) + (e.deltaY > 0 ? 1 : -1))));
+        } else if (this._dims?.sizeT > 1) {
+          this._setDim('t', Math.max(0, Math.min((this._dims.sizeT)-1, (this._dimState?.t||0) + (e.deltaY > 0 ? 1 : -1))));
         } else {
           this.setIndex(this._index + (e.deltaY > 0 ? 1 : -1));
         }
@@ -533,35 +538,32 @@ class StackViewer {
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     const sizeZ = this._dims.sizeZ || 1;
     const sizeC = this._dims.sizeC || 1;
-    const sizeT = this._dims.sizeT || 1;
+    const t = this._dimState?.t || 0;
     const type = this._projType || 'max';
 
-    // Project over all Z, for each C and each T
+    // Project over Z only, for each C, at current T
     const projectedChannels = [];
     for (let c = 0; c < sizeC; c++) {
-      // Collect all Z slices for this channel (across all T if sizeT > 1)
       const slices = [];
-      for (let t = 0; t < sizeT; t++) {
-        for (let z = 0; z < sizeZ; z++) {
-          const idx = c + sizeC * (z + sizeZ * t);
-          const res = await fetch(base + '/api/stack/raw?file=' + encodeURIComponent(this._file) + '&index=' + idx);
-          const data = await res.json();
-          if (data.error) continue;
-          const binary = atob(data.data);
-          const buffer = new ArrayBuffer(binary.length);
-          const bytes = new Uint8Array(buffer);
-          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          let pixels;
-          if (data.dtype === 'uint16') {
-            const u16 = new Uint16Array(buffer);
-            pixels = new Float32Array(u16.length);
-            for (let i = 0; i < u16.length; i++) pixels[i] = u16[i];
-          } else {
-            pixels = new Float32Array(bytes.length);
-            for (let i = 0; i < bytes.length; i++) pixels[i] = bytes[i];
-          }
-          slices.push(pixels);
+      for (let z = 0; z < sizeZ; z++) {
+        const idx = c + sizeC * (z + sizeZ * t);
+        const res = await fetch(base + '/api/stack/raw?file=' + encodeURIComponent(this._file) + '&index=' + idx);
+        const data = await res.json();
+        if (data.error) continue;
+        const binary = atob(data.data);
+        const buffer = new ArrayBuffer(binary.length);
+        const bytes = new Uint8Array(buffer);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        let pixels;
+        if (data.dtype === 'uint16') {
+          const u16 = new Uint16Array(buffer);
+          pixels = new Float32Array(u16.length);
+          for (let i = 0; i < u16.length; i++) pixels[i] = u16[i];
+        } else {
+          pixels = new Float32Array(bytes.length);
+          for (let i = 0; i < bytes.length; i++) pixels[i] = bytes[i];
         }
+        slices.push(pixels);
       }
       if (!slices.length) continue;
       const nPx = slices[0].length;
@@ -601,7 +603,6 @@ class StackViewer {
     const nPx = w * h;
 
     if (sizeC === 1) {
-      // Single channel: use renderer settings
       const px = projectedChannels[0].pixels;
       let mn = Infinity, mx = -Infinity;
       for (let i = 0; i < nPx; i++) { if (px[i] < mn) mn = px[i]; if (px[i] > mx) mx = px[i]; }
@@ -616,7 +617,6 @@ class StackViewer {
         dst[i*4+3] = 255;
       }
     } else {
-      // Multi-channel: composite additive
       for (let ci = 0; ci < projectedChannels.length; ci++) {
         const ch = projectedChannels[ci];
         const s = ch.settings || {};
