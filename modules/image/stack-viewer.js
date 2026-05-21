@@ -537,7 +537,7 @@ class StackViewer {
       row.textContent = t.toUpperCase();
       row.onmouseenter = () => { if (t !== current) row.style.background = 'var(--app-bg)'; };
       row.onmouseleave = () => { if (t !== current) row.style.background = ''; };
-      row.onclick = () => { this._projType = t; menu.remove(); if (this._projecting) this._renderProjection(); };
+      row.onclick = () => { this._projType = t; const label = document.getElementById('stackLabelZ'); if (label) label.textContent = t.toUpperCase(); menu.remove(); if (this._projecting) this._precomputeAndShow(); };
       menu.appendChild(row);
     });
     document.body.appendChild(menu);
@@ -573,6 +573,7 @@ class StackViewer {
       renderer._width = data.width;
       renderer._height = data.height;
       renderer._channels = 1;
+      renderer.rgbMode = false;
       renderer.render();
     } else {
       // Multi-channel: composite projections
