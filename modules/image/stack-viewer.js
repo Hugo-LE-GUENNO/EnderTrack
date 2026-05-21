@@ -291,6 +291,17 @@ class StackViewer {
         else canvas.requestFullscreen?.();
       };
     }
+    // Spacebar: play/stop timelapse
+    if (sizeT > 1 && !this._spaceHandler) {
+      this._spaceHandler = (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.code === 'Space' && this._dims?.sizeT > 1) {
+          e.preventDefault();
+          this._togglePlay();
+        }
+      };
+      document.addEventListener('keydown', this._spaceHandler);
+    }
   }
 
   // === HISTOGRAM ===
