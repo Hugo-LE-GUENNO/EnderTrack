@@ -92,7 +92,6 @@ class ImageManager {
     // Load image (single load, no auto-render)
     renderer._skipAutoRender = true;
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    const isTiff = img.name.endsWith('.tiff') || img.name.endsWith('.tif');
     if (isTiff) {
       await renderer.loadRaw(img.path, window.EnderTrack?.StackViewer?._index || 0);
       window.EnderTrack?.StackViewer?.open?.(img.path);
