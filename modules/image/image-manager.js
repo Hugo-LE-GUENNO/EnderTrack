@@ -65,8 +65,9 @@ class ImageManager {
     const renderer = window.EnderTrack?.GalleryRenderer;
     if (!renderer) return;
 
-    // Get saved settings for this image
-    const s = this._imageSettings[img.path];
+    // Get saved settings for this image (not for TIFF — StackViewer handles those)
+    const isTiff = img.name.endsWith('.tiff') || img.name.endsWith('.tif');
+    const s = isTiff ? null : this._imageSettings[img.path];
 
     // Pre-apply settings so renderer uses them on render
     if (s) {
@@ -76,7 +77,7 @@ class ImageManager {
       renderer.rgbMode = s.rgbMode;
       const def = window.CameraLUTs?.[s.lutId];
       renderer._lutTable = def ? def.generate() : null;
-    } else {
+    } else if (!isTiff) {
       renderer.min = 0; renderer.max = 255;
       renderer.lutId = 'gray'; renderer.rgbMode = false;
       renderer._lutTable = null;
@@ -136,6 +137,8 @@ class ImageManager {
     const img = this.getSelectedImage();
     const renderer = window.EnderTrack?.GalleryRenderer;
     if (!img || !renderer) return;
+    // Don't save for TIFF (StackViewer handles those)
+    if (img.name.endsWith('.tiff') || img.name.endsWith('.tif')) return;
     this._imageSettings[img.path] = {
       min: renderer.min,
       max: renderer.max,
@@ -143,7 +146,6 @@ class ImageManager {
       rgbMode: renderer.rgbMode,
       histMode: this._histogram?.mode || 'manual'
     };
-    // Persist to server
     this._persistImageSettings();
   }
 
