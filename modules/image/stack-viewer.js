@@ -168,7 +168,13 @@ class StackViewer {
     const renderer = window.EnderTrack?.GalleryRenderer;
     if (renderer) {
       renderer.setDisplayCanvas(document.getElementById("stackDisplayCanvas"));
-      renderer.loadRaw(this._file, this._index);
+      renderer._keepContrast = false;
+      renderer.loadRaw(this._file, this._index).then(() => {
+        this._restoreChannelSettings();
+        this._saveChannelSettings();
+        this._refreshHistogram();
+        if (this._composite) this._renderComposite();
+      });
     }
     // Mouse wheel
     wrap.onwheel = (e) => { e.preventDefault(); this.setIndex(this._index + (e.deltaY > 0 ? 1 : -1)); };

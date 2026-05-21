@@ -458,15 +458,15 @@ class ImageManager {
       if (dims.sizeC > 1) parts.push(`C: ${(ds.c||0)+1}/${dims.sizeC}`);
       if (dims.sizeZ > 1) parts.push(`Z: ${(ds.z||0)+1}/${dims.sizeZ}`);
       if (dims.sizeT > 1) parts.push(`T: ${(ds.t||0)+1}/${dims.sizeT}`);
-      if (dims.bitDepth) parts.push(`${dims.bitDepth}-bit`);
-      if (dims.pixelSize) parts.push(`${dims.pixelSize.toFixed(3)} ${dims.unit || '\u00b5m'}/px`);
       dimInfo = parts.join(' \u2022 ');
       // Extra info line
       const extra = [];
       if (dims.width && dims.height) extra.push(`${dims.width}\u00d7${dims.height}`);
+      if (dims.bitDepth) extra.push(`${dims.bitDepth}-bit`);
+      if (dims.sizeC > 1 && dims.channels?.length) extra.push(dims.channels.join('/'));
+      if (dims.pixelSize) extra.push(`${dims.pixelSize.toFixed(3)} ${dims.unit || '\u00b5m'}/px`);
       if (dims.dataMin !== undefined) extra.push(`[${dims.dataMin}-${dims.dataMax}]`);
       if (dims.source) extra.push(dims.source);
-      if (dims.dimensionOrder) extra.push(dims.dimensionOrder);
       extraInfo = extra.join(' \u2022 ');
     }
     panel.innerHTML = `

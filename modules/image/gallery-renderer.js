@@ -134,6 +134,8 @@ class GalleryRenderer {
     const dataMax = this._dataMax || this._maxVal;
     this.min = dataMin + (min / 255) * (dataMax - dataMin);
     this.max = dataMin + (max / 255) * (dataMax - dataMin);
+    // Block during channel switch
+    if (window.EnderTrack?.StackViewer?._switching) return;
     if (!this._renderPending) {
       this._renderPending = true;
       requestAnimationFrame(() => {
