@@ -530,7 +530,7 @@ class ScenarioModule {
       stackMeta.sizeT = pp.count || 10;
       stackMeta.finterval = pp.interval || 10;
     }
-    const stackName = (name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const stackName = (pp.prefix || name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
     rootChildren.push({ type: 'action', actionId: 'create_stack', params: {
       label: 'Cr\u00e9er Stack', name: stackName,
       sizeC: stackMeta.sizeC || 1, sizeZ: stackMeta.sizeZ || 1, sizeT: stackMeta.sizeT || 1,

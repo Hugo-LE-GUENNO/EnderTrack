@@ -331,6 +331,7 @@ class ActionRegistry {
       ],
       execute: async (params, context) => {
         const captures = context?._captures || [];
+        console.log('[create_stack] captures:', captures.length, captures);
         if (captures.length === 0) return { success: false, error: 'No captures' };
         const ts = new Date().toISOString().replace(/[:.]/g, '-');
         const name = (params.name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
