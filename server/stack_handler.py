@@ -163,13 +163,12 @@ def register_routes(app):
     # Cache for projections: {(filepath, c, t, type): result_json}
     _projection_cache = {}
 
-    @app.route('/api/stack/projection', methods=['GET'])
-    def _stack_projection():
-        """Compute and cache a Z-projection for a given channel and timepoint."""
-        filepath = request.args.get('file', '')
-        c = int(request.args.get('c', 0))
-        t = int(request.args.get('t', 0))
-        proj_type = request.args.get('type', 'max')
+    @app.route('/api/stack/projection/precompute', methods=['POST'])
+    def _stack_projection_precompute():
+        """Precompute ALL Z-projections for all C and T, cache them."""
+        data = request.get_json()
+        filepath = data.get('file', '')
+        proj_type = data.get('type', 'max')
 
         if not filepath:
             return jsonify({'error': 'No file specified'}), 400
@@ -177,11 +176,6 @@ def register_routes(app):
         full = os.path.join(os.getcwd(), filepath)
         if not os.path.isfile(full):
             return jsonify({'error': 'File not found'}), 404
-
-        # Check cache
-        cache_key = (filepath, c, t, proj_type)
-        if cache_key in _projection_cache:
-            return jsonify(_projection_cache[cache_key])
 
         try:
             from PIL import Image
@@ -193,55 +187,76 @@ def register_routes(app):
             dims = get_tiff_dimensions(full)
             sizeC = dims.get('sizeC', 1)
             sizeZ = dims.get('sizeZ', 1)
-
-            slices = []
-            for z in range(sizeZ):
-                idx = c + sizeC * (z + sizeZ * t)
-                img.seek(idx)
-                arr = np.array(img.copy(), dtype=np.float32)
-                if arr.ndim == 3:
-                    arr = arr[:,:,0]
-                slices.append(arr)
-
-            if not slices:
-                return jsonify({'error': 'No slices'}), 400
-
-            stack = np.stack(slices, axis=0)
-            if proj_type == 'max':
-                result = np.max(stack, axis=0)
-            elif proj_type == 'min':
-                result = np.min(stack, axis=0)
-            elif proj_type == 'mean':
-                result = np.mean(stack, axis=0)
-            elif proj_type == 'median':
-                result = np.median(stack, axis=0)
-            elif proj_type == 'std':
-                result = np.std(stack, axis=0)
-            else:
-                result = np.max(stack, axis=0)
-
+            sizeT = dims.get('sizeT', 1)
             orig_dtype = 'uint16' if dims.get('bitDepth', 8) > 8 else 'uint8'
-            if orig_dtype == 'uint16':
-                out = result.astype(np.uint16)
-            else:
-                out = np.clip(result, 0, 255).astype(np.uint8)
 
-            if out.dtype.byteorder == '>' or (out.dtype.byteorder == '=' and np.dtype(out.dtype).byteorder == '>'):
-                out = out.astype(out.dtype.newbyteorder('<'))
+            count = 0
+            for c in range(sizeC):
+                for t in range(sizeT):
+                    cache_key = (filepath, c, t, proj_type)
+                    if cache_key in _projection_cache:
+                        continue
+                    slices = []
+                    for z in range(sizeZ):
+                        idx = c + sizeC * (z + sizeZ * t)
+                        img.seek(idx)
+                        arr = np.array(img.copy(), dtype=np.float32)
+                        if arr.ndim == 3:
+                            arr = arr[:,:,0]
+                        slices.append(arr)
+                    if not slices:
+                        continue
+                    stack = np.stack(slices, axis=0)
+                    if proj_type == 'max':
+                        result = np.max(stack, axis=0)
+                    elif proj_type == 'min':
+                        result = np.min(stack, axis=0)
+                    elif proj_type == 'mean':
+                        result = np.mean(stack, axis=0)
+                    elif proj_type == 'median':
+                        result = np.median(stack, axis=0)
+                    elif proj_type == 'std':
+                        result = np.std(stack, axis=0)
+                    else:
+                        result = np.max(stack, axis=0)
 
-            response = {
-                'width': out.shape[1],
-                'height': out.shape[0],
-                'channels': 1,
-                'dtype': orig_dtype,
-                'data': base64.b64encode(out.tobytes()).decode('ascii')
-            }
-            # Cache result
-            _projection_cache[cache_key] = response
-            print(f'  \U0001f4ca Projection cached: {filepath} C{c} T{t} {proj_type}')
-            return jsonify(response)
+                    if orig_dtype == 'uint16':
+                        out = result.astype(np.uint16)
+                    else:
+                        out = np.clip(result, 0, 255).astype(np.uint8)
+                    if out.dtype.byteorder == '>' or (out.dtype.byteorder == '=' and np.dtype(out.dtype).byteorder == '>'):
+                        out = out.astype(out.dtype.newbyteorder('<'))
+
+                    _projection_cache[cache_key] = {
+                        'width': out.shape[1],
+                        'height': out.shape[0],
+                        'channels': 1,
+                        'dtype': orig_dtype,
+                        'data': base64.b64encode(out.tobytes()).decode('ascii')
+                    }
+                    count += 1
+
+            print(f'  \U0001f4ca Projections precomputed: {filepath} {proj_type} ({count} new, {sizeC}C x {sizeT}T)')
+            return jsonify({'success': True, 'computed': count, 'total': sizeC * sizeT})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/stack/projection', methods=['GET'])
+    def _stack_projection():
+        """Get a cached Z-projection (must precompute first)."""
+        filepath = request.args.get('file', '')
+        c = int(request.args.get('c', 0))
+        t = int(request.args.get('t', 0))
+        proj_type = request.args.get('type', 'max')
+
+        if not filepath:
+            return jsonify({'error': 'No file specified'}), 400
+
+        cache_key = (filepath, c, t, proj_type)
+        if cache_key in _projection_cache:
+            return jsonify(_projection_cache[cache_key])
+
+        return jsonify({'error': 'Not precomputed'}), 404
 
     @app.route('/api/stack/raw', methods=['GET'])
     def _stack_raw():

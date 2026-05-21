@@ -491,10 +491,12 @@ class StackViewer {
     this._projecting = !this._projecting;
     const btn = document.getElementById('stackZBtn');
     const slider = document.getElementById('stackSliderZ');
+    const label = document.getElementById('stackLabelZ');
     if (btn) btn.style.background = this._projecting ? 'var(--active-element)' : 'none';
-    if (slider) slider.disabled = this._projecting;
+    if (slider) { slider.disabled = this._projecting; slider.style.opacity = this._projecting ? '0.3' : '1'; slider.style.pointerEvents = this._projecting ? 'none' : ''; }
+    if (label) label.textContent = this._projecting ? (this._projType || 'MAX').toUpperCase() : ((this._dimState?.z || 0) + 1);
     if (this._projecting) {
-      // Show loading
+      // Show loading then precompute all projections
       const canvas = document.getElementById('stackDisplayCanvas');
       if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -505,10 +507,21 @@ class StackViewer {
         ctx.textAlign = 'center';
         ctx.fillText('Projection...', canvas.width/2, canvas.height/2);
       }
-      setTimeout(() => this._renderProjection(), 50);
+      setTimeout(() => this._precomputeAndShow(), 50);
     } else {
       this._doLoad(false);
     }
+  }
+
+  async _precomputeAndShow() {
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    const type = this._projType || 'max';
+    await fetch(`${base}/api/stack/projection/precompute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: this._file, type })
+    });
+    this._renderProjection();
   }
 
   _showProjectionMenu(e) {
