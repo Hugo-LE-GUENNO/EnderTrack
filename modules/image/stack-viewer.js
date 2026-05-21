@@ -261,7 +261,7 @@ class StackViewer {
         if (this._composite) this._renderComposite();
       });
     }
-    // Mouse wheel: scroll the hovered slider row
+    // Mouse wheel: scroll the hovered slider row, or the only slider if just one
     wrap.onwheel = (e) => {
       e.preventDefault();
       const row = e.target.closest?.('.stack-slider-row');
@@ -269,11 +269,16 @@ class StackViewer {
         this._setDim('c', Math.max(0, Math.min((this._dims?.sizeC||1)-1, (this._dimState?.c||0) + (e.deltaY > 0 ? 1 : -1))));
       } else if (row?.querySelector('#stackSliderT')) {
         this._setDim('t', Math.max(0, Math.min((this._dims?.sizeT||1)-1, (this._dimState?.t||0) + (e.deltaY > 0 ? 1 : -1))));
+      } else if (row?.querySelector('#stackSliderZ')) {
+        if (!this._projecting) this._setDim('z', Math.max(0, Math.min((this._dims?.sizeZ||1)-1, (this._dimState?.z||0) + (e.deltaY > 0 ? 1 : -1))));
       } else {
+        // Not on a row: scroll the most relevant dimension
         if (this._dims?.sizeZ > 1 && !this._projecting) {
           this._setDim('z', Math.max(0, Math.min((this._dims.sizeZ)-1, (this._dimState?.z||0) + (e.deltaY > 0 ? 1 : -1))));
         } else if (this._dims?.sizeT > 1) {
           this._setDim('t', Math.max(0, Math.min((this._dims.sizeT)-1, (this._dimState?.t||0) + (e.deltaY > 0 ? 1 : -1))));
+        } else if (this._dims?.sizeC > 1) {
+          this._setDim('c', Math.max(0, Math.min((this._dims.sizeC)-1, (this._dimState?.c||0) + (e.deltaY > 0 ? 1 : -1))));
         }
       }
     };
