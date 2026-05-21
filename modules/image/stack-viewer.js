@@ -467,12 +467,16 @@ class StackViewer {
     const fps = this._playFps || 10;
     const menu = document.createElement('div');
     menu.id = 'stack-play-menu';
-    menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY - 60}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:8px; min-width:100px;`;
+    menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:8px; min-width:100px;`;
     menu.innerHTML = `
       <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">FPS: <span id="stackFpsVal">${fps}</span></div>
-      <input type="range" id="stackFpsInput" min="1" max="60" value="${fps}" oninput="document.getElementById('stackFpsVal').textContent=this.value" style="width:100px; height:3px;">
+      <input type="range" id="stackFpsInput" min="1" max="30" value="${fps}" oninput="document.getElementById('stackFpsVal').textContent=this.value" style="width:100px; height:3px;">
     `;
     document.body.appendChild(menu);
+    // Reposition if overflows viewport
+    const r1 = menu.getBoundingClientRect();
+    if (r1.bottom > window.innerHeight) menu.style.top = Math.max(4, window.innerHeight - r1.height - 4) + 'px';
+    if (r1.right > window.innerWidth) menu.style.left = Math.max(4, window.innerWidth - r1.width - 4) + 'px';
     document.getElementById('stackFpsInput')?.addEventListener('input', (ev) => {
       this._playFps = parseInt(ev.target.value) || 10;
       if (this._playing) { this._stopPlay(); this._togglePlay(); }
@@ -485,7 +489,7 @@ class StackViewer {
 
   _applyFps() {
     const input = document.getElementById('stackFpsInput');
-    if (input) this._playFps = Math.max(1, Math.min(60, parseInt(input.value) || 10));
+    if (input) this._playFps = Math.max(1, Math.min(30, parseInt(input.value) || 10));
     document.getElementById('stack-play-menu')?.remove();
     // If playing, restart with new fps
     if (this._playing) {
@@ -536,7 +540,7 @@ class StackViewer {
     const current = this._projType || 'max';
     const menu = document.createElement('div');
     menu.id = 'stack-proj-menu';
-    menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY - 80}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:80px;`;
+    menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:80px;`;
     types.forEach(t => {
       const row = document.createElement('div');
       row.style.cssText = `padding:4px 10px; font-size:11px; cursor:pointer; color:${t === current ? 'var(--text-selected)' : 'var(--text-general)'}; background:${t === current ? 'var(--active-element)' : 'transparent'};`;
@@ -547,6 +551,10 @@ class StackViewer {
       menu.appendChild(row);
     });
     document.body.appendChild(menu);
+    // Reposition if overflows viewport
+    const r2 = menu.getBoundingClientRect();
+    if (r2.bottom > window.innerHeight) menu.style.top = Math.max(4, window.innerHeight - r2.height - 4) + 'px';
+    if (r2.right > window.innerWidth) menu.style.left = Math.max(4, window.innerWidth - r2.width - 4) + 'px';
     setTimeout(() => { const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } }; document.addEventListener('mousedown', close); }, 0);
   }
 
