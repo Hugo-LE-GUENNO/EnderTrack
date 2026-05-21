@@ -377,6 +377,7 @@ class ScenarioExecutor {
 
   async executeAction(actionNode) {
     if (!this.isExecuting) return;
+    console.log('[Executor] executeAction:', actionNode.actionId);
     
     const actionDef = window.EnderTrack?.ActionRegistry?.get(actionNode.actionId);
     if (!actionDef) {
