@@ -274,8 +274,6 @@ class StackViewer {
           this._setDim('z', Math.max(0, Math.min((this._dims.sizeZ)-1, (this._dimState?.z||0) + (e.deltaY > 0 ? 1 : -1))));
         } else if (this._dims?.sizeT > 1) {
           this._setDim('t', Math.max(0, Math.min((this._dims.sizeT)-1, (this._dimState?.t||0) + (e.deltaY > 0 ? 1 : -1))));
-        } else {
-          this.setIndex(this._index + (e.deltaY > 0 ? 1 : -1));
         }
       }
     };
