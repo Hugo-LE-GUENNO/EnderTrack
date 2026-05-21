@@ -1,4 +1,4 @@
-# EnderTrack — Édition Imagerie v1.2.0
+# EnderTrack — Édition Imagerie v1.2.1
 
 > Basé sur [`basic` v2.4.0](/tree/basic). Ajoute caméra, éclairage, acquisition et scénarios avancés.
 

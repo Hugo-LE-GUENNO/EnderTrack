@@ -1,25 +1,25 @@
 # Changelog
 
-## v1.2.0 — Stack Viewer & Per-Channel Display
+## v1.2.1 — Per-Channel Display, Playback & Persistence
 
 ### Nouveautés
-- **Mode Composite** — superposition additive de tous les canaux, chacun avec sa propre LUT et son propre contraste (checkbox "Comp" à côté du slider C)
-- **Contraste par canal** — min/max et LUT sauvegardés indépendamment pour chaque canal C
-- **Persistence serveur** — les settings par canal (LUT, min/max, composite) sont sauvegardés dans `.stack_settings.json` et restaurés à la réouverture
-- **Debounce intelligent** — navigation instantanée pour les petits fichiers, différée pour les gros (>50 Mo: 150ms, >500 Mo: 500ms)
-- **Histogramme par slice** — les données de l'histogramme se mettent à jour à chaque slice, les barres min/max restent synchronisées
+- **Lecture timelapse** — bouton ▶ sur le slider T, clic droit pour régler les FPS (1-60)
+- **Persistence serveur complète** — LUT/contraste/histogramme sauvés pour live, galerie et stacks
+- **Métadonnées enrichies** — Z step/total, T step/total, pixel XY, profondeur (tableau)
+- **Per-channel settings** — réécriture complète, chaque canal C a sa propre LUT/contraste
 
 ### Corrections
-- Fix: le contraste ne reset plus en naviguant Z/T (seulement sur changement de canal)
-- Fix: l'histogramme ne disparaît plus lors de la navigation rapide
-- Fix: les LUT ne se mélangent plus entre canaux lors du slide rapide (debounce + loadId anti-race-condition)
-- Fix: pas de clignotement en mode composite (skip render intermédiaire)
-- Fix: artefacts "petits carrés" lors du passage 16-bit → 8-bit RGB (reset _keepContrast sur changement de fichier)
-- Fix: `fileSize` ajouté à `/api/stack/info` pour le debounce côté client
+- Fix: LUT stable en slide rapide entre canaux (debounce 150ms + _switching flag)
+- Fix: Z/T stacks gardent leur LUT après navigation et refresh
+- Fix: histogramme figé pendant la lecture (pas de jitter)
+- Fix: barres min/max stables (dataMin/dataMax non recalculés en Z/T)
+- Fix: métadonnées correctes pour chaque type d'image (pas de contamination TIFF→PNG)
+- Fix: pas de debounce pour fichiers < 200 Mo
 
-### API
-- `GET /api/stack/settings?file=...` — charge les settings d'affichage par canal
-- `POST /api/stack/settings` — sauvegarde les settings (channels, composite)
+### Persistence
+- `.live_settings.json` — LUT, contraste, mode auto du live
+- `.gallery_settings.json` — settings par image PNG/JPG
+- `.stack_settings.json` — settings par canal pour tous les TIFF
 
 ## v1.1.0 — Live Renderer & Gallery
 
