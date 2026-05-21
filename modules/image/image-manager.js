@@ -7,9 +7,9 @@ class ImageManager {
     this.selectedId = null;
     this._galleryIdx = 0;
     this.isActive = false;
-    this._imageSettings = {}; // {path: {min, max, lutId, rgbMode}}
-    // Load persisted settings
-    try { this._imageSettings = JSON.parse(localStorage.getItem('endertrack_img_settings') || '{}'); } catch {}
+    this._imageSettings = {}; // {path: {min, max, lutId, rgbMode, histMode}}
+    // Load persisted settings from server
+    this._loadImageSettings();
   }
 
   activate() {
@@ -140,10 +140,11 @@ class ImageManager {
       min: renderer.min,
       max: renderer.max,
       lutId: renderer.lutId,
-      rgbMode: renderer.rgbMode
+      rgbMode: renderer.rgbMode,
+      histMode: this._histogram?.mode || 'manual'
     };
-    // Persist to localStorage
-    try { localStorage.setItem('endertrack_img_settings', JSON.stringify(this._imageSettings)); } catch {}
+    // Persist to server
+    this._persistImageSettings();
   }
 
   _restoreSettings() {
@@ -532,6 +533,27 @@ class ImageManager {
       };
       this._histSetup = true;
     }
+  }
+
+  async _loadImageSettings() {
+    try {
+      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      const res = await fetch(base + '/api/gallery/settings');
+      const data = await res.json();
+      if (data) this._imageSettings = data;
+    } catch {}
+  }
+
+  _persistImageSettings() {
+    clearTimeout(this._settingsTimer);
+    this._settingsTimer = setTimeout(() => {
+      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      fetch(base + '/api/gallery/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this._imageSettings)
+      }).catch(() => {});
+    }, 1000);
   }
 }
 

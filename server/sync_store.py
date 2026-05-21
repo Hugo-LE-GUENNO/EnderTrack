@@ -225,3 +225,31 @@ def register_routes(app):
         if os.path.isfile(full):
             return send_file(full, mimetype='image/png')
         return '', 404
+
+    @app.route('/api/gallery/settings', methods=['GET'])
+    def _gallery_settings_get():
+        """Load per-image display settings."""
+        import json
+        settings_file = os.path.join(os.getcwd(), '.gallery_settings.json')
+        try:
+            if os.path.isfile(settings_file):
+                with open(settings_file, 'r') as f:
+                    return jsonify(json.load(f))
+        except:
+            pass
+        return jsonify({})
+
+    @app.route('/api/gallery/settings', methods=['POST'])
+    def _gallery_settings_save():
+        """Save per-image display settings."""
+        import json
+        data = request.get_json()
+        if data is None:
+            return jsonify({'error': 'No data'}), 400
+        settings_file = os.path.join(os.getcwd(), '.gallery_settings.json')
+        try:
+            with open(settings_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500

@@ -76,7 +76,7 @@ class StackViewer {
     if (channelChanged && this._dims?.sizeC > 1) {
       this._switching = true;
       clearTimeout(this._loadTimer);
-      this._loadTimer = setTimeout(() => this._doLoad(true), 120);
+      this._loadTimer = setTimeout(() => this._doLoad(true), 150);
     } else {
       // Z/T navigation or small debounce for large files
       clearTimeout(this._loadTimer);
