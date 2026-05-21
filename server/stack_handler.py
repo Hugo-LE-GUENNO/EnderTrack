@@ -132,6 +132,7 @@ def register_routes(app):
                 return jsonify({'error': 'No valid files'}), 400
 
             n_pages = len(frames)
+            print(f'  [create_stack] received: sizeC={sizeC} sizeZ={sizeZ} sizeT={sizeT} n_pages={n_pages} product={sizeC*sizeZ*sizeT}')
             if sizeC * sizeZ * sizeT != n_pages:
                 if sizeC == 1 and sizeZ == 1 and sizeT == 1:
                     sizeZ = n_pages
