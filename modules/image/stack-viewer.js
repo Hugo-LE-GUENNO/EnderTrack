@@ -222,7 +222,7 @@ class StackViewer {
     let slidersHtml = "";
     if (sizeC > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><span style="font-size:9px; color:#888; width:12px;">C</span><input type="range" id="stackSliderC" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span><label style="font-size:9px; color:#888; display:flex; align-items:center; gap:2px; margin-left:4px;"><input type="checkbox" id="stackComposite" onchange="EnderTrack.StackViewer._toggleComposite(this.checked)" style="margin:0; width:10px; height:10px;"${this._composite ? ' checked' : ''}>Comp</label></div>`;
     if (sizeZ > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><span style="font-size:9px; color:#888; width:12px;">Z</span><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
-    if (sizeT > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><span style="font-size:9px; color:#888; width:12px;">T</span><input type="range" id="stackSliderT" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeT > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><button id="stackPlayBtn" onclick="EnderTrack.StackViewer._togglePlay()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showPlaySettings(event)" style="border:none; background:none; color:var(--text-general); cursor:pointer; font-size:11px; width:14px; padding:0;" title="Clic: lecture, Clic droit: FPS">\u25B6</button><input type="range" id="stackSliderT" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
     if (!slidersHtml) slidersHtml = `<div style="display:flex; align-items:center; gap:4px;"><input type="range" id="stackSlider" min="0" max="${info.pages-1}" value="${this._index}" oninput="EnderTrack.StackViewer.setIndex(parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabel" style="font-size:9px; color:var(--text-general); width:40px; text-align:right;">${this._index+1}/${info.pages}</span></div>`;
     wrap.innerHTML = `
       <canvas id="stackDisplayCanvas" style="flex:1; object-fit:contain; min-height:0; background:#000; image-rendering:pixelated;"></canvas>
@@ -399,6 +399,63 @@ class StackViewer {
       }
     }
     ctx.putImageData(out, 0, 0);
+  }
+
+  // === PLAYBACK ===
+
+  _togglePlay() {
+    if (this._playing) {
+      this._stopPlay();
+    } else {
+      this._playing = true;
+      const btn = document.getElementById('stackPlayBtn');
+      if (btn) btn.textContent = '\u275A\u275A'; // pause icon
+      const fps = this._playFps || 10;
+      this._playInterval = setInterval(() => {
+        const sizeT = this._dims?.sizeT || 1;
+        let t = (this._dimState?.t || 0) + 1;
+        if (t >= sizeT) t = 0; // loop
+        this._setDim('t', t);
+      }, 1000 / fps);
+    }
+  }
+
+  _stopPlay() {
+    this._playing = false;
+    clearInterval(this._playInterval);
+    const btn = document.getElementById('stackPlayBtn');
+    if (btn) btn.textContent = '\u25B6';
+  }
+
+  _showPlaySettings(e) {
+    document.getElementById('stack-play-menu')?.remove();
+    const fps = this._playFps || 10;
+    const menu = document.createElement('div');
+    menu.id = 'stack-play-menu';
+    menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY - 60}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:8px; min-width:100px;`;
+    menu.innerHTML = `
+      <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">FPS</div>
+      <input type="number" id="stackFpsInput" min="1" max="60" value="${fps}" style="width:50px; padding:2px 4px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:11px;">
+      <button onclick="EnderTrack.StackViewer._applyFps()" style="padding:2px 6px; border:none; border-radius:3px; background:var(--active-element); color:var(--text-selected); font-size:10px; cursor:pointer; margin-left:4px;">OK</button>
+    `;
+    document.body.appendChild(menu);
+    document.getElementById('stackFpsInput')?.focus();
+    menu.querySelector('input').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') this._applyFps(); });
+    setTimeout(() => {
+      const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
+      document.addEventListener('mousedown', close);
+    }, 0);
+  }
+
+  _applyFps() {
+    const input = document.getElementById('stackFpsInput');
+    if (input) this._playFps = Math.max(1, Math.min(60, parseInt(input.value) || 10));
+    document.getElementById('stack-play-menu')?.remove();
+    // If playing, restart with new fps
+    if (this._playing) {
+      this._stopPlay();
+      this._togglePlay();
+    }
   }
 
   // === MISC ===
