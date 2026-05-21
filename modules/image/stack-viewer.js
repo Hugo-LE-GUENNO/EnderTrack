@@ -221,13 +221,14 @@ class StackViewer {
     const dims = this._dims || {};
     const sizeC = dims.sizeC || 1, sizeZ = dims.sizeZ || 1, sizeT = dims.sizeT || 1;
     let slidersHtml = "";
-    if (sizeC > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px; margin-bottom:4px;"><span style="font-size:9px; color:#888; width:12px;">C</span><input type="range" id="stackSliderC" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span><label style="font-size:9px; color:#888; display:flex; align-items:center; gap:2px; margin-left:4px;"><input type="checkbox" id="stackComposite" onchange="EnderTrack.StackViewer._toggleComposite(this.checked)" style="margin:0; width:10px; height:10px;"${this._composite ? ' checked' : ''}>Comp</label></div>`;
-    if (sizeZ > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px; margin-bottom:4px;"><button id="stackZBtn" onclick="EnderTrack.StackViewer._toggleProjection()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showProjectionMenu(event)" style="border:none; background:${this._projecting ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: projection, Clic droit: type">Z</button><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"${this._projecting ? ' disabled' : ''}><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
-    if (sizeT > 1) slidersHtml += `<div style="display:flex; align-items:center; gap:4px;"><button id="stackPlayBtn" onclick="EnderTrack.StackViewer._togglePlay()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showPlaySettings(event)" style="border:none; background:none; color:var(--text-general); cursor:pointer; font-size:11px; width:14px; padding:0;" title="Clic: lecture, Clic droit: FPS">\u25B6</button><input type="range" id="stackSliderT" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeC > 1) slidersHtml += `<div class="stack-slider-row" style="display:flex; align-items:center; gap:4px; margin-bottom:6px; padding:2px 4px; border-radius:3px; transition:background 0.15s;"><button id="stackCBtn" onclick="EnderTrack.StackViewer._toggleComposite(!EnderTrack.StackViewer._composite)" style="border:none; background:${this._composite ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: composite">C</button><input type="range" id="stackSliderC" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeZ > 1) slidersHtml += `<div class="stack-slider-row" style="display:flex; align-items:center; gap:4px; margin-bottom:6px; padding:2px 4px; border-radius:3px; transition:background 0.15s;"><button id="stackZBtn" onclick="EnderTrack.StackViewer._toggleProjection()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showProjectionMenu(event)" style="border:none; background:${this._projecting ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: projection, Clic droit: type">Z</button><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"${this._projecting ? ' disabled' : ''}><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeT > 1) slidersHtml += `<div class="stack-slider-row" style="display:flex; align-items:center; gap:4px; padding:2px 4px; border-radius:3px; transition:background 0.15s;"><button id="stackPlayBtn" onclick="EnderTrack.StackViewer._togglePlay()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showPlaySettings(event)" style="border:none; background:none; color:var(--text-general); cursor:pointer; font-size:11px; width:14px; padding:0;" title="Clic: lecture, Clic droit: FPS">\u25B6</button><input type="range" id="stackSliderT" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
     if (!slidersHtml) slidersHtml = `<div style="display:flex; align-items:center; gap:4px;"><input type="range" id="stackSlider" min="0" max="${info.pages-1}" value="${this._index}" oninput="EnderTrack.StackViewer.setIndex(parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabel" style="font-size:9px; color:var(--text-general); width:40px; text-align:right;">${this._index+1}/${info.pages}</span></div>`;
     wrap.innerHTML = `
+      <style>.stack-slider-row:hover{background:rgba(255,255,255,0.05)!important;}</style>
       <canvas id="stackDisplayCanvas" style="flex:1; object-fit:contain; min-height:0; background:#000; image-rendering:pixelated;"></canvas>
-      <div style="padding:4px 8px; background:#1a1a1a; display:flex; flex-direction:column; gap:2px;">
+      <div style="padding:6px 8px; background:#1a1a1a; display:flex; flex-direction:column; gap:0;">
         ${slidersHtml}
       </div>`;
     // Setup renderer
@@ -347,6 +348,8 @@ class StackViewer {
 
   _toggleComposite(enabled) {
     this._composite = enabled;
+    const btn = document.getElementById('stackCBtn');
+    if (btn) btn.style.background = enabled ? 'var(--active-element)' : 'none';
     if (enabled) this._renderComposite();
     else this._doLoad(false);
     this._persistSettings();
@@ -486,9 +489,20 @@ class StackViewer {
     if (btn) btn.style.background = this._projecting ? 'var(--active-element)' : 'none';
     if (slider) slider.disabled = this._projecting;
     if (this._projecting) {
-      this._renderProjection();
+      // Show loading
+      const canvas = document.getElementById('stackDisplayCanvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#666';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Projection...', canvas.width/2, canvas.height/2);
+      }
+      setTimeout(() => this._renderProjection(), 50);
     } else {
-      this._doLoad(false); // back to normal slice view
+      this._doLoad(false);
     }
   }
 
