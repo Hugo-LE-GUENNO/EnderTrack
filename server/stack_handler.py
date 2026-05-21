@@ -160,6 +160,82 @@ def register_routes(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/stack/projection', methods=['GET'])
+    def _stack_projection():
+        """Compute and cache a Z-projection for a given channel and timepoint."""
+        filepath = request.args.get('file', '')
+        c = int(request.args.get('c', 0))
+        t = int(request.args.get('t', 0))
+        proj_type = request.args.get('type', 'max')
+
+        if not filepath:
+            return jsonify({'error': 'No file specified'}), 400
+
+        full = os.path.join(os.getcwd(), filepath)
+        if not os.path.isfile(full):
+            return jsonify({'error': 'File not found'}), 404
+
+        try:
+            from PIL import Image
+            import numpy as np
+            import base64
+
+            img = Image.open(full)
+            # Get dimensions
+            from server.ome_metadata import get_tiff_dimensions
+            dims = get_tiff_dimensions(full)
+            sizeC = dims.get('sizeC', 1)
+            sizeZ = dims.get('sizeZ', 1)
+            sizeT = dims.get('sizeT', 1)
+
+            # Collect all Z slices for this C and T
+            slices = []
+            for z in range(sizeZ):
+                idx = c + sizeC * (z + sizeZ * t)
+                img.seek(idx)
+                arr = np.array(img.copy(), dtype=np.float32)
+                if arr.ndim == 3:
+                    arr = arr[:,:,0]  # take first channel if RGB page
+                slices.append(arr)
+
+            if not slices:
+                return jsonify({'error': 'No slices'}), 400
+
+            stack = np.stack(slices, axis=0)
+            if proj_type == 'max':
+                result = np.max(stack, axis=0)
+            elif proj_type == 'min':
+                result = np.min(stack, axis=0)
+            elif proj_type == 'mean':
+                result = np.mean(stack, axis=0)
+            elif proj_type == 'median':
+                result = np.median(stack, axis=0)
+            elif proj_type == 'std':
+                result = np.std(stack, axis=0)
+            else:
+                result = np.max(stack, axis=0)
+
+            # Determine dtype
+            orig_dtype = 'uint16' if dims.get('bitDepth', 8) > 8 else 'uint8'
+            if orig_dtype == 'uint16':
+                out = result.astype(np.uint16)
+            else:
+                out = np.clip(result, 0, 255).astype(np.uint8)
+
+            # Ensure native byte order
+            if out.dtype.byteorder == '>' or (out.dtype.byteorder == '=' and np.dtype(out.dtype).byteorder == '>'):
+                out = out.astype(out.dtype.newbyteorder('<'))
+
+            return jsonify({
+                'width': out.shape[1],
+                'height': out.shape[0],
+                'channels': 1,
+                'dtype': orig_dtype,
+                'data': base64.b64encode(out.tobytes()).decode('ascii')
+            })
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/stack/raw', methods=['GET'])
     def _stack_raw():
         """Serve raw pixel data as binary (uint8 or uint16) with metadata header."""

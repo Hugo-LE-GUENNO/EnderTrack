@@ -227,7 +227,7 @@ class StackViewer {
     const sizeC = dims.sizeC || 1, sizeZ = dims.sizeZ || 1, sizeT = dims.sizeT || 1;
     let slidersHtml = "";
     if (sizeC > 1) slidersHtml += `<div class="stack-slider-row" style="display:flex; align-items:center; gap:4px; margin-bottom:6px; padding:2px 4px; border-radius:3px; transition:background 0.15s;"><button id="stackCBtn" onclick="EnderTrack.StackViewer._toggleComposite(!EnderTrack.StackViewer._composite)" style="border:none; background:${this._composite ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: composite">C</button><input type="range" id="stackSliderC" min="0" max="${sizeC-1}" value="0" oninput="EnderTrack.StackViewer._setDim('c', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"><span id="stackLabelC" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
-    if (sizeZ > 1) slidersHtml += `<div class="stack-slider-row" style="display:flex; align-items:center; gap:4px; margin-bottom:6px; padding:2px 4px; border-radius:3px; transition:background 0.15s;"><button id="stackZBtn" onclick="EnderTrack.StackViewer._toggleProjection()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showProjectionMenu(event)" style="border:none; background:${this._projecting ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: projection, Clic droit: type">Z</button><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"${this._projecting ? ' disabled' : ''}><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
+    if (sizeZ > 1) slidersHtml += `<div class="stack-slider-row" style="display:flex; align-items:center; gap:4px; margin-bottom:6px; padding:2px 4px; border-radius:3px; transition:background 0.15s;"><button id="stackZBtn" onclick="EnderTrack.StackViewer._toggleProjection()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showProjectionMenu(event)" style="border:none; background:${this._projecting ? 'var(--active-element)' : 'none'}; color:var(--text-general); cursor:pointer; font-size:9px; width:14px; padding:0; border-radius:2px;" title="Clic: projection, Clic droit: type">Z</button><input type="range" id="stackSliderZ" min="0" max="${sizeZ-1}" value="0" oninput="EnderTrack.StackViewer._setDim('z', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer; ${this._projecting ? 'opacity:0.3; pointer-events:none;' : ''}"${this._projecting ? ' disabled' : ''}><span id="stackLabelZ" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${this._projecting ? 'MIP' : '1'}</span></div>`;
     if (sizeT > 1) slidersHtml += `<div class="stack-slider-row" style="display:flex; align-items:center; gap:4px; padding:2px 4px; border-radius:3px; transition:background 0.15s;"><button id="stackPlayBtn" onclick="EnderTrack.StackViewer._togglePlay()" oncontextmenu="event.preventDefault(); EnderTrack.StackViewer._showPlaySettings(event)" style="border:none; background:none; color:var(--text-general); cursor:pointer; font-size:11px; width:14px; padding:0;" title="Clic: lecture, Clic droit: FPS">\u25B6</button><input type="range" id="stackSliderT" min="0" max="${sizeT-1}" value="0" oninput="EnderTrack.StackViewer._setDim('t', parseInt(this.value))" style="flex:1; height:3px; cursor:pointer;"><span id="stackLabelT" style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">1</span></div>`;
     if (!slidersHtml) slidersHtml = `<div style="display:flex; align-items:center; gap:4px;"><input type="range" id="stackSlider" min="0" max="${info.pages-1}" value="${this._index}" oninput="EnderTrack.StackViewer.setIndex(parseInt(this.value))" style="flex:1; height:3px;"><span id="stackLabel" style="font-size:9px; color:var(--text-general); width:40px; text-align:right;">${this._index+1}/${info.pages}</span></div>`;
     wrap.innerHTML = `
@@ -536,20 +536,42 @@ class StackViewer {
     const renderer = window.EnderTrack?.GalleryRenderer;
     if (!renderer) return;
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    const sizeZ = this._dims.sizeZ || 1;
     const sizeC = this._dims.sizeC || 1;
     const t = this._dimState?.t || 0;
     const type = this._projType || 'max';
 
-    // Project over Z only, for each C, at current T
-    const projectedChannels = [];
-    for (let c = 0; c < sizeC; c++) {
-      const slices = [];
-      for (let z = 0; z < sizeZ; z++) {
-        const idx = c + sizeC * (z + sizeZ * t);
-        const res = await fetch(base + '/api/stack/raw?file=' + encodeURIComponent(this._file) + '&index=' + idx);
+    if (sizeC === 1) {
+      // Single channel: load projection and display with current LUT
+      const res = await fetch(`${base}/api/stack/projection?file=${encodeURIComponent(this._file)}&c=0&t=${t}&type=${type}`);
+      const data = await res.json();
+      if (data.error) return;
+      const binary = atob(data.data);
+      const buffer = new ArrayBuffer(binary.length);
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      if (data.dtype === 'uint16') {
+        const u16 = new Uint16Array(buffer);
+        renderer._rawPixels = new Float32Array(u16.length);
+        for (let i = 0; i < u16.length; i++) renderer._rawPixels[i] = u16[i];
+      } else {
+        renderer._rawPixels = new Float32Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) renderer._rawPixels[i] = bytes[i];
+      }
+      renderer._width = data.width;
+      renderer._height = data.height;
+      renderer._channels = 1;
+      renderer.render();
+    } else {
+      // Multi-channel: composite projections
+      const canvas = renderer._displayCanvas;
+      if (!canvas) return;
+      let w = 0, h = 0;
+      const projections = [];
+      for (let c = 0; c < sizeC; c++) {
+        const res = await fetch(`${base}/api/stack/projection?file=${encodeURIComponent(this._file)}&c=${c}&t=${t}&type=${type}`);
         const data = await res.json();
         if (data.error) continue;
+        w = data.width; h = data.height;
         const binary = atob(data.data);
         const buffer = new ArrayBuffer(binary.length);
         const bytes = new Uint8Array(buffer);
@@ -563,62 +585,16 @@ class StackViewer {
           pixels = new Float32Array(bytes.length);
           for (let i = 0; i < bytes.length; i++) pixels[i] = bytes[i];
         }
-        slices.push(pixels);
+        projections.push({ pixels, settings: this._channelSettings?.[c] });
       }
-      if (!slices.length) continue;
-      const nPx = slices[0].length;
-      const result = new Float32Array(nPx);
-      if (type === 'max') {
-        result.fill(-Infinity);
-        for (const s of slices) for (let i = 0; i < nPx; i++) if (s[i] > result[i]) result[i] = s[i];
-      } else if (type === 'min') {
-        result.fill(Infinity);
-        for (const s of slices) for (let i = 0; i < nPx; i++) if (s[i] < result[i]) result[i] = s[i];
-      } else if (type === 'mean') {
-        for (const s of slices) for (let i = 0; i < nPx; i++) result[i] += s[i];
-        for (let i = 0; i < nPx; i++) result[i] /= slices.length;
-      } else if (type === 'std') {
-        const mean = new Float32Array(nPx);
-        for (const s of slices) for (let i = 0; i < nPx; i++) mean[i] += s[i];
-        for (let i = 0; i < nPx; i++) mean[i] /= slices.length;
-        for (const s of slices) for (let i = 0; i < nPx; i++) result[i] += (s[i] - mean[i]) ** 2;
-        for (let i = 0; i < nPx; i++) result[i] = Math.sqrt(result[i] / slices.length);
-      } else if (type === 'median') {
-        for (let i = 0; i < nPx; i++) {
-          const vals = slices.map(s => s[i]).sort((a, b) => a - b);
-          result[i] = vals[Math.floor(vals.length / 2)];
-        }
-      }
-      projectedChannels.push({ pixels: result, settings: this._channelSettings?.[c] });
-    }
-
-    if (!projectedChannels.length) return;
-    const w = renderer._width, h = renderer._height;
-    const canvas = renderer._displayCanvas;
-    if (!canvas) return;
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    const out = ctx.createImageData(w, h);
-    const dst = out.data;
-    const nPx = w * h;
-
-    if (sizeC === 1) {
-      const px = projectedChannels[0].pixels;
-      let mn = Infinity, mx = -Infinity;
-      for (let i = 0; i < nPx; i++) { if (px[i] < mn) mn = px[i]; if (px[i] > mx) mx = px[i]; }
-      const min = renderer.min !== undefined ? renderer.min : mn;
-      const max = renderer.max !== undefined ? renderer.max : mx;
-      const range = Math.max(1, max - min);
-      const lut = renderer._lutTable;
-      for (let i = 0; i < nPx; i++) {
-        const stretched = Math.max(0, Math.min(255, Math.round(((px[i] - min) / range) * 255)));
-        if (lut) { dst[i*4] = lut[stretched][0]; dst[i*4+1] = lut[stretched][1]; dst[i*4+2] = lut[stretched][2]; }
-        else { dst[i*4] = stretched; dst[i*4+1] = stretched; dst[i*4+2] = stretched; }
-        dst[i*4+3] = 255;
-      }
-    } else {
-      for (let ci = 0; ci < projectedChannels.length; ci++) {
-        const ch = projectedChannels[ci];
+      if (!projections.length) return;
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      const out = ctx.createImageData(w, h);
+      const dst = out.data;
+      const nPx = w * h;
+      for (let ci = 0; ci < projections.length; ci++) {
+        const ch = projections[ci];
         const s = ch.settings || {};
         const px = ch.pixels;
         let mn = Infinity, mx = -Infinity;
@@ -640,8 +616,8 @@ class StackViewer {
           dst[i*4+3] = 255;
         }
       }
+      ctx.putImageData(out, 0, 0);
     }
-    ctx.putImageData(out, 0, 0);
   }
 
   // === MISC ===
