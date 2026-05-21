@@ -512,6 +512,8 @@ class ImageManager {
       this._histogram._redraw = () => {
         origRedraw();
         if (this._histogram._skipCallback) return;
+        // Block histogram callbacks during channel switching
+        if (window.EnderTrack?.StackViewer?._switching) return;
         const r = this._histogram.getContrastRange();
         const renderer = window.EnderTrack?.GalleryRenderer;
         if (renderer) { renderer.setContrast(r.min, r.max); }

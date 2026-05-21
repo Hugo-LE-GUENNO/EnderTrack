@@ -121,8 +121,8 @@ class GalleryRenderer {
           this.max = 255;
         }
       } else {
-        // Always sync rgbMode with actual data (RGB file must show as RGB)
-        if (this._channels >= 3) this.rgbMode = true;
+        // Keep contrast but don't force rgbMode if user set a LUT
+        if (this._channels >= 3 && this.lutId === 'gray') this.rgbMode = true;
       }
       if (!this._skipAutoRender) this.render();
       return true;
@@ -134,31 +134,17 @@ class GalleryRenderer {
     const dataMax = this._dataMax || this._maxVal;
     this.min = dataMin + (min / 255) * (dataMax - dataMin);
     this.max = dataMin + (max / 255) * (dataMax - dataMin);
-    // Block during channel switch
     if (window.EnderTrack?.StackViewer?._switching) return;
     if (!this._renderPending) {
       this._renderPending = true;
       requestAnimationFrame(() => {
         this._renderPending = false;
         const sv = window.EnderTrack?.StackViewer;
-        if (sv?._composite) {
-          sv._saveChannelSettings();
-          sv._renderComposite();
-        } else {
-          this.render();
-        }
+        if (sv?._composite) { sv.saveCurrentChannel(); sv._renderComposite(); }
+        else this.render();
       });
     }
-    // Only save min/max, not LUT (LUT saved via setLut only)
-    const sv = window.EnderTrack?.StackViewer;
-    if (sv && !sv._switching && sv._dimState !== undefined) {
-      const c = sv._dimState?.c;
-      if (c !== undefined && sv._channelSettings?.[c]) {
-        sv._channelSettings[c].min = this.min;
-        sv._channelSettings[c].max = this.max;
-      }
-    }
-    sv?._persistSettings?.();
+    window.EnderTrack?.StackViewer?.saveCurrentChannel?.();
   }
 
   setLut(lutId) {
@@ -167,34 +153,15 @@ class GalleryRenderer {
     this._lutTable = def ? def.generate() : null;
     this.rgbMode = false;
     const sv = window.EnderTrack?.StackViewer;
-    if (sv?._composite) {
-      sv._saveChannelSettings();
-      sv._renderComposite();
-    } else {
-      this.render();
-    }
-    // Save LUT for current channel directly
-    if (sv && !sv._switching && sv._channelSettings && sv._dimState) {
-      const c = sv._dimState.c;
-      if (sv._channelSettings[c]) {
-        sv._channelSettings[c].lutId = lutId;
-        sv._channelSettings[c].rgbMode = false;
-      } else {
-        sv._channelSettings[c] = { min: this.min, max: this.max, lutId, rgbMode: false };
-      }
-    }
-    sv?._persistSettings?.();
+    if (sv?._composite) { sv.saveCurrentChannel(); sv._renderComposite(); }
+    else this.render();
+    sv?.saveCurrentChannel?.();
   }
 
   setRgbMode(enabled) {
     this.rgbMode = enabled;
     this.render();
-    const sv = window.EnderTrack?.StackViewer;
-    if (sv && !sv._switching && sv._channelSettings && sv._dimState) {
-      const c = sv._dimState.c;
-      if (sv._channelSettings[c]) sv._channelSettings[c].rgbMode = enabled;
-    }
-    sv?._persistSettings?.();
+    window.EnderTrack?.StackViewer?.saveCurrentChannel?.();
   }
 
   // Get raw pixel stats for histogram

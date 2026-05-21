@@ -3,9 +3,11 @@
 class StackViewer {
   constructor() {
     this._file = null;
-    this._info = null; // {pages, width, height, mode}
+    this._info = null;
     this._index = 0;
     this._container = null;
+    this._channelSettings = {}; // {0: {min, max, lutId, rgbMode}, 1: {...}, ...}
+    this._switching = false;
   }
 
   async open(filepath) {
@@ -13,7 +15,6 @@ class StackViewer {
     this._file = filepath;
     this._index = 0;
     this._channelSettings = {};
-    // Reset renderer state when changing file
     if (changed) {
       const renderer = window.EnderTrack?.GalleryRenderer;
       if (renderer) renderer._keepContrast = false;
@@ -26,11 +27,12 @@ class StackViewer {
       const dimRes = await fetch(url + '/api/stack/dimensions?file=' + encodeURIComponent(filepath));
       this._dims = await dimRes.json();
       this._dimState = { c: 0, z: 0, t: 0 };
-      // Load persisted per-channel settings
       await this._loadPersistedSettings();
       return true;
     } catch(e) { return false; }
   }
+
+  // === NAVIGATION ===
 
   setIndex(idx) {
     if (!this._info) return;
@@ -44,23 +46,14 @@ class StackViewer {
       this._dimState.t = Math.floor(this._index / (sizeC * sizeZ));
     }
     const channelChanged = this._dimState && this._dimState.c !== oldC;
-    if (channelChanged) {
-      if (!this._switching) this._saveChannelSettingsFor(oldC);
-      this._switching = true;
-    }
     this._updateSliders();
     this._updateMetadataAndHistogram();
-    this._debouncedLoad(channelChanged);
+    this._loadSlice(channelChanged);
   }
 
   _setDim(dim, val) {
     if (!this._dims) return;
     if (!this._dimState) this._dimState = { c: 0, z: 0, t: 0 };
-    const oldC = this._dimState.c;
-    if (dim === 'c') {
-      if (!this._switching) this._saveChannelSettingsFor(oldC);
-      this._switching = true;
-    }
     this._dimState[dim] = val;
     const c = this._dimState.c || 0;
     const z = this._dimState.z || 0;
@@ -70,26 +63,100 @@ class StackViewer {
     this._index = c + sizeC * (z + sizeZ * t);
     this._updateSliders();
     this._updateMetadataAndHistogram();
-    this._debouncedLoad(dim === 'c');
+    this._loadSlice(dim === 'c');
   }
 
-  // Load image — debounced for large files, always debounced for channel changes
-  _debouncedLoad(channelChanged) {
+  // === CORE LOAD LOGIC ===
+
+  _loadSlice(channelChanged) {
     const renderer = window.EnderTrack?.GalleryRenderer;
     if (renderer) renderer._keepContrast = !channelChanged;
-    clearTimeout(this._loadTimer);
-    const fileSize = this._info?.fileSize || 0;
-    if (channelChanged) {
-      // Always debounce channel changes to avoid race conditions
-      this._loadTimer = setTimeout(() => this._updateImage(true), 120);
-    } else if (fileSize > 500 * 1024 * 1024) {
-      this._loadTimer = setTimeout(() => this._updateImage(false), 500);
-    } else if (fileSize > 50 * 1024 * 1024) {
-      this._loadTimer = setTimeout(() => this._updateImage(false), 150);
+
+    // For channel changes: debounce, NO immediate render (avoids flicker)
+    if (channelChanged && this._dims?.sizeC > 1) {
+      this._switching = true;
+      clearTimeout(this._loadTimer);
+      this._loadTimer = setTimeout(() => this._doLoad(true), 120);
     } else {
-      this._updateImage(false);
+      // Z/T navigation or small debounce for large files
+      clearTimeout(this._loadTimer);
+      const fileSize = this._info?.fileSize || 0;
+      if (fileSize > 500 * 1024 * 1024) {
+        this._loadTimer = setTimeout(() => this._doLoad(false), 500);
+      } else if (fileSize > 50 * 1024 * 1024) {
+        this._loadTimer = setTimeout(() => this._doLoad(false), 150);
+      } else {
+        this._doLoad(false);
+      }
     }
   }
+
+  _doLoad(channelChanged) {
+    if (!this._file) return;
+    this._loadId = (this._loadId || 0) + 1;
+    const myId = this._loadId;
+
+    // Composite mode
+    if (this._composite) {
+      const renderer = window.EnderTrack?.GalleryRenderer;
+      if (renderer) {
+        renderer._keepContrast = true;
+        renderer._skipAutoRender = true;
+        renderer.loadRaw(this._file, this._index).then(() => {
+          if (myId !== this._loadId) return;
+          renderer._skipAutoRender = false;
+          // Apply saved settings for histogram display
+          const s = this._channelSettings?.[this._dimState.c];
+          if (s) { renderer.min = s.min; renderer.max = s.max; renderer.lutId = s.lutId; renderer.rgbMode = s.rgbMode; const def = window.CameraLUTs?.[s.lutId]; renderer._lutTable = def ? def.generate() : null; }
+          this._switching = false;
+          this._refreshHistogram();
+          this._renderComposite();
+        });
+      }
+      return;
+    }
+
+    // Normal mode
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (!renderer) return;
+    const s = channelChanged ? this._channelSettings?.[this._dimState.c] : null;
+    if (s) renderer._skipAutoRender = true;
+
+    renderer.loadRaw(this._file, this._index).then(() => {
+      if (myId !== this._loadId) return;
+      // Apply saved channel settings
+      if (s) {
+        renderer._skipAutoRender = false;
+        renderer.min = s.min;
+        renderer.max = s.max;
+        renderer.lutId = s.lutId;
+        renderer.rgbMode = s.rgbMode;
+        const def = window.CameraLUTs?.[s.lutId];
+        renderer._lutTable = def ? def.generate() : null;
+        renderer.render();
+      }
+      this._switching = false;
+      this._refreshHistogram();
+    });
+  }
+
+  // === CHANNEL SETTINGS (only for sizeC > 1) ===
+
+  // Called ONLY by user actions (setLut, setContrast via histogram drag)
+  saveCurrentChannel() {
+    if (!this._dims || this._dims.sizeC <= 1) return;
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (!renderer || !this._dimState) return;
+    const c = this._dimState.c;
+    if (!this._channelSettings) this._channelSettings = {};
+    this._channelSettings[c] = {
+      min: renderer.min, max: renderer.max,
+      lutId: renderer.lutId, rgbMode: renderer.rgbMode
+    };
+    this._persistSettings();
+  }
+
+  // === SLIDERS ===
 
   _updateSliders() {
     const ds = this._dimState || {};
@@ -112,10 +179,8 @@ class StackViewer {
   }
 
   _updateMetadataAndHistogram() {
-    // Only update dimension labels — don't rebuild full metadata/histogram DOM
-    const sv = window.EnderTrack?.StackViewer;
-    const dims = sv?._dims;
-    const ds = sv?._dimState || {};
+    const dims = this._dims;
+    const ds = this._dimState || {};
     const dimLabel = document.getElementById('metaDimInfo');
     if (dimLabel && dims) {
       const parts = [];
@@ -125,6 +190,8 @@ class StackViewer {
       dimLabel.textContent = parts.join(' \u2022 ');
     }
   }
+
+  // === VIEWPORT ===
 
   renderInViewport(container) {
     this._container = container;
@@ -136,12 +203,10 @@ class StackViewer {
       container.appendChild(wrap);
     }
     wrap.dataset.file = this._file || '';
-
     if (!this._file) {
       wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#555;font-size:11px;">Aucun stack ouvert</div>';
       return;
     }
-
     this._renderViewport();
   }
 
@@ -165,14 +230,23 @@ class StackViewer {
       <div style="padding:4px 8px; background:#1a1a1a; display:flex; flex-direction:column; gap:2px;">
         ${slidersHtml}
       </div>`;
-    // Setup renderer on this canvas
+    // Setup renderer
     const renderer = window.EnderTrack?.GalleryRenderer;
     if (renderer) {
       renderer.setDisplayCanvas(document.getElementById("stackDisplayCanvas"));
       renderer._keepContrast = false;
       renderer.loadRaw(this._file, this._index).then(() => {
-        this._restoreChannelSettings();
-        this._saveChannelSettings();
+        // For multi-C: apply saved settings for channel 0
+        if (this._dims?.sizeC > 1) {
+          const s = this._channelSettings?.[0];
+          if (s) {
+            renderer.min = s.min; renderer.max = s.max;
+            renderer.lutId = s.lutId; renderer.rgbMode = s.rgbMode;
+            const def = window.CameraLUTs?.[s.lutId];
+            renderer._lutTable = def ? def.generate() : null;
+            renderer.render();
+          }
+        }
         this._refreshHistogram();
         if (this._composite) this._renderComposite();
       });
@@ -189,123 +263,13 @@ class StackViewer {
       };
     }
   }
-  _updateImage(channelChanged) {
-    if (!this._file) return;
-    this._loadId = (this._loadId || 0) + 1;
-    const myId = this._loadId;
-    // In composite mode: load current channel for histogram, then render composite
-    if (this._composite) {
-      const renderer = window.EnderTrack?.GalleryRenderer;
-      if (renderer) {
-        renderer._keepContrast = true;
-        renderer._skipAutoRender = true;
-        renderer.loadRaw(this._file, this._index).then(() => {
-          if (myId !== this._loadId) return; // stale request
-          renderer._skipAutoRender = false;
-          this._restoreChannelSettings(true); // true = don't render
-          this._switching = false;
-          this._refreshHistogram();
-          this._renderComposite();
-        });
-      }
-      return;
-    }
-    const renderer = window.EnderTrack?.GalleryRenderer;
-    if (renderer) {
-      const hasSaved = channelChanged && this._channelSettings?.[this._dimState.c];
-      if (hasSaved) renderer._skipAutoRender = true;
-      renderer.loadRaw(this._file, this._index).then(() => {
-        if (myId !== this._loadId) return; // stale request
-        if (hasSaved) {
-          renderer._skipAutoRender = false;
-          this._restoreChannelSettings();
-        }
-        this._switching = false;
-        this._saveChannelSettings();
-        this._refreshHistogram();
-        this._persistSettings();
-      });
-    }
-    const slider = document.getElementById("stackSlider");
-    const label = document.getElementById("stackLabel");
-    if (slider) slider.value = this._index;
-    if (label) label.textContent = (this._index + 1) + "/" + this._info.pages;
-  }
 
-  // Per-channel LUT/contrast memory
-  _saveChannelSettings() {
-    if (this._switching) return;
-    this._saveChannelSettingsFor(this._dimState?.c);
-  }
-
-  _saveChannelSettingsFor(c) {
-    const renderer = window.EnderTrack?.GalleryRenderer;
-    if (!renderer || c === undefined || c === null) return;
-    if (!this._channelSettings) this._channelSettings = {};
-    this._channelSettings[c] = {
-      min: renderer.min, max: renderer.max,
-      lutId: renderer.lutId, rgbMode: renderer.rgbMode
-    };
-    console.log('[Stack] SAVE ch', c, JSON.stringify(this._channelSettings[c]));
-  }
-
-  _restoreChannelSettings(skipRender) {
-    const renderer = window.EnderTrack?.GalleryRenderer;
-    if (!renderer || !this._dimState) return;
-    const c = this._dimState.c;
-    const s = this._channelSettings?.[c];
-    console.log('[Stack] RESTORE ch', c, JSON.stringify(s));
-    if (s) {
-      renderer.min = s.min;
-      renderer.max = s.max;
-      renderer.lutId = s.lutId;
-      renderer.rgbMode = s.rgbMode;
-      const def = window.CameraLUTs?.[s.lutId];
-      renderer._lutTable = def ? def.generate() : null;
-      if (!skipRender) renderer.render();
-    }
-  }
-
-  // Persist channel settings to server
-  _persistSettings() {
-    if (!this._file || !this._channelSettings) return;
-    clearTimeout(this._persistTimer);
-    this._persistTimer = setTimeout(() => {
-      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-      fetch(base + '/api/stack/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          file: this._file,
-          channels: this._channelSettings,
-          composite: this._composite || false
-        })
-      }).catch(() => {});
-    }, 1000);
-  }
-
-  // Load persisted settings from server
-  async _loadPersistedSettings() {
-    if (!this._file) return;
-    try {
-      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-      const res = await fetch(base + '/api/stack/settings?file=' + encodeURIComponent(this._file));
-      const data = await res.json();
-      if (data && data.channels) {
-        this._channelSettings = {};
-        for (const [k, v] of Object.entries(data.channels)) {
-          this._channelSettings[parseInt(k)] = v;
-        }
-        this._composite = data.composite || false;
-      }
-    } catch {}
-  }
+  // === HISTOGRAM ===
 
   _refreshHistogram() {
     const renderer = window.EnderTrack?.GalleryRenderer;
     const mgr = window.EnderTrack?.ImageManager;
     if (!renderer?._rawPixels || !mgr?._histogram) return;
-    // Build 8-bit image data for histogram display from raw pixels
     const nPx = renderer._width * renderer._height;
     const ch = renderer._channels;
     const data = new Uint8ClampedArray(nPx * 4);
@@ -323,41 +287,54 @@ class StackViewer {
       }
       data[i*4+3] = 255;
     }
-    // Sync histogram min/max bars to current renderer contrast
     const hist = mgr._histogram;
     hist.manualMin = Math.max(0, Math.min(255, Math.round(((renderer.min - dMin) / dRange) * 255)));
     hist.manualMax = Math.max(0, Math.min(255, Math.round(((renderer.max - dMin) / dRange) * 255)));
     if (hist.manualMin >= hist.manualMax) hist.manualMax = Math.min(255, hist.manualMin + 1);
-    // Update histogram data without triggering _redraw callbacks
     hist._skipCallback = true;
     hist.updateFromImageData(data, ch === 1);
     hist._skipCallback = false;
-    // Update info label
     const info = document.getElementById('gallery-hist-info');
-    if (info) {
-      info.textContent = Math.round(renderer.min) + ' - ' + Math.round(renderer.max);
-    }
+    if (info) info.textContent = Math.round(renderer.min) + ' - ' + Math.round(renderer.max);
   }
 
-  // Update gallery viewport if stack source is active
-  _updateStackViewport() {
-    const display = window.EnderTrack?.Display;
-    if (!display) return;
-    display.viewports.forEach(vp => {
-      if (vp.source === 'stack') {
-        const cell = vp.id === 0 ? display._stageWrap : display._cells.get(vp.id);
-        if (cell) this.renderInViewport(cell);
-      }
-    });
+  // === PERSISTENCE ===
+
+  _persistSettings() {
+    if (!this._file || !this._channelSettings) return;
+    clearTimeout(this._persistTimer);
+    this._persistTimer = setTimeout(() => {
+      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      fetch(base + '/api/stack/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: this._file, channels: this._channelSettings, composite: this._composite || false })
+      }).catch(() => {});
+    }, 1000);
   }
+
+  async _loadPersistedSettings() {
+    if (!this._file) return;
+    try {
+      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      const res = await fetch(base + '/api/stack/settings?file=' + encodeURIComponent(this._file));
+      const data = await res.json();
+      if (data && data.channels) {
+        this._channelSettings = {};
+        for (const [k, v] of Object.entries(data.channels)) {
+          this._channelSettings[parseInt(k)] = v;
+        }
+        this._composite = data.composite || false;
+      }
+    } catch {}
+  }
+
+  // === COMPOSITE ===
 
   _toggleComposite(enabled) {
     this._composite = enabled;
-    if (enabled) {
-      this._renderComposite();
-    } else {
-      this._updateImage(false);
-    }
+    if (enabled) this._renderComposite();
+    else this._doLoad(false);
     this._persistSettings();
   }
 
@@ -371,14 +348,12 @@ class StackViewer {
     const t = this._dimState?.t || 0;
     const sizeZ = this._dims.sizeZ || 1;
 
-    // Load all channels
     const channels = [];
     for (let c = 0; c < sizeC; c++) {
       const idx = c + sizeC * (z + sizeZ * t);
       const res = await fetch(base + '/api/stack/raw?file=' + encodeURIComponent(this._file) + '&index=' + idx);
       const data = await res.json();
       if (data.error) continue;
-      // Decode
       const binary = atob(data.data);
       const buffer = new ArrayBuffer(binary.length);
       const bytes = new Uint8Array(buffer);
@@ -392,51 +367,54 @@ class StackViewer {
         pixels = new Float32Array(bytes.length);
         for (let i = 0; i < bytes.length; i++) pixels[i] = bytes[i];
       }
-      // Get per-channel settings
-      const s = this._channelSettings?.[c];
-      channels.push({ pixels, settings: s, width: data.width, height: data.height });
+      channels.push({ pixels, settings: this._channelSettings?.[c], width: data.width, height: data.height });
     }
 
     if (!channels.length) return;
     const w = channels[0].width, h = channels[0].height;
     const canvas = renderer._displayCanvas;
     if (!canvas) return;
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
     const out = ctx.createImageData(w, h);
     const dst = out.data;
     const nPx = w * h;
 
-    // Composite: additive blend of each channel through its LUT
     for (let ci = 0; ci < channels.length; ci++) {
       const ch = channels[ci];
       const s = ch.settings || {};
       const min = s.min !== undefined ? s.min : 0;
-      const max = s.max !== undefined ? s.max : (ch.pixels.length > 0 ? 65535 : 255);
+      const max = s.max !== undefined ? s.max : 65535;
       const range = Math.max(1, max - min);
       const lutId = s.lutId || 'gray';
       const def = window.CameraLUTs?.[lutId];
       const lut = def ? def.generate() : null;
-
       for (let i = 0; i < nPx; i++) {
         const val = ch.pixels[i];
         const stretched = Math.max(0, Math.min(255, Math.round(((val - min) / range) * 255)));
         let r, g, b;
-        if (lut) {
-          r = lut[stretched][0]; g = lut[stretched][1]; b = lut[stretched][2];
-        } else {
-          r = stretched; g = stretched; b = stretched;
-        }
-        // Additive blend
+        if (lut) { r = lut[stretched][0]; g = lut[stretched][1]; b = lut[stretched][2]; }
+        else { r = stretched; g = stretched; b = stretched; }
         dst[i*4] = Math.min(255, (dst[i*4] || 0) + r);
         dst[i*4+1] = Math.min(255, (dst[i*4+1] || 0) + g);
         dst[i*4+2] = Math.min(255, (dst[i*4+2] || 0) + b);
         dst[i*4+3] = 255;
       }
     }
-
     ctx.putImageData(out, 0, 0);
+  }
+
+  // === MISC ===
+
+  _updateStackViewport() {
+    const display = window.EnderTrack?.Display;
+    if (!display) return;
+    display.viewports.forEach(vp => {
+      if (vp.source === 'stack') {
+        const cell = vp.id === 0 ? display._stageWrap : display._cells.get(vp.id);
+        if (cell) this.renderInViewport(cell);
+      }
+    });
   }
 }
 
