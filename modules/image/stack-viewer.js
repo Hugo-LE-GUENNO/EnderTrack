@@ -78,15 +78,15 @@ class StackViewer {
       clearTimeout(this._loadTimer);
       this._loadTimer = setTimeout(() => this._doLoad(true), 150);
     } else {
-      // Z/T navigation or small debounce for large files
+      // Z/T navigation: no debounce during playback, otherwise debounce for very large files
       clearTimeout(this._loadTimer);
       const fileSize = this._info?.fileSize || 0;
-      if (fileSize > 500 * 1024 * 1024) {
-        this._loadTimer = setTimeout(() => this._doLoad(false), 500);
-      } else if (fileSize > 50 * 1024 * 1024) {
-        this._loadTimer = setTimeout(() => this._doLoad(false), 150);
-      } else {
+      if (this._playing || fileSize <= 200 * 1024 * 1024) {
         this._doLoad(false);
+      } else if (fileSize > 500 * 1024 * 1024) {
+        this._loadTimer = setTimeout(() => this._doLoad(false), 500);
+      } else {
+        this._loadTimer = setTimeout(() => this._doLoad(false), 150);
       }
     }
   }
