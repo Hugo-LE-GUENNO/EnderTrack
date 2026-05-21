@@ -452,13 +452,14 @@ class StackViewer {
     menu.id = 'stack-play-menu';
     menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY - 60}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:8px; min-width:100px;`;
     menu.innerHTML = `
-      <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">FPS</div>
-      <input type="number" id="stackFpsInput" min="1" max="60" value="${fps}" style="width:50px; padding:2px 4px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:11px;">
-      <button onclick="EnderTrack.StackViewer._applyFps()" style="padding:2px 6px; border:none; border-radius:3px; background:var(--active-element); color:var(--text-selected); font-size:10px; cursor:pointer; margin-left:4px;">OK</button>
+      <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">FPS: <span id="stackFpsVal">${fps}</span></div>
+      <input type="range" id="stackFpsInput" min="1" max="60" value="${fps}" oninput="document.getElementById('stackFpsVal').textContent=this.value" style="width:100px; height:3px;">
     `;
     document.body.appendChild(menu);
-    document.getElementById('stackFpsInput')?.focus();
-    menu.querySelector('input').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') this._applyFps(); });
+    document.getElementById('stackFpsInput')?.addEventListener('input', (ev) => {
+      this._playFps = parseInt(ev.target.value) || 10;
+      if (this._playing) { this._stopPlay(); this._togglePlay(); }
+    });
     setTimeout(() => {
       const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
       document.addEventListener('mousedown', close);
