@@ -99,11 +99,13 @@ class GalleryRenderer {
         for (let i = 0; i < bytes.length; i++) this._rawPixels[i] = bytes[i];
       }
 
-      // For 16-bit: always update dataMin/dataMax for current slice
+      // For 16-bit: update dataMin/dataMax only on first load or channel change
       if (data.dtype === 'uint16') {
-        const stats = this.getRawStats();
-        this._dataMin = stats.min;
-        this._dataMax = stats.max;
+        if (!this._keepContrast) {
+          const stats = this.getRawStats();
+          this._dataMin = stats.min;
+          this._dataMax = stats.max;
+        }
       } else {
         this._dataMin = 0;
         this._dataMax = 255;

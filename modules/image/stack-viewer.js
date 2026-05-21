@@ -136,7 +136,8 @@ class StackViewer {
         renderer.render();
       }
       this._switching = false;
-      this._refreshHistogram();
+      // Don't refresh histogram during playback (avoids jitter)
+      if (!this._playing) this._refreshHistogram();
     });
   }
 
@@ -425,6 +426,7 @@ class StackViewer {
     clearInterval(this._playInterval);
     const btn = document.getElementById('stackPlayBtn');
     if (btn) btn.textContent = '\u25B6';
+    this._refreshHistogram();
   }
 
   _showPlaySettings(e) {
