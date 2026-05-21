@@ -93,8 +93,12 @@ class ImageManager {
     renderer._skipAutoRender = true;
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     if (isTiff) {
-      await renderer.loadRaw(img.path, window.EnderTrack?.StackViewer?._index || 0);
-      window.EnderTrack?.StackViewer?.open?.(img.path);
+      const sv = window.EnderTrack?.StackViewer;
+      if (sv && sv._file !== img.path) {
+        await sv.open(img.path);
+        this._renderMetadata(); // refresh with new dims
+      }
+      await renderer.loadRaw(img.path, sv?._index || 0);
     } else {
       await renderer.loadImage(base + '/api/gallery/thumb/' + img.path);
     }
