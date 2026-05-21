@@ -264,6 +264,9 @@ class ActionRegistry {
         if (context && result.path) {
           if (!context._captures) context._captures = [];
           context._captures.push(result.path);
+          console.log('[capture] stored:', result.path, 'total:', context._captures.length);
+        } else {
+          console.warn('[capture] NO PATH in result:', result);
         }
         return { success: true, path: result.path };
       }
