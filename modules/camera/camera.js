@@ -424,72 +424,8 @@ class CameraModule {
   // === SCENARIO ACTION ===
 
   _registerScenarioAction() {
-    if (!window.EnderTrack?.ActionRegistry) return;
-    window.EnderTrack.ActionRegistry.register({
-      id: 'capture',
-      label: '📷 Capture',
-      icon: '📷',
-      category: 'camera',
-      params: [
-        { id: "label", label: "Label", type: "text", default: "Capture" },
-        { id: "cameraId", label: "Caméra", type: "select", options: (window._cameras || []).map(c => ({ value: String(c.id), label: c.label })), default: "" },
-        { id: "format", label: "Format", type: "select", options: [
-          { value: "tiff", label: "TIFF" },
-          { value: "png", label: "PNG" },
-          { value: "jpeg", label: "JPEG" }
-        ], default: "tiff" },
-        { id: "path", label: "Chemin", type: "text", default: "./captures" },
-        { id: "showInLog", label: "Log", type: "checkbox", default: true }
-      ],
-      execute: async (params, context) => {
-        let result;
-        let video = null;
-        const cam = window.EnderTrack.Camera;
-        // 1. Try existing live video in DOM
-        for (const v of document.querySelectorAll("video")) {
-          if (v.readyState >= 2 && v.videoWidth > 0) { video = v; break; }
-        }
-        // 2. If none, use driver stream or open webcam
-        if (!video) {
-          try {
-            const stream = cam?.driver?._stream || await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
-            const tmp = document.createElement("video");
-            tmp.srcObject = stream;
-            tmp.muted = true;
-            await tmp.play();
-            await new Promise(r => setTimeout(r, 300));
-            if (tmp.videoWidth > 0) video = tmp;
-          } catch(e) {}
-        }
-        // 3. Capture frame
-        if (video && video.videoWidth > 0) {
-          const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          canvas.getContext("2d").drawImage(video, 0, 0);
-          const frame = canvas.toDataURL("image/" + (params.format === "jpeg" ? "jpeg" : "png")).split(",")[1];
-          const ts = new Date().toISOString().replace(/[:.]/g, "-");
-          const pos = window.EnderTrack?.State?.get?.()?.pos || {x:0,y:0,z:0};
-          const path = (params.path || "./captures") + "/acq_" + ts + "_X" + pos.x.toFixed(2) + "_Y" + pos.y.toFixed(2) + "_Z" + pos.z.toFixed(2) + "." + (params.format || "png");
-          try {
-            const url = window.ENDERTRACK_SERVER || "http://localhost:5000";
-            const res = await fetch(url + "/api/capture/save", {
-              method: "POST", headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({ frame, path })
-            });
-            const saved = await res.json();
-            result = { success: saved.success, path: saved.path || path };
-          } catch(e) { result = { success: false, error: e.message }; }
-        } else {
-          result = { success: false, error: "No camera available" };
-        }
-        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
-          const msg = result.success ? ("Capture " + (result.path || "OK")) : ("Capture ERR: " + (result.error || "?"));
-          window.EnderTrack.Scenario.addLog(msg, result.success ? "info" : "error");
-        }
-        return result;
-      }
-    });
+    // Capture action is now registered in action-registry.js (supports stack append)
+    // This method is kept for compatibility but does nothing
   }
 
   async _loadLiveSettings() {

@@ -9,8 +9,60 @@ import io
 import json
 from flask import request, jsonify, send_file
 
+def _build_imagej_desc(n_pages, meta):
+    """Build ImageJ-compatible ImageDescription string."""
+    sizeC = meta.get('sizeC', 1)
+    sizeZ = meta.get('sizeZ', 1)
+    sizeT = meta.get('sizeT', 1)
+    # Auto-deduce T if pages exceed C*Z
+    if sizeC * sizeZ * sizeT < n_pages and sizeT <= 1:
+        sizeT = max(1, n_pages // max(1, sizeC * sizeZ))
+    desc = ['ImageJ=1.54p', f'images={n_pages}']
+    if sizeC > 1: desc.append(f'channels={sizeC}')
+    if sizeZ > 1: desc.append(f'slices={sizeZ}')
+    if sizeT > 1: desc.append(f'frames={sizeT}')
+    # hyperstack=true needed for ImageJ to recognize multi-dimensional data
+    if (sizeC > 1 or sizeZ > 1) and sizeT > 1:
+        desc.append('hyperstack=true')
+    if sizeC > 1: desc.append('mode=color')
+    if meta.get('unit'): desc.append(f'unit={meta["unit"]}')
+    if meta.get('spacing'): desc.append(f'spacing={meta["spacing"]}')
+    if meta.get('finterval'): desc.append(f'finterval={meta["finterval"]}')
+    desc.append('loop=false')
+    return '\n'.join(desc) + '\n'
+
+    @app.route('/api/stack/settings', methods=['GET'])
+    def _stack_settings_get():
+        """Load per-channel display settings for a stack file."""
+        filepath = request.args.get('file', '')
+        if not filepath:
+            return jsonify({}), 200
+        settings_file = os.path.join(ROOT, '.stack_settings.json')
+        try:
+            if os.path.isfile(settings_file):
+                with open(settings_file, 'r') as f:
+                    all_settings = json.load(f)
+                return jsonify(all_settings.get(filepath, {}))
+        except:
+            pass
+        return jsonify({}), 200
+
+
 def register_routes(app):
     """Register stack-related API routes."""
+    ROOT = app.static_folder or os.getcwd()
+
+    def _resolve(filepath):
+        """Resolve filepath relative to ROOT, handling ./ prefix."""
+        candidates = [
+            os.path.join(ROOT, filepath),
+            os.path.join(ROOT, filepath.lstrip('./')),
+            os.path.normpath(os.path.join(ROOT, filepath))
+        ]
+        for c in candidates:
+            if os.path.isfile(c):
+                return c
+        return None
 
     @app.route('/api/stack/info', methods=['GET'])
     def _stack_info():
@@ -19,8 +71,8 @@ def register_routes(app):
         if not filepath:
             return jsonify({'error': 'No file specified'}), 400
 
-        full = os.path.join(os.getcwd(), filepath)
-        if not os.path.isfile(full):
+        full = _resolve(filepath)
+        if not full:
             return jsonify({'error': 'File not found'}), 404
 
         try:
@@ -60,8 +112,8 @@ def register_routes(app):
         if not filepath:
             return jsonify({'error': 'No file specified'}), 400
 
-        full = os.path.join(os.getcwd(), filepath)
-        if not os.path.isfile(full):
+        full = _resolve(filepath)
+        if not full:
             return jsonify({'error': 'File not found'}), 404
 
         try:
@@ -117,7 +169,7 @@ def register_routes(app):
             frames = []
             for f in files:
                 # Try multiple path resolutions
-                candidates = [f, os.path.join(os.getcwd(), f), os.path.normpath(f)]
+                candidates = [f, os.path.join(ROOT, f), os.path.normpath(f)]
                 for full in candidates:
                     if os.path.isfile(full):
                         img = Image.open(full)
@@ -142,6 +194,8 @@ def register_routes(app):
             if sizeC > 1: desc.append(f'channels={sizeC}')
             if sizeZ > 1: desc.append(f'slices={sizeZ}')
             if sizeT > 1: desc.append(f'frames={sizeT}')
+            if (sizeC > 1 or sizeZ > 1) and sizeT > 1:
+                desc.append('hyperstack=true')
             if sizeC > 1: desc.append('mode=color')
             if unit: desc.append(f'unit={unit}')
             if spacing: desc.append(f'spacing={spacing}')
@@ -166,7 +220,7 @@ def register_routes(app):
 
             # Clean up individual capture files
             for f in files:
-                candidates = [f, os.path.join(os.getcwd(), f), os.path.normpath(f)]
+                candidates = [f, os.path.join(ROOT, f), os.path.normpath(f)]
                 for full in candidates:
                     if os.path.isfile(full) and os.path.abspath(full) != os.path.abspath(output):
                         try:
@@ -181,21 +235,92 @@ def register_routes(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/stack/settings', methods=['GET'])
-    def _stack_settings_get():
-        """Load per-channel display settings for a stack file."""
-        filepath = request.args.get('file', '')
-        if not filepath:
-            return jsonify({}), 200
-        settings_file = os.path.join(os.getcwd(), '.stack_settings.json')
+    @app.route('/api/stack/append', methods=['POST'])
+    def _stack_append():
+        """Append a frame (base64 PNG/JPEG) to an existing or new TIFF stack.
+        Creates the file with ImageJ metadata if it doesn't exist.
+        Returns current page count."""
+        data = request.get_json()
+        if not data or not data.get('frame') or not data.get('output'):
+            return jsonify({'error': 'Missing frame or output'}), 400
+
+        output = data['output']
+        frame_b64 = data['frame']
+        meta = data.get('metadata', {})
+
         try:
-            if os.path.isfile(settings_file):
-                with open(settings_file, 'r') as f:
-                    all_settings = json.load(f)
-                return jsonify(all_settings.get(filepath, {}))
-        except:
-            pass
-        return jsonify({}), 200
+            from PIL import Image
+            import numpy as np
+            import base64
+
+            # Decode frame
+            frame_bytes = base64.b64decode(frame_b64)
+            frame_img = Image.open(io.BytesIO(frame_bytes))
+
+            # Convert to grayscale if requested
+            if meta.get('grayscale', True) and frame_img.mode in ('RGB', 'RGBA', 'PA'):
+                frame_img = frame_img.convert('L')
+            elif frame_img.mode == 'RGBA':
+                frame_img = frame_img.convert('RGB')
+
+            full = os.path.join(ROOT, output)
+            os.makedirs(os.path.dirname(os.path.abspath(full)), exist_ok=True)
+
+            if os.path.isfile(full):
+                # Append to existing TIFF
+                existing = Image.open(full)
+                # Count current pages
+                n_pages = 0
+                try:
+                    while True:
+                        n_pages += 1
+                        existing.seek(n_pages)
+                except EOFError:
+                    pass
+                existing.seek(0)
+
+                # Read all existing frames
+                frames = []
+                for i in range(n_pages):
+                    existing.seek(i)
+                    frames.append(existing.copy())
+                frames.append(frame_img)
+
+                # Rebuild with updated metadata
+                new_pages = len(frames)
+                desc = _build_imagej_desc(new_pages, meta)
+                from PIL.TiffImagePlugin import ImageFileDirectory_v2
+                ifd = ImageFileDirectory_v2()
+                ifd[270] = desc
+                if meta.get('pixelSize') and meta['pixelSize'] > 0:
+                    ifd[282] = 1.0 / meta['pixelSize']
+                    ifd[283] = 1.0 / meta['pixelSize']
+                    ifd[296] = 1
+
+                frames[0].save(full, save_all=True, append_images=frames[1:],
+                               compression='tiff_deflate', tiffinfo=ifd)
+                print(f'  \U0001f4f7\u2192\U0001f4da {output} (page {new_pages})')
+                return jsonify({'success': True, 'path': output, 'pages': new_pages})
+            else:
+                # Create new TIFF with first frame
+                desc = _build_imagej_desc(1, meta)
+                from PIL.TiffImagePlugin import ImageFileDirectory_v2
+                ifd = ImageFileDirectory_v2()
+                ifd[270] = desc
+                if meta.get('pixelSize') and meta['pixelSize'] > 0:
+                    ifd[282] = 1.0 / meta['pixelSize']
+                    ifd[283] = 1.0 / meta['pixelSize']
+                    ifd[296] = 1
+
+                frame_img.save(full, compression='tiff_deflate', tiffinfo=ifd)
+                print(f'  \U0001f4da New stack: {output}')
+                return jsonify({'success': True, 'path': output, 'pages': 1})
+
+        except ImportError:
+            return jsonify({'error': 'Pillow not installed'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
 
     @app.route('/api/stack/settings', methods=['POST'])
     def _stack_settings_save():
@@ -204,7 +329,7 @@ def register_routes(app):
         if not data or not data.get('file'):
             return jsonify({'error': 'No file specified'}), 400
         filepath = data['file']
-        settings_file = os.path.join(os.getcwd(), '.stack_settings.json')
+        settings_file = os.path.join(ROOT, '.stack_settings.json')
         try:
             all_settings = {}
             if os.path.isfile(settings_file):
@@ -233,8 +358,8 @@ def register_routes(app):
         if not filepath:
             return jsonify({'error': 'No file specified'}), 400
 
-        full = os.path.join(os.getcwd(), filepath)
-        if not os.path.isfile(full):
+        full = _resolve(filepath)
+        if not full:
             return jsonify({'error': 'File not found'}), 404
 
         try:
@@ -327,8 +452,8 @@ def register_routes(app):
         if not filepath:
             return jsonify({'error': 'No file specified'}), 400
 
-        full = os.path.join(os.getcwd(), filepath)
-        if not os.path.isfile(full):
+        full = _resolve(filepath)
+        if not full:
             return jsonify({'error': 'File not found'}), 404
 
         try:

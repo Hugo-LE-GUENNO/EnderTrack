@@ -204,14 +204,15 @@ class ScenarioModule {
     this._preset = currentScenario?.presetState || { multipos: false, timelapse: false, zstack: false, mosaic: false, autofocus: false, useLight: false, useCapture: true };
     const p = this._preset;
     const pos = window.EnderTrack?.State?.get?.()?.pos || { x: 0, y: 0, z: 0 };
-    if (!this._presetParams) this._presetParams = {
+    // Restore presetParams from scenario or use defaults
+    this._presetParams = currentScenario?.presetParams || this._presetParams || {
       interval: 10, count: 10,
       zStart: Math.max(0, pos.z - 0.5).toFixed(2), zEnd: (pos.z + 0.5).toFixed(2), zStep: 0.05,
       listId: '', delay: 0.5,
       gridX: 3, gridY: 3, overlap: 10,
       exposure: 100000, gain: 1.0,
       lightChannel: '', lightIntensity: 100,
-      format: 'png', path: './captures', prefix: 'acq',
+      format: 'tiff', path: './captures', prefix: 'acq',
       afRange: 0.1, afSteps: 10,
       cameraId: ''
     };
@@ -378,6 +379,7 @@ class ScenarioModule {
     if (!scenario.presetState) scenario.presetState = { multipos: false, timelapse: false, zstack: false, mosaic: false, autofocus: false, useLight: false, useCapture: true };
     scenario.presetState[key] = val;
     this._preset = scenario.presetState;
+    scenario.presetParams = { ...this._presetParams };
     this.manager.save();
     // Re-render presets view
     if (document.getElementById('sbPresetsView')) {
@@ -408,6 +410,9 @@ class ScenarioModule {
   _pp(key, val) {
     if (!this._presetParams) this._presetParams = {};
     this._presetParams[key] = val;
+    // Persist presetParams in scenario
+    const scenario = this.manager?.getCurrentScenario();
+    if (scenario) { scenario.presetParams = { ...this._presetParams }; this.manager.save(); }
     // Debounced auto-generate
     clearTimeout(this._ppTimer);
     this._ppTimer = setTimeout(() => this._autoGenerate(), 300);
@@ -516,8 +521,8 @@ class ScenarioModule {
       }
     }
 
-    // Add create_stack at the end to assemble captures into one multi-TIFF
-    const stackMeta = {};
+    // Stack mode: prepend init_stack action that sets context._stackPath
+    const stackMeta = { unit: 'micron', grayscale: true };
     if (p.zstack) {
       const steps = Math.max(1, Math.round(Math.abs(pp.zEnd - pp.zStart) / Math.max(0.001, pp.zStep)));
       stackMeta.sizeZ = steps + 1;
@@ -528,11 +533,8 @@ class ScenarioModule {
       stackMeta.finterval = pp.interval || 10;
     }
     const stackName = (pp.prefix || name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
-    rootChildren.push({ type: 'action', actionId: 'create_stack', params: {
-      label: 'Cr\u00e9er Stack', name: stackName,
-      sizeC: stackMeta.sizeC || 1, sizeZ: stackMeta.sizeZ || 1, sizeT: stackMeta.sizeT || 1,
-      spacing: stackMeta.spacing || 0, finterval: stackMeta.finterval || 0,
-      pixelSize: pp.pixelSize || 0, showInLog: true
+    rootChildren.unshift({ type: 'action', actionId: 'init_stack', params: {
+      label: 'Init Stack', name: stackName, metadata: stackMeta
     }});
 
     const tree = { type: 'root', children: rootChildren };

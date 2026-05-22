@@ -254,21 +254,49 @@ class ActionRegistry {
         { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
       ],
       execute: async (params, context) => {
-        console.log('[capture action] ENTER');
         const camera = window.EnderTrack?.Camera;
         if (!camera) return { success: false, error: 'No camera' };
+
+        // Get frame from camera
+        const frame = await camera.getFrame();
+        if (!frame?.frame) {
+          console.warn('[capture] No frame from getFrame, falling back to camera.capture()');
+          const result = await camera.capture({ format: params.format || 'tiff' });
+          if (context && result.path) {
+            if (!context._captures) context._captures = [];
+            context._captures.push(result.path);
+          }
+          return { success: !!result.path, path: result.path };
+        }
+
+        // If stack mode (context has _stackPath), append to stack
+        if (context?._stackPath) {
+          const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+          const res = await fetch(url + '/api/stack/append', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              frame: frame.frame,
+              output: context._stackPath,
+              metadata: context._stackMeta || {}
+            })
+          });
+          const result = await res.json();
+          if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+            window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `\ud83d\udcf7 p.${result.pages || '?'}`, context), 'info');
+          }
+          try { window.EnderTrack?.StackViewer?._onNewPage?.(context._stackPath, result.pages); } catch(e) { console.warn('[capture] _onNewPage error:', e.message); }
+          return { success: true, path: context._stackPath, pages: result.pages };
+        }
+
+        // No stack mode: save individual file via camera.capture()
+        console.warn('[capture] No _stackPath in context, keys:', Object.keys(context || {}));
         const result = await camera.capture({ format: params.format || 'tiff' });
-        console.log('[capture action] result:', result?.success, result?.path);
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
           window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `\ud83d\udcf7 ${result.path || 'capture'}`, context), 'info');
         }
-        // Store path for stack creation
         if (context && result.path) {
           if (!context._captures) context._captures = [];
           context._captures.push(result.path);
-          console.log('[capture] stored:', result.path, 'total:', context._captures.length);
-        } else {
-          console.warn('[capture] NO PATH in result:', result);
         }
         return { success: true, path: result.path };
       }
@@ -316,7 +344,71 @@ class ActionRegistry {
       }
     });
 
-    // \ud83d\udcda Cr\u00e9er Stack
+
+    // 📦 Init Stack (sets context._stackPath for live append)
+    this.register({
+      id: 'init_stack',
+      label: '📦 Init Stack',
+      icon: '📦',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Init Stack' },
+        { id: 'name', label: 'Nom du fichier', type: 'text', default: 'acquisition', placeholder: 'nom_sans_extension' },
+        { id: 'positions', label: 'Positions', type: 'number', default: 1 },
+        { id: 'metadata', label: 'Metadata', type: 'hidden', default: {} }
+      ],
+      execute: async (params, context) => {
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        const name = (params.name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const nPos = parseInt(params.positions) || 1;
+        if (context) {
+          context._stackMeta = params.metadata || {};
+          if (nPos > 1) {
+            // Multi-position: one stack per position
+            context._stackPaths = {};
+            for (let i = 0; i < nPos; i++) {
+              context._stackPaths[i] = `./captures/${name}_pos${i + 1}_${ts}.tif`;
+            }
+            context._stackPath = context._stackPaths[0];
+            if (window.EnderTrack?.Scenario?.addLog) {
+              window.EnderTrack.Scenario.addLog(`📦 ${nPos} stacks: ${name}_pos*_${ts}.tif`, 'info');
+            }
+          } else {
+            // Single stack
+            context._stackPath = `./captures/${name}_${ts}.tif`;
+            context._stackPaths = null;
+            if (window.EnderTrack?.Scenario?.addLog) {
+              window.EnderTrack.Scenario.addLog(`📦 Stack: ${context._stackPath}`, 'info');
+            }
+          }
+        }
+        return { success: true, path: context?._stackPath };
+      }
+    });
+
+    // 🔀 Switch Stack (for multi-position: select which stack to append to)
+    this.register({
+      id: 'switch_stack',
+      label: '🔀 Switch Stack',
+      icon: '🔀',
+      category: 'core',
+      params: [
+        { id: 'indexVar', label: 'Variable index', type: 'text', default: '$i' }
+      ],
+      execute: async (params, context) => {
+        if (!context?._stackPaths) return { success: true };
+        const vars = context.variables || {};
+        const idx = window.EnderTrack._evalExpr(params.indexVar, vars);
+        const path = context._stackPaths[Math.floor(idx)];
+        if (path) {
+          context._stackPath = path;
+          // Notify stack viewer to follow this position
+          try { window.EnderTrack?.StackViewer?._onNewPage?.(path, null); } catch(e) {}
+        }
+        return { success: true, path };
+      }
+    });
+    // \ud83d\udcda Cr\u00e9er Stack (legacy — assembles individual files)
     this.register({
       id: 'create_stack',
       label: '\ud83d\udcda Cr\u00e9er Stack',

@@ -84,8 +84,15 @@ class ImageManager {
 
     // Sync histogram min/max
     if (this._histogram) {
-      this._histogram.manualMin = s ? Math.round((s.min / (renderer._maxVal || 255)) * 255) : 0;
-      this._histogram.manualMax = s ? Math.round((s.max / (renderer._maxVal || 255)) * 255) : 255;
+      if (s) {
+        this._histogram.manualMin = Math.round((s.min / (renderer._maxVal || 255)) * 255);
+        this._histogram.manualMax = Math.round((s.max / (renderer._maxVal || 255)) * 255);
+      } else if (isTiff && renderer._rawPixels) {
+        // Will be set after loadRaw below
+      } else {
+        this._histogram.manualMin = 0;
+        this._histogram.manualMax = 255;
+      }
     }
 
     // Load image (single load, no auto-render)
@@ -97,6 +104,12 @@ class ImageManager {
         await sv.open(img.path);
       }
       await renderer.loadRaw(img.path, sv?._index || 0);
+      // Auto-contrast for TIFF: use actual data range
+      const stats = renderer.getRawStats();
+      renderer.min = stats.min;
+      renderer.max = stats.max;
+      renderer.rgbMode = renderer._channels >= 3;
+      if (!renderer._lutTable) { renderer.lutId = 'gray'; }
     } else {
       await renderer.loadImage(base + '/api/gallery/thumb/' + img.path);
     }
@@ -104,6 +117,12 @@ class ImageManager {
 
     // Now render once with correct settings
     renderer.render();
+
+    // Sync histogram after render (especially for TIFF auto-contrast)
+    if (this._histogram && isTiff) {
+      this._histogram.manualMin = Math.round((renderer.min / renderer._maxVal) * 255);
+      this._histogram.manualMax = Math.round((renderer.max / renderer._maxVal) * 255);
+    }
 
     // Update histogram from loaded raw data
     if (this._histogram && renderer._rawPixels) {

@@ -671,6 +671,24 @@ class StackViewer {
       }
     });
   }
+
+  // Called by capture action when a new page is appended to the current stack
+  _onNewPage(filepath, pageCount) {
+    if (!filepath || !pageCount) return;
+    if (this._file !== filepath) {
+      this._file = filepath;
+      this._index = 0;
+      this._info = { pages: pageCount, width: 0, height: 0 };
+    } else if (this._info) {
+      this._info.pages = pageCount;
+    }
+    // Jump to latest page (just update index, don't load during acquisition)
+    this._index = pageCount - 1;
+    const slider = document.getElementById('stackSlider');
+    if (slider) { slider.max = pageCount - 1; slider.value = this._index; }
+    const label = document.getElementById('stackLabel');
+    if (label) label.textContent = `${pageCount} / ${pageCount}`;
+  }
 }
 
 window.EnderTrack = window.EnderTrack || {};

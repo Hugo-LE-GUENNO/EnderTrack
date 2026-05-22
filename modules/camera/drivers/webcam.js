@@ -53,9 +53,22 @@ class WebcamCameraDriver {
   }
 
   async getFrame() {
-    // Find the video element displaying our stream (in viewport)
-    const video = this._findVideoElement();
-    if (!video || video.readyState < 2) return null;
+    // Use hidden video with our stream, or find one in DOM
+    if (!this._stream) return null;
+    // Create a temporary video if needed
+    if (!this._grabVideo) {
+      this._grabVideo = document.createElement('video');
+      this._grabVideo.muted = true;
+      this._grabVideo.playsInline = true;
+      this._grabVideo.srcObject = this._stream;
+      this._grabVideo.play().catch(() => {});
+    }
+    const video = this._grabVideo;
+    if (video.readyState < 2) {
+      // Wait a bit for video to be ready
+      await new Promise(r => setTimeout(r, 200));
+      if (video.readyState < 2) return null;
+    }
     const w = video.videoWidth, h = video.videoHeight;
     if (!w || !h) return null;
     const canvas = document.createElement('canvas');

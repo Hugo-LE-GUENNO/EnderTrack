@@ -172,6 +172,9 @@ class ScenarioManager {
   }
 
   loadFromStorage() {
+    // Load from localStorage FIRST (synchronous, immediate)
+    this._loadLocal();
+    // Then try server (async update)
     const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     fetch(url + '/api/sync/scenarios', { signal: AbortSignal.timeout(2000) })
       .then(r => r.ok ? r.json() : Promise.reject())
@@ -179,9 +182,11 @@ class ScenarioManager {
         if (data.scenarios?.length) {
           this.scenarios = new Map(data.scenarios);
           this.currentScenarioId = data.currentScenarioId;
-        } else { this._loadLocal(); }
+          // Re-render UI if scenario module is active
+          window.EnderTrack?.Scenario?.createUI?.();
+        }
       })
-      .catch(() => this._loadLocal());
+      .catch(() => {});
   }
 
   _loadLocal() {
