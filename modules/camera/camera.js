@@ -450,6 +450,7 @@ class CameraModule {
         this.config.resolution = data.resolution || [1280, 720];
         this.config.exposure = data.exposure || 100000;
         this.config.gain = data.gain || 1.0;
+        this._renderCameraConfig();
       }
     } catch {}
   }
@@ -467,6 +468,9 @@ class CameraModule {
         this.camRotation = data.config.rotation || 0;
         this.camFlipH = data.config.flip_h || false;
         this.camFlipV = data.config.flip_v || false;
+        this.config.resolution = data.config.resolution || [1280, 720];
+        this.config.exposure = data.config.exposure || 100000;
+        this.config.gain = data.config.gain || 1.0;
       }
     } catch {}
   }
@@ -476,6 +480,64 @@ class CameraModule {
     const refRes = this.picamConfig.pixel_size_ref_res || [640, 480];
     const curRes = this.picamConfig.resolution || [640, 480];
     return ps * (refRes[0] / curRes[0]);
+  }
+
+  _renderCameraConfig() {
+    const zone = document.getElementById('configPluginZone');
+    if (!zone) return;
+    let el = document.getElementById('picam-config');
+    if (!el) {
+      el = document.createElement('details');
+      el.id = 'picam-config';
+      el.open = true;
+      zone.prepend(el);
+    }
+    const c = this.picamConfig;
+    el.innerHTML = `
+      <summary style="font-size:11px; cursor:pointer; color:var(--text-selected); font-weight:500;">\ud83d\udcf7 Cam\u00e9ra</summary>
+      <div style="display:flex; flex-direction:column; gap:6px; padding:6px 0;">
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="width:70px; font-size:10px;">R\u00e9solution</label>
+          <select onchange="EnderTrack.Camera.setPicamConfig({resolution: this.value.split(',').map(Number)})" style="flex:1; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+            <option value="4056,3040" ${c.resolution?.[0]===4056?'selected':''}>4056\u00d73040 (Full)</option>
+            <option value="2028,1520" ${c.resolution?.[0]===2028?'selected':''}>2028\u00d71520 (Half)</option>
+            <option value="1332,990" ${c.resolution?.[0]===1332?'selected':''}>1332\u00d7990</option>
+            <option value="1280,720" ${c.resolution?.[0]===1280?'selected':''}>1280\u00d7720 (HD)</option>
+            <option value="640,480" ${c.resolution?.[0]===640?'selected':''}>640\u00d7480 (Preview)</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="width:70px; font-size:10px;">Pixel size</label>
+          <input type="number" value="${c.pixel_size||1.0}" min="0.01" step="0.01" onchange="EnderTrack.Camera.setPicamConfig({pixel_size:parseFloat(this.value)})" style="width:60px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">\u00b5m/px</span>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="width:70px; font-size:10px;">Rotation</label>
+          <input type="range" min="0" max="360" value="${c.rotation||0}" step="0.5" oninput="document.getElementById('picam-rot-val').value=this.value" onchange="EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})" style="flex:1; height:3px;">
+          <input id="picam-rot-val" type="number" value="${c.rotation||0}" min="0" max="360" step="0.5" onchange="EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})" style="width:40px; padding:2px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">\u00b0
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="width:70px; font-size:10px;">Flip</label>
+          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:2px;">
+            <input type="checkbox" ${c.flip_h?'checked':''} onchange="EnderTrack.Camera.setPicamConfig({flip_h:this.checked})">
+            <span style="color:var(--text-general);">H</span>
+          </label>
+          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:2px;">
+            <input type="checkbox" ${c.flip_v?'checked':''} onchange="EnderTrack.Camera.setPicamConfig({flip_v:this.checked})">
+            <span style="color:var(--text-general);">V</span>
+          </label>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="width:70px; font-size:10px;">Exposition</label>
+          <input type="number" value="${c.exposure||100000}" min="100" step="1000" onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)})" style="width:70px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <span style="font-size:9px; color:var(--text-general);">\u00b5s</span>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="width:70px; font-size:10px;">Gain</label>
+          <input type="number" value="${c.gain||1.0}" min="1" max="16" step="0.1" onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)})" style="width:50px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+        </div>
+      </div>
+    `;
   }
 
   async _loadLiveSettings() {
