@@ -103,6 +103,13 @@ stack_handler.register_routes(app)
 from server import ome_metadata
 ome_metadata.register_routes(app)
 
+# Picamera2 (Raspberry Pi only)
+try:
+    from server import picamera_handler
+    picamera_handler.register_routes(app)
+except Exception as e:
+    print(f"  \u26a0\ufe0f  Picamera2: {e}")
+
 # 5. Real-time event stream (SSE)
 from server import event_stream
 event_stream.register_routes(app)

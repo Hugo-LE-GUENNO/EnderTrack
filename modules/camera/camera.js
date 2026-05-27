@@ -30,7 +30,7 @@ class CameraModule {
 
   // === DRIVER MANAGEMENT ===
 
-  async setDriver(name) {
+  async setDriver(name, opts) {
     if (this.live) await this.stopLive();
     const Driver = window.EnderTrack?.CameraDrivers?.[name];
     if (!Driver) {
@@ -39,6 +39,7 @@ class CameraModule {
     }
     this.driver = new Driver(this);
     this.driverName = name;
+    if (opts?.url) this.driver.streamUrl = opts.url;
     const ok = await this.driver.init(this.config);
     if (ok) {
       this._registerScenarioAction();
@@ -464,9 +465,21 @@ window.EnderTrack = window.EnderTrack || {};
 window.EnderTrack.Camera = new CameraModule();
 window.EnderTrack.CameraDrivers = window.EnderTrack.CameraDrivers || {};
 
-// Auto-init with simulation driver
+// Auto-init: detect picamera2 stream, fallback to simulation
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => EnderTrack.Camera.setDriver('simulation'));
+  document.addEventListener('DOMContentLoaded', () => {
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(base + '/api/camera/picam/config').then(r => {
+      if (r.ok) EnderTrack.Camera.setDriver('mjpeg', { url: base + '/api/camera/picam/stream' });
+      else EnderTrack.Camera.setDriver('simulation');
+    }).catch(() => EnderTrack.Camera.setDriver('simulation'));
+  });
 } else {
-  setTimeout(() => EnderTrack.Camera.setDriver('simulation'), 0);
+  setTimeout(() => {
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(base + '/api/camera/picam/config').then(r => {
+      if (r.ok) EnderTrack.Camera.setDriver('mjpeg', { url: base + '/api/camera/picam/stream' });
+      else EnderTrack.Camera.setDriver('simulation');
+    }).catch(() => EnderTrack.Camera.setDriver('simulation'));
+  }, 0);
 }
