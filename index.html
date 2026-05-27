@@ -222,6 +222,7 @@
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📷 Caméras</summary>
                         <div style="padding:8px;" id="cameraSettingsContent">
                             <div id="cameraList"></div>
+                            <div id="picamConfigZone"></div>
                             <button onclick="window._showCameraTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter une caméra</button>
                             <div id="cameraTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
                                 <div style="display:flex; flex-direction:column; gap:3px;">
@@ -257,10 +258,18 @@
                                 const camera = window.EnderTrack?.Camera;
                                 if (!camera) return;
                                 const type = cam.type || 'webcam';
-                                const driverName = type === 'mjpeg' ? 'mjpeg' : (type === 'picamera2' ? 'simulation' : 'webcam');
-                                await camera.setDriver(driverName);
-                                if (type === 'mjpeg' && cam.streamUrl) await camera.configure({ streamUrl: cam.streamUrl });
-                                if (type === 'webcam' && cam.deviceId) await camera.configure({ deviceId: cam.deviceId });
+                                const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                if (type === 'picamera2') {
+                                  await camera.setDriver('mjpeg', { url: base + '/api/camera/picam/stream' });
+                                } else if (type === 'mjpeg') {
+                                  await camera.setDriver('mjpeg');
+                                  if (cam.streamUrl) await camera.configure({ streamUrl: cam.streamUrl });
+                                } else if (type === 'webcam') {
+                                  await camera.setDriver('webcam');
+                                  if (cam.deviceId) await camera.configure({ deviceId: cam.deviceId });
+                                } else {
+                                  await camera.setDriver('simulation');
+                                }
                                 window._updateCameraLayout();
                               };
                               setTimeout(() => window._loadPeripherals(), 500);
@@ -274,6 +283,7 @@
                               window._addCamera = async (type) => {
                                 document.getElementById('cameraTypeMenu').style.display = 'none';
                                 let label = type;
+                                const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
                                 if (type === 'mjpeg') {
                                   const url = prompt('URL du flux MJPEG :', 'http://192.168.1.x:8080/video');
                                   if (!url) return;
@@ -288,7 +298,7 @@
                                     await EnderTrack.Camera.configure({ deviceId: devices[0].id });
                                   }
                                 } else if (type === 'picamera2') {
-                                  await EnderTrack.Camera.setDriver('simulation');
+                                  await EnderTrack.Camera.setDriver('mjpeg', { url: base + '/api/camera/picam/stream' });
                                   label = 'RPi Camera';
                                 } else {
                                   await EnderTrack.Camera.setDriver('simulation');
@@ -296,13 +306,20 @@
                                 }
                                 window._cameras.push({ type, label, id: Date.now() });
                                 window._renderCameras(); window._savePeripherals();
-                                await EnderTrack.Camera.startLive();
                                 window._updateCameraLayout();
+                                // Re-render nav buttons now that _cameras is populated
+                                EnderTrack.Camera._renderNav();
+                                EnderTrack.Camera._renderCameraConfig();
                               };
                               window._removeCamera = async (idx) => {
                                 window._cameras.splice(idx, 1);
                                 window._renderCameras(); window._savePeripherals();
-                                // Remove last viewport (shrink)
+                                // Stop live and clean driver
+                                if (!window._cameras.length) {
+                                  await EnderTrack.Camera.stopLive();
+                                  EnderTrack.Camera.driver = null;
+                                  EnderTrack.Camera.driverName = null;
+                                }
                                 const display = EnderTrack.Display;
                                 display.setLayout(window._cameras.length + 1);
                               };
@@ -856,7 +873,6 @@
     <script src="modules/camera/drivers/webcam.js"></script>
     <script src="modules/camera/drivers/mjpeg.js"></script>
     <script src="modules/camera/camera.js"></script>
-    <script src="modules/camera/fast-explore.js"></script>
 
     <!-- Light -->
     <script src="modules/light/drivers/simulation.js"></script>

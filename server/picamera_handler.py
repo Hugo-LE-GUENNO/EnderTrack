@@ -134,6 +134,15 @@ def register_routes(app):
 
         return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+    @app.route('/api/camera/picam/frame')
+    def _picam_frame():
+        """Return latest JPEG frame as binary (for polling)."""
+        _, output = _get_picam()
+        if not output or not output.frame:
+            return "No frame", 503
+        return Response(output.frame, mimetype='image/jpeg',
+                        headers={'Cache-Control': 'no-cache, no-store'})
+
     @app.route('/api/camera/picam/capture', methods=['POST'])
     def _picam_capture():
         """Capture a full-resolution frame and save."""

@@ -47,12 +47,13 @@ class CameraModule {
     }
     this.driver = new Driver(this);
     this.driverName = name;
-    if (opts?.url) this.driver.streamUrl = opts.url;
+    if (opts?.url) this.driver._setUrls ? this.driver._setUrls(opts.url) : (this.driver.streamUrl = opts.url);
     const ok = await this.driver.init(this.config);
     if (ok) {
       this._registerScenarioAction();
       this._updateStatus();
       this._renderNav();
+      this._renderCameraConfig();
       // Init histogram and fast-explore if available
       if (!this.histogram && window.CameraHistogram) {
         this.histogram = new window.CameraHistogram();
@@ -65,7 +66,7 @@ class CameraModule {
           if (tab === 'navigation' || !tab) {
             const r = this.histogram.getContrastRange();
             const renderer = window.EnderTrack?.LiveRenderer;
-            if (renderer) { renderer.setContrast(r.min, r.max); if (this._liveLutId && this._liveLutId !== 'gray') renderer.enabled = true; }
+            if (renderer) { renderer.setContrast(r.min, r.max); renderer.enabled = (r.min > 0 || r.max < 255 || (this._liveLutId && this._liveLutId !== 'gray')); }
             this._saveLiveSettings();
           }
         };
@@ -78,13 +79,14 @@ class CameraModule {
           this._showLiveLutMenu(x, y);
         };
       }
-      if (!this.fastExplore && window.CameraFastExplore) {
-        this.fastExplore = new window.CameraFastExplore(this);
+      if (!this.fastExplore && window.EnderTrack?.FastExplore) {
+        this.fastExplore = new window.EnderTrack.FastExplore(this);
       }
       // Auto-start live if real camera
       if (name !== 'simulation' && !this.live) {
         await this.startLive();
         this._startLiveHistogram();
+        this._hookMosaic();
       }
     }
     return ok;
@@ -216,18 +218,40 @@ class CameraModule {
       this._navEl.id = 'camera-nav';
       zone.appendChild(this._navEl);
     }
-    const recording = this._recording;
+    const isPicam = cameras.some(c => c.type === 'picamera2');
+    const exp = this.picamConfig.exposure || 100000;
+    const gain = this.picamConfig.gain || 1.0;
     this._navEl.innerHTML = `
       <style>
         #camera-nav .cam-btn { padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-size:11px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; font-weight:500; }
         #camera-nav .cam-btn:hover { background:var(--active-element); color:var(--text-selected); }
-        #camera-nav .cam-btn.rec { background:#ef4444; color:#fff; animation:recBlink 1s ease-in-out infinite; }
-        @keyframes recBlink { 50% { opacity:0.7; } }
+        #camera-nav .cam-btn.active { background:var(--active-element); color:var(--text-selected); }
       </style>
-      <div style="display:flex; gap:4px;">
+      <div style="display:flex; gap:4px; margin-bottom:6px;">
         <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">\ud83d\udcf7 Photo</button>
-        <button class="cam-btn ${recording ? 'rec' : ''}" onclick="EnderTrack.Camera.toggleRecord()">${recording ? '\u23f9 Stop' : '\ud83c\udfac Vid\u00e9o'}</button>
+        <button class="cam-btn ${this.navigatorMode ? 'active' : ''}" onclick="EnderTrack.Camera.toggleNavigator()">\ud83d\uddfa Mosa\u00efque</button>
+        ${this.tiles.length ? `<button class="cam-btn" onclick="EnderTrack.Camera.clearTiles()">\ud83d\uddd1</button>` : ''}
       </div>
+      ${isPicam ? `
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <div style="display:flex; align-items:center; gap:4px;">
+          <span style="font-size:9px; color:var(--text-general); width:32px;">Expo</span>
+          <input type="range" min="1000" max="1000000" value="${exp}" step="1000"
+            oninput="document.getElementById('nav-exp-val').textContent=Math.round(this.value/1000)+'ms'"
+            onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)}).then(()=>EnderTrack.Camera._renderNav())"
+            style="flex:1; height:3px;">
+          <span id="nav-exp-val" style="font-size:9px; color:var(--coordinates-color); width:36px; text-align:right;">${Math.round(exp/1000)}ms</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:4px;">
+          <span style="font-size:9px; color:var(--text-general); width:32px;">Gain</span>
+          <input type="range" min="1" max="16" value="${gain}" step="0.5"
+            oninput="document.getElementById('nav-gain-val').textContent=parseFloat(this.value).toFixed(1)"
+            onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)}).then(()=>EnderTrack.Camera._renderNav())"
+            style="flex:1; height:3px;">
+          <span id="nav-gain-val" style="font-size:9px; color:var(--coordinates-color); width:24px; text-align:right;">${gain.toFixed(1)}</span>
+        </div>
+      </div>
+      ` : ''}
     `;
   }
 
@@ -296,6 +320,104 @@ class CameraModule {
       overlay.innerHTML = '<span style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(34,197,94,0.85); color:#000;">LIVE</span>';
     }
   }
+  // === MOSAIC / NAVIGATOR ===
+
+  toggleNavigator(on) {
+    this.navigatorMode = on !== undefined ? on : !this.navigatorMode;
+    if (this.navigatorMode) {
+      this._hookMosaic();
+    }
+    this._renderNav();
+  }
+
+  _hookMosaic() {
+    if (this._mosaicHooked) return;
+    this._mosaicHooked = true;
+    // Draw tiles on canvas
+    window.EnderTrack?.Events?.on?.('canvas:rendered', (ctx, state) => this._renderTiles(ctx, state));
+    // Grab tile after movement
+    window.EnderTrack?.Events?.on?.('movement:completed', () => {
+      if (this.navigatorMode && this.live) {
+        clearTimeout(this._navDebounce);
+        this._navDebounce = setTimeout(() => this._grabNavigatorTile(), 500);
+      }
+    });
+    // Grab tile during scenario
+    window.EnderTrack?.Events?.on?.('scenario:position_reached', () => {
+      if (this.live) {
+        const expMs = (this.picamConfig.exposure || 100000) / 1000;
+        setTimeout(() => this._grabNavigatorTile(), Math.max(500, expMs * 2));
+      }
+    });
+  }
+
+  async _grabNavigatorTile() {
+    if (this._navGrabbing || !this.driver) return;
+    this._navGrabbing = true;
+    try {
+      const frame = await this.getFrame();
+      if (frame?.frame) this._addTile(frame);
+    } finally {
+      this._navGrabbing = false;
+    }
+  }
+
+  _addTile(frameData) {
+    const state = window.EnderTrack?.State?.get?.();
+    if (!state?.pos) return;
+    const x = state.pos.x || 0;
+    const y = state.pos.y || 0;
+    const ps = this.getEffectivePixelSize();
+    const w_px = frameData.width || this.picamConfig.resolution?.[0] || 640;
+    const h_px = frameData.height || this.picamConfig.resolution?.[1] || 480;
+    const widthMm = (w_px * ps) / 1000;
+    const heightMm = (h_px * ps) / 1000;
+
+    const tileImg = new Image();
+    tileImg.src = 'data:image/jpeg;base64,' + frameData.frame;
+    const tile = { img: tileImg, x, y, widthMm, heightMm, timestamp: Date.now(), visible: true };
+
+    // Replace existing tile at same position
+    const existing = this.tiles.findIndex(t => Math.abs(t.x - x) < 0.01 && Math.abs(t.y - y) < 0.01);
+    if (existing >= 0) this.tiles[existing] = tile;
+    else this.tiles.push(tile);
+
+    window.EnderTrack?.Canvas?.requestRender?.();
+  }
+
+  _renderTiles(ctx, state) {
+    if (!this.showMosaic || this.tiles.length === 0) return;
+    const coords = window.EnderTrack?.Coordinates;
+    if (!coords) return;
+
+    const rot = (this.camRotation || 0) * Math.PI / 180;
+    const flipH = this.camFlipH;
+    const flipV = this.camFlipV;
+
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    for (const tile of this.tiles) {
+      if (!tile.img.complete || !tile.img.naturalWidth) continue;
+      if (tile.visible === false) continue;
+      const center = coords.mapToCanvas(tile.x, tile.y);
+      const wPx = coords.mmToPixels(tile.widthMm);
+      const hPx = coords.mmToPixels(tile.heightMm);
+
+      ctx.save();
+      ctx.translate(center.cx, center.cy);
+      ctx.rotate(rot);
+      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+      ctx.drawImage(tile.img, -wPx / 2, -hPx / 2, wPx, hPx);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  clearTiles() {
+    this.tiles = [];
+    window.EnderTrack?.Canvas?.requestRender?.();
+  }
+
   // === IMAGE PROCESSING ===
 
   toggleFastExplore() {
@@ -483,19 +605,16 @@ class CameraModule {
   }
 
   _renderCameraConfig() {
-    const zone = document.getElementById('configPluginZone');
+    const zone = document.getElementById('picamConfigZone');
     if (!zone) return;
-    let el = document.getElementById('picam-config');
-    if (!el) {
-      el = document.createElement('details');
-      el.id = 'picam-config';
-      el.open = true;
-      zone.prepend(el);
-    }
+    const cameras = window._cameras || [];
+    const hasPicam = cameras.some(c => c.type === 'picamera2') ||
+      (this.driverName === 'mjpeg' && this.driver?.streamUrl?.includes('/api/camera/picam/'));
+    if (!hasPicam) { zone.innerHTML = ''; return; }
     const c = this.picamConfig;
-    el.innerHTML = `
-      <summary style="font-size:11px; cursor:pointer; color:var(--text-selected); font-weight:500;">\ud83d\udcf7 Cam\u00e9ra</summary>
-      <div style="display:flex; flex-direction:column; gap:6px; padding:6px 0;">
+    zone.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:6px; padding:8px 0 0;">
+        <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.5px; color:#666; margin-bottom:2px;">Configuration RPi Camera</div>
         <div style="display:flex; gap:6px; align-items:center;">
           <label style="width:70px; font-size:10px;">R\u00e9solution</label>
           <select onchange="EnderTrack.Camera.setPicamConfig({resolution: this.value.split(',').map(Number)})" style="flex:1; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
@@ -518,23 +637,17 @@ class CameraModule {
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
           <label style="width:70px; font-size:10px;">Flip</label>
-          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:2px;">
-            <input type="checkbox" ${c.flip_h?'checked':''} onchange="EnderTrack.Camera.setPicamConfig({flip_h:this.checked})">
-            <span style="color:var(--text-general);">H</span>
-          </label>
-          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:2px;">
-            <input type="checkbox" ${c.flip_v?'checked':''} onchange="EnderTrack.Camera.setPicamConfig({flip_v:this.checked})">
-            <span style="color:var(--text-general);">V</span>
-          </label>
+          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:2px;"><input type="checkbox" ${c.flip_h?'checked':''} onchange="EnderTrack.Camera.setPicamConfig({flip_h:this.checked})"><span style="color:var(--text-general);">H</span></label>
+          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:2px;"><input type="checkbox" ${c.flip_v?'checked':''} onchange="EnderTrack.Camera.setPicamConfig({flip_v:this.checked})"><span style="color:var(--text-general);">V</span></label>
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
           <label style="width:70px; font-size:10px;">Exposition</label>
-          <input type="number" value="${c.exposure||100000}" min="100" step="1000" onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)})" style="width:70px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <input type="number" value="${c.exposure||100000}" min="100" step="1000" onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)}).then(()=>EnderTrack.Camera._renderNav())" style="width:70px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
           <span style="font-size:9px; color:var(--text-general);">\u00b5s</span>
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
           <label style="width:70px; font-size:10px;">Gain</label>
-          <input type="number" value="${c.gain||1.0}" min="1" max="16" step="0.1" onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)})" style="width:50px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <input type="number" value="${c.gain||1.0}" min="1" max="16" step="0.1" onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)}).then(()=>EnderTrack.Camera._renderNav())" style="width:50px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
         </div>
       </div>
     `;
@@ -576,24 +689,5 @@ window.EnderTrack = window.EnderTrack || {};
 window.EnderTrack.Camera = new CameraModule();
 window.EnderTrack.CameraDrivers = window.EnderTrack.CameraDrivers || {};
 
-// Auto-init: detect picamera2 stream, fallback to simulation
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    fetch(base + '/api/camera/picam/config').then(r => {
-      if (r.ok) EnderTrack.Camera.setDriver('mjpeg', { url: base + '/api/camera/picam/stream' });
-      else EnderTrack.Camera.setDriver('simulation');
-    }).catch(() => EnderTrack.Camera.setDriver('simulation'));
-    // Init fast explore
-    if (window.EnderpicamFastExplore) EnderTrack.Camera.fastExplore = new EnderpicamFastExplore();
-  });
-} else {
-  setTimeout(() => {
-    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    fetch(base + '/api/camera/picam/config').then(r => {
-      if (r.ok) EnderTrack.Camera.setDriver('mjpeg', { url: base + '/api/camera/picam/stream' });
-      else EnderTrack.Camera.setDriver('simulation');
-    }).catch(() => EnderTrack.Camera.setDriver('simulation'));
-    if (window.EnderpicamFastExplore) EnderTrack.Camera.fastExplore = new EnderpicamFastExplore();
-  }, 0);
-}
+// Camera driver is now initialized by _initSavedCameras (peripherals system)
+// No auto-detection at boot — user selects camera type in Settings

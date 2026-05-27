@@ -202,30 +202,17 @@ class DisplayModule {
       return;
     }
 
-    // Camera source: video + processed canvas (LUT/contrast via GalleryRenderer)
+    // Camera source: video + processed canvas (LUT/contrast via LiveRenderer)
     if (source && source.startsWith('camera')) {
       const camera = window.EnderTrack?.Camera;
       const camIdx = parseInt(source.split(':')[1]) || 0;
       const camConfig = (window._cameras || [])[camIdx];
 
       const _createLiveView = () => {
-        if (!camera?.driver?._stream) return;
-        // Hidden video for stream source
-        const video = document.createElement('video');
-        video.autoplay = true;
-        video.muted = true;
-        video.playsInline = true;
-        video.style.cssText = 'position:absolute; opacity:0; pointer-events:none; width:0; height:0;';
-        video.srcObject = camera.driver._stream;
-        cell.appendChild(video);
-        video.play().catch(() => {});
-        this._videos.set(viewportId, video);
-
-        // Visible canvas for processed output
-        const canvas = document.createElement('canvas');
-        canvas.id = 'liveDisplayCanvas';
-        canvas.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000; image-rendering:pixelated;';
-        cell.appendChild(canvas);
+        const isMjpeg = camera?.driverName === 'mjpeg';
+        const hasStream = camera?.driver?._stream;
+        const hasImg = camera?.driver?._img;
+        if (!hasStream && !hasImg) return;
 
         // LIVE / REC overlay
         const overlay = document.createElement('div');
@@ -233,36 +220,79 @@ class DisplayModule {
         overlay.style.cssText = 'position:absolute; top:8px; left:8px; z-index:20; display:flex; gap:6px; pointer-events:none;';
         overlay.innerHTML = '<span id="liveBadge" style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(34,197,94,0.85); color:#000;">LIVE</span>';
         cell.appendChild(overlay);
-        // Update overlay when recording state changes
         this._liveOverlay = overlay;
 
-        // Right-click: let it bubble to viewport for source selection
-        canvas.oncontextmenu = null;
-        // Double-click for fullscreen toggle
-        canvas.ondblclick = () => {
-          if (document.fullscreenElement) document.exitFullscreen();
-          else canvas.requestFullscreen?.();
-        };
-
-        // Connect LiveRenderer
-        const liveRenderer = window.EnderTrack?.LiveRenderer;
-        if (liveRenderer) {
-          liveRenderer.setVideo(video);
-          liveRenderer.setCanvas(canvas);
-          liveRenderer.start();
+        if (isMjpeg) {
+          // MJPEG: display img directly in viewport (reliable live update)
+          const liveImg = camera.driver._img;
+          liveImg.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
+          cell.appendChild(liveImg);
+          // Double-click fullscreen
+          liveImg.ondblclick = () => {
+            if (document.fullscreenElement) document.exitFullscreen();
+            else cell.requestFullscreen?.();
+          };
+          // Also create a hidden canvas for LiveRenderer (LUT/contrast processing)
+          const canvas = document.createElement('canvas');
+          canvas.id = 'liveDisplayCanvas';
+          canvas.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000; image-rendering:pixelated; display:none;';
+          cell.appendChild(canvas);
+          // LiveRenderer: when enabled (LUT active), switch to canvas mode
+          const liveRenderer = window.EnderTrack?.LiveRenderer;
+          if (liveRenderer) {
+            liveRenderer.setVideo(null);
+            liveRenderer.setImage(liveImg);
+            liveRenderer.setCanvas(canvas);
+            liveRenderer._liveImg = liveImg; // ref for toggling
+            liveRenderer.start();
+            // Override _renderFrame to toggle img/canvas visibility
+            const origRender = liveRenderer._renderFrame.bind(liveRenderer);
+            liveRenderer._renderFrame = () => {
+              if (liveRenderer.enabled) {
+                liveImg.style.display = 'none';
+                canvas.style.display = '';
+                origRender();
+              } else {
+                canvas.style.display = 'none';
+                liveImg.style.display = '';
+              }
+            };
+          }
+        } else {
+          // Webcam: hidden video + canvas via LiveRenderer
+          const canvas = document.createElement('canvas');
+          canvas.id = 'liveDisplayCanvas';
+          canvas.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000; image-rendering:pixelated;';
+          cell.appendChild(canvas);
+          canvas.ondblclick = () => {
+            if (document.fullscreenElement) document.exitFullscreen();
+            else canvas.requestFullscreen?.();
+          };
+          const video = document.createElement('video');
+          video.autoplay = true; video.muted = true; video.playsInline = true;
+          video.style.cssText = 'position:absolute; opacity:0; pointer-events:none; width:0; height:0;';
+          video.srcObject = camera.driver._stream;
+          cell.appendChild(video);
+          video.play().catch(() => {});
+          this._videos.set(viewportId, video);
+          const liveRenderer = window.EnderTrack?.LiveRenderer;
+          if (liveRenderer) {
+            liveRenderer.setImage(null);
+            liveRenderer.setVideo(video);
+            liveRenderer.setCanvas(canvas);
+            liveRenderer.start();
+          }
         }
-        if (video.readyState >= 2) startLoop();
       };
 
       const _ensureLive = () => {
-        if (camera?.driver?._stream) {
+        const isMjpeg = camera?.driverName === 'mjpeg';
+        if (isMjpeg && camera?.driver?._img) {
           _createLiveView();
-        } else if (camera) {
-          const type = camConfig?.type || 'webcam';
-          const driverName = type === 'mjpeg' ? 'mjpeg' : (type === 'picamera2' ? 'simulation' : 'webcam');
-          const needSwitch = !camera.driver || camera.driverName !== driverName;
-          const setup = needSwitch ? camera.setDriver(driverName) : Promise.resolve();
-          setup.then(() => camera.startLive()).then(() => _createLiveView());
+        } else if (camera?.driver?._stream) {
+          _createLiveView();
+        } else if (camera && camera.driver) {
+          camera.startLive().then(() => setTimeout(_createLiveView, 300));
         }
       };
       _ensureLive();

@@ -26,6 +26,10 @@ class LiveRenderer {
     this._video = video;
   }
 
+  setImage(img) {
+    this._img = img;
+  }
+
   setContrast(min, max) {
     this.min = min;
     this.max = max;
@@ -55,21 +59,26 @@ class LiveRenderer {
   }
 
   _renderFrame() {
-    if (!this._video || !this._canvas || !this._ctx) return;
-    if (this._video.readyState < 2 || !this._video.videoWidth) return;
+    // Determine source: video or img (MJPEG)
+    const src = this._video || this._img;
+    if (!src || !this._canvas || !this._ctx) return;
+    const isVideo = !!this._video;
+    if (isVideo && (this._video.readyState < 2 || !this._video.videoWidth)) return;
+    if (!isVideo && !this._img.naturalWidth) return;
 
-    const w = this._video.videoWidth, h = this._video.videoHeight;
+    const w = isVideo ? this._video.videoWidth : this._img.naturalWidth;
+    const h = isVideo ? this._video.videoHeight : this._img.naturalHeight;
     if (this._canvas.width !== w) this._canvas.width = w;
     if (this._canvas.height !== h) this._canvas.height = h;
 
-    // If no processing needed, just draw video directly
+    // If no processing needed, just draw directly
     if (!this.enabled || (!this._lutTable && this.min === 0 && this.max === 255)) {
-      this._ctx.drawImage(this._video, 0, 0);
+      this._ctx.drawImage(src, 0, 0);
       return;
     }
 
-    // Draw video to canvas, get pixels, apply contrast/LUT
-    this._ctx.drawImage(this._video, 0, 0);
+    // Draw to canvas, get pixels, apply contrast/LUT
+    this._ctx.drawImage(src, 0, 0);
     const imgData = this._ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
     const min = this.min, max = this.max;
@@ -91,13 +100,18 @@ class LiveRenderer {
 
   // Get current frame data for histogram
   getFrameData() {
-    if (!this._video || this._video.readyState < 2) return null;
-    const w = Math.min(this._video.videoWidth, 320);
-    const h = Math.min(this._video.videoHeight, 240);
+    const src = this._video || this._img;
+    if (!src) return null;
+    if (this._video && this._video.readyState < 2) return null;
+    if (this._img && !this._img.naturalWidth) return null;
+    const sw = this._video ? this._video.videoWidth : this._img.naturalWidth;
+    const sh = this._video ? this._video.videoHeight : this._img.naturalHeight;
+    const w = Math.min(sw, 320);
+    const h = Math.min(sh, 240);
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     const ctx = c.getContext('2d');
-    ctx.drawImage(this._video, 0, 0, w, h);
+    ctx.drawImage(src, 0, 0, w, h);
     return ctx.getImageData(0, 0, w, h).data;
   }
 }
