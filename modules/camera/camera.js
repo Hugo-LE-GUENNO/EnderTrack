@@ -22,7 +22,15 @@ class CameraModule {
     this._liveLutId = 'gray';
     this._liveSettings = null;
     this._loadLiveSettings();
+    // Picam config
+    this.picamConfig = { resolution: [1280, 720], exposure: 100000, gain: 1.0, pixel_size: 1.0, pixel_size_ref_res: [640, 480], rotation: 0, flip_h: false, flip_v: false };
+    this.camRotation = 0;
+    this.camFlipH = false;
+    this.camFlipV = false;
+    this.navigatorMode = false;
+    this.showMosaic = true;
     this.fastExplore = null;
+    this._loadPicamConfig();
     this.tiles = [];
     // Register scenario action early (even without driver)
     setTimeout(() => this._registerScenarioAction(), 100);
@@ -429,6 +437,47 @@ class CameraModule {
     // This method is kept for compatibility but does nothing
   }
 
+  async _loadPicamConfig() {
+    try {
+      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      const res = await fetch(base + '/api/camera/picam/config');
+      if (res.ok) {
+        const data = await res.json();
+        this.picamConfig = data;
+        this.camRotation = data.rotation || 0;
+        this.camFlipH = data.flip_h || false;
+        this.camFlipV = data.flip_v || false;
+        this.config.resolution = data.resolution || [1280, 720];
+        this.config.exposure = data.exposure || 100000;
+        this.config.gain = data.gain || 1.0;
+      }
+    } catch {}
+  }
+
+  async setPicamConfig(params) {
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    try {
+      const res = await fetch(base + '/api/camera/picam/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+      const data = await res.json();
+      if (data.config) {
+        this.picamConfig = data.config;
+        this.camRotation = data.config.rotation || 0;
+        this.camFlipH = data.config.flip_h || false;
+        this.camFlipV = data.config.flip_v || false;
+      }
+    } catch {}
+  }
+
+  getEffectivePixelSize() {
+    const ps = this.picamConfig.pixel_size || 1.0;
+    const refRes = this.picamConfig.pixel_size_ref_res || [640, 480];
+    const curRes = this.picamConfig.resolution || [640, 480];
+    return ps * (refRes[0] / curRes[0]);
+  }
+
   async _loadLiveSettings() {
     try {
       const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
@@ -473,6 +522,8 @@ if (document.readyState === 'loading') {
       if (r.ok) EnderTrack.Camera.setDriver('mjpeg', { url: base + '/api/camera/picam/stream' });
       else EnderTrack.Camera.setDriver('simulation');
     }).catch(() => EnderTrack.Camera.setDriver('simulation'));
+    // Init fast explore
+    if (window.EnderpicamFastExplore) EnderTrack.Camera.fastExplore = new EnderpicamFastExplore();
   });
 } else {
   setTimeout(() => {
@@ -481,5 +532,6 @@ if (document.readyState === 'loading') {
       if (r.ok) EnderTrack.Camera.setDriver('mjpeg', { url: base + '/api/camera/picam/stream' });
       else EnderTrack.Camera.setDriver('simulation');
     }).catch(() => EnderTrack.Camera.setDriver('simulation'));
+    if (window.EnderpicamFastExplore) EnderTrack.Camera.fastExplore = new EnderpicamFastExplore();
   }, 0);
 }

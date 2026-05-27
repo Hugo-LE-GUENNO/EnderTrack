@@ -1,9 +1,8 @@
-// plugins/enderpicam/fast-explore.js
+// modules/camera/fast-explore.js — Fast Exploration (select region → grid → explore)
 // Fast Exploration: select region → generate grid → create list → run scenario
 
-class CameraFastExplore {
-  constructor(ui) {
-    this.ui = ui;
+class EnderpicamFastExplore {
+  constructor() {
     this.active = false;
     this.selecting = false;
     this.startPos = null;
@@ -17,9 +16,9 @@ class CameraFastExplore {
   }
 
   getFOV() {
-    const cfg = this.ui.config;
+    const cfg = EnderTrack.Camera.picamConfig;
     const res = cfg.resolution || [640, 480];
-    const ps = this.ui.getEffectivePixelSize();
+    const ps = EnderTrack.Camera.getEffectivePixelSize();
     return { x: (res[0] * ps) / 1000, y: (res[1] * ps) / 1000 };
   }
 
@@ -94,14 +93,14 @@ class CameraFastExplore {
     }
     window.EnderTrack?.Events?.off?.('canvas:rendered', this._renderBound);
     window.EnderTrack?.Canvas?.requestRender?.();
-    this.ui.renderNav();
+    EnderTrack.Camera.createUI?.();
   }
 
   _generateGrid() {
     if (!this.startPos || !this.endPos) return;
     const fov = this.getFOV();
     const step = this.getStep();
-    const rot = -(this.ui.camRotation || 0) * Math.PI / 180;
+    const rot = -(EnderTrack.Camera.camRotation || 0) * Math.PI / 180;
     const cos = Math.cos(rot);
     const sin = Math.sin(rot);
 
@@ -170,14 +169,14 @@ class CameraFastExplore {
     const fov = this.getFOV();
     const step = this.getStep();
     const n = this.positions.length;
-    const rot = -(this.ui.camRotation || 0) * Math.PI / 180;
+    const rot = -(EnderTrack.Camera.camRotation || 0) * Math.PI / 180;
     const dx = this.endPos.x - this.startPos.x;
     const dy = this.endPos.y - this.startPos.y;
     const localW = Math.abs(dx * Math.cos(rot) + dy * Math.sin(rot));
     const localH = Math.abs(-dx * Math.sin(rot) + dy * Math.cos(rot));
     const cols = Math.max(1, Math.ceil(localW / step.x) + 1);
     const rows = Math.max(1, Math.ceil(localH / step.y) + 1);
-    const expMs = (this.ui.config.exposure || 100000) / 1000;
+    const expMs = (EnderTrack.Camera.picamConfig.exposure || 100000) / 1000;
     const delayPerPos = Math.max(2000, Math.ceil(expMs) * 2 + 1500);
     const estSec = Math.round(n * delayPerPos / 1000);
     const tooMany = n > 1000;
@@ -262,7 +261,7 @@ class CameraFastExplore {
     const n = this.positions.length;
     let cols = 1, rows = 1;
     if (this.startPos && this.endPos) {
-      const rot = -(this.ui.camRotation || 0) * Math.PI / 180;
+      const rot = -(EnderTrack.Camera.camRotation || 0) * Math.PI / 180;
       const dx = this.endPos.x - this.startPos.x;
       const dy = this.endPos.y - this.startPos.y;
       const localW = Math.abs(dx * Math.cos(rot) + dy * Math.sin(rot));
@@ -304,9 +303,9 @@ class CameraFastExplore {
     }
 
     // 2. Enable navigator mode for tile capture
-    this.ui.navigatorMode = true;
-    this.ui.showMosaic = true;
-    this.ui.renderNav();
+    EnderTrack.Camera.navigatorMode = true;
+    EnderTrack.Camera.showMosaic = true;
+    EnderTrack.Camera.createUI?.();
 
     // 3. Select the list in scenario and configure
     const scenario = window.EnderTrack?.Scenario;
@@ -315,7 +314,7 @@ class CameraFastExplore {
     if (activeList) {
       scenario.selectedListId = String(activeList.id);
       // Delay = settle(500ms) + exposure×2 + capture(500ms) + margin
-      const expUs = this.ui.config.exposure || 100000;
+      const expUs = EnderTrack.Camera.picamConfig.exposure || 100000;
       const expDelay = Math.ceil(expUs / 1000) * 2;
       const afDelay = this.afEnabled ? 20000 : 0; // AF can take up to 20s
       scenario.delay = Math.max(2000, expDelay + 1500 + afDelay);
@@ -337,7 +336,7 @@ class CameraFastExplore {
     if (!coords) return;
 
     if (this.startPos && this.endPos) {
-      const rot = -(this.ui.camRotation || 0) * Math.PI / 180;
+      const rot = -(EnderTrack.Camera.camRotation || 0) * Math.PI / 180;
       const cos = Math.cos(rot);
       const sin = Math.sin(rot);
 
@@ -416,4 +415,4 @@ class CameraFastExplore {
   }
 }
 
-window.CameraFastExplore = CameraFastExplore;
+window.EnderTrack.FastExplore = EnderpicamFastExplore;

@@ -6,6 +6,7 @@ Only loaded if picamera2 is available (Raspberry Pi).
 
 import io
 import os
+import json
 import time
 import threading
 
@@ -33,21 +34,76 @@ class StreamingOutput(io.BufferedIOBase):
 
 _picam = None
 _stream_output = None
+_config = {
+    'resolution': [1280, 720],
+    'exposure': 100000,
+    'gain': 1.0,
+    'pixel_size': 1.0,
+    'pixel_size_ref_res': [640, 480],
+    'rotation': 0,
+    'flip_h': False,
+    'flip_v': False,
+    'format': 'tiff'
+}
+_CONFIG_FILE = os.path.join(os.getcwd(), '.picam_config.json')
+
+
+def _load_config():
+    global _config
+    if os.path.isfile(_CONFIG_FILE):
+        try:
+            with open(_CONFIG_FILE, 'r') as f:
+                saved = json.load(f)
+                _config.update(saved)
+        except:
+            pass
+
+
+def _save_config():
+    try:
+        with open(_CONFIG_FILE, 'w') as f:
+            json.dump(_config, f, indent=2)
+    except:
+        pass
 
 
 def _get_picam():
     global _picam, _stream_output
     if _picam is None and HAS_PICAMERA2:
+        _load_config()
         _picam = Picamera2()
-        config = _picam.create_video_configuration(
-            main={"size": (1280, 720), "format": "RGB888"},
-            lores={"size": (640, 480), "format": "YUV420"}
+        res = tuple(_config['resolution'])
+        cfg = _picam.create_video_configuration(
+            main={'format': 'RGB888', 'size': res},
+            lores={'size': (min(640, res[0]), min(480, res[1])), 'format': 'YUV420'}
         )
-        _picam.configure(config)
+        _picam.configure(cfg)
         _stream_output = StreamingOutput()
         _picam.start_recording(MJPEGEncoder(), FileOutput(_stream_output))
-        print("  📷 Picamera2 started (1280x720)")
+        time.sleep(0.5)
+        # Apply saved controls
+        controls = {
+            'ExposureTime': int(_config['exposure']),
+            'AnalogueGain': float(_config['gain']),
+            'FrameDurationLimits': (100, max(100000, int(_config['exposure']) + 100000))
+        }
+        _picam.set_controls(controls)
+        print(f"  📷 Picamera2: {res[0]}×{res[1]} exp={_config['exposure']} gain={_config['gain']}")
     return _picam, _stream_output
+
+
+def _restart_camera(new_res):
+    """Restart camera with new resolution."""
+    global _picam, _stream_output
+    if _picam:
+        _picam.stop_recording()
+        _picam.stop()
+        _picam.close()
+        _picam = None
+        _stream_output = None
+    _config['resolution'] = list(new_res)
+    _save_config()
+    _get_picam()
 
 
 def register_routes(app):
@@ -57,6 +113,8 @@ def register_routes(app):
         return
 
     from flask import Response, request, jsonify
+
+    _load_config()
 
     @app.route('/api/camera/picam/stream')
     def _picam_stream():
@@ -78,7 +136,7 @@ def register_routes(app):
 
     @app.route('/api/camera/picam/capture', methods=['POST'])
     def _picam_capture():
-        """Capture a full-resolution frame."""
+        """Capture a full-resolution frame and save."""
         import numpy as np
         import base64
 
@@ -88,61 +146,85 @@ def register_routes(app):
 
         data = request.get_json() or {}
         path = data.get('path', '')
+        fmt = data.get('format', _config.get('format', 'tiff'))
 
         # Capture raw array
         arr = picam.capture_array("main")
-        # arr is RGB888 (H, W, 3) uint8
 
         if path:
             from PIL import Image
             img = Image.fromarray(arr)
-            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-            if path.endswith('.tiff') or path.endswith('.tif'):
-                img.save(path, compression='tiff_deflate')
-            else:
-                img.save(path)
-            print(f"  📷 Capture: {path} ({arr.shape[1]}x{arr.shape[0]})")
-            return jsonify({'success': True, 'path': path, 'width': arr.shape[1], 'height': arr.shape[0]})
+            # Apply rotation
+            rot = _config.get('rotation', 0)
+            if rot:
+                img = img.rotate(-rot, expand=True)
+            # Apply flip
+            if _config.get('flip_h'):
+                img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            if _config.get('flip_v'):
+                img = img.transpose(Image.FLIP_TOP_BOTTOM)
+            # Convert to grayscale for TIFF
+            if fmt in ('tiff', 'tif'):
+                img = img.convert('L')
 
-        # Return as base64 for client-side handling
-        b64 = base64.b64encode(arr.tobytes()).decode('ascii')
-        return jsonify({
-            'success': True,
-            'width': arr.shape[1],
-            'height': arr.shape[0],
-            'channels': 3,
-            'dtype': 'uint8',
-            'data': b64
-        })
+            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+            img.save(path, compression='tiff_deflate' if fmt in ('tiff', 'tif') else None)
+            print(f"  📷 Capture: {path} ({img.size[0]}×{img.size[1]})")
+            return jsonify({'success': True, 'path': path, 'width': img.size[0], 'height': img.size[1]})
+
+        # Return as base64 JPEG for live preview
+        from PIL import Image
+        img = Image.fromarray(arr)
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=80)
+        b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+        return jsonify({'success': True, 'frame': b64, 'width': arr.shape[1], 'height': arr.shape[0]})
 
     @app.route('/api/camera/picam/config', methods=['GET'])
     def _picam_config_get():
         """Get current camera config."""
-        picam, _ = _get_picam()
-        if not picam:
-            return jsonify({'error': 'No camera'}), 503
-        controls = picam.camera_controls
-        metadata = picam.capture_metadata()
-        return jsonify({
-            'exposure': metadata.get('ExposureTime', 0),
-            'gain': metadata.get('AnalogueGain', 1.0),
-            'available_controls': list(controls.keys())
-        })
+        return jsonify(_config)
 
     @app.route('/api/camera/picam/config', methods=['POST'])
     def _picam_config_set():
-        """Set camera controls (exposure, gain, etc)."""
+        """Set camera controls and config."""
         picam, _ = _get_picam()
-        if not picam:
-            return jsonify({'error': 'No camera'}), 503
         data = request.get_json() or {}
+        restart_needed = False
+
+        # Resolution change requires restart
+        if 'resolution' in data:
+            new_res = data['resolution']
+            if new_res != _config['resolution']:
+                restart_needed = True
+                _config['resolution'] = new_res
+
+        # Update config values
+        for key in ('pixel_size', 'pixel_size_ref_res', 'rotation', 'flip_h', 'flip_v', 'format'):
+            if key in data:
+                _config[key] = data[key]
+
+        # Apply camera controls
         controls = {}
         if 'exposure' in data:
-            controls['ExposureTime'] = int(data['exposure'])
+            exp = int(data['exposure'])
+            _config['exposure'] = exp
+            controls['ExposureTime'] = exp
+            controls['FrameDurationLimits'] = (100, max(100000, exp + 100000))
         if 'gain' in data:
-            controls['AnalogueGain'] = float(data['gain'])
-        if controls:
-            picam.set_controls(controls)
-        return jsonify({'success': True, 'applied': controls})
+            g = float(data['gain'])
+            _config['gain'] = g
+            controls['AnalogueGain'] = g
+
+        if restart_needed:
+            _restart_camera(tuple(_config['resolution']))
+        elif controls and picam:
+            try:
+                picam.set_controls(controls)
+            except Exception as e:
+                print(f"  ⚠️ set_controls: {e}")
+
+        _save_config()
+        return jsonify({'success': True, 'config': _config})
 
     print("  ✅ Picamera2 routes registered")
