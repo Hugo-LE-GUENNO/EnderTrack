@@ -425,6 +425,7 @@ class ScenarioModule {
   _autoGenerate() {
     const p = this._preset || {};
     if (!p.multipos && !p.timelapse && !p.zstack && !p.mosaic && !p.autofocus) return;
+    console.log('[Scenario] _autoGenerate preset:', JSON.stringify(p));
     this._generateFromPreset();
   }
 
@@ -432,8 +433,9 @@ class ScenarioModule {
     const p = this._preset || {};
     const pp = this._presetParams || {};
     const manager = window.EnderTrack?.Scenario?.manager;
-    if (!manager) return;
-    if (!p.multipos && !p.timelapse && !p.zstack && !p.mosaic) return;
+    if (!manager) { console.warn('[Scenario] no manager'); return; }
+    if (!p.multipos && !p.timelapse && !p.zstack && !p.mosaic) { console.warn('[Scenario] no mode selected'); return; }
+    console.log('[Scenario] _generateFromPreset, listId:', pp.listId);
 
     const parts = [];
     if (p.multipos) parts.push('Multi-pos');

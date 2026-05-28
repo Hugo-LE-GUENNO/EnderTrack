@@ -146,7 +146,7 @@ class ActionRegistry {
       }
     });
 
-    // 💡 LED
+    // 💡 LED (status indicator)
     this.register({
       id: 'led',
       label: '💡 LED',
@@ -176,6 +176,43 @@ class ActionRegistry {
         await new Promise(r => setTimeout(r, 50));
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
           window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `💡 LED ${color}`, context), 'info');
+        }
+        return { success: true };
+      }
+    });
+
+    // 💡 NeoPixel Light (pilight)
+    this.register({
+      id: 'light_set',
+      label: '💡 Lumi\u00e8re',
+      icon: '💡',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Lumi\u00e8re' },
+        { id: 'action', label: 'Action', type: 'select', options: [
+          { value: 'on', label: 'ON' },
+          { value: 'off', label: 'OFF' },
+          { value: 'set', label: 'Set intensit\u00e9' }
+        ], default: 'on' },
+        { id: 'lightId', label: 'ID lumi\u00e8re', type: 'number', default: 1, min: 1 },
+        { id: 'intensity', label: 'Intensit\u00e9 (%)', type: 'number', default: 100, min: 0, max: 100 },
+        { id: 'r', label: 'R', type: 'number', default: 255, min: 0, max: 255 },
+        { id: 'g', label: 'G', type: 'number', default: 255, min: 0, max: 255 },
+        { id: 'b', label: 'B', type: 'number', default: 255, min: 0, max: 255 },
+        { id: 'showInLog', label: 'Log', type: 'checkbox', default: false }
+      ],
+      execute: async (params, context) => {
+        const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const id = parseInt(params.lightId) || 1;
+        const intensity = (parseInt(params.intensity) || 100) / 100;
+        let endpoint = '/api/light/' + (params.action === 'off' ? 'off' : 'on');
+        const body = { id, intensity, r: parseInt(params.r)||255, g: parseInt(params.g)||255, b: parseInt(params.b)||255 };
+        if (params.action === 'off') endpoint = '/api/light/off';
+        try {
+          await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        } catch {}
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(`💡 Light #${id} ${params.action} (${params.intensity}%)`, 'info');
         }
         return { success: true };
       }
