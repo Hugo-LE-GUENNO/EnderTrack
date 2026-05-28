@@ -803,7 +803,6 @@ ${p.label}:`, p.default ?? '');
   }
 
   stop() { this.stopExecution(); }
-  }
 
   _showRunUI(list) {
     // Progress + logs in right panel
