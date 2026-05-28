@@ -791,13 +791,18 @@ ${p.label}:`, p.default ?? '');
   }
 
   stopExecution() {
-    this.stop();
+    this._stopped = true;
+    this._isExecuting = false;
+    this._paused = false;
+    this._executor?.stop?.();
+    // Cancel current movement
+    window.EnderTrack?.Movement?.emergencyStopMovement?.();
+    // Restore UI immediately
+    this._hideRunUI();
+    this.createUI();
   }
 
-  stop() {
-    this._stopped = true;
-    this.isExecuting = false;
-    this._executor?.stop?.();
+  stop() { this.stopExecution(); }
   }
 
   _showRunUI(list) {
