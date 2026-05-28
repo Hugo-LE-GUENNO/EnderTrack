@@ -229,10 +229,8 @@ class CameraModule {
       </style>
       <div style="display:flex; gap:4px; margin-bottom:6px;">
         <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">\ud83d\udcf7 Photo</button>
-        <button class="cam-btn ${this.navigatorMode ? 'active' : ''}" onclick="EnderTrack.Camera.toggleNavigator()">\ud83d\uddfa Mosa\u00efque</button>
         ${isPicam ? `<button class="cam-btn" onclick="EnderTrack.Camera.runAutofocus()">\ud83d\udd2c AF</button>` : ''}
         <button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" onclick="EnderTrack.Camera.toggleFastExplore()">\ud83d\udd32 Explore</button>
-        ${this.tiles.length ? `<button class="cam-btn" onclick="EnderTrack.Camera.clearTiles()">\ud83d\uddd1</button>` : ''}
       </div>
       ${isPicam ? `
       <div style="display:flex; flex-direction:column; gap:4px;">
@@ -363,6 +361,8 @@ class CameraModule {
     this._mosaicHooked = true;
     // Draw tiles on canvas
     window.EnderTrack?.Events?.on?.('canvas:rendered', (ctx, state) => this._renderTiles(ctx, state));
+    // Render gallery panel
+    this._renderTilesPanel();
     // Grab tile after movement
     window.EnderTrack?.Events?.on?.('movement:completed', () => {
       if (this.navigatorMode && this.live) {
@@ -450,29 +450,30 @@ class CameraModule {
   }
 
   _renderTilesPanel() {
-    // Render mosaic tiles in the Image/Gallery tab
+    // Render mosaic section in the Image/Gallery tab
     let el = document.getElementById('mosaicGallerySection');
     const container = document.getElementById('imageTabContent');
     if (!container) return;
-    if (!this.tiles.length) {
-      if (el) el.remove();
-      return;
-    }
     if (!el) {
       el = document.createElement('div');
       el.id = 'mosaicGallerySection';
-      el.style.cssText = 'border-top:1px solid #333; padding:8px; margin-top:8px;';
+      el.style.cssText = 'border-top:1px solid #333; padding:8px;';
       container.appendChild(el);
     }
     el.innerHTML = `
       <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
         <span style="font-size:10px; color:var(--text-selected); font-weight:500; flex:1;">\ud83e\udde9 Mosa\u00efque (${this.tiles.length})</span>
         <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
+          <input type="checkbox" ${this.navigatorMode ? 'checked' : ''} onchange="EnderTrack.Camera.toggleNavigator(this.checked)">
+          <span style="color:var(--text-general);">Auto</span>
+        </label>
+        <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
           <input type="checkbox" ${this.showMosaic ? 'checked' : ''} onchange="EnderTrack.Camera.showMosaic=this.checked; EnderTrack.Canvas?.requestRender?.()">
           <span style="color:var(--text-general);">Overlay</span>
         </label>
       </div>
-      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(50px, 1fr)); gap:3px; max-height:200px; overflow-y:auto;">
+      ${this.tiles.length ? `
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(50px, 1fr)); gap:3px; max-height:200px; overflow-y:auto; margin-bottom:6px;">
         ${this.tiles.map((t, i) => `
           <div style="position:relative; aspect-ratio:4/3; background:#111; border-radius:3px; overflow:hidden; cursor:pointer;" onclick="EnderTrack.Camera._selectTile(${i})">
             <img src="${t.img.src || ''}" style="width:100%; height:100%; object-fit:cover;">
@@ -480,10 +481,11 @@ class CameraModule {
           </div>
         `).join('')}
       </div>
-      <div style="display:flex; gap:4px; margin-top:6px;">
+      <div style="display:flex; gap:4px;">
         <button onclick="EnderTrack.Camera.saveTiles()" style="flex:1; padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">\ud83d\udcbe Sauver tout</button>
         <button onclick="EnderTrack.Camera.clearTiles()" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:#ef4444;">\ud83d\uddd1 Effacer</button>
       </div>
+      ` : '<div style="font-size:9px; color:#666; text-align:center; padding:8px;">Activer "Auto" puis d\u00e9placer la platine</div>'}
     `;
   }
 
