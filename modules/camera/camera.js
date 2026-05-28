@@ -359,8 +359,7 @@ class CameraModule {
   _hookMosaic() {
     if (this._mosaicHooked) return;
     this._mosaicHooked = true;
-    // Draw tiles on canvas
-    window.EnderTrack?.Events?.on?.('canvas:rendered', (ctx, state) => this._renderTiles(ctx, state));
+    // Tiles are now rendered directly by xy-canvas.js (before cursor)
     // Render gallery panel
     this._renderTilesPanel();
     // Grab tile after movement

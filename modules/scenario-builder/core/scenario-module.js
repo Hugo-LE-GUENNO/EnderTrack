@@ -545,6 +545,10 @@ class ScenarioModule {
 
     // Stack mode: prepend init_stack action that sets context._stackPath
     const stackMeta = { unit: 'micron', grayscale: true };
+    if (p.multipos) {
+      const list = window.EnderTrack?.Lists?.manager?.getList?.(pp.listId);
+      stackMeta.sizeC = list?.positions?.length || 1;
+    }
     if (p.zstack) {
       const steps = Math.max(1, Math.round(Math.abs(pp.zEnd - pp.zStart) / Math.max(0.001, pp.zStep)));
       stackMeta.sizeZ = steps + 1;

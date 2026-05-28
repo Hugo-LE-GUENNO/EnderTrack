@@ -201,6 +201,9 @@ class XYCanvasManager {
     if (window.EnderTrack?.Lists?.renderOnCanvas && window.EnderTrack.Coordinates) {
       window.EnderTrack.Lists.renderOnCanvas(this.ctx, window.EnderTrack.Coordinates);
     }
+
+    // Layer 3.5: Mosaic tiles (below cursor)
+    window.EnderTrack?.Camera?._renderTiles?.(this.ctx, state);
     
     // Layer 4: UI (topmost)
     window.EnderTrack.UIRenderer.render(this.ctx, this.canvas, state);
