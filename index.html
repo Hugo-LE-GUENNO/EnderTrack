@@ -249,7 +249,7 @@
                                     // Auto-init first camera driver + live
                                     setTimeout(() => window._initSavedCameras(), 1000);
                                   }
-                                  if (data.lights?.length) { window._lights = data.lights; window._renderLights?.(); }
+                                  if (data.lights?.length) { window._lights = data.lights; window._renderLights?.(); setTimeout(() => window._initSavedLights(), 1500); }
                                 } catch(e) {}
                               };
                               window._initSavedCameras = async () => {
@@ -271,6 +271,17 @@
                                   await camera.setDriver('simulation');
                                 }
                                 window._updateCameraLayout();
+                              };
+                              window._initSavedLights = () => {
+                                if (!window._lights?.length) return;
+                                const light = window.EnderTrack?.Light;
+                                if (!light) return;
+                                // Register channels from saved lights
+                                light.channels = window._lights.map(l => ({ id: l.id, name: l.name, type: l.type, intensity: l.intensity || 0, on: l.on || false }));
+                                light._renderNav?.();
+                                light._updateStatus?.();
+                                // Re-register scenario action with current channels
+                                light._registerScenarioAction?.();
                               };
                               setTimeout(() => window._loadPeripherals(), 500);
                               // Auto-save config every 5s if changed
