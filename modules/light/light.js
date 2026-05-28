@@ -140,10 +140,12 @@ class LightModule {
         { id: 'channel', label: 'Canal', type: 'select', options: channelOpts, default: channelOpts[0]?.value || '' },
         { id: 'action', label: 'Action', type: 'select', options: [
           { value: 'on', label: 'ON' },
-          { value: 'off', label: 'OFF' },
-          { value: 'set', label: 'Intensité' }
+          { value: 'off', label: 'OFF' }
         ], default: 'on' },
-        { id: 'intensity', label: 'Intensité (0-100%)', type: 'number', default: 100, min: 0, max: 100, showIf: 'action=set' },
+        { id: 'intensity', label: 'Intensité (%)', type: 'number', default: 100, min: 0, max: 100 },
+        { id: 'r', label: 'R', type: 'number', default: 255, min: 0, max: 255 },
+        { id: 'g', label: 'G', type: 'number', default: 255, min: 0, max: 255 },
+        { id: 'b', label: 'B', type: 'number', default: 255, min: 0, max: 255 },
         { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
       ],
       execute: async (params, context) => {
@@ -156,7 +158,7 @@ class LightModule {
           const body = { id: light.serverId || 1 };
           if (params.action !== 'off') {
             body.intensity = (parseInt(params.intensity) || 100) / 100;
-            body.r = light.r || 255; body.g = light.g || 255; body.b = light.b || 255;
+            body.r = parseInt(params.r) || 255; body.g = parseInt(params.g) || 255; body.b = parseInt(params.b) || 255;
           }
           try { await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch {}
         } else {

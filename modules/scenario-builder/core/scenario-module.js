@@ -457,11 +457,13 @@ class ScenarioModule {
     if (p.autofocus) parts.push('AF');
     const name = parts.join(' + ');
 
-    // Capture block: light on + capture + light off
+    // Capture block: light on + wait(expo) + capture + light off
     const captureActions = [];
+    const expoMs = Math.ceil((pp.exposure || EnderTrack.Camera?.picamConfig?.exposure || 100000) / 1000);
     if (p.autofocus) captureActions.push({ type: 'action', actionId: 'autofocus', params: { range: pp.afRange || 0.1, steps: pp.afSteps || 10, showInLog: true, label: 'AF' } });
     if (p.useLight) captureActions.push({ type: 'action', actionId: 'light_set', params: { lightId: 1, action: 'on', intensity: pp.lightIntensity || 100, r: 255, g: 255, b: 255, showInLog: false } });
-    if (p.useCapture) captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', cameraId: pp.cameraId || '', path: pp.path || './captures', showInLog: true, label: 'Capture' } });
+    if (p.useLight) captureActions.push({ type: 'action', actionId: 'wait', params: { duration: (expoMs + 50) / 1000, showInLog: false } });
+    if (p.useCapture) captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', exposure: pp.exposure || 0, cameraId: pp.cameraId || '', path: pp.path || './captures', showInLog: true, label: 'Capture' } });
     if (p.useLight) captureActions.push({ type: 'action', actionId: 'light_set', params: { lightId: 1, action: 'off', showInLog: false } });
 
     // Z-stack wrapper

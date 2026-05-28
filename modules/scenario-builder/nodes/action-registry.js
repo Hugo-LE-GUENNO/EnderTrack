@@ -67,6 +67,8 @@ class ActionRegistry {
         { id: 'dx', label: 'Delta X (mm)', type: 'text', default: '0', showIf: 'moveType=relative' },
         { id: 'dy', label: 'Delta Y (mm)', type: 'text', default: '0', showIf: 'moveType=relative' },
         { id: 'dz', label: 'Delta Z (mm)', type: 'text', default: '0', showIf: 'moveType=relative' },
+        // Settle
+        { id: 'settle', label: 'Stabilisation (ms)', type: 'number', default: 0, min: 0 },
         // Log
         { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
         { id: 'logMessage', label: 'Message', type: 'text', default: '', placeholder: 'Déplacement...', showIf: 'showInLog' }
@@ -125,6 +127,10 @@ class ActionRegistry {
             await window.EnderTrack.Movement.moveAbsolute(x, y, z);
           }
         }
+
+        // Settle time after movement
+        const settle = parseInt(params.settle) || 0;
+        if (settle > 0) await new Promise(r => setTimeout(r, settle));
 
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
           const msg = params.logMessage || `🎯 ${params.moveType === 'relative' ? 'Δ' : '→'}(${x}, ${y}, ${z})`;
@@ -293,12 +299,20 @@ class ActionRegistry {
           { value: 'tiff', label: 'TIFF (16-bit)' },
           { value: 'png', label: 'PNG (8-bit)' }
         ], default: 'tiff' },
+        { id: 'exposure', label: 'Exposition (µs)', type: 'number', default: 0, min: 0, placeholder: '0 = auto' },
         { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: true },
         { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
       ],
       execute: async (params, context) => {
         const camera = window.EnderTrack?.Camera;
         if (!camera) return { success: false, error: 'No camera' };
+
+        // Set exposure if specified
+        const expo = parseInt(params.exposure) || 0;
+        if (expo > 0 && camera.setPicamConfig) {
+          await camera.setPicamConfig({ exposure: expo });
+          await new Promise(r => setTimeout(r, Math.max(100, expo / 1000)));
+        }
 
         // Get frame from camera
         const frame = await camera.getFrame();
