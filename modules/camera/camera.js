@@ -27,7 +27,7 @@ class CameraModule {
     this.camRotation = 0;
     this.camFlipH = false;
     this.camFlipV = false;
-    this.navigatorMode = false;
+    this.navigatorMode = true;
     this.showMosaic = true;
     this.fastExplore = null;
     this._loadPicamConfig();
@@ -365,6 +365,7 @@ class CameraModule {
     this._renderTilesPanel();
     // Grab tile after movement
     window.EnderTrack?.Events?.on?.('movement:completed', () => {
+      console.log('[Mosaic] movement:completed, navigatorMode:', this.navigatorMode, 'live:', this.live);
       if (this.navigatorMode && this.live) {
         clearTimeout(this._navDebounce);
         this._navDebounce = setTimeout(() => this._grabNavigatorTile(), 500);
@@ -382,9 +383,12 @@ class CameraModule {
   async _grabNavigatorTile() {
     if (this._navGrabbing || !this.driver) return;
     this._navGrabbing = true;
+    console.log('[Mosaic] grabbing tile...');
     try {
       const frame = await this.getFrame();
+      console.log('[Mosaic] frame:', frame ? `${frame.width}x${frame.height}` : 'null');
       if (frame?.frame) this._addTile(frame);
+      else console.warn('[Mosaic] no frame data');
     } finally {
       this._navGrabbing = false;
     }
@@ -392,7 +396,8 @@ class CameraModule {
 
   _addTile(frameData) {
     const state = window.EnderTrack?.State?.get?.();
-    if (!state?.pos) return;
+    if (!state?.pos) { console.warn('[Mosaic] no position'); return; }
+    console.log('[Mosaic] addTile at', state.pos.x.toFixed(2), state.pos.y.toFixed(2));
     const x = state.pos.x || 0;
     const y = state.pos.y || 0;
     const ps = this.getEffectivePixelSize();
@@ -450,14 +455,14 @@ class CameraModule {
   }
 
   _renderTilesPanel() {
-    // Render mosaic section in the Image/Gallery tab
+    // Render mosaic section in "Calque caméra" zone of Image tab
     let el = document.getElementById('mosaicGallerySection');
-    const container = document.getElementById('imageTabContent');
-    if (!container) return;
+    const container = document.getElementById('imageLayerTable');
+    if (!container) { console.warn('[Mosaic] imageLayerTable not found'); return; }
     if (!el) {
       el = document.createElement('div');
       el.id = 'mosaicGallerySection';
-      el.style.cssText = 'border-top:1px solid #333; padding:8px;';
+      container.innerHTML = ''; // remove "Aucune image" placeholder
       container.appendChild(el);
     }
     el.innerHTML = `

@@ -557,6 +557,8 @@ window.switchTab = (tabId) => {
     window.EnderTrack.ImageManager.activate();
     // Switch viewport to gallery
     window.EnderTrack?.Camera?.switchViewportForTab?.('image');
+    // Re-render mosaic panel
+    setTimeout(() => window.EnderTrack?.Camera?._renderTilesPanel?.(), 100);
   } else {
     // Other tabs: back to stage viewport, hide histograms
     window.EnderTrack?.Camera?.switchViewportForTab?.(tabId);
