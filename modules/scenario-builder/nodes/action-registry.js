@@ -92,7 +92,12 @@ class ActionRegistry {
             if (loopListId) resolvedListId = loopListId;
           }
           if (src === 'list' && resolvedListId) {
-            const list = window.EnderTrack?.Lists?.manager?.getList?.(resolvedListId);
+            let list = window.EnderTrack?.Lists?.manager?.getList?.(resolvedListId);
+            // Fallback: if list not found, use first available
+            if (!list) {
+              const all = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+              list = all[0];
+            }
             if (params.listPickMode === 'pick') {
               const pos = list?.positions?.[parseInt(params.listPick) || 0];
               if (pos) { x = pos.x; y = pos.y; z = pos.z; }

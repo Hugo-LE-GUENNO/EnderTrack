@@ -435,6 +435,14 @@ class ScenarioModule {
     const manager = window.EnderTrack?.Scenario?.manager;
     if (!manager) { console.warn('[Scenario] no manager'); return; }
     if (!p.multipos && !p.timelapse && !p.zstack && !p.mosaic) { console.warn('[Scenario] no mode selected'); return; }
+    // Auto-fix listId if it doesn't exist
+    if (p.multipos && pp.listId) {
+      const list = window.EnderTrack?.Lists?.manager?.getList?.(pp.listId);
+      if (!list) {
+        const all = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+        if (all.length) { pp.listId = String(all[0].id); }
+      }
+    }
     console.log('[Scenario] _generateFromPreset, listId:', pp.listId);
 
     const parts = [];
@@ -544,6 +552,7 @@ class ScenarioModule {
     }});
 
     const tree = { type: 'root', children: rootChildren };
+    console.log('[Scenario] generated tree:', JSON.stringify(tree, null, 2).slice(0, 500));
     // Update current scenario instead of creating a new one
     let scenario = manager.getCurrentScenario();
     if (!scenario) {

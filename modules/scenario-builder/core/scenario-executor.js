@@ -223,10 +223,12 @@ class ScenarioExecutor {
   async executeLoop(loopNode) {
     const loopDef = window.EnderTrack?.LoopTypesRegistry?.get(loopNode.loopId);
     if (!loopDef) {
+      console.warn('[Executor] Loop type not found:', loopNode.loopId);
       return;
     }
 
     const iterationCount = loopDef.getIterationCount(loopNode.params, this.context);
+    console.log('[Executor] executeLoop:', loopNode.loopId, 'iterations:', iterationCount, 'params:', JSON.stringify(loopNode.params));
     const loopVar = loopNode.params?.loopVar || '$i';
     const startIndex = loopNode.params?.startIndex || 0;
     const increment = loopNode.params?.increment || 1;

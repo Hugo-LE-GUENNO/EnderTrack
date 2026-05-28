@@ -28,7 +28,12 @@ class LoopTypesRegistry {
       getIterationCount: (params) => {
         if (params.countMode === 'infinite') return Infinity;
         if (params.countMode === 'list') {
-          const list = window.EnderTrack?.Lists?.manager?.getList?.(params.countListId);
+          let list = window.EnderTrack?.Lists?.manager?.getList?.(params.countListId);
+          // Fallback: if list not found, use first available list
+          if (!list) {
+            const all = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+            list = all[0];
+          }
           return list?.positions?.length || 0;
         }
         return Math.max(1, Math.floor(Number(params.count) || 1));
