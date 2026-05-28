@@ -110,6 +110,13 @@ try:
 except Exception as e:
     print(f"  \u26a0\ufe0f  Picamera2: {e}")
 
+# PiLight (NeoPixel LEDs)
+try:
+    from server import pilight_handler
+    pilight_handler.register_routes(app)
+except Exception as e:
+    print(f"  \u26a0\ufe0f  PiLight: {e}")
+
 # 5. Real-time event stream (SSE)
 from server import event_stream
 event_stream.register_routes(app)

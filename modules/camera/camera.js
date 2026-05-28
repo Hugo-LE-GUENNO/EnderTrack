@@ -455,14 +455,13 @@ class CameraModule {
   }
 
   _renderTilesPanel() {
-    // Render mosaic section in "Calque caméra" zone of Image tab
     let el = document.getElementById('mosaicGallerySection');
     const container = document.getElementById('imageLayerTable');
-    if (!container) { console.warn('[Mosaic] imageLayerTable not found'); return; }
+    if (!container) return;
     if (!el) {
       el = document.createElement('div');
       el.id = 'mosaicGallerySection';
-      container.innerHTML = ''; // remove "Aucune image" placeholder
+      container.innerHTML = '';
       container.appendChild(el);
     }
     el.innerHTML = `
@@ -478,17 +477,21 @@ class CameraModule {
         </label>
       </div>
       ${this.tiles.length ? `
-      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(50px, 1fr)); gap:3px; max-height:200px; overflow-y:auto; margin-bottom:6px;">
+      <div style="max-height:200px; overflow-y:auto; margin-bottom:6px;">
         ${this.tiles.map((t, i) => `
-          <div style="position:relative; aspect-ratio:4/3; background:#111; border-radius:3px; overflow:hidden; cursor:pointer;" onclick="EnderTrack.Camera._selectTile(${i})">
-            <img src="${t.img.src || ''}" style="width:100%; height:100%; object-fit:cover;">
-            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.7); font-size:7px; color:#aaa; padding:1px 3px; text-align:center;">${t.x.toFixed(1)},${t.y.toFixed(1)}</div>
+          <div style="display:flex; align-items:center; gap:6px; padding:3px 4px; border-radius:3px; cursor:pointer; font-size:9px; color:var(--text-general);" 
+            onclick="EnderTrack.Camera._selectTile(${i})" 
+            oncontextmenu="event.preventDefault(); EnderTrack.Camera._tileContextMenu(event, ${i})"
+            onmouseenter="this.style.background='var(--app-bg)'" onmouseleave="this.style.background=''">
+            <span style="color:var(--coordinates-color); font-family:var(--font-mono); min-width:90px;">${t.x.toFixed(2)}, ${t.y.toFixed(2)}</span>
+            <span style="flex:1; color:#666;">${new Date(t.timestamp).toLocaleTimeString()}</span>
+            <span style="font-size:8px; color:#555;">${t.widthMm?.toFixed(2)||'?'}\u00d7${t.heightMm?.toFixed(2)||'?'}mm</span>
           </div>
         `).join('')}
       </div>
       <div style="display:flex; gap:4px;">
-        <button onclick="EnderTrack.Camera.saveTiles()" style="flex:1; padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">\ud83d\udcbe Sauver tout</button>
-        <button onclick="EnderTrack.Camera.clearTiles()" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:#ef4444;">\ud83d\uddd1 Effacer</button>
+        <button onclick="EnderTrack.Camera.saveTilesZip()" style="flex:1; padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">\ud83d\udcbe Sauver tout (.zip)</button>
+        <button onclick="EnderTrack.Camera.clearTiles()" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:#ef4444;">\ud83d\uddd1</button>
       </div>
       ` : '<div style="font-size:9px; color:#666; text-align:center; padding:8px;">Activer "Auto" puis d\u00e9placer la platine</div>'}
     `;
@@ -496,33 +499,95 @@ class CameraModule {
 
   _selectTile(idx) {
     const tile = this.tiles[idx];
-    if (!tile) return;
-    // Center canvas on this tile position
+    if (!tile?.img?.complete) return;
+    // Display tile in gallery viewport
+    const display = window.EnderTrack?.Display;
+    const renderer = window.EnderTrack?.GalleryRenderer;
+    if (renderer && display) {
+      // Draw tile into gallery canvas
+      const canvas = document.getElementById('galleryDisplayCanvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        canvas.width = tile.img.naturalWidth;
+        canvas.height = tile.img.naturalHeight;
+        ctx.drawImage(tile.img, 0, 0);
+      } else {
+        // Fallback: set renderer source directly
+        renderer._drawDirect?.(tile.img);
+      }
+    }
+    // Also center stage canvas on tile position
     window.EnderTrack?.Coordinates?.centerOn?.(tile.x, tile.y);
     window.EnderTrack?.Canvas?.requestRender?.();
   }
 
-  async saveTiles() {
+  _tileContextMenu(e, idx) {
+    document.getElementById('tile-ctx-menu')?.remove();
+    const menu = document.createElement('div');
+    menu.id = 'tile-ctx-menu';
+    menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:120px;`;
+    const items = [
+      { label: '\ud83d\udcbe Sauver cette image', fn: () => this._saveSingleTile(idx) },
+      { label: '\ud83d\uddd1 Supprimer', fn: () => { this.tiles.splice(idx, 1); this._renderTilesPanel(); this._renderNav(); EnderTrack.Canvas?.requestRender?.(); } }
+    ];
+    for (const item of items) {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:5px 12px; font-size:10px; cursor:pointer; color:var(--text-general);';
+      row.textContent = item.label;
+      row.onmouseenter = () => row.style.background = 'var(--app-bg)';
+      row.onmouseleave = () => row.style.background = '';
+      row.onclick = () => { item.fn(); menu.remove(); };
+      menu.appendChild(row);
+    }
+    document.body.appendChild(menu);
+    setTimeout(() => document.addEventListener('mousedown', function close(ev) { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } }), 0);
+  }
+
+  _saveSingleTile(idx) {
+    const tile = this.tiles[idx];
+    if (!tile?.img?.complete) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = tile.img.naturalWidth; canvas.height = tile.img.naturalHeight;
+    canvas.getContext('2d').drawImage(tile.img, 0, 0);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `mosaic_X${tile.x.toFixed(2)}_Y${tile.y.toFixed(2)}.png`;
+    a.click();
+  }
+
+  async saveTilesZip() {
     if (!this.tiles.length) return;
+    // Collect all tiles as base64 PNGs, send to server to create ZIP
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    let saved = 0;
+    const tiles = [];
     for (const tile of this.tiles) {
       if (!tile.img.complete || !tile.img.naturalWidth) continue;
       const canvas = document.createElement('canvas');
-      canvas.width = tile.img.naturalWidth;
-      canvas.height = tile.img.naturalHeight;
+      canvas.width = tile.img.naturalWidth; canvas.height = tile.img.naturalHeight;
       canvas.getContext('2d').drawImage(tile.img, 0, 0);
-      const b64 = canvas.toDataURL('image/png').split(',')[1];
-      const path = `./captures/mosaic_X${tile.x.toFixed(2)}_Y${tile.y.toFixed(2)}.png`;
-      try {
-        await fetch(base + '/api/capture/save', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ frame: b64, path })
-        });
-        saved++;
-      } catch {}
+      tiles.push({
+        name: `mosaic_X${tile.x.toFixed(2)}_Y${tile.y.toFixed(2)}.png`,
+        data: canvas.toDataURL('image/png').split(',')[1],
+        x: tile.x, y: tile.y
+      });
     }
-    window.EnderTrack?.UI?.showSuccess?.(`\ud83d\udcbe ${saved} tiles sauvegard\u00e9es`);
+    try {
+      const res = await fetch(base + '/api/mosaic/zip', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tiles })
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `mosaic_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        window.EnderTrack?.UI?.showSuccess?.(`\ud83d\udcbe ${tiles.length} images export\u00e9es`);
+      }
+    } catch (e) {
+      window.EnderTrack?.UI?.showError?.('Export ZIP failed: ' + e.message);
+    }
   }
 
   // === IMAGE PROCESSING ===

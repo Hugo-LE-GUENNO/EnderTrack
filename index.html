@@ -398,6 +398,14 @@
                                 const light = window._lights[idx];
                                 if (!light) return;
                                 light[channel] = parseInt(value);
+                                // Send to server if GPIO and on
+                                if (light.on && light.type === 'gpio') {
+                                  clearTimeout(light._rgbTimer);
+                                  light._rgbTimer = setTimeout(() => {
+                                    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                    fetch(base + '/api/light/color', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: light.serverId || 1, r: light.r, g: light.g, b: light.b }) }).catch(()=>{});
+                                  }, 200);
+                                }
                               };
                               window._updateLightPreview = (idx) => {
                                 const l = window._lights[idx];
@@ -462,19 +470,31 @@
                                   </div>
                                 `).join('');
                               };
-                              window._toggleLight = (idx) => {
+                              window._toggleLight = async (idx) => {
                                 const l = window._lights[idx];
                                 if (!l) return;
                                 l.on = !l.on;
-                                const intensity = l.on ? Math.max(l.r, l.g, l.b) / 255 : 0;
-                                EnderTrack.Light?.setChannel?.(l.id, intensity);
+                                const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                if (l.type === 'gpio') {
+                                  const body = { id: l.serverId || 1 };
+                                  if (l.on) {
+                                    body.intensity = l.intensity || 1.0;
+                                    body.r = l.r; body.g = l.g; body.b = l.b;
+                                    await fetch(base + '/api/light/on', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }).catch(()=>{});
+                                  } else {
+                                    await fetch(base + '/api/light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }).catch(()=>{});
+                                  }
+                                }
                                 EnderTrack.Light?._renderNav?.();
                               };
-                              window._setLightIntensity = (idx, pct) => {
+                              window._setLightIntensity = async (idx, pct) => {
                                 const l = window._lights[idx];
                                 if (!l) return;
                                 l.intensity = parseInt(pct) / 100;
-                                if (l.on) EnderTrack.Light?.setChannel?.(l.id, l.intensity);
+                                if (l.on && l.type === 'gpio') {
+                                  const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                  await fetch(base + '/api/light/intensity', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: l.serverId || 1, intensity: l.intensity }) }).catch(()=>{});
+                                }
                               };
                             </script>
                         </div>

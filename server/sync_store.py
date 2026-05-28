@@ -289,3 +289,31 @@ def register_routes(app):
             return jsonify({'success': True})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/mosaic/zip', methods=['POST'])
+    def _mosaic_zip():
+        """Create a ZIP from mosaic tiles (base64 PNGs)."""
+        import zipfile
+        import base64
+        from io import BytesIO
+        from flask import Response as FlaskResponse
+
+        data = request.get_json()
+        tiles = data.get('tiles', [])
+        if not tiles:
+            return jsonify({'error': 'No tiles'}), 400
+
+        buf = BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for tile in tiles:
+                name = tile.get('name', 'tile.png')
+                img_data = base64.b64decode(tile.get('data', ''))
+                zf.writestr(name, img_data)
+            csv = 'filename,x_mm,y_mm\n'
+            for tile in tiles:
+                csv += f"{tile.get('name','')},{tile.get('x',0)},{tile.get('y',0)}\n"
+            zf.writestr('positions.csv', csv)
+
+        buf.seek(0)
+        return FlaskResponse(buf.getvalue(), mimetype='application/zip',
+                        headers={'Content-Disposition': 'attachment; filename=mosaic.zip'})
