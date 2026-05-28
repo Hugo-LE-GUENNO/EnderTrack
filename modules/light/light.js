@@ -169,3 +169,36 @@ class LightModule {
         }
         return { success: true };
       }
+    });
+
+    window.EnderTrack.ActionRegistry.register({
+      id: 'light_all_off',
+      label: '🌑 All lights OFF',
+      icon: '🌑',
+      category: 'light',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'All OFF' },
+        { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
+      ],
+      execute: async (params) => {
+        const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        try { await fetch(base + '/api/light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: 1 }) }); } catch {}
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog('🌑 All lights OFF', 'info');
+        }
+        return { success: true };
+      }
+    });
+  }
+}
+
+window.EnderTrack = window.EnderTrack || {};
+window.EnderTrack.Light = new LightModule();
+window.EnderTrack.LightDrivers = window.EnderTrack.LightDrivers || {};
+
+// Auto-init with simulation driver
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => EnderTrack.Light.setDriver('simulation'));
+} else {
+  setTimeout(() => EnderTrack.Light.setDriver('simulation'), 0);
+}
