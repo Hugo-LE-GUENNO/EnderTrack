@@ -410,6 +410,8 @@ class CameraModule {
     if (existing >= 0) this.tiles[existing] = tile;
     else this.tiles.push(tile);
 
+    this._renderTilesPanel();
+    this._renderNav();
     window.EnderTrack?.Canvas?.requestRender?.();
   }
 
@@ -443,7 +445,61 @@ class CameraModule {
 
   clearTiles() {
     this.tiles = [];
+    this._renderTilesPanel();
     window.EnderTrack?.Canvas?.requestRender?.();
+  }
+
+  _renderTilesPanel() {
+    const zone = document.getElementById('rightPluginZone');
+    if (!zone) return;
+    let el = document.getElementById('mosaicPanel');
+    if (!this.tiles.length) {
+      if (el) el.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'mosaicPanel';
+      zone.appendChild(el);
+    }
+    el.innerHTML = `
+      <div style="padding:8px; border-top:1px solid #333;">
+        <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+          <span style="font-size:10px; color:var(--text-selected); font-weight:500; flex:1;">\ud83e\udde9 Mosa\u00efque (${this.tiles.length})</span>
+          <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
+            <input type="checkbox" ${this.showMosaic ? 'checked' : ''} onchange="EnderTrack.Camera.showMosaic=this.checked; EnderTrack.Canvas?.requestRender?.()">
+            <span style="color:var(--text-general);">Overlay</span>
+          </label>
+        </div>
+        <div style="display:flex; gap:4px;">
+          <button onclick="EnderTrack.Camera.saveTiles()" style="flex:1; padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">\ud83d\udcbe Sauver tout</button>
+          <button onclick="EnderTrack.Camera.clearTiles()" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:#ef4444;">\ud83d\uddd1</button>
+        </div>
+      </div>
+    `;
+  }
+
+  async saveTiles() {
+    if (!this.tiles.length) return;
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    let saved = 0;
+    for (const tile of this.tiles) {
+      if (!tile.img.complete || !tile.img.naturalWidth) continue;
+      const canvas = document.createElement('canvas');
+      canvas.width = tile.img.naturalWidth;
+      canvas.height = tile.img.naturalHeight;
+      canvas.getContext('2d').drawImage(tile.img, 0, 0);
+      const b64 = canvas.toDataURL('image/png').split(',')[1];
+      const path = `./captures/mosaic_X${tile.x.toFixed(2)}_Y${tile.y.toFixed(2)}.png`;
+      try {
+        await fetch(base + '/api/capture/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ frame: b64, path })
+        });
+        saved++;
+      } catch {}
+    }
+    window.EnderTrack?.UI?.showSuccess?.(`\ud83d\udcbe ${saved} tiles sauvegard\u00e9es`);
   }
 
   // === IMAGE PROCESSING ===

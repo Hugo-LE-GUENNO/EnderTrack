@@ -450,7 +450,8 @@ class ListManager {
     fetch(url + '/api/sync/lists', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
-    }).catch(() => {});
+    }).then(r => { if (!r.ok) console.error('[Lists] save failed:', r.status); })
+      .catch(e => console.error('[Lists] save error:', e));
   }
 
   load() {

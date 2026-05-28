@@ -733,12 +733,18 @@ ${p.label}:`, p.default ?? '');
   // === COMPAT: simple run (iterate list + move) for fast-explore ===
   async run() {
     const list = this.getSelectedList();
-    if (!list?.positions?.length) return;
+    console.log('[Scenario.run] selectedListId:', this.selectedListId, 'list:', list?.name, list?.positions?.length, 'pos');
+    if (!list?.positions?.length) {
+      console.warn('[Scenario.run] No positions in list!');
+      return;
+    }
     this.isExecuting = true;
     this._stopped = false;
     this._paused = false;
     this._runStartTime = Date.now();
     this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [], preview: list.positions };
+    // Switch to acquisition tab to show UI
+    window.switchTab?.('acquisition');
     EnderTrack.Events?.emit?.('scenario:activated');
     this._showRunUI(list);
 
@@ -779,7 +785,7 @@ ${p.label}:`, p.default ?? '');
   _togglePause() {
     if (!this.isExecuting) return;
     this._paused = !this._paused;
-    const btn = document.getElementById('sbPauseBtn');
+    const btn = document.getElementById('sbPlayPauseBtn');
     if (btn) btn.textContent = this._paused ? '▶' : '⏸';
     this.addLog(this._paused ? '⏸ Pause' : '▶ Reprise', 'info');
   }
@@ -795,21 +801,28 @@ ${p.label}:`, p.default ?? '');
   }
 
   _showRunUI(list) {
-    const container = document.getElementById('acquisitionTabContent');
-    if (!container) return;
-    container.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
-        <div style="font-size:11px; color:var(--text-selected); font-weight:500;">▶ ${list.name} (${list.positions.length} positions)</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-          <button onclick="EnderTrack.Scenario.run()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#22c55e; color:#000; font-weight:600;" disabled>▶</button>
-          <button id="sbPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">⏸</button>
-          <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">■</button>
+    // Show in right panel
+    const zone = document.getElementById('rightPluginZone');
+    if (!zone) return;
+    let el = document.getElementById('scenarioRunPanel');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'scenarioRunPanel';
+      zone.prepend(el);
+    }
+    el.style.display = '';
+    el.innerHTML = `
+      <div style="padding:8px; display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <button id="sbPlayPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="width:28px; height:28px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--active-element); color:var(--text-selected);">⏸</button>
+          <button onclick="EnderTrack.Scenario.stopExecution()" style="width:28px; height:28px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:#ef4444; color:#fff;">■</button>
+          <div style="flex:1; font-size:10px; color:var(--text-selected); font-weight:500;">▶ ${list.name}</div>
+          <span id="sbRunStatus" style="font-size:9px; color:var(--coordinates-color);">0%</span>
         </div>
-        <div style="position:relative; height:6px; background:var(--app-bg); border-radius:3px; overflow:hidden;">
-          <div id="sbRunProgress" style="height:100%; width:0%; background:#22c55e; border-radius:3px; transition:width 0.3s;"></div>
+        <div style="height:4px; background:var(--app-bg); border-radius:2px; overflow:hidden;">
+          <div id="sbRunProgress" style="height:100%; width:0%; background:#22c55e; border-radius:2px; transition:width 0.3s;"></div>
         </div>
-        <div id="sbRunStatus" style="font-size:10px; color:var(--text-general);">Démarrage...</div>
-        <div id="sbRunLog" style="max-height:200px; overflow-y:auto; background:var(--app-bg); border-radius:4px; padding:6px; font-family:var(--font-mono); font-size:9px;"></div>
+        <div id="sbRunLog" style="max-height:150px; overflow-y:auto; background:var(--app-bg); border-radius:4px; padding:4px 6px; font-size:9px; font-family:var(--font-mono);"></div>
       </div>
     `;
   }
@@ -820,7 +833,12 @@ ${p.label}:`, p.default ?? '');
     if (bar) bar.style.width = pct + '%';
     const status = document.getElementById('sbRunStatus');
     const elapsed = ((Date.now() - this._runStartTime) / 1000).toFixed(0);
-    if (status) status.textContent = `${current}/${total} — ${pct}% — ${elapsed}s`;
+    if (status) status.textContent = `${current}/${total} — ${elapsed}s`;
+  }
+
+  _hideRunUI() {
+    const el = document.getElementById('scenarioRunPanel');
+    if (el) el.style.display = 'none';
   }
 
   addLog(message, type = 'info') {
