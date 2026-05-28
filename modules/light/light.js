@@ -147,52 +147,25 @@ class LightModule {
         { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
       ],
       execute: async (params, context) => {
-        const light = window.EnderTrack.Light;
-        let result;
-        if (params.action === 'off') {
-          result = await light.off(params.channel);
-        } else if (params.action === 'set') {
-          result = await light.on(params.channel, (params.intensity || 100) / 100);
+        const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const lights = window._lights || [];
+        const light = lights.find(l => l.id === params.channel) || lights[0];
+        const isGpio = light?.type === 'gpio';
+        if (isGpio) {
+          const endpoint = '/api/light/' + (params.action === 'off' ? 'off' : 'on');
+          const body = { id: light.serverId || 1 };
+          if (params.action !== 'off') {
+            body.intensity = (parseInt(params.intensity) || 100) / 100;
+            body.r = light.r || 255; body.g = light.g || 255; body.b = light.b || 255;
+          }
+          try { await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch {}
         } else {
-          result = await light.on(params.channel);
+          const lm = window.EnderTrack.Light;
+          if (params.action === 'off') lm?.off?.(params.channel);
+          else lm?.on?.(params.channel, (params.intensity || 100) / 100);
         }
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
-          const ch = light.channels.find(c => c.id === params.channel);
-          const name = ch?.name || params.channel;
-          const msg = params.action === 'off' ? `💡 ${name} OFF` : `💡 ${name} ${Math.round((ch?.intensity || 1) * 100)}%`;
-          window.EnderTrack.Scenario.addLog(msg, 'info');
-        }
-        return { success: result !== false };
-      }
-    });
-
-    window.EnderTrack.ActionRegistry.register({
-      id: 'light_all_off',
-      label: '🌑 All lights OFF',
-      icon: '🌑',
-      category: 'light',
-      params: [
-        { id: 'label', label: 'Label', type: 'text', default: 'All OFF' },
-        { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
-      ],
-      execute: async (params) => {
-        await window.EnderTrack.Light.allOff();
-        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
-          window.EnderTrack.Scenario.addLog('🌑 All lights OFF', 'info');
+          window.EnderTrack.Scenario.addLog('\ud83d\udca1 ' + (light?.name || 'Light') + ' ' + params.action, 'info');
         }
         return { success: true };
       }
-    });
-  }
-}
-
-window.EnderTrack = window.EnderTrack || {};
-window.EnderTrack.Light = new LightModule();
-window.EnderTrack.LightDrivers = window.EnderTrack.LightDrivers || {};
-
-// Auto-init with simulation driver
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => EnderTrack.Light.setDriver('simulation'));
-} else {
-  setTimeout(() => EnderTrack.Light.setDriver('simulation'), 0);
-}
