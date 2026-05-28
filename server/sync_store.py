@@ -5,8 +5,10 @@ Stores JSON files in data/ folder. Broadcasts changes via SSE.
 
 import os
 import json
+import threading
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+_write_lock = threading.Lock()
 
 
 def _ensure_dir():
@@ -16,16 +18,22 @@ def _ensure_dir():
 def _read(name):
     path = os.path.join(DATA_DIR, f'{name}.json')
     if os.path.isfile(path):
-        with open(path, 'r') as f:
-            return json.load(f)
+        try:
+            with open(path, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, ValueError):
+            # Corrupted file — remove it
+            os.remove(path)
+            return None
     return None
 
 
 def _write(name, data):
     _ensure_dir()
     path = os.path.join(DATA_DIR, f'{name}.json')
-    with open(path, 'w') as f:
-        json.dump(data, f, indent=2)
+    with _write_lock:
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=2)
 
 
 def register_routes(app):

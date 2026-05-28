@@ -398,6 +398,7 @@ class ScenarioExecutor {
 
     try {
       const result = await actionDef.execute(actionNode.params, this.context);
+      console.log('[Executor] action done:', actionNode.actionId, result);
       
       // Mettre à jour le track si c'est un mouvement
       if (actionNode.actionId === 'move') {

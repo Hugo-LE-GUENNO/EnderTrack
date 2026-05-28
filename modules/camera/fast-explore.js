@@ -305,7 +305,7 @@ class EnderpicamFastExplore {
     // 2. Enable navigator mode for tile capture
     EnderTrack.Camera.navigatorMode = true;
     EnderTrack.Camera.showMosaic = true;
-    EnderTrack.Camera.createUI?.();
+    EnderTrack.Camera._hookMosaic?.();
 
     // 3. Select the list in scenario and configure
     const scenario = window.EnderTrack?.Scenario;
@@ -321,12 +321,10 @@ class EnderpicamFastExplore {
       scenario.loops = 1;
     }
 
-    // 5. Switch to scenario tab and run
-    window.switchTab?.('acquisition');
-    setTimeout(() => scenario.run(), 300);
-
+    // 4. Run scenario (iterate positions)
     document.body.style.cursor = '';
     this.deactivate();
+    scenario.run();
   }
 
   // Draw selection rectangle + grid preview on canvas

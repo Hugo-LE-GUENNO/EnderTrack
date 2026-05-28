@@ -736,14 +736,21 @@ ${p.label}:`, p.default ?? '');
     if (!list?.positions?.length) return;
     this.isExecuting = true;
     this._stopped = false;
+    this._paused = false;
+    this._runStartTime = Date.now();
     this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [], preview: list.positions };
     EnderTrack.Events?.emit?.('scenario:activated');
+    this._showRunUI(list);
 
     for (let i = 0; i < list.positions.length && !this._stopped; i++) {
+      // Pause support
+      while (this._paused && !this._stopped) await new Promise(r => setTimeout(r, 100));
       if (this._stopped) break;
+
       const p = list.positions[i];
       this.scenarioTrack.current = p;
       this.scenarioTrack.remaining = list.positions.slice(i + 1);
+      this._updateRunUI(i, list.positions.length);
       EnderTrack.Canvas?.requestRender?.();
 
       try {
@@ -751,24 +758,78 @@ ${p.label}:`, p.default ?? '');
       } catch { break; }
 
       this.scenarioTrack.visited.push({ x: p.x, y: p.y, z: p.z });
+      this.addLog(`📍 Position ${i+1}/${list.positions.length} (${p.x.toFixed(2)}, ${p.y.toFixed(2)})`, 'info');
       EnderTrack.Events?.emit?.('scenario:position_reached', { position: p, index: i, loop: 0 });
 
-      // Wait delay between positions
       if (i < list.positions.length - 1 && this.delay > 0 && !this._stopped) {
         await new Promise(r => setTimeout(r, this.delay));
       }
     }
 
+    const duration = ((Date.now() - this._runStartTime) / 1000).toFixed(1);
+    this.addLog(this._stopped ? '⏹ Arrêté' : `✅ Terminé (${duration}s)`, this._stopped ? 'warning' : 'info');
     this.isExecuting = false;
     this._stopped = false;
-    EnderTrack.Events?.emit?.('scenario:completed', { scenarioName: list.name, duration: 0 });
+    this._paused = false;
+    EnderTrack.Events?.emit?.('scenario:completed', { scenarioName: list.name, duration: parseFloat(duration) });
     EnderTrack.Canvas?.requestRender?.();
+    this._updateRunUI(list.positions.length, list.positions.length);
+  }
+
+  _togglePause() {
+    if (!this.isExecuting) return;
+    this._paused = !this._paused;
+    const btn = document.getElementById('sbPauseBtn');
+    if (btn) btn.textContent = this._paused ? '▶' : '⏸';
+    this.addLog(this._paused ? '⏸ Pause' : '▶ Reprise', 'info');
+  }
+
+  stopExecution() {
+    this.stop();
   }
 
   stop() {
     this._stopped = true;
     this.isExecuting = false;
     this._executor?.stop?.();
+  }
+
+  _showRunUI(list) {
+    const container = document.getElementById('acquisitionTabContent');
+    if (!container) return;
+    container.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
+        <div style="font-size:11px; color:var(--text-selected); font-weight:500;">▶ ${list.name} (${list.positions.length} positions)</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+          <button onclick="EnderTrack.Scenario.run()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#22c55e; color:#000; font-weight:600;" disabled>▶</button>
+          <button id="sbPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">⏸</button>
+          <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">■</button>
+        </div>
+        <div style="position:relative; height:6px; background:var(--app-bg); border-radius:3px; overflow:hidden;">
+          <div id="sbRunProgress" style="height:100%; width:0%; background:#22c55e; border-radius:3px; transition:width 0.3s;"></div>
+        </div>
+        <div id="sbRunStatus" style="font-size:10px; color:var(--text-general);">Démarrage...</div>
+        <div id="sbRunLog" style="max-height:200px; overflow-y:auto; background:var(--app-bg); border-radius:4px; padding:6px; font-family:var(--font-mono); font-size:9px;"></div>
+      </div>
+    `;
+  }
+
+  _updateRunUI(current, total) {
+    const pct = Math.round((current / total) * 100);
+    const bar = document.getElementById('sbRunProgress');
+    if (bar) bar.style.width = pct + '%';
+    const status = document.getElementById('sbRunStatus');
+    const elapsed = ((Date.now() - this._runStartTime) / 1000).toFixed(0);
+    if (status) status.textContent = `${current}/${total} — ${pct}% — ${elapsed}s`;
+  }
+
+  addLog(message, type = 'info') {
+    const colors = { info: 'var(--text-general)', warning: '#f59e0b', error: '#ef4444' };
+    const el = document.getElementById('sbRunLog') || document.getElementById('scenarioRightLog');
+    if (el) {
+      el.innerHTML += `<div style="color:${colors[type] || colors.info}; padding:1px 0;">${message}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
   }
 }
 
