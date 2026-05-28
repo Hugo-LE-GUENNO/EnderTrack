@@ -414,6 +414,14 @@ class CameraModule {
     if (existing >= 0) this.tiles[existing] = tile;
     else this.tiles.push(tile);
 
+    // Save to server gallery
+    const path = './captures/mosaic_X' + x.toFixed(2) + '_Y' + y.toFixed(2) + '.png';
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(base + '/api/capture/save', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ frame: frameData.frame, path })
+    }).catch(() => {});
+
     this._renderTilesPanel();
     this._renderNav();
     window.EnderTrack?.Canvas?.requestRender?.();
