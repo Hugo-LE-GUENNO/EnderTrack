@@ -233,7 +233,7 @@ class CameraModule {
         <button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" onclick="EnderTrack.Camera.toggleFastExplore()">\ud83d\udd32 Explore</button>
       </div>
       ${isPicam ? `
-      <div style="display:flex; flex-direction:column; gap:4px;">
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px; padding-top:8px; border-top:1px solid #333;">
         <div style="display:flex; align-items:center; gap:4px;">
           <span style="font-size:9px; color:var(--text-general); width:32px;">Expo</span>
           <input type="range" min="1000" max="1000000" value="${exp}" step="1000"
@@ -295,11 +295,8 @@ class CameraModule {
         body: JSON.stringify({ frame: frame.frame, path })
       });
     } catch(e) {}
-    // Also download locally
-    const a = document.createElement('a');
-    a.href = 'data:image/png;base64,' + frame.frame;
-    a.download = path.split('/').pop();
-    a.click();
+    // Refresh gallery
+    window.EnderTrack?.ImageManager?.loadGallery?.();
   }
 
   toggleRecord() {

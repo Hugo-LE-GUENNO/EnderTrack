@@ -443,13 +443,48 @@ class ImageManager {
         style="width:100%; padding:4px 6px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px; margin-bottom:4px;">
       <div style="max-height:200px; overflow-y:auto;">
         ${this.gallery.map((f, i) => `
-          <div onclick="EnderTrack.ImageManager.selectGalleryImage(${i})" style="display:flex; align-items:center; gap:6px; padding:4px; cursor:pointer; font-size:10px; background:${i === this._galleryIdx ? 'var(--app-bg)' : 'transparent'}; border-radius:3px;">
+          <div onclick="EnderTrack.ImageManager.selectGalleryImage(${i})" oncontextmenu="event.preventDefault(); EnderTrack.ImageManager._galleryContextMenu(event, ${i})" style="display:flex; align-items:center; gap:6px; padding:4px; cursor:pointer; font-size:10px; background:${i === this._galleryIdx ? 'var(--app-bg)' : 'transparent'}; border-radius:3px;">
             <span style="color:var(--coordinates-color); width:20px; text-align:right;">${i + 1}</span>
             <span style="flex:1; color:var(--text-general); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.name}</span>
             <span style="color:#666; font-size:9px;">${(f.size / 1024).toFixed(0)}k</span>
           </div>
         `).join('')}
       </div>`;
+  }
+
+  _galleryContextMenu(e, idx) {
+    document.getElementById('gallery-ctx-menu')?.remove();
+    const file = this.gallery[idx];
+    if (!file) return;
+    const menu = document.createElement('div');
+    menu.id = 'gallery-ctx-menu';
+    menu.style.cssText = 'position:fixed; left:' + e.clientX + 'px; top:' + e.clientY + 'px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:140px;';
+    const items = [
+      { label: '\ud83d\udcbe T\u00e9l\u00e9charger', fn: () => { const a = document.createElement('a'); a.href = (window.ENDERTRACK_SERVER||'http://localhost:5000') + '/api/gallery/file?path=' + encodeURIComponent(file.path); a.download = file.name; a.click(); } },
+      { label: '\ud83d\uddd1 Supprimer', fn: () => this._deleteGalleryFile(idx) }
+    ];
+    for (const item of items) {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:5px 12px; font-size:10px; cursor:pointer; color:var(--text-general);';
+      row.textContent = item.label;
+      row.onmouseenter = () => row.style.background = 'var(--app-bg)';
+      row.onmouseleave = () => row.style.background = '';
+      row.onclick = () => { item.fn(); menu.remove(); };
+      menu.appendChild(row);
+    }
+    document.body.appendChild(menu);
+    setTimeout(() => document.addEventListener('mousedown', function close(ev) { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } }), 0);
+  }
+
+  async _deleteGalleryFile(idx) {
+    const file = this.gallery[idx];
+    if (!file) return;
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    try {
+      await fetch(base + '/api/gallery/delete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ path: file.path }) });
+      this.gallery.splice(idx, 1);
+      this._renderGallery();
+    } catch {}
   }
 
   _filterGallery(query) {

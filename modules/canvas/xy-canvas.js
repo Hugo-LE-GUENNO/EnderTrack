@@ -192,6 +192,9 @@ class XYCanvasManager {
     
     // Layer 3: Interactive elements (ALWAYS on top of overlays)
     window.EnderTrack.TrackRenderer.render(this.ctx, this.canvas, state);
+    // Layer 3.5: Mosaic tiles (below cursor and lists)
+    window.EnderTrack?.Camera?._renderTiles?.(this.ctx, state);
+
     window.EnderTrack.PositionRenderer.render(this.ctx, this.canvas, state);
     
     if (window.EnderTrack?.StrategicPositions && window.EnderTrack.Coordinates) {
@@ -201,9 +204,6 @@ class XYCanvasManager {
     if (window.EnderTrack?.Lists?.renderOnCanvas && window.EnderTrack.Coordinates) {
       window.EnderTrack.Lists.renderOnCanvas(this.ctx, window.EnderTrack.Coordinates);
     }
-
-    // Layer 3.5: Mosaic tiles (below cursor)
-    window.EnderTrack?.Camera?._renderTiles?.(this.ctx, state);
     
     // Layer 4: UI (topmost)
     window.EnderTrack.UIRenderer.render(this.ctx, this.canvas, state);
