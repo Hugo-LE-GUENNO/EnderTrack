@@ -4,13 +4,17 @@ class ScenarioModule {
   constructor() {
     this.isActive = false;
     this.selectedListId = null;
+    this.delay = 2000;
+    this.loops = 1;
+    this._stopped = false;
     this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [], preview: [] };
     this.manager = null;
     this._executor = null;
     this._logEntries = [];
   }
 
-  get isExecuting() { return this._executor?.isExecuting || false; }
+  get isExecuting() { return this._isExecuting || this._executor?.isExecuting || false; }
+  set isExecuting(v) { this._isExecuting = v; }
 
   async init() {
     this.manager = new window.EnderTrack.ScenarioManager();
@@ -724,6 +728,47 @@ ${p.label}:`, p.default ?? '');
 
   getSelectedListPositions() {
     return this.getSelectedList()?.positions || [];
+  }
+
+  // === COMPAT: simple run (iterate list + move) for fast-explore ===
+  async run() {
+    const list = this.getSelectedList();
+    if (!list?.positions?.length) return;
+    this.isExecuting = true;
+    this._stopped = false;
+    this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [], preview: list.positions };
+    EnderTrack.Events?.emit?.('scenario:activated');
+
+    for (let i = 0; i < list.positions.length && !this._stopped; i++) {
+      if (this._stopped) break;
+      const p = list.positions[i];
+      this.scenarioTrack.current = p;
+      this.scenarioTrack.remaining = list.positions.slice(i + 1);
+      EnderTrack.Canvas?.requestRender?.();
+
+      try {
+        await EnderTrack.Movement?.moveAbsolute(p.x, p.y, p.z);
+      } catch { break; }
+
+      this.scenarioTrack.visited.push({ x: p.x, y: p.y, z: p.z });
+      EnderTrack.Events?.emit?.('scenario:position_reached', { position: p, index: i, loop: 0 });
+
+      // Wait delay between positions
+      if (i < list.positions.length - 1 && this.delay > 0 && !this._stopped) {
+        await new Promise(r => setTimeout(r, this.delay));
+      }
+    }
+
+    this.isExecuting = false;
+    this._stopped = false;
+    EnderTrack.Events?.emit?.('scenario:completed', { scenarioName: list.name, duration: 0 });
+    EnderTrack.Canvas?.requestRender?.();
+  }
+
+  stop() {
+    this._stopped = true;
+    this.isExecuting = false;
+    this._executor?.stop?.();
   }
 }
 

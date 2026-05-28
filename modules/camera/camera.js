@@ -230,6 +230,8 @@ class CameraModule {
       <div style="display:flex; gap:4px; margin-bottom:6px;">
         <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">\ud83d\udcf7 Photo</button>
         <button class="cam-btn ${this.navigatorMode ? 'active' : ''}" onclick="EnderTrack.Camera.toggleNavigator()">\ud83d\uddfa Mosa\u00efque</button>
+        ${isPicam ? `<button class="cam-btn" onclick="EnderTrack.Camera.runAutofocus()">\ud83d\udd2c AF</button>` : ''}
+        <button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" onclick="EnderTrack.Camera.toggleFastExplore()">\ud83d\udd32 Explore</button>
         ${this.tiles.length ? `<button class="cam-btn" onclick="EnderTrack.Camera.clearTiles()">\ud83d\uddd1</button>` : ''}
       </div>
       ${isPicam ? `
@@ -253,6 +255,32 @@ class CameraModule {
       </div>
       ` : ''}
     `;
+  }
+
+  async runAutofocus() {
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    const state = window.EnderTrack?.State?.get?.();
+    const z = state?.pos?.z || 0;
+    // Visual feedback
+    const btn = this._navEl?.querySelector('.cam-btn:nth-child(3)');
+    if (btn) { btn.textContent = '\u23f3 AF...'; btn.disabled = true; }
+    try {
+      const res = await fetch(base + '/api/camera/picam/autofocus', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ z_min: z - 2, z_max: z + 2 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Update state with new Z
+        window.EnderTrack?.State?.update?.({ pos: { ...state.pos, z: data.best_z } });
+        window.EnderTrack?.UI?.showSuccess?.(`\ud83d\udd2c AF: z=${data.best_z.toFixed(3)}mm`);
+      } else {
+        window.EnderTrack?.UI?.showError?.('AF failed');
+      }
+    } catch (e) {
+      window.EnderTrack?.UI?.showError?.('AF error: ' + e.message);
+    }
+    if (btn) { btn.textContent = '\ud83d\udd2c AF'; btn.disabled = false; }
   }
 
   async saveLive() {

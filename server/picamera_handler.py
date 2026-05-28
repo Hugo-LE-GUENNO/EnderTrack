@@ -236,4 +236,48 @@ def register_routes(app):
         _save_config()
         return jsonify({'success': True, 'config': _config})
 
+    @app.route('/api/camera/picam/autofocus', methods=['POST'])
+    def _picam_autofocus():
+        """Run 3-phase autofocus."""
+        import numpy as np
+        import requests as http_req
+        from server.autofocus import Autofocus
+
+        picam, _ = _get_picam()
+        if not picam:
+            return jsonify({'error': 'No camera'}), 503
+
+        data = request.get_json() or {}
+        na = float(data.get('na', 0.25))
+        settle = int(data.get('settle_ms', 200))
+        min_step = float(data.get('min_step_mm', 0.01))
+        z_min = float(data.get('z_min', -2.0))
+        z_max = float(data.get('z_max', 2.0))
+
+        # Get current Z from state
+        try:
+            r = http_req.get('http://localhost:5000/api/position', timeout=5)
+            current_z = float(r.json().get('position', {}).get('z', 0.0))
+        except:
+            current_z = 0.0
+
+        af = Autofocus(na=na, settle_ms=settle, min_step_mm=min_step)
+
+        def capture_func():
+            arr = picam.capture_array("main")
+            return arr
+
+        def move_z_func(dz_mm):
+            try:
+                http_req.post('http://localhost:5000/api/move/relative',
+                    json={'dx': 0, 'dy': 0, 'dz': round(dz_mm, 4), 'feedrate': 3000},
+                    timeout=30)
+            except Exception as e:
+                print(f"  ⚠️ AF move_z error: {e}")
+
+        print(f"  🔬 Autofocus start z={current_z:.3f} range=[{z_min},{z_max}]")
+        ok, best_z, score = af.search(capture_func, move_z_func, z_min, z_max, current_z)
+        print(f"  🔬 Autofocus {'✅' if ok else '❌'} z={best_z:.4f} score={score:.2f}")
+        return jsonify({'success': ok, 'best_z': best_z, 'score': score})
+
     print("  ✅ Picamera2 routes registered")
