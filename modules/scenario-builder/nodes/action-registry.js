@@ -210,17 +210,18 @@ class ActionRegistry {
         const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
         const id = parseInt(params.lightId) || 1;
         const intensity = (parseInt(params.intensity) || 100) / 100;
-        let endpoint = '/api/light/' + (params.action === 'off' ? 'off' : 'on');
+        const endpoint = '/api/light/' + (params.action === 'off' ? 'off' : 'on');
         const body = { id, intensity, r: parseInt(params.r)||255, g: parseInt(params.g)||255, b: parseInt(params.b)||255 };
-        if (params.action === 'off') endpoint = '/api/light/off';
         try {
-          await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-        } catch {}
+          const res = await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+          if (!res.ok) console.warn('[light_set] server error:', res.status);
+        } catch (e) { console.warn('[light_set] fetch error:', e); }
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
-          window.EnderTrack.Scenario.addLog(`💡 Light #${id} ${params.action} (${params.intensity}%)`, 'info');
+          window.EnderTrack.Scenario.addLog('Light #' + id + ' ' + params.action, 'info');
         }
         return { success: true };
       }
+
     });
 
     // 🛑 STOP

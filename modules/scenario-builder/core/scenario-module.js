@@ -82,6 +82,10 @@ class ScenarioModule {
     const scenario = this.manager?.getCurrentScenario();
     if (!scenario?.tree) return;
 
+    // Reset emergency stop flag
+    EnderTrack.State?.update?.({ emergencyStopActive: false });
+    if (EnderTrack.Movement) EnderTrack.Movement.emergencyStop = false;
+
     // Close builder if open
     document.getElementById('sbModal')?.remove();
 
@@ -746,11 +750,10 @@ ${p.label}:`, p.default ?? '');
   // === COMPAT: simple run (iterate list + move) for fast-explore ===
   async run() {
     const list = this.getSelectedList();
-    console.log('[Scenario.run] selectedListId:', this.selectedListId, 'list:', list?.name, list?.positions?.length, 'pos');
-    if (!list?.positions?.length) {
-      console.warn('[Scenario.run] No positions in list!');
-      return;
-    }
+    if (!list?.positions?.length) return;
+    // Reset emergency stop
+    EnderTrack.State?.update?.({ emergencyStopActive: false });
+    if (EnderTrack.Movement) EnderTrack.Movement.emergencyStop = false;
     this.isExecuting = true;
     this._stopped = false;
     this._paused = false;
