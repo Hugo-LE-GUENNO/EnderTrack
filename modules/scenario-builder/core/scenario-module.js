@@ -801,7 +801,7 @@ ${p.label}:`, p.default ?? '');
   }
 
   _showRunUI(list) {
-    // Show in right panel
+    // Progress + logs in right panel
     const zone = document.getElementById('rightPluginZone');
     if (!zone) return;
     let el = document.getElementById('scenarioRunPanel');
@@ -814,9 +814,7 @@ ${p.label}:`, p.default ?? '');
     el.innerHTML = `
       <div style="padding:8px; display:flex; flex-direction:column; gap:6px;">
         <div style="display:flex; align-items:center; gap:6px;">
-          <button id="sbPlayPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="width:28px; height:28px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--active-element); color:var(--text-selected);">⏸</button>
-          <button onclick="EnderTrack.Scenario.stopExecution()" style="width:28px; height:28px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:#ef4444; color:#fff;">■</button>
-          <div style="flex:1; font-size:10px; color:var(--text-selected); font-weight:500;">▶ ${list.name}</div>
+          <div style="flex:1; font-size:10px; color:var(--text-selected); font-weight:500;">\u25b6 ${list.name} (${list.positions.length})</div>
           <span id="sbRunStatus" style="font-size:9px; color:var(--coordinates-color);">0%</span>
         </div>
         <div style="height:4px; background:var(--app-bg); border-radius:2px; overflow:hidden;">
@@ -825,6 +823,19 @@ ${p.label}:`, p.default ?? '');
         <div id="sbRunLog" style="max-height:150px; overflow-y:auto; background:var(--app-bg); border-radius:4px; padding:4px 6px; font-size:9px; font-family:var(--font-mono);"></div>
       </div>
     `;
+    // Play/pause + stop in left panel (acquisition tab)
+    const acqTab = document.getElementById('acquisitionTabContent');
+    if (acqTab) {
+      acqTab.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
+          <div style="font-size:11px; color:var(--text-selected); font-weight:500;">\u25b6 ${list.name}</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button id="sbPlayPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="flex:1; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\u23f8</button>
+            <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px 16px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:#ef4444; color:#fff; font-weight:600;">\u25a0</button>
+          </div>
+        </div>
+      `;
+    }
   }
 
   _updateRunUI(current, total) {

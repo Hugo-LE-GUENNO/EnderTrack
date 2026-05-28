@@ -450,33 +450,49 @@ class CameraModule {
   }
 
   _renderTilesPanel() {
-    const zone = document.getElementById('rightPluginZone');
-    if (!zone) return;
-    let el = document.getElementById('mosaicPanel');
+    // Render mosaic tiles in the Image/Gallery tab
+    let el = document.getElementById('mosaicGallerySection');
+    const container = document.getElementById('imageTabContent');
+    if (!container) return;
     if (!this.tiles.length) {
       if (el) el.remove();
       return;
     }
     if (!el) {
       el = document.createElement('div');
-      el.id = 'mosaicPanel';
-      zone.appendChild(el);
+      el.id = 'mosaicGallerySection';
+      el.style.cssText = 'border-top:1px solid #333; padding:8px; margin-top:8px;';
+      container.appendChild(el);
     }
     el.innerHTML = `
-      <div style="padding:8px; border-top:1px solid #333;">
-        <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-          <span style="font-size:10px; color:var(--text-selected); font-weight:500; flex:1;">\ud83e\udde9 Mosa\u00efque (${this.tiles.length})</span>
-          <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
-            <input type="checkbox" ${this.showMosaic ? 'checked' : ''} onchange="EnderTrack.Camera.showMosaic=this.checked; EnderTrack.Canvas?.requestRender?.()">
-            <span style="color:var(--text-general);">Overlay</span>
-          </label>
-        </div>
-        <div style="display:flex; gap:4px;">
-          <button onclick="EnderTrack.Camera.saveTiles()" style="flex:1; padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">\ud83d\udcbe Sauver tout</button>
-          <button onclick="EnderTrack.Camera.clearTiles()" style="padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:#ef4444;">\ud83d\uddd1</button>
-        </div>
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+        <span style="font-size:10px; color:var(--text-selected); font-weight:500; flex:1;">\ud83e\udde9 Mosa\u00efque (${this.tiles.length})</span>
+        <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
+          <input type="checkbox" ${this.showMosaic ? 'checked' : ''} onchange="EnderTrack.Camera.showMosaic=this.checked; EnderTrack.Canvas?.requestRender?.()">
+          <span style="color:var(--text-general);">Overlay</span>
+        </label>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(50px, 1fr)); gap:3px; max-height:200px; overflow-y:auto;">
+        ${this.tiles.map((t, i) => `
+          <div style="position:relative; aspect-ratio:4/3; background:#111; border-radius:3px; overflow:hidden; cursor:pointer;" onclick="EnderTrack.Camera._selectTile(${i})">
+            <img src="${t.img.src || ''}" style="width:100%; height:100%; object-fit:cover;">
+            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.7); font-size:7px; color:#aaa; padding:1px 3px; text-align:center;">${t.x.toFixed(1)},${t.y.toFixed(1)}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex; gap:4px; margin-top:6px;">
+        <button onclick="EnderTrack.Camera.saveTiles()" style="flex:1; padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">\ud83d\udcbe Sauver tout</button>
+        <button onclick="EnderTrack.Camera.clearTiles()" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:#ef4444;">\ud83d\uddd1 Effacer</button>
       </div>
     `;
+  }
+
+  _selectTile(idx) {
+    const tile = this.tiles[idx];
+    if (!tile) return;
+    // Center canvas on this tile position
+    window.EnderTrack?.Coordinates?.centerOn?.(tile.x, tile.y);
+    window.EnderTrack?.Canvas?.requestRender?.();
   }
 
   async saveTiles() {
