@@ -456,9 +456,9 @@ class ScenarioModule {
     // Capture block: light on + capture + light off
     const captureActions = [];
     if (p.autofocus) captureActions.push({ type: 'action', actionId: 'autofocus', params: { range: pp.afRange || 0.1, steps: pp.afSteps || 10, showInLog: true, label: 'AF' } });
-    if (p.useLight && pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'set', intensity: pp.lightIntensity || 100, showInLog: false } });
+    if (p.useLight) captureActions.push({ type: 'action', actionId: 'light_set', params: { lightId: 1, action: 'on', intensity: pp.lightIntensity || 100, r: 255, g: 255, b: 255, showInLog: false } });
     if (p.useCapture) captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', cameraId: pp.cameraId || '', path: pp.path || './captures', showInLog: true, label: 'Capture' } });
-    if (p.useLight && pp.lightChannel) captureActions.push({ type: 'action', actionId: 'light_set', params: { channel: pp.lightChannel, action: 'off', showInLog: false } });
+    if (p.useLight) captureActions.push({ type: 'action', actionId: 'light_set', params: { lightId: 1, action: 'off', showInLog: false } });
 
     // Z-stack wrapper
     const wrapZ = (children) => {
@@ -493,14 +493,16 @@ class ScenarioModule {
 
     let rootChildren;
     if (p.multipos) {
+      const loopChildren = [
+        { type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'list', listId: pp.listId, listPickMode: 'index', listIndex: '$i', showInLog: false, label: 'Go' } },
+      ];
+      if (p.useLight) loopChildren.push({ type: 'action', actionId: 'light_set', params: { lightId: 1, action: 'off', showInLog: false } });
+      loopChildren.push({ type: 'action', actionId: 'wait', params: { duration: pp.delay || 0.2, showInLog: false } });
+      loopChildren.push(...core);
       rootChildren = [{
         type: 'loop', loopId: 'simple',
         params: { count: 0, countMode: 'list', countListId: pp.listId, loopVar: '$i', label: 'Positions', showInLog: true, logMessage: 'Position $i' },
-        children: [
-          { type: 'action', actionId: 'move', params: { moveType: 'absolute', absSource: 'list', listId: pp.listId, listPickMode: 'index', listIndex: '$i', showInLog: false, label: 'Go' } },
-          { type: 'action', actionId: 'wait', params: { duration: pp.delay || 0.2, showInLog: false } },
-          ...core
-        ]
+        children: loopChildren
       }];
     } else if (p.mosaic) {
       this._generateMosaicGrid(pp);

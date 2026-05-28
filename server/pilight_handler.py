@@ -33,13 +33,13 @@ def _get_strip(pin_name, total_pixels):
         if total_pixels > strip['total']:
             bp = _get_board_pin(pin_name)
             if bp:
-                strip['obj'] = neopixel.NeoPixel(bp, total_pixels, auto_write=False, pixel_order=neopixel.RGB)
+                strip['obj'] = neopixel.NeoPixel(bp, total_pixels, auto_write=False)
                 strip['total'] = total_pixels
         return strip['obj']
     else:
         bp = _get_board_pin(pin_name)
         if bp:
-            obj = neopixel.NeoPixel(bp, total_pixels, auto_write=False, pixel_order=neopixel.RGB)
+            obj = neopixel.NeoPixel(bp, total_pixels, auto_write=False)
             _strips[pin_name] = {'obj': obj, 'total': total_pixels}
             return obj
     return None
