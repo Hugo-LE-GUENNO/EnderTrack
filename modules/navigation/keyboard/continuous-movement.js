@@ -150,6 +150,22 @@ function startContinuousMovement(direction) {
       }
       
       if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
+        // Hardware: send G-code relative move
+        const es = window.EnderTrack?.Enderscope;
+        if (es?.isConnected) {
+          const feedrate = actualSpeed * 60; // mm/s to mm/min
+          const gcode = 'G91\nG1' +
+            (moveX ? ' X' + moveX.toFixed(3) : '') +
+            (moveY ? ' Y' + moveY.toFixed(3) : '') +
+            (moveZ ? ' Z' + moveZ.toFixed(3) : '') +
+            ' F' + Math.round(feedrate) + '\nG90';
+          const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+          fetch(base + '/api/move/stream', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ gcode })
+          }).catch(() => {});
+        }
+
         const newPos = {
           x: state.pos.x + moveX,
           y: state.pos.y + moveY,
@@ -185,6 +201,20 @@ function stopContinuousMovement() {
   if (window.continuousInterval) {
     clearInterval(window.continuousInterval);
     window.continuousInterval = null;
+  }
+  
+  // Stop hardware movement
+  const es = window.EnderTrack?.Enderscope;
+  if (es?.isConnected) {
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(base + '/api/move/stop', { method: 'POST' }).then(() => {
+      return fetch(base + '/api/position/real');
+    }).then(r => r.json()).then(data => {
+      if (data?.position) {
+        window.EnderTrack.State.update({ pos: data.position });
+        window.EnderTrack.Canvas?.requestRender?.();
+      }
+    }).catch(() => {});
   }
   
   window.EnderTrack.ContinuousMovement.clearCanvasVectors();
