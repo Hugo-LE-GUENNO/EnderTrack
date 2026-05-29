@@ -88,26 +88,20 @@ class Autofocus:
         # Continue in best direction as long as improving
         n = 0
         stale = 0
-        prev_score = best_score
         while n < max_steps:
             self._move(move_func, direction * step)
             z += direction * step
             score = self._measure(capture_func)
+            self._log(f"  {label} step {n+1}: z={z:.3f} score={score:.4f} (best={best_score:.4f})")
             n += 1
             if score > best_score:
                 best_score = score
                 best_z = z
                 stale = 0
-            elif score < prev_score * 0.95:
-                # Significant drop — stop
-                stale += 1
-                if stale >= 3:
-                    break
             else:
                 stale += 1
                 if stale >= 3:
                     break
-            prev_score = score
 
         self._log(f"{label} -> best_z={best_z:.3f} score={best_score:.4f} ({n} steps, now at z={z:.3f})")
         return z, best_z, best_score
