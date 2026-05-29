@@ -241,6 +241,9 @@ def register_routes(app):
         """Run 3-phase autofocus."""
         import numpy as np
         import requests as http_req
+        import importlib
+        from server import autofocus as _af_mod
+        importlib.reload(_af_mod)
         from server.autofocus import Autofocus
 
         picam, _ = _get_picam()

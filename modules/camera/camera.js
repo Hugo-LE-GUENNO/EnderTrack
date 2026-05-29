@@ -260,7 +260,7 @@ class CameraModule {
     const state = window.EnderTrack?.State?.get?.();
     const z = state?.pos?.z || 0;
     // Visual feedback
-    const btn = this._navEl?.querySelector('.cam-btn:nth-child(3)');
+    const btn = this._navEl?.querySelector('[onclick*="runAutofocus"]');
     if (btn) { btn.textContent = '\u23f3 AF...'; btn.disabled = true; }
     try {
       const res = await fetch(base + '/api/camera/picam/autofocus', {
@@ -279,6 +279,7 @@ class CameraModule {
       window.EnderTrack?.UI?.showError?.('AF error: ' + e.message);
     }
     if (btn) { btn.textContent = '\ud83d\udd2c AF'; btn.disabled = false; }
+    this._renderNav();
   }
 
   async saveLive() {
