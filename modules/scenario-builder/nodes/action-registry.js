@@ -340,7 +340,11 @@ class ActionRegistry {
             body: JSON.stringify({
               frame: frame.frame,
               output: context._stackPath,
-              metadata: context._stackMeta || {}
+              metadata: { ...(context._stackMeta || {}),
+                displayMin: window.EnderTrack?.LiveRenderer?.min || 0,
+                displayMax: window.EnderTrack?.LiveRenderer?.max || 255,
+                lut: window.EnderTrack?.Camera?._liveLutId || 'gray'
+              }
             })
           });
           const result = await res.json();

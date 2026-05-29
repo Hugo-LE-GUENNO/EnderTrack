@@ -28,6 +28,9 @@ def _build_imagej_desc(n_pages, meta):
     if meta.get('unit'): desc.append(f'unit={meta["unit"]}')
     if meta.get('spacing'): desc.append(f'spacing={meta["spacing"]}')
     if meta.get('finterval'): desc.append(f'finterval={meta["finterval"]}')
+    if meta.get('displayMin') is not None: desc.append(f'min={meta["displayMin"]}')
+    if meta.get('displayMax') is not None: desc.append(f'max={meta["displayMax"]}')
+    if meta.get('lut'): desc.append(f'lut={meta["lut"]}')
     desc.append('loop=false')
     return '\n'.join(desc) + '\n'
 
@@ -92,13 +95,24 @@ def register_routes(app):
             width, height = img.size
             mode = img.mode
 
+            # Parse ImageJ description for display settings
+            desc = img.tag_v2.get(270, '') if hasattr(img, 'tag_v2') else ''
+            display = {}
+            if desc and 'ImageJ' in desc:
+                from server.ome_metadata import parse_imagej_description
+                ij = parse_imagej_description(desc)
+                if 'min' in ij: display['min'] = float(ij['min'])
+                if 'max' in ij: display['max'] = float(ij['max'])
+                if 'lut' in ij: display['lut'] = ij['lut']
+
             return jsonify({
                 'file': filepath,
                 'pages': n_pages,
                 'width': width,
                 'height': height,
                 'mode': mode,
-                'fileSize': os.path.getsize(full)
+                'fileSize': os.path.getsize(full),
+                'display': display
             })
         except ImportError:
             return jsonify({'error': 'Pillow not installed'}), 500

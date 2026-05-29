@@ -28,6 +28,19 @@ class StackViewer {
       this._dims = await dimRes.json();
       this._dimState = { c: 0, z: 0, t: 0 };
       await this._loadPersistedSettings();
+      // If no persisted settings, use display settings from TIFF metadata
+      if (!this._channelSettings || !Object.keys(this._channelSettings).length) {
+        const d = this._info?.display;
+        if (d && (d.min !== undefined || d.lut)) {
+          this._channelSettings = { 0: { min: d.min || 0, max: d.max || 255, lutId: d.lut || 'gray', rgbMode: false } };
+          const renderer = window.EnderTrack?.GalleryRenderer;
+          if (renderer) {
+            renderer.min = d.min || 0;
+            renderer.max = d.max || 255;
+            if (d.lut && d.lut !== 'gray') { renderer.lutId = d.lut; renderer.rgbMode = false; }
+          }
+        }
+      }
       return true;
     } catch(e) { return false; }
   }
