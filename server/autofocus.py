@@ -48,13 +48,12 @@ class Autofocus:
         move_func(dz)
         time.sleep(self.settle_ms / 1000.0)
 
-    def _scan(self, capture_func, move_func, z, step, z_min, z_max, label, max_steps=50):
+    def _scan(self, capture_func, move_func, z, step, z_min, z_max, label):
         """
-        Scan in best direction. For coarse scans (step>=1mm), requires a significant
-        peak before stopping. For fine scans, stops after 2 consecutive drops.
+        Scan in best direction. Stops after 2 consecutive score decreases.
+        Returns (z_current, best_z, best_score) — does NOT return to best_z.
         """
-        start_score = self._measure(capture_func)
-        best_score = start_score
+        best_score = self._measure(capture_func)
         best_z = z
         self._log(f"{label} z={z:.3f} step={step} score={best_score:.4f}")
 
@@ -84,35 +83,23 @@ class Autofocus:
                 self._log(f"{label} -> no improvement, stay z={z:.3f}")
                 return z, best_z, best_score
 
-        # Climb: continue in direction
-        # For coarse (P1): need significant improvement (>10% above start) before allowing stop
-        # For fine (P2/P3): stop after 2 consecutive drops
-        is_coarse = step >= 0.5
-        found_peak = False
+        # Climb until score drops twice in a row
         n = 0
         drops = 0
         prev_score = best_score
-        while n < max_steps:
+        while z_min < z < z_max:
             self._move(move_func, direction * step)
             z += direction * step
             score = self._measure(capture_func)
-            self._log(f"  {label} step {n}: z={z:.3f} score={score:.4f} (best={best_score:.4f})")
             n += 1
             if score > best_score:
                 best_score = score
                 best_z = z
                 drops = 0
-                if best_score > start_score * 1.1:
-                    found_peak = True
             elif score < prev_score:
                 drops += 1
-                # Coarse: only stop if we already found a real peak
-                if is_coarse and not found_peak:
-                    if drops >= 5:
-                        break  # safety: 5 drops without ever finding peak = give up
-                else:
-                    if drops >= 2:
-                        break
+                if drops >= 2:
+                    break
             else:
                 drops = 0
             prev_score = score
