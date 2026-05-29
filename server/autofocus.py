@@ -89,7 +89,7 @@ class Autofocus:
         n = 0
         stale = 0
         prev_score = best_score
-        while z_min < z < z_max and n < max_steps:
+        while n < max_steps:
             self._move(move_func, direction * step)
             z += direction * step
             score = self._measure(capture_func)
