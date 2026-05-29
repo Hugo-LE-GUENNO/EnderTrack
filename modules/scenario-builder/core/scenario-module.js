@@ -91,7 +91,7 @@ class ScenarioModule {
 
     this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [], preview: this.scenarioTrack.preview || [] };
     this._logEntries = [];
-    const scenario = this.manager?.getCurrentScenario();
+    
     this._showRunUI({ name: scenario?.name || 'Scenario', positions: [] });
     this.showExecutionUI();
     EnderTrack.Events?.emit?.('scenario:activated');
