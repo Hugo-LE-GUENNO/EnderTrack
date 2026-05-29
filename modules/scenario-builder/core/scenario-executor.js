@@ -325,6 +325,10 @@ class ScenarioExecutor {
       
       // Update loop progress
       this.updateLoopProgress(i + 1, iterationCount);
+      // Update right panel progress bar
+      if (window.EnderTrack?.Scenario?._updateRunUI) {
+        window.EnderTrack.Scenario._updateRunUI(i + 1, iterationCount);
+      }
       
       while (this.isPaused) {
         await new Promise(resolve => setTimeout(resolve, 100));

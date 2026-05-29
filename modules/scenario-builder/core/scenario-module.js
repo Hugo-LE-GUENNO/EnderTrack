@@ -11,6 +11,7 @@ class ScenarioModule {
     this.manager = null;
     this._executor = null;
     this._logEntries = [];
+    this._runStartTime = Date.now();
   }
 
   get isExecuting() { return this._isExecuting || this._executor?.isExecuting || false; }
