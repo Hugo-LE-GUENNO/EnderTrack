@@ -259,33 +259,39 @@ class ActionRegistry {
 
     this.register({
       id: 'autofocus',
-      label: '🔍 Autofocus',
-      icon: '🔍',
+      label: '\ud83d\udd0d Autofocus',
+      icon: '\ud83d\udd0d',
       category: 'core',
       params: [
         { id: 'label', label: 'Label', type: 'text', default: 'Autofocus' },
-        { id: 'range', label: 'Range (mm)', type: 'number', default: 0.1, min: 0.01, step: 0.01 },
-        { id: 'steps', label: 'Steps', type: 'number', default: 10, min: 3 },
-        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: true },
-        { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
+        { id: 'range', label: 'Range (\u00b1 mm)', type: 'number', default: 2, min: 0.1, step: 0.1 },
+        { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
       ],
-      execute: async (params, ctx) => {
-        // Autofocus: sweep Z range, find best focus (placeholder)
-        const range = parseFloat(params.range) || 0.1;
-        const steps = parseInt(params.steps) || 10;
-        const startZ = (ctx.pos?.z || 0) - range / 2;
-        const stepSize = range / steps;
-        let bestZ = ctx.pos?.z || 0;
-        // TODO: integrate with camera contrast metric
-        for (let i = 0; i <= steps; i++) {
-          const z = startZ + i * stepSize;
-          await ctx.moveAbsolute?.(ctx.pos?.x, ctx.pos?.y, z);
-          await new Promise(r => setTimeout(r, 100));
+      execute: async (params, context) => {
+        const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const state = window.EnderTrack?.State?.get?.();
+        const z = state?.pos?.z || 0;
+        const range = parseFloat(params.range) || 2;
+        try {
+          const res = await fetch(base + '/api/camera/picam/autofocus', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ z_min: z - range, z_max: z + range })
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.EnderTrack?.State?.update?.({ pos: { ...state.pos, z: data.best_z } });
+            if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+              window.EnderTrack.Scenario.addLog('\ud83d\udd2c AF: z=' + data.best_z.toFixed(3) + 'mm', 'info');
+            }
+            return { success: true, best_z: data.best_z };
+          }
+          return { success: false };
+        } catch (e) {
+          return { success: false };
         }
-        await ctx.moveAbsolute?.(ctx.pos?.x, ctx.pos?.y, bestZ);
-        return { label: `AF z=${bestZ.toFixed(3)}` };
       }
     });
+
 
     // 📷 Capture
     this.register({
