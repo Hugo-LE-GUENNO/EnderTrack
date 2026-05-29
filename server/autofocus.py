@@ -48,10 +48,12 @@ class Autofocus:
         move_func(dz)
         time.sleep(self.settle_ms / 1000.0)
 
-    def _scan(self, capture_func, move_func, z, step, z_min, z_max, label):
+    def _scan(self, capture_func, move_func, z, step, z_min, z_max, label, max_steps=50):
         """
-        Scan in best direction. Stops after 2 consecutive score decreases.
-        Returns (z_current, best_z, best_score) — does NOT return to best_z.
+        Scan in best direction. Continues as long as improving.
+        Stops after 3 consecutive non-improvements OR max_steps OR out of range.
+        Returns (z_current, best_z, best_score).
+        If neither direction improves: returns with 'lost' flag (best_score=0 sentinel).
         """
         best_score = self._measure(capture_func)
         best_z = z
@@ -76,18 +78,18 @@ class Autofocus:
                 best_z = z
                 direction = -1
             else:
-                # Neither better — already at best, go back
+                # Neither direction improves — lost
                 move_func(step)
                 z += step
                 time.sleep(self.settle_ms / 1000.0)
-                self._log(f"{label} -> no improvement, stay z={z:.3f}")
+                self._log(f"{label} -> LOST, no improvement in either direction z={z:.3f}")
                 return z, best_z, best_score
 
-        # Climb until score drops twice in a row
+        # Continue in best direction as long as improving
         n = 0
-        drops = 0
+        stale = 0
         prev_score = best_score
-        while z_min < z < z_max:
+        while z_min < z < z_max and n < max_steps:
             self._move(move_func, direction * step)
             z += direction * step
             score = self._measure(capture_func)
@@ -95,13 +97,16 @@ class Autofocus:
             if score > best_score:
                 best_score = score
                 best_z = z
-                drops = 0
-            elif score < prev_score:
-                drops += 1
-                if drops >= 2:
+                stale = 0
+            elif score < prev_score * 0.95:
+                # Significant drop — stop
+                stale += 1
+                if stale >= 3:
                     break
             else:
-                drops = 0
+                stale += 1
+                if stale >= 3:
+                    break
             prev_score = score
 
         self._log(f"{label} -> best_z={best_z:.3f} score={best_score:.4f} ({n} steps, now at z={z:.3f})")
