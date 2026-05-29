@@ -72,7 +72,7 @@ class ScenarioModule {
     if (this._logEntries.length > 200) this._logEntries.shift();
     const color = type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : 'var(--text-general)';
     const line = `<div style="font-size:10px; color:${color}; padding:1px 0;">${message}</div>`;
-    const el = document.getElementById('scenarioRightLog');
+    const el = document.getElementById('sbRunLog') || document.getElementById('scenarioRightLog');
     if (el) { el.innerHTML += line; el.scrollTop = el.scrollHeight; }
   }
 
@@ -91,17 +91,19 @@ class ScenarioModule {
 
     this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [], preview: this.scenarioTrack.preview || [] };
     this._logEntries = [];
-    this._showRightPanel(true);
+    const scenario = this.manager?.getCurrentScenario();
+    this._showRunUI({ name: scenario?.name || 'Scenario', positions: [] });
     this.showExecutionUI();
     EnderTrack.Events?.emit?.('scenario:activated');
 
     await this._executor.executeTree(scenario.tree, scenario.watchers);
 
+    const dur = this._executor.getElapsedTime().toFixed(1);
+    this.addLog('\u2705 Termin\u00e9 (' + dur + 's)', 'info');
     EnderTrack.Events?.emit?.('scenario:completed', {
       scenarioName: scenario.name,
-      duration: this._executor.getElapsedTime()
+      duration: parseFloat(dur)
     });
-    this._showRightPanel(false);
     this.createUI();
   }
 
