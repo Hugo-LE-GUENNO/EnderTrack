@@ -278,9 +278,35 @@ def register_routes(app):
             except Exception as e:
                 print(f"  ⚠️ AF move_z error: {e}")
 
-        print(f"  🔬 Autofocus start z={current_z:.3f} range=[{z_min},{z_max}]")
-        ok, best_z, score = af.search(capture_func, move_z_func, z_min, z_max, current_z)
-        print(f"  🔬 Autofocus {'✅' if ok else '❌'} z={best_z:.4f} score={score:.2f}")
+        mode = data.get('mode', 'full')
+        print(f"  AF start z={current_z:.3f} range=[{z_min},{z_max}] mode={mode}")
+
+        if mode == 'quick':
+            import time as _t
+            z = current_z
+            z, best2_z, _ = af._scan(capture_func, move_z_func, z, af.coarse_step, z_min, z_max, "P2")
+            if abs(z - best2_z) > 0.001:
+                move_z_func(best2_z - z); z = best2_z; _t.sleep(af.settle_ms / 1000.0)
+            move_z_func(af.backlash_mm); z += af.backlash_mm; _t.sleep(af.settle_ms / 1000.0)
+            best_score, best_z, drops, prev_score = 0.0, z, 0, 0.0
+            for _ in range(int((af.backlash_mm * 2) / af.fine_step)):
+                af._move(move_z_func, -af.fine_step); z -= af.fine_step
+                score = af._measure(capture_func)
+                if score > best_score:
+                    best_score = score; best_z = z; drops = 0
+                elif score < prev_score:
+                    drops += 1
+                    if drops >= 3: break
+                else:
+                    drops = 0
+                prev_score = score
+            if best_z != z:
+                move_z_func(best_z - z); _t.sleep(af.settle_ms / 1000.0)
+            ok, score = True, best_score
+        else:
+            ok, best_z, score = af.search(capture_func, move_z_func, z_min, z_max, current_z)
+
+        print(f"  AF done ok={ok} z={best_z:.4f} score={score:.2f}")
         return jsonify({'success': ok, 'best_z': best_z, 'score': score})
 
     print("  ✅ Picamera2 routes registered")

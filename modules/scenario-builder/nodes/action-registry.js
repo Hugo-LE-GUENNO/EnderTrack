@@ -275,7 +275,7 @@ class ActionRegistry {
         try {
           const res = await fetch(base + '/api/camera/picam/autofocus', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ z_min: z - range, z_max: z + range })
+            body: JSON.stringify({ z_min: z - range, z_max: z + range, mode: params.mode || 'quick' })
           });
           const data = await res.json();
           if (data.success) {
