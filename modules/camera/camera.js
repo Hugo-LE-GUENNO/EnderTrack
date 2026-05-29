@@ -229,7 +229,7 @@ class CameraModule {
       </style>
       <div style="display:flex; gap:4px; margin-bottom:6px;">
         <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">\ud83d\udcf7 Photo</button>
-        ${isPicam ? `<button class="cam-btn" onclick="EnderTrack.Camera.runAutofocus()">\ud83d\udd2c AF</button>` : ''}
+        ${isPicam ? `<button class="cam-btn" onclick="EnderTrack.Camera.runAutofocus('full')" oncontextmenu="event.preventDefault(); EnderTrack.Camera._afContextMenu(event)">\ud83d\udd2c AF</button>` : ''}
         <button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" onclick="EnderTrack.Camera.toggleFastExplore()">\ud83d\udd32 Explore</button>
       </div>
       ${isPicam ? `
@@ -255,7 +255,25 @@ class CameraModule {
     `;
   }
 
-  async runAutofocus() {
+  _afContextMenu(e) {
+    document.getElementById('af-ctx-menu')?.remove();
+    const menu = document.createElement('div');
+    menu.id = 'af-ctx-menu';
+    menu.style.cssText = 'position:fixed; left:'+e.clientX+'px; top:'+e.clientY+'px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:120px;';
+    [{label:'\u26a1 Rapide (P2+P3)',mode:'quick'},{label:'\ud83d\udd2c Complet (P1+P2+P3)',mode:'full'}].forEach(item => {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:5px 12px; font-size:10px; cursor:pointer; color:var(--text-general);';
+      row.textContent = item.label;
+      row.onmouseenter = () => row.style.background = 'var(--app-bg)';
+      row.onmouseleave = () => row.style.background = '';
+      row.onclick = () => { menu.remove(); this.runAutofocus(item.mode); };
+      menu.appendChild(row);
+    });
+    document.body.appendChild(menu);
+    setTimeout(() => document.addEventListener('mousedown', function close(ev) { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } }), 0);
+  }
+
+  async runAutofocus(mode = 'full') {
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     const state = window.EnderTrack?.State?.get?.();
     const z = state?.pos?.z || 0;
@@ -265,7 +283,7 @@ class CameraModule {
     try {
       const res = await fetch(base + '/api/camera/picam/autofocus', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ z_min: z - 2, z_max: z + 2 })
+        body: JSON.stringify({ z_min: z - 2, z_max: z + 2, mode })
       });
       const data = await res.json();
       if (data.success) {

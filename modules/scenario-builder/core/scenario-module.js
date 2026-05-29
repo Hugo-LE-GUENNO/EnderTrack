@@ -306,15 +306,13 @@ class ScenarioModule {
 
     if (p.autofocus) {
       paramsHtml += `<div style="padding:6px; background:var(--app-bg); border-radius:4px; margin-top:6px;">
-        <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">🔍 Autofocus</div>
+        <div style="font-size:9px; color:var(--text-general); margin-bottom:4px;">AF</div>
         <div style="display:flex; gap:6px; align-items:center;">
-          <label style="font-size:10px; width:40px;">Range</label>
-          <input type="number" value="${pp.afRange || 0.1}" min="0.01" step="0.01" onchange="EnderTrack.Scenario._pp('afRange', parseFloat(this.value))"
-            style="width:50px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">mm</span>
-          <label style="font-size:10px; margin-left:6px;">Steps</label>
-          <input type="number" value="${pp.afSteps || 10}" min="3" onchange="EnderTrack.Scenario._pp('afSteps', parseInt(this.value))"
-            style="width:40px; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+          <label style="font-size:10px; width:40px;">Mode</label>
+          <select onchange="EnderTrack.Scenario._pp('afMode', this.value)" style="flex:1; padding:3px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+            <option value="quick" ${(pp.afMode||'quick')==='quick'?'selected':''}>Rapide (P2+P3)</option>
+            <option value="full" ${pp.afMode==='full'?'selected':''}>Complet (P1+P2+P3)</option>
+          </select>
         </div>
       </div>`;
     }
@@ -460,7 +458,7 @@ class ScenarioModule {
     // Capture block: light on + wait(expo) + capture + light off
     const captureActions = [];
     const expoMs = Math.ceil((pp.exposure || EnderTrack.Camera?.picamConfig?.exposure || 100000) / 1000);
-    if (p.autofocus) captureActions.push({ type: 'action', actionId: 'autofocus', params: { mode: 'quick', range: 2, showInLog: true, label: 'AF' } });
+    if (p.autofocus) captureActions.push({ type: 'action', actionId: 'autofocus', params: { mode: pp.afMode || 'quick', range: 2, showInLog: true, label: 'AF' } });
     if (p.useLight) captureActions.push({ type: 'action', actionId: 'light_set', params: { lightId: 1, action: 'on', intensity: pp.lightIntensity || 100, r: 255, g: 255, b: 255, showInLog: false } });
     if (p.useLight) captureActions.push({ type: 'action', actionId: 'wait', params: { duration: (expoMs + 50) / 1000, showInLog: false } });
     if (p.useCapture) captureActions.push({ type: 'action', actionId: 'capture', params: { format: pp.format || 'tiff', exposure: pp.exposure || 0, cameraId: pp.cameraId || '', path: pp.path || './captures', showInLog: true, label: 'Capture' } });
