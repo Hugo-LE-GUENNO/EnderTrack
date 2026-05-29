@@ -115,6 +115,23 @@ function startContinuousMovement(direction) {
     window.EnderTrack.ContinuousMovement.drawCanvasVector('z', 0, dz, actualSpeed);
   }
   
+  // Hardware: send one long G1 in the direction (will be stopped by M410)
+  const es = window.EnderTrack?.Enderscope;
+  if (es?.isConnected) {
+    const FAR = 9999;
+    let gx = '', gy = '', gz = '';
+    if (dx > 0) gx = ' X' + FAR; else if (dx < 0) gx = ' X-' + FAR;
+    if (dy > 0) gy = ' Y' + FAR; else if (dy < 0) gy = ' Y-' + FAR;
+    if (dz > 0) gz = ' Z' + FAR; else if (dz < 0) gz = ' Z-' + FAR;
+    const feedrate = window.EnderTrack?.State?.get()?.feedrate || 3000;
+    const gcode = 'G91\nG1' + gx + gy + gz + ' F' + feedrate + '\nG90';
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(base + '/api/move/stream', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ gcode })
+    }).catch(() => {});
+  }
+
   window.continuousInterval = setInterval(() => {
     if (window.moveDirection) {
       const state = window.EnderTrack.State.get();
@@ -150,22 +167,6 @@ function startContinuousMovement(direction) {
       }
       
       if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
-        // Hardware: send G-code relative move
-        const es = window.EnderTrack?.Enderscope;
-        if (es?.isConnected) {
-          const feedrate = actualSpeed * 60; // mm/s to mm/min
-          const gcode = 'G91\nG1' +
-            (moveX ? ' X' + moveX.toFixed(3) : '') +
-            (moveY ? ' Y' + moveY.toFixed(3) : '') +
-            (moveZ ? ' Z' + moveZ.toFixed(3) : '') +
-            ' F' + Math.round(feedrate) + '\nG90';
-          const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-          fetch(base + '/api/move/stream', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ gcode })
-          }).catch(() => {});
-        }
-
         const newPos = {
           x: state.pos.x + moveX,
           y: state.pos.y + moveY,

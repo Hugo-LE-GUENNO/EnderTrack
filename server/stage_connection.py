@@ -404,11 +404,11 @@ def register_routes(app):
 
     @app.route('/api/move/stop', methods=['POST'])
     def _move_stop():
-        """Emergency stop movement: M410 (quick stop) + G90 (absolute mode)."""
+        """Quick stop: M410 aborts current move, G90 restores absolute mode."""
         if stage:
             stage.send_gcode("M410", wait_ok=False, _log=False)
-            time.sleep(0.05)
-            stage.send_gcode("G90", wait_ok=False, _log=False)
+            time.sleep(0.1)
+            stage.send_gcode("G90", wait_ok=True, _log=False)
         return jsonify({'success': True})
 
     @app.route('/api/position/real', methods=['GET'])
