@@ -465,7 +465,31 @@ class CameraModule {
       ctx.translate(center.cx, center.cy);
       ctx.rotate(rot);
       ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-      ctx.drawImage(tile.img, -wPx / 2, -hPx / 2, wPx, hPx);
+      // Apply live contrast/LUT if active
+      const renderer = window.EnderTrack?.LiveRenderer;
+      if (renderer?.enabled && (renderer.min > 0 || renderer.max < 255 || renderer._lutTable)) {
+        if (!tile._processed || tile._procMin !== renderer.min || tile._procMax !== renderer.max || tile._procLut !== renderer.lutId) {
+          const tc = document.createElement('canvas');
+          tc.width = tile.img.naturalWidth; tc.height = tile.img.naturalHeight;
+          const tctx = tc.getContext('2d');
+          tctx.drawImage(tile.img, 0, 0);
+          const imgData = tctx.getImageData(0, 0, tc.width, tc.height);
+          const d = imgData.data;
+          const min = renderer.min, max = renderer.max, range = Math.max(1, max - min);
+          const lut = renderer._lutTable;
+          for (let i = 0; i < d.length; i += 4) {
+            const lum = Math.round(0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]);
+            const stretched = Math.max(0, Math.min(255, Math.round(((lum - min) / range) * 255)));
+            if (lut) { const c = lut[stretched]; d[i]=c[0]; d[i+1]=c[1]; d[i+2]=c[2]; }
+            else { d[i]=stretched; d[i+1]=stretched; d[i+2]=stretched; }
+          }
+          tctx.putImageData(imgData, 0, 0);
+          tile._processed = tc; tile._procMin = renderer.min; tile._procMax = renderer.max; tile._procLut = renderer.lutId;
+        }
+        ctx.drawImage(tile._processed, -wPx / 2, -hPx / 2, wPx, hPx);
+      } else {
+        ctx.drawImage(tile.img, -wPx / 2, -hPx / 2, wPx, hPx);
+      }
       ctx.restore();
     }
     ctx.restore();
