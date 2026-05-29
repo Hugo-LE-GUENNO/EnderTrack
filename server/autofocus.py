@@ -50,10 +50,11 @@ class Autofocus:
 
     def _scan(self, capture_func, move_func, z, step, z_min, z_max, label, max_steps=50):
         """
-        Scan in best direction. Stops after 2 consecutive score decreases.
-        Returns (z_current, best_z, best_score) — does NOT return to best_z.
+        Scan in best direction. For coarse scans (step>=1mm), requires a significant
+        peak before stopping. For fine scans, stops after 2 consecutive drops.
         """
-        best_score = self._measure(capture_func)
+        start_score = self._measure(capture_func)
+        best_score = start_score
         best_z = z
         self._log(f"{label} z={z:.3f} step={step} score={best_score:.4f}")
 
@@ -83,7 +84,11 @@ class Autofocus:
                 self._log(f"{label} -> no improvement, stay z={z:.3f}")
                 return z, best_z, best_score
 
-        # Climb until score drops twice in a row
+        # Climb: continue in direction
+        # For coarse (P1): need significant improvement (>10% above start) before allowing stop
+        # For fine (P2/P3): stop after 2 consecutive drops
+        is_coarse = step >= 0.5
+        found_peak = False
         n = 0
         drops = 0
         prev_score = best_score
@@ -97,10 +102,17 @@ class Autofocus:
                 best_score = score
                 best_z = z
                 drops = 0
+                if best_score > start_score * 1.1:
+                    found_peak = True
             elif score < prev_score:
                 drops += 1
-                if drops >= 2:
-                    break
+                # Coarse: only stop if we already found a real peak
+                if is_coarse and not found_peak:
+                    if drops >= 5:
+                        break  # safety: 5 drops without ever finding peak = give up
+                else:
+                    if drops >= 2:
+                        break
             else:
                 drops = 0
             prev_score = score
