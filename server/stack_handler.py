@@ -42,7 +42,9 @@ def _build_imagej_desc(n_pages, meta):
             if os.path.isfile(settings_file):
                 with open(settings_file, 'r') as f:
                     all_settings = json.load(f)
-                return jsonify(all_settings.get(filepath, {}))
+                # Normalize path: try with and without ./
+                result = all_settings.get(filepath) or all_settings.get('./' + filepath) or all_settings.get(filepath.lstrip('./'))
+                return jsonify(result or {})
         except:
             pass
         return jsonify({}), 200
