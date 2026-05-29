@@ -314,8 +314,30 @@ class CameraModule {
         body: JSON.stringify({ frame: frame.frame, path })
       });
     } catch(e) {}
+    // Copy live settings for this image in gallery
+    this._saveLiveSettingsForImage(path);
     // Refresh gallery
     window.EnderTrack?.ImageManager?.loadGallery?.();
+  }
+
+  _saveLiveSettingsForImage(path) {
+    const renderer = window.EnderTrack?.LiveRenderer;
+    const imgMgr = window.EnderTrack?.ImageManager;
+    if (!renderer || !imgMgr) return;
+    const relativePath = path.replace('./', '');
+    imgMgr._imageSettings[relativePath] = {
+      min: renderer.min || 0,
+      max: renderer.max || 255,
+      lutId: this._liveLutId || 'gray',
+      rgbMode: !renderer.enabled,
+      histMode: 'manual'
+    };
+    // Persist to server
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    fetch(base + '/api/gallery/settings', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(imgMgr._imageSettings)
+    }).catch(() => {});
   }
 
   toggleRecord() {
@@ -437,6 +459,8 @@ class CameraModule {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ frame: frameData.frame, path })
     }).catch(() => {});
+    // Copy live contrast/LUT settings to gallery for this image
+    this._saveLiveSettingsForImage(path);
 
     this._renderTilesPanel();
     this._renderNav();
