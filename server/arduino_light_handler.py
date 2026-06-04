@@ -15,7 +15,7 @@ except ImportError:
 
 _lock = threading.Lock()
 _ser = None
-_port = '/dev/ttyUSB0'
+_port = '/dev/ttyACM0'
 _baud = 57600
 _connected = False
 
@@ -129,7 +129,11 @@ def register_routes(app):
 
     @app.route('/api/arduino-light/off', methods=['POST'])
     def _al_off():
-        global _shutter
+        global _shutter, _port
+        data = request.get_json() or {}
+        if 'port' in data and data['port'] != _port:
+            _port = data['port']
+            _connect()
         _shutter = False
         _send("S0")
         return jsonify({'success': True, 'shutter': False})
@@ -143,8 +147,11 @@ def register_routes(app):
 
     @app.route('/api/arduino-light/color', methods=['POST'])
     def _al_color():
-        global _r, _g, _b
+        global _r, _g, _b, _port
         data = request.get_json() or {}
+        if 'port' in data and data['port'] != _port:
+            _port = data['port']
+            _connect()
         if 'r' in data: _r = min(255, max(0, int(data['r'])))
         if 'g' in data: _g = min(255, max(0, int(data['g'])))
         if 'b' in data: _b = min(255, max(0, int(data['b'])))
@@ -154,8 +161,11 @@ def register_routes(app):
 
     @app.route('/api/arduino-light/intensity', methods=['POST'])
     def _al_intensity():
-        global _intensity
+        global _intensity, _port
         data = request.get_json() or {}
+        if 'port' in data and data['port'] != _port:
+            _port = data['port']
+            _connect()
         if 'intensity' in data:
             _intensity = max(0, min(1, float(data['intensity'])))
         if _shutter:

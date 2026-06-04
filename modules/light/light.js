@@ -152,8 +152,7 @@ class LightModule {
         const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
         const lights = window._lights || [];
         const light = lights.find(l => l.id === params.channel) || lights[0];
-        const isGpio = light?.type === 'gpio';
-        if (isGpio) {
+        if (light?.type === 'gpio') {
           const endpoint = '/api/light/' + (params.action === 'off' ? 'off' : 'on');
           const body = { id: light.serverId || 1 };
           if (params.action !== 'off') {
@@ -161,6 +160,13 @@ class LightModule {
             body.r = parseInt(params.r) || 255; body.g = parseInt(params.g) || 255; body.b = parseInt(params.b) || 255;
           }
           try { await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch {}
+        } else if (light?.type === 'arduino') {
+          if (params.action === 'off') {
+            try { await fetch(base + '/api/arduino-light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ port: light.pin }) }); } catch {}
+          } else {
+            const body = { port: light.pin, intensity: (parseInt(params.intensity) || 100) / 100, r: parseInt(params.r) || 255, g: parseInt(params.g) || 255, b: parseInt(params.b) || 255 };
+            try { await fetch(base + '/api/arduino-light/on', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch {}
+          }
         } else {
           const lm = window.EnderTrack.Light;
           if (params.action === 'off') lm?.off?.(params.channel);

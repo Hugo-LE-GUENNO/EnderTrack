@@ -384,7 +384,7 @@
                                 document.getElementById('lightTypeMenu').style.display = 'none';
                                 const id = 'light_' + Date.now();
                                 const name = type === 'gpio' ? 'Neopixel' : 'LED';
-                                const pin = type === 'gpio' ? 'D18' : '/dev/ttyUSB0'; window._lights.push({ id, name, type, pin, totalPixels: 1, start: 0, end: 1, r: 255, g: 255, b: 255, intensity: 1.0, on: false });
+                                const pin = type === 'gpio' ? 'D18' : '/dev/ttyACM0'; window._lights.push({ id, name, type, pin, totalPixels: 1, start: 0, end: 1, r: 255, g: 255, b: 255, intensity: 1.0, on: false });
                                 if (EnderTrack.Light?.driver?._channels) {
                                   EnderTrack.Light.driver._channels.push({ id, name, type, intensity: 0, on: false });
                                   EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
@@ -392,6 +392,18 @@
                                 window._renderLights(); window._savePeripherals();
                                 EnderTrack.Light._renderNav?.();
                                 EnderTrack.Light._updateStatus?.();
+                                // Blink to confirm Arduino connection
+                                if (type === 'arduino') {
+                                  const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                  (async () => {
+                                    for (let i = 0; i < 3; i++) {
+                                      await fetch(base + '/api/arduino-light/on', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ port: pin, intensity: 1, r: 255, g: 255, b: 255 }) }).catch(()=>{});
+                                      await new Promise(r => setTimeout(r, 150));
+                                      await fetch(base + '/api/arduino-light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ port: pin }) }).catch(()=>{});
+                                      await new Promise(r => setTimeout(r, 150));
+                                    }
+                                  })();
+                                }
                               };
                               window._removeLight = (idx) => {
                                 const light = window._lights[idx];
@@ -501,9 +513,9 @@
                                   }
                                 } else if (l.type === 'arduino') {
                                   if (l.on) {
-                                    await fetch(base + '/api/arduino-light/on', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ intensity: l.intensity || 1.0, r: l.r, g: l.g, b: l.b }) }).catch(()=>{});
+                                    await fetch(base + '/api/arduino-light/on', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ port: l.pin, intensity: l.intensity || 1.0, r: l.r, g: l.g, b: l.b }) }).catch(()=>{});
                                   } else {
-                                    await fetch(base + '/api/arduino-light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) }).catch(()=>{});
+                                    await fetch(base + '/api/arduino-light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ port: l.pin }) }).catch(()=>{});
                                   }
                                 }
                                 EnderTrack.Light?._renderNav?.();
