@@ -111,6 +111,14 @@
   padding: 12px 0;
   align-self: stretch;
   flex-shrink: 0;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.z-controls-right:hover {
+  border-color: var(--coordinates-color);
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.15);
+  cursor: ns-resize;
 }
 
 .z-btn {
