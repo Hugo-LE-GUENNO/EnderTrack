@@ -409,12 +409,16 @@
                                 const light = window._lights[idx];
                                 if (!light) return;
                                 light[channel] = parseInt(value);
-                                // Send to server if GPIO and on
-                                if (light.on && light.type === 'gpio') {
+                                // Send to server if on
+                                if (light.on) {
                                   clearTimeout(light._rgbTimer);
                                   light._rgbTimer = setTimeout(() => {
                                     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-                                    fetch(base + '/api/light/color', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: light.serverId || 1, r: light.r, g: light.g, b: light.b }) }).catch(()=>{});
+                                    if (light.type === 'gpio') {
+                                      fetch(base + '/api/light/color', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: light.serverId || 1, r: light.r, g: light.g, b: light.b }) }).catch(()=>{});
+                                    } else if (light.type === 'arduino') {
+                                      fetch(base + '/api/arduino-light/color', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ r: light.r, g: light.g, b: light.b }) }).catch(()=>{});
+                                    }
                                   }, 200);
                                 }
                               };
@@ -495,6 +499,12 @@
                                   } else {
                                     await fetch(base + '/api/light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }).catch(()=>{});
                                   }
+                                } else if (l.type === 'arduino') {
+                                  if (l.on) {
+                                    await fetch(base + '/api/arduino-light/on', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ intensity: l.intensity || 1.0, r: l.r, g: l.g, b: l.b }) }).catch(()=>{});
+                                  } else {
+                                    await fetch(base + '/api/arduino-light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) }).catch(()=>{});
+                                  }
                                 }
                                 EnderTrack.Light?._renderNav?.();
                               };
@@ -502,9 +512,11 @@
                                 const l = window._lights[idx];
                                 if (!l) return;
                                 l.intensity = parseInt(pct) / 100;
+                                const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
                                 if (l.on && l.type === 'gpio') {
-                                  const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
                                   await fetch(base + '/api/light/intensity', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: l.serverId || 1, intensity: l.intensity }) }).catch(()=>{});
+                                } else if (l.on && l.type === 'arduino') {
+                                  await fetch(base + '/api/arduino-light/intensity', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ intensity: l.intensity }) }).catch(()=>{});
                                 }
                               };
                             </script>
@@ -907,6 +919,7 @@
 
     <!-- Light -->
     <script src="modules/light/drivers/simulation.js"></script>
+    <script src="modules/light/drivers/arduino.js"></script>
     <script src="modules/light/light.js"></script>
 
     <!-- Acquisition wizards -->

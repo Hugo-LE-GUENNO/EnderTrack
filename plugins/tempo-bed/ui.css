@@ -1,0 +1,113 @@
+/* plugins/tempo-bed/ui.css */
+
+.tb-panel {
+  background: var(--container-bg);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-top: 8px;
+}
+.tb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-selected);
+  margin-bottom: 8px;
+}
+.tb-toggle {
+  padding: 4px 12px;
+  border: none;
+  background: var(--app-bg);
+  color: var(--text-general);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.tb-toggle:hover { background: var(--active-element); color: var(--text-selected); }
+.tb-toggle.tb-on {
+  background: #ef4444;
+  color: white;
+}
+.tb-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--text-general);
+}
+.tb-row label { min-width: 50px; }
+.tb-row input[type="range"] { flex: 1; height: 4px; }
+.tb-input {
+  width: 45px;
+  padding: 2px 4px;
+  border: 1px solid #444;
+  background: var(--app-bg);
+  color: var(--coordinates-color);
+  border-radius: 3px;
+  font-size: 11px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+.tb-row span { font-size: 10px; }
+.tb-presets {
+  display: flex;
+  gap: 4px;
+}
+.tb-preset {
+  flex: 1;
+  padding: 4px;
+  border: none;
+  background: var(--app-bg);
+  color: var(--text-general);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: 10px;
+  transition: all 0.2s ease;
+}
+.tb-preset:hover { background: var(--active-element); color: var(--text-selected); }
+
+/* Status widget */
+.tb-status {
+  padding: 8px;
+  margin-top: 4px;
+}
+.tb-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tb-status-icon {
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+.tb-status-icon.tb-warming {
+  animation: tbPulse 1s ease-in-out infinite;
+}
+.tb-status-icon.tb-reached {
+  animation: none;
+}
+@keyframes tbPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.tb-status-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-general);
+}
+.tb-status-temp {
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: var(--text-selected);
+  flex: 1;
+  text-align: center;
+}
+.tb-status-unit {
+  font-size: 12px;
+  color: var(--coordinates-color);
+}

@@ -117,6 +117,13 @@ try:
 except Exception as e:
     print(f"  \u26a0\ufe0f  PiLight: {e}")
 
+# Arduino Light (USB serial)
+try:
+    from server import arduino_light_handler
+    arduino_light_handler.register_routes(app)
+except Exception as e:
+    print(f"  \u26a0\ufe0f  Arduino Light: {e}")
+
 # 5. Real-time event stream (SSE)
 from server import event_stream
 event_stream.register_routes(app)
