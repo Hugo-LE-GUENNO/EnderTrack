@@ -14,7 +14,7 @@
 ## Installation
 
 ```bash
-git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+git clone -b imagerie https://github.com/Hugo-LE-GUENNO/EnderTrack.git
 cd EnderTrack
 python3 endertrack-server.py
 ```
