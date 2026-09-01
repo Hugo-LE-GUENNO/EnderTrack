@@ -484,14 +484,6 @@ window.switchTab = (tabId) => {
   if (window.EnderTrack?.Scenario?.isActive && !window.EnderTrack.Scenario.isExecuting) {
     window.EnderTrack.Scenario.deactivate();
   }
-  if (window.EnderTrack?.ImageManager?.isActive) {
-    window.EnderTrack.ImageManager.deactivate();
-    // Single viewport: switch back to stage
-    const display = window.EnderTrack?.Display;
-    if (display && display.viewports.length === 1 && display.viewports[0].source === 'gallery') {
-      display.assignSource(0, 'stage');
-    }
-  }
   
   // Reset canvas
   const canvas = window.EnderTrack?.Canvas?.getCanvas();
@@ -536,8 +528,6 @@ window.switchTab = (tabId) => {
     if (window.EnderTrack?.Canvas) {
       window.EnderTrack.Canvas.clickAndGoEnabled = true;
     }
-    // Switch viewport to live camera if available
-    window.EnderTrack?.Camera?.switchViewportForTab?.('navigation');
   } else if (tabId === 'overlays' && window.EnderTrack?.Overlays) {
     window.EnderTrack.Overlays.activate();
   } else if (tabId === 'settings') {
@@ -550,18 +540,13 @@ window.switchTab = (tabId) => {
     if (sizeLabel && window.EnderTrack?.StorageManager) sizeLabel.textContent = window.EnderTrack.StorageManager.getStorageSize() + ' KB';
   } else if (tabId === 'lists' && window.EnderTrack?.Lists) {
     window.EnderTrack.Lists.activate();
+    // Scenario is embedded in Positions tab
+    if (window.EnderTrack?.Scenario) {
+      window.EnderTrack.Scenario.activate();
+    }
   } else if (tabId === 'acquisition' && window.EnderTrack?.Scenario) {
     canvas.classList.add('scenario-mode');
     window.EnderTrack.Scenario.activate();
-  } else if (tabId === 'image' && window.EnderTrack?.ImageManager) {
-    window.EnderTrack.ImageManager.activate();
-    // Switch viewport to gallery
-    window.EnderTrack?.Camera?.switchViewportForTab?.('image');
-    // Re-render mosaic panel
-    setTimeout(() => window.EnderTrack?.Camera?._renderTilesPanel?.(), 100);
-  } else {
-    // Other tabs: back to stage viewport, hide histograms
-    window.EnderTrack?.Camera?.switchViewportForTab?.(tabId);
   }
   
   // === STEP 5: INIT OVERLAYS/TRACKS ===
@@ -767,7 +752,6 @@ window.clearHistory = () => {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (window.EnderTrack?.Scenario?.isExecuting) return;
     if (window.EnderTrack?.Movement?.isMoving) return;
-    if (window.EnderTrack?.ImageManager?.isActive) return;
 
     // Z movement (immediate, no combo needed)
     if (e.key === 'PageUp') { e.preventDefault(); EnderTrack.Navigation?.moveDirection?.('zUp'); return; }
@@ -777,7 +761,7 @@ window.clearHistory = () => {
     if (e.key === ' ') { e.preventDefault(); EnderTrack.Movement?.stopMovement?.(); return; }
 
     // P = add current position to active list
-    if (e.key === 'p' || e.key === 'P') { EnderTrack.Lists?.addPosition?.(EnderTrack.State?.get()?.pos?.x, EnderTrack.State?.get()?.pos?.y, EnderTrack.State?.get()?.pos?.z); return; }
+    if (e.key === 'p' || e.key === 'P') { const pos = EnderTrack.State?.get()?.pos; if (pos) EnderTrack.Lists?.addPosition?.(pos.x, pos.y, pos.z); return; }
 
     // XY arrows: buffer with 50ms tempo for diagonal detection
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -869,36 +853,20 @@ window.showAboutModal = async function() {
 window.showKeyboardShortcuts = function() {
   const existing = document.querySelector('.shortcuts-modal-overlay');
   if (existing) { existing.remove(); return; }
-
   const overlay = document.createElement('div');
   overlay.className = 'shortcuts-modal-overlay';
   overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10001; display:flex; align-items:center; justify-content:center;';
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-
   overlay.innerHTML = `
     <div style="background:var(--container-bg); border:1px solid #555; border-radius:12px; padding:24px 28px; max-width:340px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div style="font-size:14px; font-weight:600; color:var(--text-selected);">Raccourcis clavier</div>
         <button onclick="this.closest('.shortcuts-modal-overlay').remove()" style="background:none; border:none; color:var(--text-general); cursor:pointer; font-size:18px; opacity:0.6; padding:0; line-height:1;">✕</button>
       </div>
-      ${[
-        ['↑', 'Avancer (Y+)'],
-        ['↓', 'Reculer (Y−)'],
-        ['←', 'Gauche (X−)'],
-        ['→', 'Droite (X+)'],
-        ['Page↑', 'Monter (Z+)'],
-        ['Page↓', 'Descendre (Z−)'],
-        ['P', 'Ajouter la position actuelle à la liste'],
-      ].map(([k, d]) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
-          <span style="font-size:11px; color:var(--text-general);">${d}</span>
-          <span style="font-family:monospace; font-size:10px; background:var(--app-bg); border:1px solid #555; border-radius:3px; padding:1px 6px; color:var(--text-selected); white-space:nowrap; margin-left:12px;">${k}</span>
-        </div>`).join('')}
-      <div style="margin-top:10px; font-size:10px; color:var(--text-general); opacity:0.45; line-height:1.5;">
-        Déplacement au survol du slider Z + molette souris
-      </div>
+      ${[['\u2191','Avancer (Y+)'],['\u2193','Reculer (Y\u2212)'],['\u2190','Gauche (X\u2212)'],['\u2192','Droite (X+)'],['Page\u2191','Monter (Z+)'],['Page\u2193','Descendre (Z\u2212)'],['P','Ajouter la position actuelle \u00e0 la liste']]
+        .map(([k,d]) => `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span style="font-size:11px; color:var(--text-general);">${d}</span><span style="font-family:monospace; font-size:10px; background:var(--app-bg); border:1px solid #555; border-radius:3px; padding:1px 6px; color:var(--text-selected); white-space:nowrap; margin-left:12px;">${k}</span></div>`).join('')}
+      <div style="margin-top:10px; font-size:10px; color:var(--text-general); opacity:0.45; line-height:1.5;">Déplacement au survol du slider Z + molette souris</div>
     </div>`;
-
   document.body.appendChild(overlay);
 };
 
