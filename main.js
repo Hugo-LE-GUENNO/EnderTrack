@@ -900,7 +900,7 @@ window.showKeyboardShortcuts = function() {
         ['Page↓', 'Descendre (Z−)'],
       ])}
       ${section('Listes de positions (onglet Positions actif)', [
-        ['P', 'Ajouter la position actuelle'],
+        ['P', 'Ajouter la position actuelle à la liste'],
         ['Suppr / ⌫', 'Supprimer la position sélectionnée'],
         ['Échap', 'Désélectionner / quitter le mode clic'],
       ])}

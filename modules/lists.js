@@ -330,13 +330,7 @@ class ListManager {
         this.renderUI(); EnderTrack.Canvas?.requestRender?.();
       } else if (e.key === 'p' || e.key === 'P') {
         const pos = EnderTrack.State?.get()?.pos;
-        if (!pos) return;
-        const xEl = document.getElementById('listAddX');
-        if (xEl) {
-          xEl.value = Math.round(pos.x * 100) / 100;
-          document.getElementById('listAddY').value = Math.round(pos.y * 100) / 100;
-          document.getElementById('listAddZ').value = Math.round(pos.z * 100) / 100;
-        }
+        if (pos) this.addPosition(pos.x, pos.y, pos.z);
       }
     };
     document.addEventListener('keydown', this._onKey);
