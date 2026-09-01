@@ -890,14 +890,14 @@ window.showKeyboardShortcuts = function() {
       </div>
       <div style="font-size:10px; color:var(--text-general); opacity:0.5; margin-bottom:14px;">Déplacement : mode contrôleur activé requis &nbsp;·&nbsp; Positions : onglet Positions actif</div>
       ${section('Déplacement XY', [
-        ['↑ / W', 'Avancer (Y+)'],
-        ['↓ / S', 'Reculer (Y−)'],
-        ['← / A', 'Gauche (X−)'],
-        ['→ / D', 'Droite (X+)'],
+        ['↑', 'Avancer (Y+)'],
+        ['↓', 'Reculer (Y−)'],
+        ['←', 'Gauche (X−)'],
+        ['→', 'Droite (X+)'],
       ])}
       ${section('Déplacement Z', [
-        ['Page↑ / Q', 'Monter (Z+)'],
-        ['Page↓ / E', 'Descendre (Z−)'],
+        ['Page↑', 'Monter (Z+)'],
+        ['Page↓', 'Descendre (Z−)'],
       ])}
       ${section('Listes de positions (onglet Positions actif)', [
         ['P', 'Ajouter la position actuelle'],
