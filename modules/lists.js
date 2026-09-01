@@ -625,36 +625,22 @@ class ListManager {
       </div>
       <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
       ${pts.length ? `
-        <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px 20px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
-          <span style="text-align:center">#</span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span><span></span><span style="text-align:center">↕</span><span></span><span></span>
+        <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
+          <span style="text-align:center">#</span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
         </div>
       ` : '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>'}
-      ${pts.map((p, i) => this._renderRow(p, i, pts.length)).join('')}
-      <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px 20px; gap:2px; align-items:center; padding:3px 4px; border-left:3px solid transparent; border-top:1px solid #333; margin-top:2px;">
-        <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.4;">+</span>
-        <span></span>
-        <input type="number" id="listAddX" placeholder="X" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
-        <input type="number" id="listAddY" placeholder="Y" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
-        <input type="number" id="listAddZ" placeholder="Z" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
-        <button onclick="EnderTrack.Lists.addManualPosition()" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.5; font-size:10px;" title="Ajouter">Add</button>
-        <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:none; border:none; color:var(--coordinates-color); cursor:pointer; opacity:0.7; font-size:10px;" title="Ajouter la position actuelle">📍</button>
-        <span></span>
+      ${pts.map((p, i) => this._renderRow(p, i)).join('')}
+      <div style="display:flex; gap:4px; align-items:center; padding:6px 4px; border-top:1px solid #333; margin-top:4px;">
+        <input type="number" id="listAddX" placeholder="X" step="0.1" style="width:52px; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--pos-potential); text-align:center; font-size:11px; font-family:monospace; padding:2px;">
+        <input type="number" id="listAddY" placeholder="Y" step="0.1" style="width:52px; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--pos-potential); text-align:center; font-size:11px; font-family:monospace; padding:2px;">
+        <input type="number" id="listAddZ" placeholder="Z" step="0.1" style="width:52px; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--pos-potential); text-align:center; font-size:11px; font-family:monospace; padding:2px;">
+        <button onclick="EnderTrack.Lists.addManualPosition()" style="background:var(--button-bg); border:none; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:11px; padding:3px 8px;">Add</button>
+        <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:var(--button-bg); border:none; border-radius:3px; color:var(--coordinates-color); cursor:pointer; font-size:14px; padding:2px 6px;" title="Ajouter la position actuelle">📍</button>
       </div>
     `;
 
     // Plugin injection zone
     window.EnderTrack?.Events?.notifyListeners?.('lists:rendered', container);
-
-    container.querySelectorAll('[data-pt-prop]').forEach(input => {
-      const handler = () => {
-        const idx = parseInt(input.dataset.ptIdx);
-        const prop = input.dataset.ptProp;
-        const val = prop === 'name' ? input.value : parseFloat(input.value);
-        this.updatePosition(idx, { [prop]: val });
-      };
-      input.addEventListener('input', handler);
-      input.addEventListener('change', handler);
-    });
 
     // Enter on add inputs
     ['listAddX', 'listAddY', 'listAddZ'].forEach(id => {
@@ -664,30 +650,78 @@ class ListManager {
     });
   }
 
-  _renderRow(p, i, total) {
+  _renderRow(p, i) {
     const sel = i === this.selectedIdx;
+    const editing = i === this._editingIdx;
     const border = sel ? 'border-left:3px solid #ffc107;' : 'border-left:3px solid transparent;';
-    const is = 'width:100%; background:transparent; border:none; color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;';
+    const nameEsc = (p.name || '').replace(/"/g, '&quot;');
+    if (editing) {
+      return `
+        <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:2px 4px; border-left:3px solid var(--coordinates-color); background:var(--active-element); font-size:11px;">
+          <span style="text-align:center; color:var(--text-general); font-size:10px;">${i + 1}</span>
+          <input type="text" value="${nameEsc}" data-pt-idx="${i}" data-pt-prop="name" placeholder="Nom..." style="background:transparent; border:none; border-bottom:1px solid var(--coordinates-color); color:var(--text-selected); font-size:11px; min-width:0;">
+          <input type="number" value="${p.x}" step="0.01" data-pt-idx="${i}" data-pt-prop="x" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--coordinates-color); color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">
+          <input type="number" value="${p.y}" step="0.01" data-pt-idx="${i}" data-pt-prop="y" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--coordinates-color); color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">
+          <input type="number" value="${p.z}" step="0.01" data-pt-idx="${i}" data-pt-prop="z" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--coordinates-color); color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">
+        </div>`;
+    }
     return `
-      <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px 20px; gap:2px; align-items:center; padding:2px 4px; ${border} cursor:pointer; font-size:11px;"
+      <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px; ${border} cursor:pointer; font-size:11px; user-select:none;"
         onclick="EnderTrack.Lists.selectPoint(${i})"
         onmouseenter="EnderTrack.Lists.hoverPoint(${i})"
         onmouseleave="EnderTrack.Lists.hoverPoint(null)"
-        ondblclick="EnderTrack.Lists.goToPosition(${i})">
-        <span style="text-align:center; color:var(--text-general); font-size:10px;">${i + 1}</span>
-        <input type="text" value="${p.name || ''}" placeholder="..." data-pt-idx="${i}" data-pt-prop="name" style="background:transparent; border:none; color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; min-width:0;" onclick="event.stopPropagation()">
-        <input type="number" value="${p.x}" step="0.1" data-pt-idx="${i}" data-pt-prop="x" style="${is}" onclick="event.stopPropagation()">
-        <input type="number" value="${p.y}" step="0.1" data-pt-idx="${i}" data-pt-prop="y" style="${is}" onclick="event.stopPropagation()">
-        <input type="number" value="${p.z}" step="0.1" data-pt-idx="${i}" data-pt-prop="z" style="${is}" onclick="event.stopPropagation()">
-        <button onclick="event.stopPropagation(); EnderTrack.Lists.goToPosition(${i})" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.5; font-size:10px;" title="Go">Go</button>
-        <div style="display:flex; flex-direction:column; gap:0;" onclick="event.stopPropagation()">
-          <button onclick="EnderTrack.Lists.movePosition(${i},-1)" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:${i > 0 ? '0.5' : '0.15'}; font-size:8px; padding:0; line-height:1;" ${i === 0 ? 'disabled' : ''}>▲</button>
-          <button onclick="EnderTrack.Lists.movePosition(${i},1)" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:${i < total - 1 ? '0.5' : '0.15'}; font-size:8px; padding:0; line-height:1;" ${i === total - 1 ? 'disabled' : ''}>▼</button>
-        </div>
-        <button onclick="event.stopPropagation(); EnderTrack.Lists.duplicatePosition(${i})" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.4; font-size:10px;" title="Dupliquer">⧉</button>
-        <button onclick="event.stopPropagation(); EnderTrack.Lists.removePosition(${i})" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.4; font-size:12px;">x</button>
-      </div>
+        oncontextmenu="event.preventDefault(); EnderTrack.Lists._positionContextMenu(event, ${i})">
+        <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.6;">${i + 1}</span>
+        <span style="color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name || '<span style="opacity:0.3">—</span>'}</span>
+        <span style="color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">${p.x}</span>
+        <span style="color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">${p.y}</span>
+        <span style="color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">${p.z}</span>
+      </div>`;
+  }
+
+  _positionContextMenu(e, idx) {
+    document.getElementById('listPosCtxMenu')?.remove();
+    const total = this.positions.length;
+    const menu = document.createElement('div');
+    menu.id = 'listPosCtxMenu';
+    menu.className = 'axis-context-menu';
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+    menu.innerHTML = `
+      <button onmousedown="EnderTrack.Lists.goToPosition(${idx}); this.parentElement.remove()">🎯 Aller à</button>
+      <button onmousedown="EnderTrack.Lists._startEdit(${idx}); this.parentElement.remove()">✏️ Modifier</button>
+      <button onmousedown="EnderTrack.Lists.duplicatePosition(${idx}); this.parentElement.remove()">⧉ Dupliquer</button>
+      <button onmousedown="EnderTrack.Lists.movePosition(${idx},-1); this.parentElement.remove()" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''}>▲ Monter</button>
+      <button onmousedown="EnderTrack.Lists.movePosition(${idx},1); this.parentElement.remove()" ${idx === total - 1 ? 'disabled style="opacity:0.3"' : ''}>▼ Descendre</button>
+      <button onmousedown="EnderTrack.Lists.removePosition(${idx}); this.parentElement.remove()" style="color:#e25555;">✕ Supprimer</button>
     `;
+    document.body.appendChild(menu);
+    const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
+    setTimeout(() => document.addEventListener('mousedown', close), 0);
+  }
+
+  _startEdit(idx) {
+    this._editingIdx = idx;
+    this.selectedIdx = idx;
+    this.renderUI();
+    // Setup save on Enter/blur for all inputs in editing row
+    const container = document.getElementById('listsContent') || document.getElementById('listsTabContent');
+    if (!container) return;
+    const inputs = container.querySelectorAll(`[data-pt-idx="${idx}"]`);
+    const save = () => {
+      inputs.forEach(input => {
+        const prop = input.dataset.ptProp;
+        const val = prop === 'name' ? input.value : parseFloat(input.value);
+        if (!isNaN(val) || prop === 'name') this.updatePosition(idx, { [prop]: val });
+      });
+      this._editingIdx = null;
+      this.renderUI();
+    };
+    inputs.forEach(input => {
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } if (e.key === 'Escape') { this._editingIdx = null; this.renderUI(); } });
+      input.addEventListener('blur', () => setTimeout(() => { if (this._editingIdx === idx) save(); }, 150));
+    });
+    inputs[0]?.focus();
   }
 
   _groupContextMenu(e, gid) {
