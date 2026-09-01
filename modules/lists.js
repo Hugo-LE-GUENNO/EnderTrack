@@ -329,7 +329,6 @@ class ListManager {
         this._clickMode = false;
         this.renderUI(); EnderTrack.Canvas?.requestRender?.();
       }
-      }
     };
     document.addEventListener('keydown', this._onKey);
   }
