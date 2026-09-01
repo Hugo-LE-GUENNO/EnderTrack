@@ -9,6 +9,7 @@ class ListManager {
     this._nextGroupId = 1;
     this._clickMode = false;
     this._editingIdx = null;
+    this._draggingIdx = null;
     this.load();
     if (this.groups.length === 0) this.addGroup('Liste 1');
     window.addEventListener('load', () => this._startSync());
@@ -626,8 +627,8 @@ class ListManager {
       </div>
       <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
       ${pts.length ? `
-        <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
-          <span style="text-align:center">#</span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
+        <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
+          <span></span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
         </div>
       ` : '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>'}
       ${pts.map((p, i) => this._renderRow(p, i)).join('')}
@@ -668,12 +669,18 @@ class ListManager {
     const isFocus = `this.style.borderBottomColor='#f59e0b'; this.style.color='#f59e0b';`;
     const iBlur = `this.style.borderBottomColor='transparent'; this.style.color='var(--pos-current)';`;
     return `
-      <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px; ${border} cursor:pointer; font-size:11px; user-select:none;"
+      <div draggable="true" data-drag-idx="${i}"
+        style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px; ${border} cursor:pointer; font-size:11px; user-select:none;"
         onclick="EnderTrack.Lists.selectPoint(${i})"
         onmouseenter="EnderTrack.Lists.hoverPoint(${i})"
         onmouseleave="EnderTrack.Lists.hoverPoint(null)"
-        oncontextmenu="event.preventDefault(); EnderTrack.Lists.selectPoint(${i}); EnderTrack.Lists._positionContextMenu(event, ${i})">
-        <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.6;">${i + 1}</span>
+        oncontextmenu="event.preventDefault(); EnderTrack.Lists.selectPoint(${i}); EnderTrack.Lists._positionContextMenu(event, ${i})"
+        ondragstart="EnderTrack.Lists._dragStart(event, ${i})"
+        ondragover="event.preventDefault(); EnderTrack.Lists._dragOver(event, ${i})"
+        ondragleave="EnderTrack.Lists._dragLeave(event)"
+        ondrop="EnderTrack.Lists._dragDrop(event, ${i})"
+        ondragend="EnderTrack.Lists._dragEnd()">
+        <span style="text-align:center; color:var(--text-general); font-size:12px; opacity:0.4; cursor:grab;" title="Glisser pour réordonner">⠇</span>
         <input type="text" value="${nameEsc}" placeholder="—" data-pt-idx="${i}" data-pt-prop="name"
           style="background:transparent; border:none; border-bottom:1px solid transparent; color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; min-width:0; outline:none; cursor:pointer; width:100%;"
           onfocus="${isFocus} this.style.color='#f59e0b';"
@@ -683,6 +690,41 @@ class ListManager {
         <input type="number" value="${p.y}" step="0.01" data-pt-idx="${i}" data-pt-prop="y" style="${is}" onfocus="${isFocus}" onblur="${iBlur}" onclick="event.stopPropagation()">
         <input type="number" value="${p.z}" step="0.01" data-pt-idx="${i}" data-pt-prop="z" style="${is}" onfocus="${isFocus}" onblur="${iBlur}" onclick="event.stopPropagation()">
       </div>`;
+  }
+
+  _dragStart(e, idx) {
+    this._draggingIdx = idx;
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.style.opacity = '0.4';
+  }
+
+  _dragOver(e, idx) {
+    if (this._draggingIdx === idx) return;
+    e.currentTarget.style.borderTop = this._draggingIdx > idx ? '2px solid #f59e0b' : 'none';
+    e.currentTarget.style.borderBottom = this._draggingIdx < idx ? '2px solid #f59e0b' : 'none';
+  }
+
+  _dragLeave(e) {
+    e.currentTarget.style.borderTop = '';
+    e.currentTarget.style.borderBottom = '';
+  }
+
+  _dragDrop(e, toIdx) {
+    e.currentTarget.style.borderTop = '';
+    e.currentTarget.style.borderBottom = '';
+    const fromIdx = this._draggingIdx;
+    if (fromIdx === null || fromIdx === toIdx) return;
+    const g = this._activeGroup();
+    if (!g) return;
+    const [item] = g.positions.splice(fromIdx, 1);
+    g.positions.splice(toIdx, 0, item);
+    this.selectedIdx = toIdx;
+    this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.();
+  }
+
+  _dragEnd() {
+    this._draggingIdx = null;
+    this.renderUI();
   }
 
   _positionContextMenu(e, idx) {
