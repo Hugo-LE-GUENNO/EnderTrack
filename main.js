@@ -888,7 +888,7 @@ window.showKeyboardShortcuts = function() {
         <div style="font-size:14px; font-weight:600; color:var(--text-selected);">Raccourcis clavier</div>
         <button onclick="this.closest('.shortcuts-modal-overlay').remove()" style="background:none; border:none; color:var(--text-general); cursor:pointer; font-size:18px; opacity:0.6; padding:0; line-height:1;">✕</button>
       </div>
-      <div style="font-size:10px; color:var(--text-general); opacity:0.5; margin-bottom:14px;">Actifs uniquement en mode contrôleur (bouton clavier activé)</div>
+      <div style="font-size:10px; color:var(--text-general); opacity:0.5; margin-bottom:14px;">Déplacement : mode contrôleur activé requis &nbsp;·&nbsp; Positions : onglet Positions actif</div>
       ${section('Déplacement XY', [
         ['↑ / W', 'Avancer (Y+)'],
         ['↓ / S', 'Reculer (Y−)'],
@@ -899,7 +899,8 @@ window.showKeyboardShortcuts = function() {
         ['Page↑ / Q', 'Monter (Z+)'],
         ['Page↓ / E', 'Descendre (Z−)'],
       ])}
-      ${section('Listes de positions', [
+      ${section('Listes de positions (onglet Positions actif)', [
+        ['P', 'Ajouter la position actuelle'],
         ['Suppr / ⌫', 'Supprimer la position sélectionnée'],
         ['Échap', 'Désélectionner / quitter le mode clic'],
       ])}
