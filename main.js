@@ -862,6 +862,52 @@ window.showAboutModal = async function() {
   document.body.appendChild(overlay);
   document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', esc); } });
 };
+
+window.showKeyboardShortcuts = function() {
+  const existing = document.querySelector('.shortcuts-modal-overlay');
+  if (existing) { existing.remove(); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'shortcuts-modal-overlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10001; display:flex; align-items:center; justify-content:center;';
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  const section = (title, rows) => `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:10px; font-weight:600; color:var(--coordinates-color); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">${title}</div>
+      ${rows.map(([k, d]) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+          <span style="font-size:11px; color:var(--text-general); opacity:0.8;">${d}</span>
+          <span style="font-family:monospace; font-size:10px; background:var(--app-bg); border:1px solid #555; border-radius:3px; padding:1px 6px; color:var(--text-selected); white-space:nowrap; margin-left:12px;">${k}</span>
+        </div>`).join('')}
+    </div>`;
+
+  overlay.innerHTML = `
+    <div style="background:var(--container-bg); border:1px solid #555; border-radius:12px; padding:24px 28px; max-width:380px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.5); max-height:85vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div style="font-size:14px; font-weight:600; color:var(--text-selected);">Raccourcis clavier</div>
+        <button onclick="this.closest('.shortcuts-modal-overlay').remove()" style="background:none; border:none; color:var(--text-general); cursor:pointer; font-size:18px; opacity:0.6; padding:0; line-height:1;">✕</button>
+      </div>
+      <div style="font-size:10px; color:var(--text-general); opacity:0.5; margin-bottom:14px;">Actifs uniquement en mode contrôleur (bouton clavier activé)</div>
+      ${section('Déplacement XY', [
+        ['↑ / W', 'Avancer (Y+)'],
+        ['↓ / S', 'Reculer (Y−)'],
+        ['← / A', 'Gauche (X−)'],
+        ['→ / D', 'Droite (X+)'],
+      ])}
+      ${section('Déplacement Z', [
+        ['Page↑ / Q', 'Monter (Z+)'],
+        ['Page↓ / E', 'Descendre (Z−)'],
+      ])}
+      ${section('Listes de positions', [
+        ['Suppr / ⌫', 'Supprimer la position sélectionnée'],
+        ['Échap', 'Désélectionner / quitter le mode clic'],
+      ])}
+    </div>`;
+
+  document.body.appendChild(overlay);
+};
+
 window.openSequences = () => {};
 window.openDrivers = () => {};
 window.openEnderman = () => {};
