@@ -549,7 +549,7 @@ window.goToAbsolute = () => EnderTrack.Navigation?.goToAbsolute?.();
   if (!el) return;
   el.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const direction = e.deltaY > 0 ? 'zUp' : 'zDown';
+    const direction = e.deltaY > 0 ? 'zDown' : 'zUp';
     window.moveDirection?.(direction);
   }, { passive: false });
 })();
