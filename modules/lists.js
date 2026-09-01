@@ -111,7 +111,15 @@ class ListManager {
 
   addCurrentPosition() {
     const pos = EnderTrack.State?.get()?.pos;
-    if (pos) this.addPosition(pos.x, pos.y, pos.z);
+    if (!pos) return;
+    const xEl = document.getElementById('listAddX');
+    if (xEl) {
+      xEl.value = Math.round(pos.x * 100) / 100;
+      document.getElementById('listAddY').value = Math.round(pos.y * 100) / 100;
+      document.getElementById('listAddZ').value = Math.round(pos.z * 100) / 100;
+    } else {
+      this.addPosition(pos.x, pos.y, pos.z);
+    }
   }
 
   duplicatePosition(idx) {
@@ -180,10 +188,12 @@ class ListManager {
   }
 
   addManualPosition() {
-    const x = parseFloat(document.getElementById('listAddX')?.value) || 0;
-    const y = parseFloat(document.getElementById('listAddY')?.value) || 0;
-    const z = parseFloat(document.getElementById('listAddZ')?.value) || 0;
-    this.addPosition(x, y, z);
+    const x = parseFloat(document.getElementById('listAddX')?.value);
+    const y = parseFloat(document.getElementById('listAddY')?.value);
+    const z = parseFloat(document.getElementById('listAddZ')?.value);
+    const name = document.getElementById('listAddName')?.value.trim() || '';
+    this.addPosition(isNaN(x) ? 0 : x, isNaN(y) ? 0 : y, isNaN(z) ? 0 : z, name);
+    const n = document.getElementById('listAddName'); if (n) n.value = '';
   }
 
   // === COMPAT: tracks & executor (minimal stubs for renderers/scenario) ===
@@ -626,22 +636,17 @@ class ListManager {
         <button onclick="EnderTrack.Lists.addGroup()" style="padding:3px 8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);">+</button>
       </div>
       <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
-      <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; padding:0 4px 4px; border-bottom:1px solid #333; margin-bottom:4px;">
-        <span></span>
-        <span style="font-size:9px; color:var(--text-general); opacity:0.5; padding:2px 0;">Nom</span>
-        <span style="font-size:9px; color:var(--text-general); opacity:0.5; text-align:center; padding:2px 0;">X</span>
-        <span style="font-size:9px; color:var(--text-general); opacity:0.5; text-align:center; padding:2px 0;">Y</span>
-        <span style="font-size:9px; color:var(--text-general); opacity:0.5; text-align:center; padding:2px 0;">Z</span>
-        <span></span>
-        <span></span>
+      <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
+        <span></span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
+      </div>
+      <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px 6px; border-bottom:1px solid #333; margin-bottom:4px;">
+        <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:none; border:none; color:var(--coordinates-color); cursor:pointer; font-size:12px; padding:0; text-align:center; line-height:1;" title="Remplir avec la position actuelle">📍</button>
+        <input type="text" id="listAddName" placeholder="—" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--text-general); font-size:11px; outline:none; padding:1px;">
         <input type="number" id="listAddX" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
         <input type="number" id="listAddY" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
         <input type="number" id="listAddZ" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
         <span></span>
-        <div style="display:flex; gap:3px; padding-top:3px;">
-          <button onclick="EnderTrack.Lists.addManualPosition()" style="flex:1; background:var(--button-bg); border:none; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:11px; padding:3px 4px;">Add</button>
-          <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:var(--button-bg); border:none; border-radius:3px; color:var(--coordinates-color); cursor:pointer; font-size:13px; padding:2px 5px;" title="Ajouter la position actuelle">📍</button>
-        </div>
+        <button onclick="EnderTrack.Lists.addManualPosition()" style="grid-column:2 / span 4; background:var(--button-bg); border:none; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:11px; padding:3px; margin-top:3px;">+ Ajouter</button>
       </div>
       ${!pts.length ? '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>' : ''}
       ${pts.map((p, i) => this._renderRow(p, i)).join('')}
