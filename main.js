@@ -760,6 +760,9 @@ window.clearHistory = () => {
     // Space = soft stop (stop movement, stay in place)
     if (e.key === ' ') { e.preventDefault(); EnderTrack.Movement?.stopMovement?.(); return; }
 
+    // P = add current position to active list
+    if (e.key === 'p' || e.key === 'P') { const pos = EnderTrack.State?.get()?.pos; if (pos) EnderTrack.Lists?.addPosition?.(pos.x, pos.y, pos.z); return; }
+
     // XY arrows: buffer with 50ms tempo for diagonal detection
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
@@ -846,6 +849,27 @@ window.showAboutModal = async function() {
   document.body.appendChild(overlay);
   document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', esc); } });
 };
+
+window.showKeyboardShortcuts = function() {
+  const existing = document.querySelector('.shortcuts-modal-overlay');
+  if (existing) { existing.remove(); return; }
+  const overlay = document.createElement('div');
+  overlay.className = 'shortcuts-modal-overlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10001; display:flex; align-items:center; justify-content:center;';
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  overlay.innerHTML = `
+    <div style="background:var(--container-bg); border:1px solid #555; border-radius:12px; padding:24px 28px; max-width:340px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div style="font-size:14px; font-weight:600; color:var(--text-selected);">Raccourcis clavier</div>
+        <button onclick="this.closest('.shortcuts-modal-overlay').remove()" style="background:none; border:none; color:var(--text-general); cursor:pointer; font-size:18px; opacity:0.6; padding:0; line-height:1;">✕</button>
+      </div>
+      ${[['\u2191','Avancer (Y+)'],['\u2193','Reculer (Y\u2212)'],['\u2190','Gauche (X\u2212)'],['\u2192','Droite (X+)'],['Page\u2191','Monter (Z+)'],['Page\u2193','Descendre (Z\u2212)'],['P','Ajouter la position actuelle \u00e0 la liste']]
+        .map(([k,d]) => `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span style="font-size:11px; color:var(--text-general);">${d}</span><span style="font-family:monospace; font-size:10px; background:var(--app-bg); border:1px solid #555; border-radius:3px; padding:1px 6px; color:var(--text-selected); white-space:nowrap; margin-left:12px;">${k}</span></div>`).join('')}
+      <div style="margin-top:10px; font-size:10px; color:var(--text-general); opacity:0.45; line-height:1.5;">Déplacement au survol du slider Z + molette souris</div>
+    </div>`;
+  document.body.appendChild(overlay);
+};
+
 window.openSequences = () => {};
 window.openDrivers = () => {};
 window.openEnderman = () => {};

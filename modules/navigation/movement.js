@@ -12,6 +12,13 @@ class MovementEngine {
 
   _setupSSE() {
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+    // Load tracks from server on init
+    fetch(url + '/api/sync/tracks').then(r => r.json()).then(data => {
+      if (data?.positionHistory?.length || data?.continuousTrack?.length) {
+        EnderTrack.State.update({ positionHistory: data.positionHistory || [], continuousTrack: data.continuousTrack || [] });
+        setTimeout(() => EnderTrack.Canvas?.requestRender?.(), 200);
+      }
+    }).catch(() => {});
     try {
       const es = new EventSource(url + '/api/events');
       this._sse = es;
@@ -22,10 +29,14 @@ class MovementEngine {
           if (evt.type === 'position:moving') {
             if (!this._isLocalMove) this._remoteMove(evt.data);
           } else if (evt.type === 'position:moved') {
-            // Server-side move completed — snap to final position
-            this._remoteArrive(evt.data);
+            if (!this._isLocalMove) this._remoteArrive(evt.data);
           } else if (evt.type === 'position:arrived') {
-            this._remoteArrive(evt.data);
+            if (!this._isLocalMove) this._remoteArrive(evt.data);
+          } else if (evt.type === 'position:homed') {
+            EnderTrack.State?.update?.({ pos: { x: 0, y: 0, z: 0 }, isMoving: false });
+            EnderTrack.Canvas?.requestRender?.();
+            EnderTrack.ZVisualization?.render?.();
+            EnderTrack.UI?.showNotification?.('Homing terminé', 'success');
           } else if (evt.type === 'sync:overlays') {
             if (window.EnderTrack?.Overlays) {
               window.EnderTrack.Overlays._loadFromData(evt.data);
@@ -364,7 +375,9 @@ class MovementEngine {
     this._cancelAnim();
     const roundedPos = EnderTrack.Math.roundPoint(finalPos);
     EnderTrack.State.update({ pos: roundedPos, isMoving: false });
-    // Sync absolute inputs to final position (clears yellow cross)
+    this.isMoving = false;
+    // Keep _isLocalMove true briefly to ignore late SSE events
+    setTimeout(() => { this._isLocalMove = false; }, 500);    // Sync absolute inputs to final position (clears yellow cross)
     const ix = document.getElementById('inputX');
     const iy = document.getElementById('inputY');
     const iz = document.getElementById('inputZ');
@@ -373,8 +386,6 @@ class MovementEngine {
     if (iz) iz.value = roundedPos.z.toFixed(2);
     EnderTrack.Events.notifyListeners('position:changed', roundedPos);
     if (success) EnderTrack.State.recordFinalPosition?.(roundedPos);
-    this.isMoving = false;
-    this._isLocalMove = false;
     this._broadcast('position:arrived', { x: roundedPos.x, y: roundedPos.y, z: roundedPos.z });
     // Persist position to server
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/state/patch';

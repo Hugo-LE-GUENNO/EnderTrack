@@ -8,6 +8,8 @@ class ListManager {
     this.selectedIdx = null;
     this._nextGroupId = 1;
     this._clickMode = false;
+    this._editingIdx = null;
+    this._draggingIdx = null;
     this.load();
     if (this.groups.length === 0) this.addGroup('Liste 1');
     window.addEventListener('load', () => this._startSync());
@@ -109,7 +111,24 @@ class ListManager {
 
   addCurrentPosition() {
     const pos = EnderTrack.State?.get()?.pos;
-    if (pos) this.addPosition(pos.x, pos.y, pos.z);
+    if (!pos) return;
+    const xEl = document.getElementById('listAddX');
+    if (xEl) {
+      xEl.value = Math.round(pos.x * 100) / 100;
+      document.getElementById('listAddY').value = Math.round(pos.y * 100) / 100;
+      document.getElementById('listAddZ').value = Math.round(pos.z * 100) / 100;
+    } else {
+      this.addPosition(pos.x, pos.y, pos.z);
+    }
+  }
+
+  duplicatePosition(idx) {
+    const g = this._activeGroup();
+    if (!g?.positions[idx]) return;
+    const p = { ...g.positions[idx], name: g.positions[idx].name ? g.positions[idx].name + ' (copie)' : '' };
+    g.positions.splice(idx + 1, 0, p);
+    this.selectedIdx = idx + 1;
+    this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.();
   }
 
   removePosition(idx) {
@@ -169,10 +188,12 @@ class ListManager {
   }
 
   addManualPosition() {
-    const x = parseFloat(document.getElementById('listAddX')?.value) || 0;
-    const y = parseFloat(document.getElementById('listAddY')?.value) || 0;
-    const z = parseFloat(document.getElementById('listAddZ')?.value) || 0;
-    this.addPosition(x, y, z);
+    const x = parseFloat(document.getElementById('listAddX')?.value);
+    const y = parseFloat(document.getElementById('listAddY')?.value);
+    const z = parseFloat(document.getElementById('listAddZ')?.value);
+    const name = document.getElementById('listAddName')?.value.trim() || '';
+    this.addPosition(isNaN(x) ? 0 : x, isNaN(y) ? 0 : y, isNaN(z) ? 0 : z, name);
+    const n = document.getElementById('listAddName'); if (n) n.value = '';
   }
 
   // === COMPAT: tracks & executor (minimal stubs for renderers/scenario) ===
@@ -450,7 +471,8 @@ class ListManager {
     fetch(url + '/api/sync/lists', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
-    }).catch(() => {});
+    }).then(r => { if (!r.ok) console.error('[Lists] save failed:', r.status); })
+      .catch(e => console.error('[Lists] save error:', e));
   }
 
   load() {
@@ -614,35 +636,32 @@ class ListManager {
         <button onclick="EnderTrack.Lists.addGroup()" style="padding:3px 8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);">+</button>
       </div>
       <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
-      ${pts.length ? `
-        <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
-          <span style="text-align:center">#</span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span><span></span><span style="text-align:center">↕</span><span></span>
-        </div>
-      ` : '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>'}
-      ${pts.map((p, i) => this._renderRow(p, i, pts.length)).join('')}
-      <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px; gap:2px; align-items:center; padding:3px 4px; border-left:3px solid transparent; border-top:1px solid #333; margin-top:2px;">
-        <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.4;">+</span>
-        <span></span>
-        <input type="number" id="listAddX" placeholder="X" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
-        <input type="number" id="listAddY" placeholder="Y" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
-        <input type="number" id="listAddZ" placeholder="Z" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
-        <button onclick="EnderTrack.Lists.addManualPosition()" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.5; font-size:10px;" title="Ajouter">Add</button>
-        <span></span><span></span>
+      <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
+        <span></span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
       </div>
+      <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px 6px; border-bottom:1px solid #333; margin-bottom:4px;">
+        <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:none; border:none; color:var(--coordinates-color); cursor:pointer; font-size:12px; padding:0; text-align:center; line-height:1;" title="Remplir avec la position actuelle">📍</button>
+        <input type="text" id="listAddName" placeholder="—" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--text-general); font-size:11px; outline:none; padding:1px;">
+        <input type="number" id="listAddX" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
+        <input type="number" id="listAddY" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
+        <input type="number" id="listAddZ" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
+        <span></span>
+        <button onclick="EnderTrack.Lists.addManualPosition()" style="grid-column:2 / span 4; background:var(--button-bg); border:none; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:11px; padding:3px; margin-top:3px;">+ Ajouter</button>
+      </div>
+      ${!pts.length ? '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>' : ''}
+      ${pts.map((p, i) => this._renderRow(p, i)).join('')}
     `;
 
     // Plugin injection zone
     window.EnderTrack?.Events?.notifyListeners?.('lists:rendered', container);
 
     container.querySelectorAll('[data-pt-prop]').forEach(input => {
-      const handler = () => {
+      input.addEventListener('change', () => {
         const idx = parseInt(input.dataset.ptIdx);
         const prop = input.dataset.ptProp;
         const val = prop === 'name' ? input.value : parseFloat(input.value);
-        this.updatePosition(idx, { [prop]: val });
-      };
-      input.addEventListener('input', handler);
-      input.addEventListener('change', handler);
+        if (prop === 'name' || !isNaN(val)) this.updatePosition(idx, { [prop]: val });
+      });
     });
 
     // Enter on add inputs
@@ -653,29 +672,90 @@ class ListManager {
     });
   }
 
-  _renderRow(p, i, total) {
+  _renderRow(p, i) {
     const sel = i === this.selectedIdx;
     const border = sel ? 'border-left:3px solid #ffc107;' : 'border-left:3px solid transparent;';
-    const is = 'width:100%; background:transparent; border:none; color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;';
+    const nameEsc = (p.name || '').replace(/"/g, '&quot;');
+    const is = 'width:100%; background:transparent; border:none; border-bottom:1px solid transparent; color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace; outline:none; cursor:pointer;';
+    const isFocus = `this.style.borderBottomColor='#f59e0b'; this.style.color='#f59e0b';`;
+    const iBlur = `this.style.borderBottomColor='transparent'; this.style.color='var(--pos-current)';`;
     return `
-      <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px; gap:2px; align-items:center; padding:2px 4px; ${border} cursor:pointer; font-size:11px;"
+      <div draggable="true" data-drag-idx="${i}"
+        style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px; ${border} cursor:pointer; font-size:11px; user-select:none;"
         onclick="EnderTrack.Lists.selectPoint(${i})"
         onmouseenter="EnderTrack.Lists.hoverPoint(${i})"
         onmouseleave="EnderTrack.Lists.hoverPoint(null)"
-        ondblclick="EnderTrack.Lists.goToPosition(${i})">
-        <span style="text-align:center; color:var(--text-general); font-size:10px;">${i + 1}</span>
-        <input type="text" value="${p.name || ''}" placeholder="..." data-pt-idx="${i}" data-pt-prop="name" style="background:transparent; border:none; color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; min-width:0;" onclick="event.stopPropagation()">
-        <input type="number" value="${p.x}" step="0.1" data-pt-idx="${i}" data-pt-prop="x" style="${is}" onclick="event.stopPropagation()">
-        <input type="number" value="${p.y}" step="0.1" data-pt-idx="${i}" data-pt-prop="y" style="${is}" onclick="event.stopPropagation()">
-        <input type="number" value="${p.z}" step="0.1" data-pt-idx="${i}" data-pt-prop="z" style="${is}" onclick="event.stopPropagation()">
-        <button onclick="event.stopPropagation(); EnderTrack.Lists.goToPosition(${i})" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.5; font-size:10px;" title="Go">Go</button>
-        <div style="display:flex; flex-direction:column; gap:0;" onclick="event.stopPropagation()">
-          <button onclick="EnderTrack.Lists.movePosition(${i},-1)" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:${i > 0 ? '0.5' : '0.15'}; font-size:8px; padding:0; line-height:1;" ${i === 0 ? 'disabled' : ''}>▲</button>
-          <button onclick="EnderTrack.Lists.movePosition(${i},1)" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:${i < total - 1 ? '0.5' : '0.15'}; font-size:8px; padding:0; line-height:1;" ${i === total - 1 ? 'disabled' : ''}>▼</button>
-        </div>
-        <button onclick="event.stopPropagation(); EnderTrack.Lists.removePosition(${i})" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.4; font-size:12px;">x</button>
-      </div>
+        oncontextmenu="event.preventDefault(); EnderTrack.Lists.selectPoint(${i}); EnderTrack.Lists._positionContextMenu(event, ${i})"
+        ondragstart="EnderTrack.Lists._dragStart(event, ${i})"
+        ondragover="event.preventDefault(); EnderTrack.Lists._dragOver(event, ${i})"
+        ondragleave="EnderTrack.Lists._dragLeave(event)"
+        ondrop="EnderTrack.Lists._dragDrop(event, ${i})"
+        ondragend="EnderTrack.Lists._dragEnd()">
+        <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.5; cursor:grab; user-select:none;" title="Glisser pour réordonner">${i + 1}</span>
+        <input type="text" value="${nameEsc}" placeholder="—" data-pt-idx="${i}" data-pt-prop="name"
+          style="background:transparent; border:none; border-bottom:1px solid transparent; color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; min-width:0; outline:none; cursor:pointer; width:100%;"
+          onfocus="${isFocus} this.style.color='#f59e0b';"
+          onblur="${iBlur} this.style.color='${sel ? '#ffc107' : 'var(--text-general)'}';"
+          onclick="event.stopPropagation()">
+        <input type="number" value="${p.x}" step="0.01" data-pt-idx="${i}" data-pt-prop="x" style="${is}" onfocus="${isFocus}" onblur="${iBlur}" onclick="event.stopPropagation()">
+        <input type="number" value="${p.y}" step="0.01" data-pt-idx="${i}" data-pt-prop="y" style="${is}" onfocus="${isFocus}" onblur="${iBlur}" onclick="event.stopPropagation()">
+        <input type="number" value="${p.z}" step="0.01" data-pt-idx="${i}" data-pt-prop="z" style="${is}" onfocus="${isFocus}" onblur="${iBlur}" onclick="event.stopPropagation()">
+      </div>`;
+  }
+
+  _dragStart(e, idx) {
+    this._draggingIdx = idx;
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.style.opacity = '0.4';
+  }
+
+  _dragOver(e, idx) {
+    if (this._draggingIdx === idx) return;
+    e.currentTarget.style.borderTop = this._draggingIdx > idx ? '2px solid #f59e0b' : 'none';
+    e.currentTarget.style.borderBottom = this._draggingIdx < idx ? '2px solid #f59e0b' : 'none';
+  }
+
+  _dragLeave(e) {
+    e.currentTarget.style.borderTop = '';
+    e.currentTarget.style.borderBottom = '';
+  }
+
+  _dragDrop(e, toIdx) {
+    e.currentTarget.style.borderTop = '';
+    e.currentTarget.style.borderBottom = '';
+    const fromIdx = this._draggingIdx;
+    if (fromIdx === null || fromIdx === toIdx) return;
+    const g = this._activeGroup();
+    if (!g) return;
+    const [item] = g.positions.splice(fromIdx, 1);
+    g.positions.splice(toIdx, 0, item);
+    this.selectedIdx = toIdx;
+    this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.();
+  }
+
+  _dragEnd() {
+    this._draggingIdx = null;
+    this.renderUI();
+  }
+
+  _positionContextMenu(e, idx) {
+    document.getElementById('listPosCtxMenu')?.remove();
+    const total = this.positions.length;
+    const menu = document.createElement('div');
+    menu.id = 'listPosCtxMenu';
+    menu.className = 'axis-context-menu';
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+    menu.innerHTML = `
+      <button onmousedown="EnderTrack.Lists.goToPosition(${idx}); this.parentElement.remove()">🎯 Aller à</button>
+      <button onmousedown="EnderTrack.Lists.duplicatePosition(${idx}); this.parentElement.remove()">⧉ Dupliquer</button>
+      <button onmousedown="EnderTrack.Lists.movePosition(${idx},-1); this.parentElement.remove()" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''}>▲ Monter</button>
+      <button onmousedown="EnderTrack.Lists.movePosition(${idx},1); this.parentElement.remove()" ${idx === total - 1 ? 'disabled style="opacity:0.3"' : ''}>▼ Descendre</button>
+      <button onmousedown="EnderTrack.Lists.removePosition(${idx}); this.parentElement.remove()" style="color:#e25555;">✕ Supprimer</button>
     `;
+    document.body.appendChild(menu);
+    const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
+    setTimeout(() => document.addEventListener('mousedown', close), 0);
   }
 
   _groupContextMenu(e, gid) {

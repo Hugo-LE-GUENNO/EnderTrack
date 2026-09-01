@@ -284,10 +284,14 @@ def register_routes(app):
     @app.route('/api/home', methods=['POST'])
     def _home():
         if stage:
+            try:
+                from server.event_stream import bus
+                bus.publish('position:moving', {'x': 0, 'y': 0, 'z': 0})
+            except: pass
             stage.home()
             try:
                 from server.event_stream import bus
-                bus.publish('position:homed', {})
+                bus.publish('position:homed', {'x': 0, 'y': 0, 'z': 0})
             except: pass
         return jsonify({'success': True})
 
@@ -392,3 +396,29 @@ def register_routes(app):
             stage.send_gcode("M300")
         return jsonify({'success': True})
 
+
+    @app.route('/api/move/stream', methods=['POST'])
+    def _move_stream():
+        """Send raw G-code for continuous movement (no M400 wait)."""
+        data = request.get_json() or {}
+        gcode = data.get('gcode', '')
+        if stage and gcode:
+            stage.send_gcode(gcode, wait_ok=False, _log=False)
+        return jsonify({'success': True})
+
+    @app.route('/api/move/stop', methods=['POST'])
+    def _move_stop():
+        """Quick stop: M410 aborts current move, G90 restores absolute mode."""
+        if stage:
+            stage.send_gcode("M410", wait_ok=False, _log=False)
+            time.sleep(0.1)
+            stage.send_gcode("G90", wait_ok=True, _log=False)
+        return jsonify({'success': True})
+
+    @app.route('/api/position/real', methods=['GET'])
+    def _position_real():
+        """Get real position from M114 (blocking query)."""
+        if stage:
+            p = stage.get_position(as_dict=True)
+            return jsonify({'success': True, 'position': {'x': p.get('X', p.get('x', 0)), 'y': p.get('Y', p.get('y', 0)), 'z': p.get('Z', p.get('z', 0))}})
+        return jsonify({'success': True, 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}})

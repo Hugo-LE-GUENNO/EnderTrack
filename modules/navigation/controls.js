@@ -542,3 +542,14 @@ window.emergencyStop = () => EnderTrack.Movement?.emergencyStopMovement?.();
 window.setAxisPreset = (axis, preset) => EnderTrack.Navigation?.setAxisPreset?.(axis, preset);
 window.toggleLock = (axis) => EnderTrack.Navigation?.toggleLock?.(axis);
 window.goToAbsolute = () => EnderTrack.Navigation?.goToAbsolute?.();
+
+// Z wheel control — always active on hover over Z controls
+(function() {
+  const el = document.getElementById('controllerRight');
+  if (!el) return;
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const direction = e.deltaY > 0 ? 'zDown' : 'zUp';
+    window.moveDirection?.(direction);
+  }, { passive: false });
+})();
