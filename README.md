@@ -1,4 +1,4 @@
-# EnderTrack — v2.4.0
+# EnderTrack — v2.4.1
 
 Contrôleur de position 3D pour platines XYZ motorisées. Simulateur intégré ou pilotage réel via G-code (USB série).
 
@@ -14,7 +14,7 @@ Ouvrir http://localhost:5000 — c'est tout. Les dépendances sont incluses dans
 
 - **Visualisation XY + Z** — temps réel si connecté, simulateur sinon
 - **Navigation** — pas à pas (flèches clavier) ou positionnement absolu (clic sur canvas)
-- **Listes de positions** — sauvegarde, chargement, automatisation simple
+- **Listes de positions** — sauvegarde, chargement, automatisation simple, drag & drop, duplication
 - **Tactile** — fonctionne sur tablette et smartphone (pan, zoom, tap)
 - **Responsive** — s'adapte du grand écran au smartphone portrait
 - **Plugins** — système extensible, déposer un dossier dans `plugins/`
