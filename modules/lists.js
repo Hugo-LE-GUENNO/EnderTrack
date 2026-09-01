@@ -643,6 +643,15 @@ class ListManager {
     // Plugin injection zone
     window.EnderTrack?.Events?.notifyListeners?.('lists:rendered', container);
 
+    container.querySelectorAll('[data-pt-prop]').forEach(input => {
+      input.addEventListener('change', () => {
+        const idx = parseInt(input.dataset.ptIdx);
+        const prop = input.dataset.ptProp;
+        const val = prop === 'name' ? input.value : parseFloat(input.value);
+        if (prop === 'name' || !isNaN(val)) this.updatePosition(idx, { [prop]: val });
+      });
+    });
+
     // Enter on add inputs
     ['listAddX', 'listAddY', 'listAddZ'].forEach(id => {
       document.getElementById(id)?.addEventListener('keypress', (e) => {
@@ -653,31 +662,26 @@ class ListManager {
 
   _renderRow(p, i) {
     const sel = i === this.selectedIdx;
-    const editing = i === this._editingIdx;
     const border = sel ? 'border-left:3px solid #ffc107;' : 'border-left:3px solid transparent;';
     const nameEsc = (p.name || '').replace(/"/g, '&quot;');
-    if (editing) {
-      return `
-        <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:2px 4px; border-left:3px solid #f59e0b; background:rgba(245,158,11,0.08); font-size:11px;">
-          <span style="text-align:center; color:#f59e0b; font-size:10px;">✎</span>
-          <input type="text" value="${nameEsc}" data-pt-idx="${i}" data-pt-prop="name" placeholder="Nom..." style="background:transparent; border:none; border-bottom:1px solid #f59e0b; color:#f59e0b; font-size:11px; min-width:0; outline:none;">
-          <input type="number" value="${p.x}" step="0.01" data-pt-idx="${i}" data-pt-prop="x" style="width:100%; background:transparent; border:none; border-bottom:1px solid #f59e0b; color:#f59e0b; text-align:center; font-size:10px; font-family:monospace; outline:none;">
-          <input type="number" value="${p.y}" step="0.01" data-pt-idx="${i}" data-pt-prop="y" style="width:100%; background:transparent; border:none; border-bottom:1px solid #f59e0b; color:#f59e0b; text-align:center; font-size:10px; font-family:monospace; outline:none;">
-          <input type="number" value="${p.z}" step="0.01" data-pt-idx="${i}" data-pt-prop="z" style="width:100%; background:transparent; border:none; border-bottom:1px solid #f59e0b; color:#f59e0b; text-align:center; font-size:10px; font-family:monospace; outline:none;">
-        </div>`;
-    }
+    const is = 'width:100%; background:transparent; border:none; border-bottom:1px solid transparent; color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace; outline:none; cursor:pointer;';
+    const isFocus = `this.style.borderBottomColor='#f59e0b'; this.style.color='#f59e0b';`;
+    const iBlur = `this.style.borderBottomColor='transparent'; this.style.color='var(--pos-current)';`;
     return `
       <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px; ${border} cursor:pointer; font-size:11px; user-select:none;"
         onclick="EnderTrack.Lists.selectPoint(${i})"
         onmouseenter="EnderTrack.Lists.hoverPoint(${i})"
         onmouseleave="EnderTrack.Lists.hoverPoint(null)"
-        oncontextmenu="event.preventDefault(); EnderTrack.Lists.selectPoint(${i}); EnderTrack.Lists._positionContextMenu(event, ${i})"
-        ondblclick="EnderTrack.Lists._startEdit(${i})">
+        oncontextmenu="event.preventDefault(); EnderTrack.Lists.selectPoint(${i}); EnderTrack.Lists._positionContextMenu(event, ${i})">
         <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.6;">${i + 1}</span>
-        <span style="color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name || '<span style="opacity:0.3">—</span>'}</span>
-        <span style="color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">${p.x}</span>
-        <span style="color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">${p.y}</span>
-        <span style="color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">${p.z}</span>
+        <input type="text" value="${nameEsc}" placeholder="—" data-pt-idx="${i}" data-pt-prop="name"
+          style="background:transparent; border:none; border-bottom:1px solid transparent; color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; min-width:0; outline:none; cursor:pointer; width:100%;"
+          onfocus="${isFocus} this.style.color='#f59e0b';"
+          onblur="${iBlur} this.style.color='${sel ? '#ffc107' : 'var(--text-general)'}';"
+          onclick="event.stopPropagation()">
+        <input type="number" value="${p.x}" step="0.01" data-pt-idx="${i}" data-pt-prop="x" style="${is}" onfocus="${isFocus}" onblur="${iBlur}" onclick="event.stopPropagation()">
+        <input type="number" value="${p.y}" step="0.01" data-pt-idx="${i}" data-pt-prop="y" style="${is}" onfocus="${isFocus}" onblur="${iBlur}" onclick="event.stopPropagation()">
+        <input type="number" value="${p.z}" step="0.01" data-pt-idx="${i}" data-pt-prop="z" style="${is}" onfocus="${isFocus}" onblur="${iBlur}" onclick="event.stopPropagation()">
       </div>`;
   }
 
@@ -699,43 +703,6 @@ class ListManager {
     document.body.appendChild(menu);
     const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
     setTimeout(() => document.addEventListener('mousedown', close), 0);
-  }
-
-  _startEdit(idx) {
-    this._editingIdx = idx;
-    this.selectedIdx = idx;
-    this.renderUI();
-    const container = document.getElementById('listsContent') || document.getElementById('listsTabContent');
-    if (!container) return;
-    const inputs = [...container.querySelectorAll(`[data-pt-idx="${idx}"]`)];
-    if (!inputs.length) return;
-    const save = () => {
-      if (this._editingIdx !== idx) return;
-      inputs.forEach(input => {
-        const prop = input.dataset.ptProp;
-        const val = prop === 'name' ? input.value : parseFloat(input.value);
-        if (prop === 'name' || !isNaN(val)) this.updatePosition(idx, { [prop]: val });
-      });
-      this._editingIdx = null;
-      this.renderUI();
-    };
-    const cancel = () => { this._editingIdx = null; this.renderUI(); };
-    inputs.forEach(input => {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); save(); }
-        if (e.key === 'Escape') { e.preventDefault(); cancel(); }
-      });
-      // blur: only save if focus leaves all editing inputs
-      input.addEventListener('blur', () => {
-        setTimeout(() => {
-          if (this._editingIdx !== idx) return;
-          const focused = document.activeElement;
-          const stillEditing = inputs.some(i => i === focused);
-          if (!stillEditing) save();
-        }, 100);
-      });
-    });
-    inputs[0].focus();
   }
 
   _groupContextMenu(e, gid) {
