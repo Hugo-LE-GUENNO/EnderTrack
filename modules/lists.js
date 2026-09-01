@@ -626,19 +626,25 @@ class ListManager {
         <button onclick="EnderTrack.Lists.addGroup()" style="padding:3px 8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);">+</button>
       </div>
       <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
-      ${pts.length ? `
-        <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
-          <span></span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
+      <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; padding:0 4px 4px; border-bottom:1px solid #333; margin-bottom:4px;">
+        <span></span>
+        <span style="font-size:9px; color:var(--text-general); opacity:0.5; padding:2px 0;">Nom</span>
+        <span style="font-size:9px; color:var(--text-general); opacity:0.5; text-align:center; padding:2px 0;">X</span>
+        <span style="font-size:9px; color:var(--text-general); opacity:0.5; text-align:center; padding:2px 0;">Y</span>
+        <span style="font-size:9px; color:var(--text-general); opacity:0.5; text-align:center; padding:2px 0;">Z</span>
+        <span></span>
+        <span></span>
+        <input type="number" id="listAddX" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
+        <input type="number" id="listAddY" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
+        <input type="number" id="listAddZ" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
+        <span></span>
+        <div style="display:flex; gap:3px; padding-top:3px;">
+          <button onclick="EnderTrack.Lists.addManualPosition()" style="flex:1; background:var(--button-bg); border:none; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:11px; padding:3px 4px;">Add</button>
+          <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:var(--button-bg); border:none; border-radius:3px; color:var(--coordinates-color); cursor:pointer; font-size:13px; padding:2px 5px;" title="Ajouter la position actuelle">📍</button>
         </div>
-      ` : '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>'}
-      ${pts.map((p, i) => this._renderRow(p, i)).join('')}
-      <div style="display:flex; gap:4px; align-items:center; padding:6px 4px; border-top:1px solid #333; margin-top:4px;">
-        <input type="number" id="listAddX" placeholder="X" step="0.1" style="width:52px; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--pos-potential); text-align:center; font-size:11px; font-family:monospace; padding:2px;">
-        <input type="number" id="listAddY" placeholder="Y" step="0.1" style="width:52px; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--pos-potential); text-align:center; font-size:11px; font-family:monospace; padding:2px;">
-        <input type="number" id="listAddZ" placeholder="Z" step="0.1" style="width:52px; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--pos-potential); text-align:center; font-size:11px; font-family:monospace; padding:2px;">
-        <button onclick="EnderTrack.Lists.addManualPosition()" style="background:var(--button-bg); border:none; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:11px; padding:3px 8px;">Add</button>
-        <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:var(--button-bg); border:none; border-radius:3px; color:var(--coordinates-color); cursor:pointer; font-size:14px; padding:2px 6px;" title="Ajouter la position actuelle">📍</button>
       </div>
+      ${!pts.length ? '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>' : ''}
+      ${pts.map((p, i) => this._renderRow(p, i)).join('')}
     `;
 
     // Plugin injection zone
@@ -680,7 +686,7 @@ class ListManager {
         ondragleave="EnderTrack.Lists._dragLeave(event)"
         ondrop="EnderTrack.Lists._dragDrop(event, ${i})"
         ondragend="EnderTrack.Lists._dragEnd()">
-        <span style="text-align:center; color:var(--text-general); font-size:12px; opacity:0.4; cursor:grab;" title="Glisser pour réordonner">⠇</span>
+        <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.5; cursor:grab; user-select:none;" title="Glisser pour réordonner">${i + 1}</span>
         <input type="text" value="${nameEsc}" placeholder="—" data-pt-idx="${i}" data-pt-prop="name"
           style="background:transparent; border:none; border-bottom:1px solid transparent; color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; min-width:0; outline:none; cursor:pointer; width:100%;"
           onfocus="${isFocus} this.style.color='#f59e0b';"
