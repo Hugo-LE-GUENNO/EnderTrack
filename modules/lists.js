@@ -8,6 +8,7 @@ class ListManager {
     this.selectedIdx = null;
     this._nextGroupId = 1;
     this._clickMode = false;
+    this._editingIdx = null;
     this.load();
     if (this.groups.length === 0) this.addGroup('Liste 1');
     window.addEventListener('load', () => this._startSync());
@@ -657,12 +658,12 @@ class ListManager {
     const nameEsc = (p.name || '').replace(/"/g, '&quot;');
     if (editing) {
       return `
-        <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:2px 4px; border-left:3px solid var(--coordinates-color); background:var(--active-element); font-size:11px;">
-          <span style="text-align:center; color:var(--text-general); font-size:10px;">${i + 1}</span>
-          <input type="text" value="${nameEsc}" data-pt-idx="${i}" data-pt-prop="name" placeholder="Nom..." style="background:transparent; border:none; border-bottom:1px solid var(--coordinates-color); color:var(--text-selected); font-size:11px; min-width:0;">
-          <input type="number" value="${p.x}" step="0.01" data-pt-idx="${i}" data-pt-prop="x" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--coordinates-color); color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">
-          <input type="number" value="${p.y}" step="0.01" data-pt-idx="${i}" data-pt-prop="y" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--coordinates-color); color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">
-          <input type="number" value="${p.z}" step="0.01" data-pt-idx="${i}" data-pt-prop="z" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--coordinates-color); color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">
+        <div style="display:grid; grid-template-columns:24px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:2px 4px; border-left:3px solid #f59e0b; background:rgba(245,158,11,0.08); font-size:11px;">
+          <span style="text-align:center; color:#f59e0b; font-size:10px;">✎</span>
+          <input type="text" value="${nameEsc}" data-pt-idx="${i}" data-pt-prop="name" placeholder="Nom..." style="background:transparent; border:none; border-bottom:1px solid #f59e0b; color:#f59e0b; font-size:11px; min-width:0; outline:none;">
+          <input type="number" value="${p.x}" step="0.01" data-pt-idx="${i}" data-pt-prop="x" style="width:100%; background:transparent; border:none; border-bottom:1px solid #f59e0b; color:#f59e0b; text-align:center; font-size:10px; font-family:monospace; outline:none;">
+          <input type="number" value="${p.y}" step="0.01" data-pt-idx="${i}" data-pt-prop="y" style="width:100%; background:transparent; border:none; border-bottom:1px solid #f59e0b; color:#f59e0b; text-align:center; font-size:10px; font-family:monospace; outline:none;">
+          <input type="number" value="${p.z}" step="0.01" data-pt-idx="${i}" data-pt-prop="z" style="width:100%; background:transparent; border:none; border-bottom:1px solid #f59e0b; color:#f59e0b; text-align:center; font-size:10px; font-family:monospace; outline:none;">
         </div>`;
     }
     return `
@@ -704,24 +705,37 @@ class ListManager {
     this._editingIdx = idx;
     this.selectedIdx = idx;
     this.renderUI();
-    // Setup save on Enter/blur for all inputs in editing row
     const container = document.getElementById('listsContent') || document.getElementById('listsTabContent');
     if (!container) return;
-    const inputs = container.querySelectorAll(`[data-pt-idx="${idx}"]`);
+    const inputs = [...container.querySelectorAll(`[data-pt-idx="${idx}"]`)];
+    if (!inputs.length) return;
     const save = () => {
+      if (this._editingIdx !== idx) return;
       inputs.forEach(input => {
         const prop = input.dataset.ptProp;
         const val = prop === 'name' ? input.value : parseFloat(input.value);
-        if (!isNaN(val) || prop === 'name') this.updatePosition(idx, { [prop]: val });
+        if (prop === 'name' || !isNaN(val)) this.updatePosition(idx, { [prop]: val });
       });
       this._editingIdx = null;
       this.renderUI();
     };
+    const cancel = () => { this._editingIdx = null; this.renderUI(); };
     inputs.forEach(input => {
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } if (e.key === 'Escape') { this._editingIdx = null; this.renderUI(); } });
-      input.addEventListener('blur', () => setTimeout(() => { if (this._editingIdx === idx) save(); }, 150));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      });
+      // blur: only save if focus leaves all editing inputs
+      input.addEventListener('blur', () => {
+        setTimeout(() => {
+          if (this._editingIdx !== idx) return;
+          const focused = document.activeElement;
+          const stillEditing = inputs.some(i => i === focused);
+          if (!stillEditing) save();
+        }, 100);
+      });
     });
-    inputs[0]?.focus();
+    inputs[0].focus();
   }
 
   _groupContextMenu(e, gid) {
