@@ -112,6 +112,15 @@ class ListManager {
     if (pos) this.addPosition(pos.x, pos.y, pos.z);
   }
 
+  duplicatePosition(idx) {
+    const g = this._activeGroup();
+    if (!g?.positions[idx]) return;
+    const p = { ...g.positions[idx], name: g.positions[idx].name ? g.positions[idx].name + ' (copie)' : '' };
+    g.positions.splice(idx + 1, 0, p);
+    this.selectedIdx = idx + 1;
+    this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.();
+  }
+
   removePosition(idx) {
     const g = this._activeGroup();
     if (!g) return;
@@ -616,19 +625,20 @@ class ListManager {
       </div>
       <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
       ${pts.length ? `
-        <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
-          <span style="text-align:center">#</span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span><span></span><span style="text-align:center">↕</span><span></span>
+        <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px 20px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
+          <span style="text-align:center">#</span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span><span></span><span style="text-align:center">↕</span><span></span><span></span>
         </div>
       ` : '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>'}
       ${pts.map((p, i) => this._renderRow(p, i, pts.length)).join('')}
-      <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px; gap:2px; align-items:center; padding:3px 4px; border-left:3px solid transparent; border-top:1px solid #333; margin-top:2px;">
+      <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px 20px; gap:2px; align-items:center; padding:3px 4px; border-left:3px solid transparent; border-top:1px solid #333; margin-top:2px;">
         <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.4;">+</span>
         <span></span>
         <input type="number" id="listAddX" placeholder="X" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
         <input type="number" id="listAddY" placeholder="Y" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
         <input type="number" id="listAddZ" placeholder="Z" step="0.1" style="width:100%; background:transparent; border:none; color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace;">
         <button onclick="EnderTrack.Lists.addManualPosition()" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.5; font-size:10px;" title="Ajouter">Add</button>
-        <span></span><span></span>
+        <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:none; border:none; color:var(--coordinates-color); cursor:pointer; opacity:0.7; font-size:10px;" title="Ajouter la position actuelle">📍</button>
+        <span></span>
       </div>
     `;
 
@@ -659,7 +669,7 @@ class ListManager {
     const border = sel ? 'border-left:3px solid #ffc107;' : 'border-left:3px solid transparent;';
     const is = 'width:100%; background:transparent; border:none; color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;';
     return `
-      <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px; gap:2px; align-items:center; padding:2px 4px; ${border} cursor:pointer; font-size:11px;"
+      <div style="display:grid; grid-template-columns:24px minmax(30px,1fr) 46px 46px 46px 20px 24px 20px 20px; gap:2px; align-items:center; padding:2px 4px; ${border} cursor:pointer; font-size:11px;"
         onclick="EnderTrack.Lists.selectPoint(${i})"
         onmouseenter="EnderTrack.Lists.hoverPoint(${i})"
         onmouseleave="EnderTrack.Lists.hoverPoint(null)"
@@ -674,6 +684,7 @@ class ListManager {
           <button onclick="EnderTrack.Lists.movePosition(${i},-1)" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:${i > 0 ? '0.5' : '0.15'}; font-size:8px; padding:0; line-height:1;" ${i === 0 ? 'disabled' : ''}>▲</button>
           <button onclick="EnderTrack.Lists.movePosition(${i},1)" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:${i < total - 1 ? '0.5' : '0.15'}; font-size:8px; padding:0; line-height:1;" ${i === total - 1 ? 'disabled' : ''}>▼</button>
         </div>
+        <button onclick="event.stopPropagation(); EnderTrack.Lists.duplicatePosition(${i})" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.4; font-size:10px;" title="Dupliquer">⧉</button>
         <button onclick="event.stopPropagation(); EnderTrack.Lists.removePosition(${i})" style="background:none; border:none; color:var(--text-general); cursor:pointer; opacity:0.4; font-size:12px;">x</button>
       </div>
     `;
