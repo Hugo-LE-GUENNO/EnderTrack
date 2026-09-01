@@ -25,7 +25,7 @@ Ouvrir http://localhost:5000 — c'est tout. Les dépendances sont incluses dans
 |--------|-------------|
 | **Réglages** | Connexion, espace de travail, calques, navigation, stockage, extensions |
 | **Navigation** | Flèches directionnelles, sensibilité, positionnement absolu, home |
-| **Positions** | Listes, scénarios, clic sur canvas |
+| **Positions** | Listes, scénarios, clic sur canvas, drag & drop, duplication, raccourci `P` |
 
 ## 📡 Accès réseau
 
