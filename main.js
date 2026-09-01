@@ -776,6 +776,9 @@ window.clearHistory = () => {
     // Space = soft stop (stop movement, stay in place)
     if (e.key === ' ') { e.preventDefault(); EnderTrack.Movement?.stopMovement?.(); return; }
 
+    // P = add current position to active list
+    if (e.key === 'p' || e.key === 'P') { EnderTrack.Lists?.addPosition?.(EnderTrack.State?.get()?.pos?.x, EnderTrack.State?.get()?.pos?.y, EnderTrack.State?.get()?.pos?.z); return; }
+
     // XY arrows: buffer with 50ms tempo for diagonal detection
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
@@ -888,21 +891,24 @@ window.showKeyboardShortcuts = function() {
         <div style="font-size:14px; font-weight:600; color:var(--text-selected);">Raccourcis clavier</div>
         <button onclick="this.closest('.shortcuts-modal-overlay').remove()" style="background:none; border:none; color:var(--text-general); cursor:pointer; font-size:18px; opacity:0.6; padding:0; line-height:1;">✕</button>
       </div>
-      <div style="font-size:10px; color:var(--text-general); opacity:0.5; margin-bottom:14px;">Déplacement : mode contrôleur activé requis &nbsp;·&nbsp; Positions : onglet Positions actif</div>
-      ${section('Déplacement XY', [
+      <div style="font-size:10px; color:var(--text-general); opacity:0.5; margin-bottom:14px;">Déplacement : mode contrôleur activé requis &nbsp;·&nbsp; Globaux : toujours actifs (hors champ texte)</div>
+      ${section('Déplacement XY — mode contrôleur', [
         ['↑', 'Avancer (Y+)'],
         ['↓', 'Reculer (Y−)'],
         ['←', 'Gauche (X−)'],
         ['→', 'Droite (X+)'],
       ])}
-      ${section('Déplacement Z', [
+      ${section('Déplacement Z — mode contrôleur', [
         ['Page↑', 'Monter (Z+)'],
         ['Page↓', 'Descendre (Z−)'],
       ])}
-      ${section('Listes de positions (onglet Positions actif)', [
+      ${section('Global', [
         ['P', 'Ajouter la position actuelle à la liste'],
+        ['Espace', 'Stopper le mouvement'],
+      ])}
+      ${section('Onglet Positions', [
         ['Suppr / ⌫', 'Supprimer la position sélectionnée'],
-        ['Échap', 'Désélectionner / quitter le mode clic'],
+        ['Échap', 'Désélectionner'],
       ])}
     </div>`;
 

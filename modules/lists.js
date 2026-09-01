@@ -328,9 +328,7 @@ class ListManager {
         this.selectedIdx = null;
         this._clickMode = false;
         this.renderUI(); EnderTrack.Canvas?.requestRender?.();
-      } else if (e.key === 'p' || e.key === 'P') {
-        const pos = EnderTrack.State?.get()?.pos;
-        if (pos) this.addPosition(pos.x, pos.y, pos.z);
+      }
       }
     };
     document.addEventListener('keydown', this._onKey);
