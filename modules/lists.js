@@ -670,7 +670,8 @@ class ListManager {
         onclick="EnderTrack.Lists.selectPoint(${i})"
         onmouseenter="EnderTrack.Lists.hoverPoint(${i})"
         onmouseleave="EnderTrack.Lists.hoverPoint(null)"
-        oncontextmenu="event.preventDefault(); EnderTrack.Lists._positionContextMenu(event, ${i})">
+        oncontextmenu="event.preventDefault(); EnderTrack.Lists.selectPoint(${i}); EnderTrack.Lists._positionContextMenu(event, ${i})"
+        ondblclick="EnderTrack.Lists._startEdit(${i})">
         <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.6;">${i + 1}</span>
         <span style="color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name || '<span style="opacity:0.3">—</span>'}</span>
         <span style="color:var(--pos-current); text-align:center; font-size:10px; font-family:monospace;">${p.x}</span>
@@ -689,7 +690,6 @@ class ListManager {
     menu.style.top = e.clientY + 'px';
     menu.innerHTML = `
       <button onmousedown="EnderTrack.Lists.goToPosition(${idx}); this.parentElement.remove()">🎯 Aller à</button>
-      <button onmousedown="EnderTrack.Lists._startEdit(${idx}); this.parentElement.remove()">✏️ Modifier</button>
       <button onmousedown="EnderTrack.Lists.duplicatePosition(${idx}); this.parentElement.remove()">⧉ Dupliquer</button>
       <button onmousedown="EnderTrack.Lists.movePosition(${idx},-1); this.parentElement.remove()" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''}>▲ Monter</button>
       <button onmousedown="EnderTrack.Lists.movePosition(${idx},1); this.parentElement.remove()" ${idx === total - 1 ? 'disabled style="opacity:0.3"' : ''}>▼ Descendre</button>
