@@ -284,10 +284,14 @@ def register_routes(app):
     @app.route('/api/home', methods=['POST'])
     def _home():
         if stage:
+            try:
+                from server.event_stream import bus
+                bus.publish('position:moving', {'x': 0, 'y': 0, 'z': 0})
+            except: pass
             stage.home()
             try:
                 from server.event_stream import bus
-                bus.publish('position:homed', {})
+                bus.publish('position:homed', {'x': 0, 'y': 0, 'z': 0})
             except: pass
         return jsonify({'success': True})
 

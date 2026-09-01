@@ -59,6 +59,7 @@
                 <button class="tab-btn" id="listsTab" onclick="switchTab('lists')">
                     Positions
                 </button>
+                <div style="width:1px; height:20px; background:var(--border); margin:0 4px; align-self:center;"></div>
                 <button class="tab-btn" id="acquisitionTab" onclick="switchTab('acquisition')">
                     Acquisition
                 </button>
@@ -68,6 +69,7 @@
 
             </div>
             <div style="flex:1"></div>
+            <button onclick="showKeyboardShortcuts()" style="background:none; border:none; cursor:pointer; font-size:16px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Raccourcis clavier" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">⌨</button>
             <button id="layoutBtn" onclick="EnderTrack.Display._showLayoutMenuFromBtn(this)" style="background:none; border:none; cursor:pointer; font-size:16px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Layout" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">⊞</button>
             <button onclick="toggleFullscreen()" style="background:none; border:none; cursor:pointer; font-size:18px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Plein écran" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">&#x26F6;</button>
             <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" onclick="showAboutModal()" style="height: 28px; cursor: pointer; opacity: 0.85; transition: opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">

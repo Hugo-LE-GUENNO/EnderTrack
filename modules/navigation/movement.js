@@ -29,10 +29,14 @@ class MovementEngine {
           if (evt.type === 'position:moving') {
             if (!this._isLocalMove) this._remoteMove(evt.data);
           } else if (evt.type === 'position:moved') {
-            // Server-side move completed — snap to final position
             if (!this._isLocalMove) this._remoteArrive(evt.data);
           } else if (evt.type === 'position:arrived') {
             if (!this._isLocalMove) this._remoteArrive(evt.data);
+          } else if (evt.type === 'position:homed') {
+            EnderTrack.State?.update?.({ pos: { x: 0, y: 0, z: 0 }, isMoving: false });
+            EnderTrack.Canvas?.requestRender?.();
+            EnderTrack.ZVisualization?.render?.();
+            EnderTrack.UI?.showNotification?.('Homing terminé', 'success');
           } else if (evt.type === 'sync:overlays') {
             if (window.EnderTrack?.Overlays) {
               window.EnderTrack.Overlays._loadFromData(evt.data);
