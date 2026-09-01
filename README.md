@@ -31,8 +31,8 @@ Chaque édition est une **branche** avec ses propres modules.
 
 | Édition | Modules | Version |
 |---------|---------|---------|
-| [`basic`](../../tree/basic) | Navigation, listes, tactile, responsive | v2.4.0 |
-| [`imagerie`](../../tree/imagerie) | basic + caméra, éclairage, acquisition, scénarios | v1.2.3 |
+| [`basic`](../../tree/basic) | Navigation, listes, tactile, responsive | v2.4.1 |
+| [`imagerie`](../../tree/imagerie) | basic + caméra, éclairage, acquisition, scénarios | v1.2.4 |
 | [`plotter`](../../tree/plotter) | basic + pen plotter (image → tracé XY) | v1.0.0 |
 
 Pour une autre édition : `git clone -b <edition> https://github.com/Hugo-LE-GUENNO/EnderTrack.git`
