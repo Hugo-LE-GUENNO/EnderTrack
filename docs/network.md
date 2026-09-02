@@ -1,5 +1,7 @@
 # Network access
 
+EnderTrack runs a local web server. By default it is only accessible from the machine running it. With `--lan`, it listens on the local network so any device on the same network (tablet, phone, another PC) can open the interface in a browser.
+
 ## Local (default)
 
 ```bash
