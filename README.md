@@ -23,7 +23,7 @@ Open http://localhost:5000 — zero setup, dependencies included.
 
 Update: `git pull`
 
-Tablet/phone access: `python3 endertrack-server.py --lan` · 👉 **[Network, hotspot, RPi](docs/network.md)**
+Network access: `python3 endertrack-server.py --lan` · 👉 **[Network, hotspot, RPi](docs/network.md)**
 
 ## Editions
 
