@@ -1,7 +1,7 @@
 {
   "name": "endertrack",
   "version": "1.2.4",
-  "description": "Contrôleur de position 3D pour platines XYZ motorisées",
+  "description": "3D position controller for motorized XYZ stages",
   "main": "main.js",
   "scripts": {
     "start": "python3 endertrack-server.py"
@@ -19,5 +19,5 @@
   ],
   "author": "Hugo Le Guenno",
   "license": "GPL-3.0",
-  "edition": "imagerie"
+  "edition": "imaging"
 }

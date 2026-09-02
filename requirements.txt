@@ -1,7 +1,7 @@
-# EnderTrack Minimal v1 - Python dependencies
+# EnderTrack — Python dependencies
 #
-# Toutes les dépendances sont incluses dans vendor/ (zéro install).
-# Ce fichier est fourni uniquement si vous préférez installer via pip :
+# All dependencies are included in vendor/ (zero install required).
+# This file is provided if you prefer to install via pip:
 #
 #   pip install -r requirements.txt
 
