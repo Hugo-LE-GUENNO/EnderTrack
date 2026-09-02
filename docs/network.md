@@ -1,37 +1,37 @@
-# Accès réseau
+# Network access
 
-## Local (défaut)
+## Local (default)
 
 ```bash
 python3 endertrack-server.py
 # → http://localhost:5000
 ```
 
-## Réseau local
+## Local network
 
 ```bash
 python3 endertrack-server.py --lan
-# → affiche l'adresse à ouvrir depuis un autre appareil
+# → displays the address to open from another device
 ```
 
-## Hotspot WiFi depuis un PC
+## WiFi hotspot from a PC
 
-La carte WiFi passe en mode Access Point — elle émet un réseau WiFi local.
+The WiFi card switches to Access Point mode — it broadcasts a local WiFi network.
 
-**Linux (GNOME)** : Paramètres → WiFi → ⋮ → *Activer le point d'accès Wi-Fi*
+**Linux (GNOME)**: Settings → WiFi → ⋮ → *Turn On Wi-Fi Hotspot*
 
-**Linux (terminal)** :
+**Linux (terminal)**:
 ```bash
 nmcli device wifi hotspot ifname wlan0 ssid EnderTrack password endertrack123
 python3 endertrack-server.py --lan
 # → http://10.42.0.1:5000
 ```
 
-**Windows** : Paramètres → Réseau → *Point d'accès sans fil mobile* → Activer
+**Windows**: Settings → Network → *Mobile hotspot* → Enable
 
-**macOS** : Préférences Système → Partage → *Partage Internet* (Ethernet → WiFi)
+**macOS**: System Preferences → Sharing → *Internet Sharing* (Ethernet → WiFi)
 
-## Hotspot WiFi depuis un Raspberry Pi
+## WiFi hotspot from a Raspberry Pi
 
 ```bash
 sudo nmcli device wifi hotspot ifname wlan0 ssid EnderTrack password endertrack123
@@ -39,26 +39,26 @@ python3 endertrack-server.py --lan
 # → http://10.42.0.1:5000
 ```
 
-Hotspot persistant au boot :
+Persistent hotspot on boot:
 ```bash
 sudo nmcli connection modify Hotspot connection.autoconnect yes
 ```
 
 ## Hotspot + internet
 
-La carte WiFi ne peut pas être hotspot ET client en même temps. Pour avoir les deux :
+The WiFi card cannot be a hotspot and a client at the same time. To have both:
 
-- **Ethernet + WiFi hotspot** — câble Ethernet pour internet, WiFi en hotspot
-- **Tethering USB + WiFi hotspot** — smartphone branché en USB partage sa 4G, WiFi du PC en hotspot
+- **Ethernet + WiFi hotspot** — Ethernet cable for internet, WiFi as hotspot
+- **USB tethering + WiFi hotspot** — smartphone connected via USB shares its 4G, PC WiFi as hotspot
 
-## Partage 4G/5G (sans hotspot PC)
+## 4G/5G sharing (without PC hotspot)
 
-1. **Smartphone** : Paramètres → Partage de connexion → Activer
-2. **PC** : Se connecter au WiFi du smartphone
+1. **Smartphone**: Settings → Hotspot → Enable
+2. **PC**: Connect to the smartphone's WiFi
 3. `python3 endertrack-server.py --lan`
-4. **Smartphone** : ouvrir l'adresse affichée
+4. **Smartphone**: open the displayed address
 
-## Raspberry Pi — démarrage automatique
+## Raspberry Pi — auto-start on boot
 
 ```bash
 git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
