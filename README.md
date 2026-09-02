@@ -14,7 +14,7 @@
 ## Installation
 
 ```bash
-git clone -b imaging https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
 cd EnderTrack
 python3 endertrack-server.py
 ```
@@ -39,23 +39,7 @@ For another edition: `git clone -b <edition> https://github.com/Hugo-LE-GUENNO/E
 
 ## Plugins
 
-Compatible with all editions.
-
-Install (replace `<plugin>` with a name from the table below):
-```bash
-git clone -b plugins https://github.com/Hugo-LE-GUENNO/EnderTrack.git /tmp/et-plugins
-cp -r /tmp/et-plugins/plugins/<plugin> plugins/
-```
-
-Or via the UI: Settings → Extensions → Catalogue.
-
-| Plugin | `<plugin>` | Description |
-|--------|-----------|-------------|
-| 🎮 External Controller | `external-controller` | Keyboard + gamepad mapping |
-| 🔩 Extruder | `extruder` | Extruder motor control |
-| 🌡️ TempoBed | `tempo-bed` | Heated bed temperature |
-
-👉 Catalogue: [`plugins`](../../tree/plugins) branch
+Plugins are compatible with all editions. Browse and install from the [`plugins`](../../tree/plugins) branch, or via the UI: Settings → Extensions → Catalogue.
 
 ## Extending
 
