@@ -90,10 +90,14 @@ EnderTrack.State.get().pos                        // {x, y, z} — current posit
 EnderTrack.Movement.moveAbsolute(x, y, z)         // move to absolute position
 EnderTrack.Movement.moveRelative(dx, dy, dz)      // move by relative offset
 EnderTrack.UI.showNotification(message, type)     // type: 'success', 'error', 'info'
-EnderTrack.State.on('state:changed', callback)    // react to any state change
+EnderTrack.Events.on('state:changed', callback)   // react to any state change
 EnderTrack.Canvas.requestRender()                 // force canvas redraw
 ```
+
+👉 Full API reference: [api.md](api.md)
 
 ---
 
 👉 Need Python backend, real-time sync, or multi-client events? See [plugins-advanced.md](plugins-advanced.md).
+
+👉 Want to generate a plugin with an AI assistant? Use [plugin-prompt.txt](plugin-prompt.txt).

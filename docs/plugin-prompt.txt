@@ -1,0 +1,36 @@
+You are going to create a plugin for EnderTrack, an open-source 3D position controller for motorized XYZ stages.
+
+## Documentation
+
+- Plugin basics & tutorial: https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/main/docs/plugins.md
+- Advanced (Python backend, SSE, state sync): https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/main/docs/plugins-advanced.md
+- Full API reference: https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/main/docs/api.md
+
+## Plugin structure
+
+A plugin is a folder placed in `plugins/` containing:
+
+- `plugin.json` — manifest (id in camelCase, folder = folder name, name, version, description, icon)
+- `bridge.js` — logic class `[Id]Bridge` with `activate()` / `deactivate()`, exposed on `window`
+- `ui.js` — UI class `[Id]PluginUI` with `init()` / `destroy()`, injects into `#navPluginZone`
+- `scripts/my-script.py` (optional) — Python backend, `ACTIONS = {'/endpoint': handler}`
+
+## Key API
+
+```javascript
+EnderTrack.State.get().pos                         // {x, y, z} current position
+EnderTrack.Movement.moveAbsolute(x, y, z)          // move to position
+EnderTrack.Movement.moveRelative(dx, dy, dz)       // move by offset
+EnderTrack.UI.showNotification(message, type)      // 'info', 'success', 'warning', 'error'
+EnderTrack.Events.on('state:changed', callback)    // react to state changes
+EnderTrack.Canvas.requestRender()                  // force canvas redraw
+```
+
+Python backend call from frontend:
+```javascript
+fetch('/api/plugins/{pluginId}/{scriptName}/{action}', { method: 'POST', ... })
+```
+
+---
+
+*** ADD YOUR NEEDS HERE ***
