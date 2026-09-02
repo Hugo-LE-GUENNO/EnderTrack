@@ -69,6 +69,7 @@ Project initiated at CNRS following the [MIFOBIO](https://mifobio.fr) 2025 micro
 
 - [EnderScope](https://github.com/Pickering-Lab/EnderScope) — Pickering Lab (original project)
 - Jérôme, Erwan and Aliénor — EnderTeam
+- Wassim Jaziri — logo design
 - CNRS / RTmfm ("PPP" Working Group)
 
 ## License
