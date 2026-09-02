@@ -1,33 +1,33 @@
-# Contribuer à EnderTrack
+# Contributing to EnderTrack
 
 ## 🔌 Plugin
 
-1. Fork → branche `plugins`
-2. Ajouter un dossier dans `plugins/`
-3. Tester localement (Réglages → Extensions)
-4. Pull Request
+1. Fork → branch `plugins`
+2. Add a folder in `plugins/`
+3. Test locally (Settings → Extensions)
+4. Open a Pull Request
 
-👉 **[Structure et API](docs/plugins.md)**
+👉 [plugins.md](docs/plugins.md) · [plugins-advanced.md](docs/plugins-advanced.md) · [api.md](docs/api.md)
 
 ### Checklist
 
-- [ ] `plugin.json` avec `id`, `folder`, `name`, `version`
-- [ ] S'active et se désactive sans erreur
-- [ ] Pas de dépendance externe
-- [ ] Testé sur la dernière version `basic`
+- [ ] `plugin.json` with `id`, `folder`, `name`, `version`
+- [ ] Activates and deactivates without errors
+- [ ] No external dependencies
+- [ ] Tested on the latest `basic` version
 
-## 🔬 Version spécialisée
+## 🔬 New edition
 
-1. Fork → nouvelle branche depuis `basic`
-2. Ajouter modules, onglets, routes serveur
-3. Pull Request ou Issue
+1. Fork → new branch from `basic`
+2. Add modules, tabs, server routes
+3. Open a Pull Request or Issue
 
-👉 **[Guide modules](docs/modules.md)**
+👉 [modules.md](docs/modules.md)
 
-## 🐛 Bug / idée
+## 🐛 Bug / idea
 
-[Ouvrir une Issue](../../issues) avec : ce que vous faisiez, ce qui s'est passé, navigateur + appareil.
+[Open an Issue](../../issues) with: what you were doing, what happened, browser + device.
 
-## 📜 Licence
+## 📜 License
 
-Toute contribution est sous GPLv3.
+All contributions are under GPLv3.
