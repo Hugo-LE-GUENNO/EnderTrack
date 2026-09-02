@@ -1,6 +1,8 @@
 # Contributing to EnderTrack
 
-## 🔌 Plugin
+Contributions are welcome! Whether you want to build a plugin, create a new edition, or report a bug — every contribution helps make EnderTrack better for the community.
+
+## Plugin
 
 1. Fork → branch `plugins`
 2. Add a folder in `plugins/`
@@ -16,7 +18,7 @@
 - [ ] No external dependencies
 - [ ] Tested on the latest `basic` version
 
-## 🔬 New edition
+## New edition
 
 1. Fork → new branch from `basic`
 2. Add modules, tabs, server routes
@@ -24,10 +26,10 @@
 
 👉 [modules.md](docs/modules.md)
 
-## 🐛 Bug / idea
+## Bug / idea
 
 [Open an Issue](../../issues) with: what you were doing, what happened, browser + device.
 
-## 📜 License
+## License
 
 All contributions are under GPLv3.

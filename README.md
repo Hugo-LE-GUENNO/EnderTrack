@@ -61,11 +61,11 @@ Or via the UI: Settings → Extensions → Catalogue.
 
 | | |
 |-|-|
-| 🔌 Create a plugin | Add buttons, controls or hardware support — [plugins.md](docs/plugins.md) |
-| ⚙️ Advanced plugin | Python backend, real-time sync, multi-client — [plugins-advanced.md](docs/plugins-advanced.md) |
-| 🔬 Create an edition | Fork `basic` and add a new tab or module — [modules.md](docs/modules.md) |
-| 📖 API reference | All available functions for plugins — [api.md](docs/api.md) |
-| 🤖 AI prompt | Generate a plugin with any AI assistant — [plugin-prompt.txt](docs/plugin-prompt.txt) |
+| Create a plugin | Add buttons, controls or hardware support — [plugins.md](docs/plugins.md) |
+| Advanced plugin | Python backend, real-time sync, multi-client — [plugins-advanced.md](docs/plugins-advanced.md) |
+| Create an edition | Fork `basic` and add a new tab or module — [modules.md](docs/modules.md) |
+| API reference | All available functions for plugins — [api.md](docs/api.md) |
+| AI prompt | Generate a plugin with any AI assistant — [plugin-prompt.txt](docs/plugin-prompt.txt) |
 
 ## Contributing
 
