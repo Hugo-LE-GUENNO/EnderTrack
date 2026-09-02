@@ -1,159 +1,120 @@
-# Créer un module (version spécialisée)
+# Creating a module (specialized edition)
 
-Un module ajoute un onglet, un panneau ou des routes serveur. C'est une nouvelle version d'EnderTrack.
+A module adds a tab, a panel, or server routes to EnderTrack. Unlike a plugin, it modifies the core — it is a new edition of EnderTrack, distributed as its own branch.
 
-## Démarrer
+## Getting started
+
+Fork from `basic` and create a new branch:
 
 ```bash
-git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git endertrack-maversion
-cd endertrack-maversion
-git checkout -b ma-version
+git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git endertrack-myedition
+cd endertrack-myedition
+git checkout -b my-edition
 ```
 
-## Ajouter un onglet
+## Adding a tab
 
-Dans `index.html` :
+In `index.html`, add a tab button and its content panel:
+
 ```html
-<button class="tab-btn" id="monModuleTab" onclick="switchTab('monModule')">
-    🔬 Mon Module
+<button class="tab-btn" id="myModuleTab" onclick="switchTab('myModule')">
+    🔬 My Module
 </button>
 
-<div class="tab-panel" id="monModuleTabContent">
+<div class="tab-panel" id="myModuleTabContent">
     <!-- Interface -->
 </div>
 ```
 
-## Créer le module JS
+## Creating the JS module
 
-`modules/mon-module.js` :
+`modules/my-module.js` — follows the same activate/deactivate pattern as plugins:
+
 ```javascript
-class MonModule {
+class MyModule {
   constructor() { this.isActive = false; }
   activate() { this.isActive = true; this.createUI(); }
   deactivate() { this.isActive = false; }
   createUI() {
-    const el = document.getElementById('monModuleTabContent');
-    if (el) el.innerHTML = '<div>Mon interface</div>';
+    const el = document.getElementById('myModuleTabContent');
+    if (el) el.innerHTML = '<div>My interface</div>';
   }
 }
 window.EnderTrack = window.EnderTrack || {};
-window.EnderTrack.MonModule = new MonModule();
+window.EnderTrack.MyModule = new MyModule();
 ```
 
-Charger dans `index.html` :
+Load it in `index.html`:
+
 ```html
-<script src="modules/mon-module.js"></script>
+<script src="modules/my-module.js"></script>
 ```
 
-Activer dans `main.js` (dans `switchTab`) :
+Activate it in `main.js` inside `switchTab`:
+
 ```javascript
-} else if (tabId === 'monModule' && window.EnderTrack?.MonModule) {
-    window.EnderTrack.MonModule.activate();
+} else if (tabId === 'myModule' && window.EnderTrack?.MyModule) {
+    window.EnderTrack.MyModule.activate();
 }
 ```
 
-## Ajouter une route serveur
+## Adding a server route
 
-`server/mon_module.py` :
+`server/my_module.py`:
+
 ```python
 def register_routes(app):
     from flask import request, jsonify
 
-    @app.route('/api/mon-module/data', methods=['GET'])
+    @app.route('/api/my-module/data', methods=['GET'])
     def _data():
         return jsonify({'success': True, 'data': []})
 ```
 
-Dans `endertrack-server.py` :
+In `endertrack-server.py`:
+
 ```python
-from server import mon_module
-mon_module.register_routes(app)
+from server import my_module
+my_module.register_routes(app)
 ```
 
-## Points d'extension
+## Extension points
 
-| Zone | Fichier |
-|------|---------|
-| Onglet | `index.html` (tab-btn + tab-panel) |
-| Module JS | `modules/` |
-| Renderer canvas | `modules/canvas/renderers/` |
-| Route serveur | `server/` + `endertrack-server.py` |
+| Area | File |
+|------|------|
+| Tab | `index.html` (tab-btn + tab-panel) |
+| JS module | `modules/` |
+| Canvas renderer | `modules/canvas/renderers/` |
+| Server route | `server/` + `endertrack-server.py` |
 
-## Publier
+## Publishing
 
 ```bash
-git push origin ma-version
+git push origin my-edition
 ```
 
-Ouvrir une PR ou Issue pour l'ajouter à la table des versions.
+Open a PR or Issue to add it to the editions table.
 
-## Prompt IA
+## Server sync
+
+A module can use the same APIs as plugins for multi-client sync. See [plugins-advanced.md](plugins-advanced.md) for the full reference (shared state, SSE events, activity log).
+
+## AI prompt
 
 ```
-Crée un module EnderTrack depuis la branche basic
+Create an EnderTrack module from the basic branch
 (https://github.com/Hugo-LE-GUENNO/EnderTrack/tree/basic).
 
-Ajouter : modules/mon-module.js (activate/deactivate/createUI),
-onglet dans index.html, cas dans switchTab() de main.js.
-Si backend : server/mon_module.py avec register_routes(app).
+Add: modules/my-module.js (activate/deactivate/createUI),
+tab in index.html, case in switchTab() in main.js.
+If backend: server/my_module.py with register_routes(app).
 
-API : EnderTrack.State, EnderTrack.Movement, EnderTrack.Canvas, EnderTrack.UI
+API: EnderTrack.State, EnderTrack.Movement, EnderTrack.Canvas, EnderTrack.UI
 
-Sync serveur :
-- État partagé : GET/POST /api/state, POST /api/state/patch
-- Temps réel : EventSource('/api/events'), POST /api/events/publish
-- Log terminal : POST /api/log {action, details}
+Server sync:
+- Shared state: GET/POST /api/state, POST /api/state/patch
+- Real-time: EventSource('/api/events'), POST /api/events/publish
+- Server log: POST /api/log {action, details}
 
-Le module doit : [DESCRIPTION]
+The module should: [DESCRIPTION]
 ```
-
-
-## Synchronisation serveur
-
-Un module peut utiliser les mêmes APIs que les plugins pour la sync multi-clients.
-
-### Routes disponibles
-
-| Route | Méthode | Description |
-|-------|---------|-------------|
-| `/api/state` | GET | Lire l'état partagé |
-| `/api/state/patch` | POST | Écrire (merge partiel) |
-| `/api/state/hash` | GET | Hash MD5 pour détecter les changements |
-| `/api/events` | GET | Connexion SSE (temps réel) |
-| `/api/events/publish` | POST | Publier un événement à tous les clients |
-| `/api/log` | POST | Envoyer un log au terminal serveur |
-
-### Exemple : module avec sync temps réel
-
-```javascript
-class MonModule {
-  activate() {
-    const SERVER = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    this._es = new EventSource(SERVER + '/api/events');
-    this._es.onmessage = (e) => {
-      const evt = JSON.parse(e.data);
-      if (evt.type === 'monModule:data') this.onRemoteData(evt.data);
-    };
-  }
-
-  deactivate() {
-    this._es?.close();
-  }
-
-  sendData(data) {
-    fetch(SERVER + '/api/events/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'monModule:data', data })
-    });
-  }
-}
-```
-
-### Stockage
-
-| Donnée | Où | Pourquoi |
-|--------|-----|---------|
-| Position, listes | `data/state.json` (serveur) | Partagé entre appareils |
-| Thème, préférences UI | `localStorage` (navigateur) | Propre à chaque appareil |
-| Images, fichiers lourds | `data/` (serveur) | Accessible par tous |

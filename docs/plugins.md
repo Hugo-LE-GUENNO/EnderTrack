@@ -1,55 +1,59 @@
 # Creating a plugin
 
-Plugins let you extend EnderTrack without modifying the core. A plugin is a folder dropped into `plugins/` — it can add UI elements, new controls, backend scripts, or communicate with external hardware. Once placed in the folder, it appears in Settings → Extensions and can be enabled or disabled at any time.
+A plugin extends EnderTrack without touching the core. It lives in its own folder inside `plugins/`, appears in Settings → Extensions, and can be enabled or disabled at any time. A plugin can add buttons, panels, new controls, or communicate with external hardware.
 
-## Structure
+## Tutorial: Position Logger
+
+The simplest possible plugin — a button that reads the current position and shows it as a notification. No Python, no CSS, just 3 files.
+
+### 1. Create the folder
 
 ```
-plugins/my-plugin/
-├── plugin.json    # Manifest
-├── bridge.js      # Frontend logic
-├── ui.js          # Interface
-├── ui.css         # Styles (optional)
-└── scripts/       # Python backend (optional)
-    └── my-tool.py
+plugins/position-logger/
+├── plugin.json
+├── bridge.js
+└── ui.js
 ```
 
-## plugin.json
+### 2. plugin.json
+
+Declares the plugin identity. `id` must be camelCase — it is used to name the classes.
 
 ```json
 {
-  "id": "myPlugin",
-  "folder": "my-plugin",
-  "name": "My Plugin",
+  "id": "positionLogger",
+  "folder": "position-logger",
+  "name": "Position Logger",
   "version": "1.0.0",
-  "description": "Short description",
-  "icon": "🔌"
+  "description": "Shows current position on demand",
+  "icon": "📍"
 }
 ```
 
-`id` in camelCase → classes `MyPluginBridge` + `MyPluginPluginUI`.
+### 3. bridge.js
 
-## bridge.js
-
-The bridge handles the plugin logic and communicates with the backend or hardware.
+Contains the plugin logic. `activate()` and `deactivate()` are called by the plugin system when the user enables or disables the plugin.
 
 ```javascript
-class MyPluginBridge {
+class PositionLoggerBridge {
   activate() { }
   deactivate() { }
-  getStatus() { return { connected: true }; }
+
+  logPosition() {
+    const pos = EnderTrack.State.get().pos;
+    EnderTrack.UI.showNotification(`X:${pos.x} Y:${pos.y} Z:${pos.z}`, 'info');
+  }
 }
-window.MyPluginBridge = MyPluginBridge;
+window.PositionLoggerBridge = PositionLoggerBridge;
 ```
 
-## ui.js
+### 4. ui.js
 
-The UI class injects interface elements into the app. `init()` is called on activation, `destroy()` on deactivation.
+Injects UI elements into the app. `init()` is called on activation, `destroy()` cleans up on deactivation. Elements are injected into `#navPluginZone`, which is the dedicated area for plugin UI in the Navigation tab.
 
 ```javascript
-class MyPluginPluginUI {
+class PositionLoggerPluginUI {
   constructor(manifest, bridge) {
-    this.manifest = manifest;
     this.bridge = bridge;
     this._el = null;
   }
@@ -59,7 +63,7 @@ class MyPluginPluginUI {
     const zone = document.getElementById('navPluginZone');
     if (!zone) return;
     this._el = document.createElement('div');
-    this._el.innerHTML = '<button>My Button</button>';
+    this._el.innerHTML = '<button onclick="EnderTrack.Plugins.get(\'positionLogger\').bridge.logPosition()">📍 Log position</button>';
     zone.appendChild(this._el);
   }
 
@@ -68,166 +72,28 @@ class MyPluginPluginUI {
     this._el?.remove();
   }
 }
-window.MyPluginPluginUI = MyPluginPluginUI;
+window.PositionLoggerPluginUI = PositionLoggerPluginUI;
 ```
 
-## JavaScript API
-
-```javascript
-EnderTrack.State.get().pos                        // {x, y, z}
-EnderTrack.Movement.moveAbsolute(x, y, z)
-EnderTrack.Movement.moveRelative(dx, dy, dz)
-EnderTrack.UI.showNotification(message, type)     // 'success', 'error', 'info'
-EnderTrack.State.on('state:changed', callback)
-EnderTrack.Canvas.requestRender()
-```
-
-## Testing
+### 5. Enable it
 
 Copy the folder into `plugins/` → Settings → Extensions → Enable.
 
-## Python backend scripts
+---
 
-A plugin can include Python scripts in `scripts/`. They are loaded automatically when the plugin is activated and expose API endpoints.
+## JavaScript API
 
-### Structure
-
-```
-plugins/my-plugin/
-└── scripts/
-    └── camera.py
-```
-
-### scripts/camera.py
-
-```python
-def capture(params=None):
-    return {'success': True, 'image': 'data:image/png;base64,...'}
-
-def status(params=None):
-    return {'success': True, 'connected': True}
-
-# Each key = one API endpoint
-ACTIONS = {
-    '/capture': capture,
-    '/status': status,
-}
-```
-
-### Calling from the frontend
+Lets your plugin read state, trigger movements, show notifications, and react to events. Available anywhere in `bridge.js` and `ui.js`.
 
 ```javascript
-// URL: /api/plugins/{pluginId}/{scriptName}/{action}
-const resp = await fetch('/api/plugins/myPlugin/camera/capture', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ resolution: '1080p' })
-});
-const data = await resp.json();
+EnderTrack.State.get().pos                        // {x, y, z} — current position
+EnderTrack.Movement.moveAbsolute(x, y, z)         // move to absolute position
+EnderTrack.Movement.moveRelative(dx, dy, dz)      // move by relative offset
+EnderTrack.UI.showNotification(message, type)     // type: 'success', 'error', 'info'
+EnderTrack.State.on('state:changed', callback)    // react to any state change
+EnderTrack.Canvas.requestRender()                 // force canvas redraw
 ```
 
-### MJPEG streaming
+---
 
-To stream video, export a `stream_generator` function:
-
-```python
-def stream_generator():
-    while True:
-        frame = get_frame()  # JPEG bytes
-        yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-ACTIONS = { '/status': status }
-```
-
-Accessible via `<img src="/api/plugins/myPlugin/camera/stream">`.
-
-## Server synchronization
-
-### Shared state
-
-Read and write to the server state (`data/state.json`):
-
-```javascript
-const SERVER = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-
-// Read
-const state = await (await fetch(SERVER + '/api/state')).json();
-
-// Write (partial merge)
-await fetch(SERVER + '/api/state/patch', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ myPlugin: { config: 'value' } })
-});
-```
-
-### Real-time events (SSE)
-
-Listen to events from other clients:
-
-```javascript
-const es = new EventSource(SERVER + '/api/events');
-es.onmessage = (e) => {
-  const evt = JSON.parse(e.data);
-  // evt.type = 'lists:updated', 'position:moved', etc.
-  // evt.data._from = sender clientId
-};
-```
-
-Publish an event to all clients:
-
-```javascript
-fetch(SERVER + '/api/events/publish', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ type: 'myPlugin:update', data: { value: 42 } })
-});
-```
-
-### Activity log
-
-Send a log visible in the server terminal:
-
-```javascript
-fetch(SERVER + '/api/log', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ action: 'Capture', details: 'image_001.png' })
-});
-// Terminal: [14:32:05] 192.168.1.15 — Capture (image_001.png)
-```
-
-### Available events
-
-| Type | Data | Emitted by |
-|------|------|------------|
-| `lists:updated` | `{_from}` | Client modifying a list |
-| `position:moving` | `{x,y,z,sx,sy,sz,duration}` | Client starting a movement |
-| `position:arrived` | `{x,y,z}` | Client whose movement completed |
-| `position:moved` | `{x,y,z}` | Server (hardware movement) |
-| `position:homed` | `{}` | Server (hardware home) |
-
-## AI prompt
-
-If you want to generate a plugin quickly with an AI assistant, use this prompt:
-
-```
-Create an EnderTrack plugin:
-- plugin.json (camelCase id, folder = folder name)
-- bridge.js (class [Id]Bridge with activate/deactivate, exposed on window)
-- ui.js (class [Id]PluginUI with init/destroy, injects into #navPluginZone)
-- scripts/my-tool.py (optional, ACTIONS dict with endpoints)
-
-JS API: EnderTrack.State.get().pos, EnderTrack.Movement.moveAbsolute(x,y,z),
-EnderTrack.UI.showNotification(msg, type), EnderTrack.Canvas.requestRender()
-
-Python API: ACTIONS dict = {'/endpoint': handler_function}
-Frontend call: fetch('/api/plugins/{id}/{script}/{action}')
-
-Server sync:
-- Shared state: GET/POST /api/state, POST /api/state/patch
-- Real-time: EventSource('/api/events'), POST /api/events/publish
-- Server log: POST /api/log {action, details}
-
-The plugin should: [DESCRIPTION]
-```
+👉 Need Python backend, real-time sync, or multi-client events? See [plugins-advanced.md](plugins-advanced.md).
