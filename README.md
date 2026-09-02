@@ -27,12 +27,12 @@ Tablet/phone access: `python3 endertrack-server.py --lan` · 👉 **[Network, ho
 
 ## Editions
 
-Each edition is a **branch** with its own modules.
+Each edition is a **branch** with its own feature set.
 
-| Edition | Modules | Version |
+| Edition | Features | Version |
 |---------|---------|---------|
-| [`basic`](../../tree/basic) | Navigation, position lists, touch, responsive | v2.4.1 |
-| [`imagerie`](../../tree/imagerie) | basic + camera, lighting, acquisition, scenarios | v1.2.4 |
+| [`basic`](../../tree/basic) | XYZ stage navigation, position lists | v2.4.1 |
+| [`imagerie`](../../tree/imagerie) | basic + image acquisition, camera control, lighting, image gallery | v1.2.4 |
 | [`plotter`](../../tree/plotter) | basic + pen plotter (image → XY path) | v1.0.0 |
 
 For another edition: `git clone -b <edition> https://github.com/Hugo-LE-GUENNO/EnderTrack.git`
