@@ -55,7 +55,22 @@ Or via the UI: Settings → Extensions → Catalogue.
 | 🔩 Extruder | `extruder` | Extruder motor control |
 | 🌡️ TempoBed | `tempo-bed` | Heated bed temperature |
 
-👉 **[Create a plugin](docs/plugins.md)** · Catalogue: [`plugins`](../../tree/plugins) branch
+👉 Catalogue: [`plugins`](../../tree/plugins) branch
+
+## Extending
+
+| | |
+|-|-|
+| 🔌 Create a plugin | Add buttons, controls or hardware support — [plugins.md](docs/plugins.md) |
+| ⚙️ Advanced plugin | Python backend, real-time sync, multi-client — [plugins-advanced.md](docs/plugins-advanced.md) |
+| 🔬 Create an edition | Fork `basic` and add a new tab or module — [modules.md](docs/modules.md) |
+| 📖 API reference | All available functions for plugins — [api.md](docs/api.md) |
+| 🤖 AI prompt | Generate a plugin with any AI assistant — [plugin-prompt.txt](docs/plugin-prompt.txt) |
+
+## Contributing
+
+Found a bug or have an idea? Open an [issue](../../issues).
+Want to contribute code? Fork the repo and open a PR.
 
 ## About
 
