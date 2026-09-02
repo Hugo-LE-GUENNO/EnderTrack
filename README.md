@@ -14,7 +14,7 @@
 ## Installation
 
 ```bash
-git clone -b imagerie https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+git clone -b imaging https://github.com/Hugo-LE-GUENNO/EnderTrack.git
 cd EnderTrack
 python3 endertrack-server.py
 ```
@@ -32,7 +32,7 @@ Each edition is a **branch** with its own feature set.
 | Edition | Features | Version |
 |---------|---------|---------|
 | [`basic`](../../tree/basic) | XYZ stage navigation, position lists | v2.4.1 |
-| [`imagerie`](../../tree/imagerie) | basic + image acquisition, camera control, lighting, image gallery | v1.2.4 |
+| [`imaging`](../../tree/imaging) | basic + image acquisition, camera control, lighting, image gallery | v1.2.4 |
 | [`plotter`](../../tree/plotter) | basic + pen plotter (image → XY path) | v1.0.0 |
 
 For another edition: `git clone -b <edition> https://github.com/Hugo-LE-GUENNO/EnderTrack.git`
