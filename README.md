@@ -180,6 +180,13 @@ See the [`plugins`](../../tree/plugins) branch for available plugins. Copy a plu
 - [EnderScope](https://github.com/Pickering-Lab/EnderScope) ([paper](http://doi.org/10.1098/rsta.2023.0214))
 - [diy.microscopie.org](https://diy.microscopie.org/explore.html)
 
+## Acknowledgements
+
+- [EnderScope](https://github.com/Pickering-Lab/EnderScope) — Pickering Lab (original project)
+- Jérôme, Erwan and Aliénor — EnderTeam
+- Wassim Jaziri — logo design
+- CNRS / RTmfm (“PPP” Working Group)
+
 ## License
 
 GPLv3 — Hugo Le Guenno, 2025
