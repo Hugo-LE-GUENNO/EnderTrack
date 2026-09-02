@@ -139,7 +139,7 @@ python3 endertrack-server.py --lan --port 3000   # both
 
 ```bash
 # 1. Clone
-git clone -b imagerie https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+git clone -b imaging https://github.com/Hugo-LE-GUENNO/EnderTrack.git
 cd EnderTrack
 
 # 2. Run (network access to control from another device)
