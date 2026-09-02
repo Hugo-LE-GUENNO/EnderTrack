@@ -1,154 +1,153 @@
-# EnderTrack — v2.4.1
+# EnderTrack — v1.2.4
 
-Contrôleur de position 3D pour platines XYZ motorisées. Simulateur intégré ou pilotage réel via G-code (USB série).
+3D position controller for motorized XYZ stages. Built-in simulator or real control via G-code (USB serial).
 
-## Démarrage
+## Getting started
 
 ```bash
 python3 endertrack-server.py
 ```
 
-Ouvrir http://localhost:5000 — c'est tout. Les dépendances sont incluses dans `vendor/`.
+Open http://localhost:5000 — that's it. Dependencies are included in `vendor/`.
 
-## Fonctionnalités
+## Features
 
-- **Visualisation XY + Z** — temps réel si connecté, simulateur sinon
-- **Navigation** — pas à pas (flèches clavier) ou positionnement absolu (clic sur canvas)
-- **Listes de positions** — sauvegarde, chargement, automatisation simple, drag & drop, duplication
-- **Tactile** — fonctionne sur tablette et smartphone (pan, zoom, tap)
-- **Responsive** — s'adapte du grand écran au smartphone portrait
-- **Plugins** — système extensible, déposer un dossier dans `plugins/`
+- **XY + Z visualization** — real-time when connected, simulator otherwise
+- **Navigation** — step-by-step (arrow keys) or absolute positioning (click on canvas)
+- **Position lists** — save, load, simple automation, drag & drop, duplicate
+- **Touch** — works on tablet and smartphone (pan, zoom, tap)
+- **Responsive** — adapts from large screen to portrait smartphone
+- **Plugins** — extensible system, drop a folder into `plugins/`
 
-## Onglets
+## Tabs
 
-| Onglet | Description |
-|--------|-------------|
-| **Réglages** | Connexion, espace de travail, calques, navigation, stockage, extensions |
-| **Navigation** | Flèches directionnelles, sensibilité, positionnement absolu, home |
-| **Positions** | Listes, scénarios, clic sur canvas, drag & drop, duplication, raccourci `P` |
+| Tab | Description |
+|-----|-------------|
+| **Settings** | Connection, workspace, layers, navigation, storage, extensions |
+| **Navigation** | Directional arrows, sensitivity, absolute positioning, home |
+| **Positions** | Lists, scenarios, click on canvas, drag & drop, duplicate, `P` shortcut |
 
-## 📡 Accès réseau
+## 📡 Network access
 
-### Utilisation locale (par défaut)
+### Local use (default)
 
 ```bash
 python3 endertrack-server.py
 # → http://localhost:5000
 ```
 
-Le serveur n'est accessible que depuis la machine qui le lance.
+The server is only accessible from the machine running it.
 
-### Accès depuis un autre appareil (tablette, téléphone, autre PC)
+### Access from another device (tablet, phone, other PC)
 
 ```bash
 python3 endertrack-server.py --lan
 ```
 
-Le serveur affiche l'adresse à utiliser :
+The server displays the address to use:
 ```
-🌐 Écoute sur http://0.0.0.0:5000
-🌐 Accès LAN: http://192.168.1.42:5000
+🌐 Listening on http://0.0.0.0:5000
+🌐 LAN access: http://192.168.1.42:5000
 ```
 
-Ouvrir cette adresse depuis n'importe quel navigateur **sur le même réseau**.
+Open this address from any browser **on the same network**.
 
-### 📶 Quel réseau utiliser ?
+### 📶 Which network to use?
 
-#### ✅ WiFi maison / labo
-Tout fonctionne. Le PC et le smartphone/tablette sont sur le même réseau.
+#### ✅ Home / lab WiFi
+Everything works. The PC and smartphone/tablet are on the same network.
 
-#### ⚠️ Eduroam / WiFi entreprise
-**Problème** : ces réseaux isolent souvent les appareils entre eux (isolation client). Deux appareils sur eduroam ne peuvent pas se voir.
+#### ⚠️ Eduroam / enterprise WiFi
+**Problem**: these networks often isolate devices from each other (client isolation). Two devices on eduroam cannot see each other.
 
-**Solutions** :
-1. **Hotspot depuis le PC** (recommandé, voir ci-dessous)
-2. Demander au service IT un réseau dédié ou une exception
-3. Utiliser un petit routeur WiFi portable (TP-Link, GL.iNet...)
+**Solutions**:
+1. **Hotspot from the PC** (recommended, see below)
+2. Ask IT for a dedicated network or an exception
+3. Use a portable WiFi router (TP-Link, GL.iNet...)
 
-#### 📱 Hotspot WiFi depuis le PC (la solution universelle)
+#### 📱 WiFi hotspot from the PC (the universal solution)
 
-Le PC qui fait tourner EnderTrack crée son propre réseau WiFi. Le smartphone/tablette s'y connecte.
+The PC running EnderTrack creates its own WiFi network. The smartphone/tablet connects to it.
 
-**Linux (GNOME) :**
-1. Paramètres → WiFi → ⋮ (menu) → **Activer le point d'accès Wi-Fi**
-2. Noter le nom du réseau et le mot de passe
-3. Connecter le smartphone à ce réseau
-4. Lancer `python3 endertrack-server.py --lan`
-5. Ouvrir l'adresse affichée sur le smartphone
+**Linux (GNOME):**
+1. Settings → WiFi → ⋮ (menu) → **Turn On Wi-Fi Hotspot**
+2. Note the network name and password
+3. Connect the smartphone to this network
+4. Run `python3 endertrack-server.py --lan`
+5. Open the displayed address on the smartphone
 
-**Linux (terminal) :**
+**Linux (terminal):**
 ```bash
-# Créer un hotspot
+# Create a hotspot
 nmcli device wifi hotspot ifname wlan0 ssid EnderTrack password endertrack123
 
-# Trouver l'IP du hotspot
+# Find the hotspot IP
 ip addr show | grep "10.42"
-# → typiquement 10.42.0.1
+# → typically 10.42.0.1
 
-# Lancer EnderTrack
+# Run EnderTrack
 python3 endertrack-server.py --lan
 # → http://10.42.0.1:5000
 ```
 
-**Windows 10/11 :**
-1. Paramètres → Réseau → **Point d'accès sans fil mobile** → Activer
-2. Connecter le smartphone au hotspot
-3. Lancer `python3 endertrack-server.py --lan`
-4. Ouvrir l'adresse affichée
+**Windows 10/11:**
+1. Settings → Network → **Mobile hotspot** → Enable
+2. Connect the smartphone to the hotspot
+3. Run `python3 endertrack-server.py --lan`
+4. Open the displayed address
 
-**macOS :**
-1. Préférences Système → Partage → **Partage Internet**
-2. Partager depuis : Ethernet/Thunderbolt → vers : WiFi
-3. Configurer le nom et mot de passe WiFi
-4. Connecter le smartphone, lancer avec `--lan`
+**macOS:**
+1. System Preferences → Sharing → **Internet Sharing**
+2. Share from: Ethernet/Thunderbolt → To: WiFi
+3. Configure WiFi name and password
+4. Connect the smartphone, run with `--lan`
 
-#### 📱 Partage de connexion depuis le smartphone (4G/5G)
+#### 📱 Mobile hotspot from smartphone (4G/5G)
 
-Le smartphone partage sa connexion mobile, le PC s'y connecte.
+The smartphone shares its mobile connection, the PC connects to it.
 
-1. **Smartphone** : Paramètres → Partage de connexion → Activer le point d'accès WiFi
-2. **PC** : Se connecter au WiFi du smartphone
-3. Lancer `python3 endertrack-server.py --lan`
-4. **Smartphone** : ouvrir l'adresse affichée dans le navigateur
+1. **Smartphone**: Settings → Hotspot → Enable WiFi hotspot
+2. **PC**: Connect to the smartphone's WiFi
+3. Run `python3 endertrack-server.py --lan`
+4. **Smartphone**: open the displayed address in the browser
 
-> 💡 L'adresse est souvent `http://192.168.43.x:5000` (Android) ou `http://172.20.10.x:5000` (iPhone)
+> 💡 The address is usually `http://192.168.43.x:5000` (Android) or `http://172.20.10.x:5000` (iPhone)
 
 #### 🔌 USB (Raspberry Pi)
 
-Si le Pi est branché en USB au PC, on peut utiliser le réseau USB :
+If the Pi is connected via USB to the PC, you can use the USB network:
 ```bash
-# Sur le Pi
+# On the Pi
 python3 endertrack-server.py --lan
-# → http://<IP_PI>:5000
+# → http://<PI_IP>:5000
 ```
 
-### Options serveur
+### Server options
 
 ```bash
-python3 endertrack-server.py --port 8080        # port personnalisé
-python3 endertrack-server.py --lan               # accès réseau
-python3 endertrack-server.py --lan --port 3000   # les deux
+python3 endertrack-server.py --port 8080        # custom port
+python3 endertrack-server.py --lan               # network access
+python3 endertrack-server.py --lan --port 3000   # both
 ```
 
-## Installation sur Raspberry Pi
+## Raspberry Pi installation
 
 ```bash
-# 1. Cloner
-git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
+# 1. Clone
+git clone -b imagerie https://github.com/Hugo-LE-GUENNO/EnderTrack.git
 cd EnderTrack
 
-# 2. Lancer (accès réseau pour piloter depuis un autre appareil)
+# 2. Run (network access to control from another device)
 python3 endertrack-server.py --lan
 ```
 
-Ouvrir `http://<IP_DU_PI>:5000` depuis un navigateur sur le même réseau.
+Open `http://<PI_IP>:5000` from a browser on the same network.
 
-Pour trouver l'IP du Pi : `hostname -I`
+To find the Pi's IP: `hostname -I`
 
-### Démarrage automatique au boot (optionnel)
+### Auto-start on boot (optional)
 
 ```bash
-# Créer un service systemd
 sudo tee /etc/systemd/system/endertrack.service << EOF
 [Unit]
 Description=EnderTrack Server
@@ -164,26 +163,23 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-# Activer
 sudo systemctl enable endertrack
 sudo systemctl start endertrack
-
-# Vérifier
 sudo systemctl status endertrack
 ```
 
-Le serveur démarre automatiquement à chaque boot du Pi. La platine USB est détectée dans Réglages → Platine XYZ.
+The server starts automatically on every boot. The USB stage is detected in Settings → XYZ Stage.
 
 ## Plugins
 
-Voir la branche [`plugins`](../../tree/plugins) pour les plugins disponibles. Copiez un dossier plugin dans `plugins/` et activez-le dans Réglages → Extensions.
+See the [`plugins`](../../tree/plugins) branch for available plugins. Copy a plugin folder into `plugins/` and enable it in Settings → Extensions.
 
-## Liens
+## Links
 
-- [enderscope.py](https://github.com/mutterer/enderscopy) ([publication](https://dx.doi.org/10.1016/j.softx.2025.102210))
-- [EnderScope](https://github.com/Pickering-Lab/EnderScope) ([publication](http://doi.org/10.1098/rsta.2023.0214))
+- [enderscope.py](https://github.com/mutterer/enderscopy) ([paper](https://dx.doi.org/10.1016/j.softx.2025.102210))
+- [EnderScope](https://github.com/Pickering-Lab/EnderScope) ([paper](http://doi.org/10.1098/rsta.2023.0214))
 - [diy.microscopie.org](https://diy.microscopie.org/explore.html)
 
-## Licence
+## License
 
 GPLv3 — Hugo Le Guenno, 2025
