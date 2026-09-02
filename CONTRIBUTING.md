@@ -9,7 +9,7 @@ Contributions are welcome! Whether you want to build a plugin, create a new edit
 3. Test locally (Settings → Extensions)
 4. Open a Pull Request
 
-👉 [plugins.md](docs/plugins.md) · [plugins-advanced.md](docs/plugins-advanced.md) · [api.md](docs/api.md)
+👉 [plugins.md](https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/main/docs/plugins.md) · [plugins-advanced.md](https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/main/docs/plugins-advanced.md) · [api.md](https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/main/docs/api.md)
 
 ### Checklist
 
@@ -24,7 +24,7 @@ Contributions are welcome! Whether you want to build a plugin, create a new edit
 2. Add modules, tabs, server routes
 3. Open a Pull Request or Issue
 
-👉 [modules.md](docs/modules.md)
+👉 [modules.md](https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/main/docs/modules.md)
 
 ## Bug / idea
 
