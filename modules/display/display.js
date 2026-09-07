@@ -270,10 +270,12 @@ class DisplayModule {
           };
           const video = document.createElement('video');
           video.autoplay = true; video.muted = true; video.playsInline = true;
-          video.style.cssText = 'position:absolute; opacity:0; pointer-events:none; width:0; height:0;';
+          video.style.cssText = 'position:absolute; opacity:0; pointer-events:none; width:1px; height:1px;';
           video.srcObject = camera.driver._stream;
           cell.appendChild(video);
           video.play().catch(() => {});
+          // Also assign to driver so getFrame() works
+          if (camera.driver) camera.driver._grabVideo = video;
           this._videos.set(viewportId, video);
           const liveRenderer = window.EnderTrack?.LiveRenderer;
           if (liveRenderer) {
