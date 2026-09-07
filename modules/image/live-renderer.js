@@ -14,16 +14,20 @@ class LiveRenderer {
     this._dataMax = 255;
     this.lutId = 'gray';
     this._lutTable = null;
-    this.enabled = false; // only process when enabled (not passthrough)
+    this.enabled = false;
+    this._videoEl = null;  // DOM video element for visibility toggle
+    this._canvasEl = null; // DOM canvas element for visibility toggle
   }
 
   setCanvas(canvas) {
     this._canvas = canvas;
+    this._canvasEl = canvas;
     this._ctx = canvas?.getContext('2d') || null;
   }
 
   setVideo(video) {
     this._video = video;
+    this._videoEl = video;
   }
 
   setImage(img) {

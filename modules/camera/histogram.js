@@ -228,13 +228,11 @@ class CameraHistogram {
       row.addEventListener('mouseenter', () => { if (id !== currentLut) row.style.background = 'var(--app-bg)'; });
       row.addEventListener('mouseleave', () => { if (id !== currentLut) row.style.background = ''; });
       row.addEventListener('click', () => {
-        window.EnderTrack?.Camera?._showLiveLutMenu && window.EnderTrack.Camera._liveLutId;
-        if (window.EnderTrack?.Camera) {
-          window.EnderTrack.Camera._liveLutId = id;
-          const renderer = window.EnderTrack?.LiveRenderer;
-          if (renderer) { renderer.setLut(id); renderer.enabled = true; }
-          this._redraw();
-        }
+        const cam = window.EnderTrack?.Camera;
+        const renderer = window.EnderTrack?.LiveRenderer;
+        if (cam) cam._liveLutId = id;
+        if (renderer) { renderer.setLut(id); renderer.enabled = true; }
+        this._redraw();
         menu.remove();
       });
       menu.appendChild(row);
