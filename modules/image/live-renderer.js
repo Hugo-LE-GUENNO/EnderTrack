@@ -59,7 +59,6 @@ class LiveRenderer {
   }
 
   _renderFrame() {
-    // Determine source: video or img (MJPEG)
     const src = this._video || this._img;
     if (!src || !this._canvas || !this._ctx) return;
     const isVideo = !!this._video;
@@ -71,29 +70,25 @@ class LiveRenderer {
     if (this._canvas.width !== w) this._canvas.width = w;
     if (this._canvas.height !== h) this._canvas.height = h;
 
-    // If no processing needed, just draw directly
-    if (!this.enabled || (!this._lutTable && this.min === 0 && this.max === 255)) {
-      this._ctx.drawImage(src, 0, 0);
-      return;
-    }
+    const needsProcessing = this.enabled && (this._lutTable || this.min > 0 || this.max < 255);
 
-    // Draw to canvas, get pixels, apply contrast/LUT
+    // Toggle video/canvas visibility
+    if (this._videoEl) this._videoEl.style.display = needsProcessing ? 'none' : '';
+    if (this._canvasEl) this._canvasEl.style.display = needsProcessing ? '' : 'none';
+
+    if (!needsProcessing) return;
+
     this._ctx.drawImage(src, 0, 0);
     const imgData = this._ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
     const min = this.min, max = this.max;
     const range = Math.max(1, max - min);
     const lut = this._lutTable;
-
     for (let i = 0; i < data.length; i += 4) {
       const lum = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
       const stretched = Math.max(0, Math.min(255, Math.round(((lum - min) / range) * 255)));
-      if (lut) {
-        const c = lut[stretched];
-        data[i] = c[0]; data[i+1] = c[1]; data[i+2] = c[2];
-      } else {
-        data[i] = stretched; data[i+1] = stretched; data[i+2] = stretched;
-      }
+      if (lut) { const c = lut[stretched]; data[i]=c[0]; data[i+1]=c[1]; data[i+2]=c[2]; }
+      else { data[i]=stretched; data[i+1]=stretched; data[i+2]=stretched; }
     }
     this._ctx.putImageData(imgData, 0, 0);
   }

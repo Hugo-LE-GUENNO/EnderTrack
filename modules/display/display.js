@@ -259,10 +259,10 @@ class DisplayModule {
             };
           }
         } else {
-          // Webcam: visible video element (simple, reliable)
+          // Webcam: visible video + canvas overlay for LUT/contrast
           const video = document.createElement('video');
           video.autoplay = true; video.muted = true; video.playsInline = true;
-          video.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
+          video.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000;';
           video.srcObject = camera.driver._stream;
           cell.appendChild(video);
           video.play().catch(() => {});
@@ -270,30 +270,21 @@ class DisplayModule {
             if (document.fullscreenElement) document.exitFullscreen();
             else cell.requestFullscreen?.();
           };
-          // Assign to driver so getFrame() works
           if (camera.driver) camera.driver._grabVideo = video;
           this._videos.set(viewportId, video);
-          // LiveRenderer on hidden canvas for LUT/contrast (only when enabled)
+
           const canvas = document.createElement('canvas');
           canvas.id = 'liveDisplayCanvas';
           canvas.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:none;';
           cell.appendChild(canvas);
+
           const liveRenderer = window.EnderTrack?.LiveRenderer;
           if (liveRenderer) {
             liveRenderer.setImage(null);
             liveRenderer.setVideo(video);
             liveRenderer.setCanvas(canvas);
-            const origRender = liveRenderer._renderFrame.bind(liveRenderer);
-            liveRenderer._renderFrame = () => {
-              if (liveRenderer.enabled) {
-                video.style.display = 'none';
-                canvas.style.display = '';
-                origRender();
-              } else {
-                canvas.style.display = 'none';
-                video.style.display = '';
-              }
-            };
+            liveRenderer._videoEl = video;  // ref for toggling
+            liveRenderer._canvasEl = canvas;
             liveRenderer.start();
           }
         }
