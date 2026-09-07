@@ -62,13 +62,13 @@ class CameraModule {
         const origRedraw = this.histogram._redraw.bind(this.histogram);
         this.histogram._redraw = () => {
           origRedraw();
-          const tab = window.EnderTrack?.State?.get?.()?.activeTab;
-          if (tab === 'navigation' || !tab) {
-            const r = this.histogram.getContrastRange();
-            const renderer = window.EnderTrack?.LiveRenderer;
-            if (renderer) { renderer.setContrast(r.min, r.max); renderer.enabled = (r.min > 0 || r.max < 255 || (this._liveLutId && this._liveLutId !== 'gray')); }
-            this._saveLiveSettings();
+          const r = this.histogram.getContrastRange();
+          const renderer = window.EnderTrack?.LiveRenderer;
+          if (renderer) {
+            renderer.setContrast(r.min, r.max);
+            renderer.enabled = (r.min > 0 || r.max < 255 || (this._liveLutId && this._liveLutId !== 'gray'));
           }
+          this._saveLiveSettings();
         };
         this.histogram._getCurrentLut = () => {
           if (!this._liveLutId || this._liveLutId === 'gray') return null;
@@ -688,12 +688,18 @@ class CameraModule {
     if (this._liveHistTimer) return;
     this._liveHistTimer = setInterval(() => {
       if (!this.live || !this.histogram) return;
-      const tab = window.EnderTrack?.State?.get?.()?.activeTab;
-      if (tab !== 'navigation') return;
-      this.getFrame().then(f => {
-        if (f?.frame) this.histogram.updateFromBase64(f.frame);
-      }).catch(() => {});
-    }, 1000);
+      // Read pixels directly from video via LiveRenderer canvas (fastest path)
+      const renderer = window.EnderTrack?.LiveRenderer;
+      const data = renderer?.getFrameData?.();
+      if (data) {
+        this.histogram.updateFromImageData(data, true);
+      } else {
+        // Fallback: grab frame
+        this.getFrame().then(f => {
+          if (f?.frame) this.histogram.updateFromBase64(f.frame);
+        }).catch(() => {});
+      }
+    }, 200);
   }
 
   _stopLiveHistogram() {
