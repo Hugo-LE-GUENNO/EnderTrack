@@ -1,0 +1,621 @@
+// plugins/scenario-builder/src/nodes/action-registry.js - Central Action Registry
+
+class ActionRegistry {
+  constructor() {
+    this.actions = new Map();
+    this.categories = new Map();
+    this.registerCoreActions();
+  }
+
+  registerCoreActions() {
+    // ⏱️ Attendre
+    this.register({
+      id: 'wait',
+      label: '⏱️ Attendre',
+      icon: '⏱️',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Attendre' },
+        { id: 'duration', label: 'Durée (s)', type: 'number', default: 1, min: 0, step: 0.1 },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', placeholder: 'Attente $duration s', showIf: 'showInLog' }
+      ],
+      execute: async (params, context) => {
+        const vars = context?.variables || {};
+        const duration = _evalExpr(params.duration, vars);
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `⏱️ Attendre ${duration}s`, context), 'info');
+        }
+        await new Promise(r => setTimeout(r, duration * 1000));
+        return { success: true };
+      }
+    });
+
+    // 🎯 Se déplacer
+    this.register({
+      id: 'move',
+      label: '🎯 Se déplacer',
+      icon: '🎯',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Se déplacer' },
+        { id: 'moveType', label: 'Mode', type: 'select', options: [
+          { value: 'absolute', label: 'Absolu' },
+          { value: 'relative', label: 'Relatif' }
+        ], default: 'absolute' },
+        // Absolu — source
+        { id: 'absSource', label: 'Source', type: 'select', options: [
+          { value: 'manual', label: '✏️ Coordonnées' },
+          { value: 'list', label: '📍 Liste' },
+          { value: 'strategic', label: '🚩 Position stratégique' }
+        ], default: 'manual', showIf: 'moveType=absolute' },
+        // Absolu manual
+        { id: 'x', label: 'X (mm)', type: 'text', default: '0', placeholder: '0 ou $x+5', showIf: 'moveType=absolute,absSource=manual' },
+        { id: 'y', label: 'Y (mm)', type: 'text', default: '0', placeholder: '0', showIf: 'moveType=absolute,absSource=manual' },
+        { id: 'z', label: 'Z (mm)', type: 'text', default: '0', placeholder: '0', showIf: 'moveType=absolute,absSource=manual' },
+        // Absolu list
+        { id: 'listId', label: 'Liste', type: 'list-select', default: '', showIf: 'moveType=absolute,absSource=list' },
+        { id: 'listPickMode', label: 'Sélection', type: 'select', options: [
+          { value: 'index', label: '🔢 Par indice (variable)' },
+          { value: 'pick', label: '📌 Choisir une position' }
+        ], default: 'index', showIf: 'moveType=absolute,absSource=list' },
+        { id: 'listIndex', label: 'Indice', type: 'text', default: '$i', placeholder: '$i', showIf: 'moveType=absolute,absSource=list,listPickMode=index' },
+        { id: 'listPick', label: 'Position', type: 'list-position-select', default: '', showIf: 'moveType=absolute,absSource=list,listPickMode=pick' },
+        // Absolu strategic
+        { id: 'strategicId', label: 'Position', type: 'strategic-select', default: 'homeXY', showIf: 'moveType=absolute,absSource=strategic' },
+        // Relatif
+        { id: 'dx', label: 'Delta X (mm)', type: 'text', default: '0', showIf: 'moveType=relative' },
+        { id: 'dy', label: 'Delta Y (mm)', type: 'text', default: '0', showIf: 'moveType=relative' },
+        { id: 'dz', label: 'Delta Z (mm)', type: 'text', default: '0', showIf: 'moveType=relative' },
+        // Settle
+        { id: 'settle', label: 'Stabilisation (ms)', type: 'number', default: 0, min: 0 },
+        // Log
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', placeholder: 'Déplacement...', showIf: 'showInLog' }
+      ],
+      execute: async (params, context) => {
+        const vars = context?.variables || {};
+        let x = 0, y = 0, z = 0;
+
+        if (params.moveType === 'relative') {
+          x = _evalExpr(params.dx, vars);
+          y = _evalExpr(params.dy, vars);
+          z = _evalExpr(params.dz, vars);
+          if (window.EnderTrack?.Movement) {
+            await window.EnderTrack.Movement.moveRelative(x, y, z);
+          }
+        } else {
+          // Absolu
+          const src = params.absSource || 'manual';
+          let resolvedListId = params.listId;
+          if (src === 'list' && !resolvedListId) {
+            // Fallback: find listId from executor loop context
+            const loopListId = context?.loopListId;
+            if (loopListId) resolvedListId = loopListId;
+          }
+          if (src === 'list' && resolvedListId) {
+            let list = window.EnderTrack?.Lists?.manager?.getList?.(resolvedListId);
+            // Fallback: if list not found, use first available
+            if (!list) {
+              const all = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+              list = all[0];
+            }
+            if (params.listPickMode === 'pick') {
+              const pos = list?.positions?.[parseInt(params.listPick) || 0];
+              if (pos) { x = pos.x; y = pos.y; z = pos.z; }
+            } else {
+              const idx = _evalExpr(params.listIndex, vars);
+              const pos = list?.positions?.[Math.floor(idx)];
+              if (pos) { x = pos.x; y = pos.y; z = pos.z; }
+            }
+          } else if (src === 'strategic') {
+            const state = window.EnderTrack?.State?.get?.();
+            const id = params.strategicId || 'homeXY';
+            if (id === 'homeXY') {
+              const h = state?.homePositions?.xy || { x: 0, y: 0 };
+              x = h.x; y = h.y; z = state?.pos?.z || 0;
+            } else if (id === 'homeXYZ') {
+              const h = state?.homePositions?.xyz || { x: 0, y: 0, z: 0 };
+              x = h.x; y = h.y; z = h.z;
+            }
+          } else {
+            x = _evalExpr(params.x, vars);
+            y = _evalExpr(params.y, vars);
+            z = _evalExpr(params.z, vars);
+          }
+          if (window.EnderTrack?.Movement) {
+            await window.EnderTrack.Movement.moveAbsolute(x, y, z);
+          }
+        }
+
+        // Settle time after movement
+        const settle = parseInt(params.settle) || 0;
+        if (settle > 0) await new Promise(r => setTimeout(r, settle));
+
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          const msg = params.logMessage || `🎯 ${params.moveType === 'relative' ? 'Δ' : '→'}(${x}, ${y}, ${z})`;
+          window.EnderTrack.Scenario.addLog(_resolveVars(msg, context), 'info');
+        }
+        return { success: true };
+      }
+    });
+
+    // 📝 Message log
+    this.register({
+      id: 'log',
+      label: '📝 Message log',
+      icon: '📝',
+      category: 'core',
+      params: [
+        { id: 'message', label: 'Message', type: 'text', default: '', placeholder: 'Position: $x, $y' }
+      ],
+      execute: async (params, context) => {
+        const msg = _resolveVars(params.message || '', context);
+        console.log(`📝 [Scenario] ${msg}`);
+        window.EnderTrack?.Scenario?.addLog?.(msg, 'info');
+        return { success: true };
+      }
+    });
+
+    // 💡 LED (status indicator)
+    this.register({
+      id: 'led',
+      label: '💡 LED',
+      icon: '💡',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'LED' },
+        { id: 'ledColor', label: 'Couleur', type: 'select', options: [
+          { value: 'green', label: '🟢 Vert' },
+          { value: 'orange', label: '🟠 Orange' },
+          { value: 'red', label: '🔴 Rouge' }
+        ], default: 'green' },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
+      ],
+      execute: async (params, context) => {
+        const color = params.ledColor || 'green';
+        const el = (id) => document.getElementById(id);
+        const colors = { green: '#22c55e', orange: '#f59e0b', red: '#ef4444' };
+        ['green', 'orange', 'red'].forEach(c => {
+          const led = el('status-light-' + c);
+          if (!led) return;
+          const on = c === color;
+          led.style.opacity = on ? '1' : '0.2';
+          led.style.boxShadow = on ? `0 0 12px ${colors[c]}` : 'none';
+        });
+        await new Promise(r => setTimeout(r, 50));
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `💡 LED ${color}`, context), 'info');
+        }
+        return { success: true };
+      }
+    });
+
+    // 💡 NeoPixel Light (pilight)
+    this.register({
+      id: 'light_set',
+      label: '💡 Lumi\u00e8re',
+      icon: '💡',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Lumi\u00e8re' },
+        { id: 'action', label: 'Action', type: 'select', options: [
+          { value: 'on', label: 'ON' },
+          { value: 'off', label: 'OFF' },
+          { value: 'set', label: 'Set intensit\u00e9' }
+        ], default: 'on' },
+        { id: 'lightId', label: 'ID lumi\u00e8re', type: 'number', default: 1, min: 1 },
+        { id: 'intensity', label: 'Intensit\u00e9 (%)', type: 'number', default: 100, min: 0, max: 100 },
+        { id: 'r', label: 'R', type: 'number', default: 255, min: 0, max: 255 },
+        { id: 'g', label: 'G', type: 'number', default: 255, min: 0, max: 255 },
+        { id: 'b', label: 'B', type: 'number', default: 255, min: 0, max: 255 },
+        { id: 'showInLog', label: 'Log', type: 'checkbox', default: false }
+      ],
+      execute: async (params, context) => {
+        const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const id = parseInt(params.lightId) || 1;
+        const intensity = (parseInt(params.intensity) || 100) / 100;
+        const endpoint = '/api/light/' + (params.action === 'off' ? 'off' : 'on');
+        const body = { id, intensity, r: parseInt(params.r)||255, g: parseInt(params.g)||255, b: parseInt(params.b)||255 };
+        try {
+          const res = await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+          if (!res.ok) console.warn('[light_set] server error:', res.status);
+        } catch (e) { console.warn('[light_set] fetch error:', e); }
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog('Light #' + id + ' ' + params.action, 'info');
+        }
+        return { success: true };
+      }
+
+    });
+
+    // 🛑 STOP
+    this.register({
+      id: 'stop',
+      label: '🛑 STOP',
+      icon: '🛑',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'STOP' },
+        { id: 'condition', label: 'Condition (vide = stop immédiat)', type: 'text', default: '', placeholder: '$z < 1.20' },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
+      ],
+      execute: async (params, context) => {
+        let shouldStop = true;
+        if (params.condition) {
+          shouldStop = window.EnderTrack.ConditionEvaluator.evaluate(params.condition, context?.variables || {});
+        }
+        if (shouldStop) {
+          if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+            window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `🛑 STOP${params.condition ? ': ' + params.condition : ''}`, context), 'warning');
+          }
+          window.EnderTrack?.Scenario?.executor?.stop?.();
+        }
+        return { success: true, stopped: shouldStop };
+      }
+    });
+
+    this.register({
+      id: 'autofocus',
+      label: '\ud83d\udd0d Autofocus',
+      icon: '\ud83d\udd0d',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Autofocus' },
+        { id: 'range', label: 'Range (\u00b1 mm)', type: 'number', default: 2, min: 0.1, step: 0.1 },
+        { id: 'showInLog', label: 'Log', type: 'checkbox', default: true }
+      ],
+      execute: async (params, context) => {
+        const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const state = window.EnderTrack?.State?.get?.();
+        const z = state?.pos?.z || 0;
+        const range = parseFloat(params.range) || 2;
+        try {
+          const res = await fetch(base + '/api/camera/picam/autofocus', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ z_min: z - range, z_max: z + range, mode: params.mode || 'quick' })
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.EnderTrack?.State?.update?.({ pos: { ...state.pos, z: data.best_z } });
+            if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+              window.EnderTrack.Scenario.addLog('\ud83d\udd2c AF: z=' + data.best_z.toFixed(3) + 'mm', 'info');
+            }
+            return { success: true, best_z: data.best_z };
+          }
+          return { success: false };
+        } catch (e) {
+          return { success: false };
+        }
+      }
+    });
+
+
+    // 📷 Capture
+    this.register({
+      id: 'capture',
+      label: '\ud83d\udcf7 Capture',
+      icon: '\ud83d\udcf7',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Capture' },
+        { id: 'format', label: 'Format', type: 'select', options: [
+          { value: 'tiff', label: 'TIFF (16-bit)' },
+          { value: 'png', label: 'PNG (8-bit)' }
+        ], default: 'tiff' },
+        { id: 'exposure', label: 'Exposition (µs)', type: 'number', default: 0, min: 0, placeholder: '0 = auto' },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: true },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
+      ],
+      execute: async (params, context) => {
+        const camera = window.EnderTrack?.Camera;
+        if (!camera) return { success: false, error: 'No camera' };
+
+        // Set exposure if specified
+        const expo = parseInt(params.exposure) || 0;
+        if (expo > 0 && camera.setPicamConfig) {
+          await camera.setPicamConfig({ exposure: expo });
+          await new Promise(r => setTimeout(r, Math.max(100, expo / 1000)));
+        }
+
+        // Get frame from camera
+        const frame = await camera.getFrame();
+        if (!frame?.frame) {
+          console.warn('[capture] No frame from getFrame, falling back to camera.capture()');
+          const result = await camera.capture({ format: params.format || 'tiff' });
+          if (context && result.path) {
+            if (!context._captures) context._captures = [];
+            context._captures.push(result.path);
+          }
+          return { success: !!result.path, path: result.path };
+        }
+
+        // If stack mode (context has _stackPath), append to stack
+        if (context?._stackPath) {
+          const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+          const res = await fetch(url + '/api/stack/append', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              frame: frame.frame,
+              output: context._stackPath,
+              metadata: { ...(context._stackMeta || {}),
+                displayMin: window.EnderTrack?.LiveRenderer?.min || 0,
+                displayMax: window.EnderTrack?.LiveRenderer?.max || 255,
+                lut: window.EnderTrack?.Camera?._liveLutId || 'gray'
+              }
+            })
+          });
+          const result = await res.json();
+          if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+            window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `\ud83d\udcf7 p.${result.pages || '?'}`, context), 'info');
+          }
+          try { window.EnderTrack?.StackViewer?._onNewPage?.(context._stackPath, result.pages); } catch(e) { console.warn('[capture] _onNewPage error:', e.message); }
+          return { success: true, path: context._stackPath, pages: result.pages };
+        }
+
+        // No stack mode: save individual file via camera.capture()
+        console.warn('[capture] No _stackPath in context, keys:', Object.keys(context || {}));
+        const result = await camera.capture({ format: params.format || 'tiff' });
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `\ud83d\udcf7 ${result.path || 'capture'}`, context), 'info');
+        }
+        if (context && result.path) {
+          if (!context._captures) context._captures = [];
+          context._captures.push(result.path);
+        }
+        return { success: true, path: result.path };
+      }
+    });
+
+    // \ud83d\udca1 Channel (excitation)
+    this.register({
+      id: 'channel',
+      label: '\ud83d\udca1 Channel',
+      icon: '\ud83d\udca1',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Channel' },
+        { id: 'channelName', label: 'Nom du canal', type: 'text', default: 'CH1', placeholder: 'GFP, DAPI, BF...' },
+        { id: 'ledId', label: 'LED/Source', type: 'text', default: '', placeholder: 'ID du p\u00e9riph\u00e9rique' },
+        { id: 'intensity', label: 'Intensit\u00e9 (%)', type: 'number', default: 100, min: 0, max: 100 },
+        { id: 'exposure', label: 'Exposition (ms)', type: 'number', default: 100, min: 1 },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
+        { id: 'logMessage', label: 'Message', type: 'text', default: '', showIf: 'showInLog' }
+      ],
+      execute: async (params, context) => {
+        // Set excitation source
+        if (params.ledId) {
+          const peripherals = window.EnderTrack?.State?.get?.()?.peripherals || [];
+          const led = peripherals.find(p => p.id === params.ledId || p.name === params.ledId);
+          // TODO: send command to LED controller
+        }
+        // Set camera exposure
+        const camera = window.EnderTrack?.Camera;
+        if (camera && params.exposure) {
+          camera.config.exposure = params.exposure * 1000; // ms to us
+        }
+        // Store channel info in context
+        if (context) {
+          context._currentChannel = params.channelName || 'CH1';
+          if (!context._channelNames) context._channelNames = [];
+          if (!context._channelNames.includes(context._currentChannel)) {
+            context._channelNames.push(context._currentChannel);
+          }
+        }
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(_resolveVars(params.logMessage || `\ud83d\udca1 ${params.channelName}`, context), 'info');
+        }
+        return { success: true, channel: params.channelName };
+      }
+    });
+
+
+    // 📦 Init Stack (sets context._stackPath for live append)
+    this.register({
+      id: 'init_stack',
+      label: '📦 Init Stack',
+      icon: '📦',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Init Stack' },
+        { id: 'name', label: 'Nom du fichier', type: 'text', default: 'acquisition', placeholder: 'nom_sans_extension' },
+        { id: 'positions', label: 'Positions', type: 'number', default: 1 },
+        { id: 'metadata', label: 'Metadata', type: 'hidden', default: {} }
+      ],
+      execute: async (params, context) => {
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        const name = (params.name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const nPos = parseInt(params.positions) || 1;
+        if (context) {
+          context._stackMeta = params.metadata || {};
+          if (nPos > 1) {
+            // Multi-position: one stack per position
+            context._stackPaths = {};
+            for (let i = 0; i < nPos; i++) {
+              context._stackPaths[i] = `./captures/${name}_pos${i + 1}_${ts}.tif`;
+            }
+            context._stackPath = context._stackPaths[0];
+            if (window.EnderTrack?.Scenario?.addLog) {
+              window.EnderTrack.Scenario.addLog(`📦 ${nPos} stacks: ${name}_pos*_${ts}.tif`, 'info');
+            }
+          } else {
+            // Single stack
+            context._stackPath = `./captures/${name}_${ts}.tif`;
+            context._stackPaths = null;
+            if (window.EnderTrack?.Scenario?.addLog) {
+              window.EnderTrack.Scenario.addLog(`📦 Stack: ${context._stackPath}`, 'info');
+            }
+          }
+        }
+        return { success: true, path: context?._stackPath };
+      }
+    });
+
+    // 🔀 Switch Stack (for multi-position: select which stack to append to)
+    this.register({
+      id: 'switch_stack',
+      label: '🔀 Switch Stack',
+      icon: '🔀',
+      category: 'core',
+      params: [
+        { id: 'indexVar', label: 'Variable index', type: 'text', default: '$i' }
+      ],
+      execute: async (params, context) => {
+        if (!context?._stackPaths) return { success: true };
+        const vars = context.variables || {};
+        const idx = window.EnderTrack._evalExpr(params.indexVar, vars);
+        const path = context._stackPaths[Math.floor(idx)];
+        if (path) {
+          context._stackPath = path;
+          // Notify stack viewer to follow this position
+          try { window.EnderTrack?.StackViewer?._onNewPage?.(path, null); } catch(e) {}
+        }
+        return { success: true, path };
+      }
+    });
+    // \ud83d\udcda Cr\u00e9er Stack (legacy — assembles individual files)
+    this.register({
+      id: 'create_stack',
+      label: '\ud83d\udcda Cr\u00e9er Stack',
+      icon: '\ud83d\udcda',
+      category: 'core',
+      params: [
+        { id: 'label', label: 'Label', type: 'text', default: 'Cr\u00e9er Stack' },
+        { id: 'name', label: 'Nom du fichier', type: 'text', default: 'acquisition', placeholder: 'nom_sans_extension' },
+        { id: 'sizeC', label: 'Canaux (C)', type: 'number', default: 1, min: 1 },
+        { id: 'sizeZ', label: 'Slices (Z)', type: 'number', default: 1, min: 1 },
+        { id: 'sizeT', label: 'Frames (T)', type: 'number', default: 1, min: 1 },
+        { id: 'spacing', label: 'Z step (\u00b5m)', type: 'number', default: 0, min: 0, step: 0.01 },
+        { id: 'finterval', label: 'T interval (s)', type: 'number', default: 0, min: 0, step: 0.1 },
+        { id: 'pixelSize', label: 'Pixel size (\u00b5m)', type: 'number', default: 0, min: 0, step: 0.001 },
+        { id: 'grayscale', label: 'Grayscale', type: 'checkbox', default: true },
+        { id: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: true }
+      ],
+      execute: async (params, context) => {
+        const captures = context?._captures || [];
+        console.log('[create_stack] captures:', captures.length, captures);
+        if (captures.length === 0) return { success: false, error: 'No captures' };
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        const name = (params.name || 'acquisition').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const output = `./captures/${name}_${ts}.tif`;
+        const metadata = {
+          sizeC: parseInt(params.sizeC) || 1,
+          sizeZ: parseInt(params.sizeZ) || 1,
+          sizeT: parseInt(params.sizeT) || 1
+        };
+        if (params.spacing > 0) metadata.spacing = params.spacing;
+        if (params.finterval > 0) metadata.finterval = params.finterval;
+        if (params.pixelSize > 0) metadata.pixelSize = params.pixelSize;
+        metadata.unit = 'micron';
+        metadata.grayscale = params.grayscale !== false;
+        const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const res = await fetch(url + '/api/stack/create', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: captures, output, metadata })
+        });
+        const result = await res.json();
+        if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
+          window.EnderTrack.Scenario.addLog(`\ud83d\udcda ${output} (${captures.length} pages)`, 'info');
+        }
+        // Clear captures for next stack
+        if (context) context._captures = [];
+        return { success: true, path: output, ...result };
+      }
+    });
+
+
+
+  }
+
+  register(actionDef) {
+    if (!actionDef.id || !actionDef.label || !actionDef.icon) return false;
+    this.actions.set(actionDef.id, actionDef);
+    const cat = actionDef.category || 'custom';
+    if (!this.categories.has(cat)) this.categories.set(cat, []);
+    this.categories.get(cat).push(actionDef.id);
+    return true;
+  }
+
+  getAllActions() { return Array.from(this.actions.values()); }
+  getByCategory(cat) { return (this.categories.get(cat) || []).map(id => this.actions.get(id)); }
+  get(id) { return this.actions.get(id); }
+  getCategories() { return Array.from(this.categories.keys()); }
+
+  unregister(id) {
+    const a = this.actions.get(id);
+    if (!a) return false;
+    this.actions.delete(id);
+    const cat = a.category || 'custom';
+    if (this.categories.has(cat)) {
+      const ids = this.categories.get(cat);
+      const idx = ids.indexOf(id);
+      if (idx > -1) ids.splice(idx, 1);
+    }
+    return true;
+  }
+}
+
+// === Helpers ===
+
+// Substitute $variables in a string, return string
+function _resolveVars(msg, context) {
+  if (!msg || !context?.variables) return msg || '';
+  let out = String(msg);
+  // Sort keys longest-first to avoid $x matching before $xSlice
+  const keys = Object.keys(context.variables).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    const val = context.variables[key];
+    const re = new RegExp(key.replace(/\$/g, '\\$'), 'g');
+    if (typeof val === 'object' && val !== null) {
+      out = out.replace(re, `(${val.x}, ${val.y}, ${val.z})`);
+    } else {
+      out = out.replace(re, val);
+    }
+  }
+  return out;
+}
+
+// Evaluate expression to number, substituting $variables. Returns 0 on failure.
+function _evalExpr(expr, vars) {
+  if (expr === undefined || expr === null || expr === '') return 0;
+  let s = String(expr).replace(',', '.');
+  const num = Number(s);
+  if (!isNaN(num)) return num;
+  try {
+    let e = s;
+    // Sort keys longest-first
+    const keys = Object.keys(vars).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      const val = vars[key];
+      if (typeof val === 'number') {
+        e = e.replace(new RegExp(key.replace(/\$/g, '\\$'), 'g'), val);
+      }
+    }
+    return Number(Function('"use strict"; return (' + e + ')')()) || 0;
+  } catch { return 0; }
+}
+
+// Evaluate expression as string (for filenames, messages with mixed text+vars)
+// e.g. "img_$i_z$k.tif" → "img_3_z5.tif"
+function _evalStr(expr, vars) {
+  if (expr === undefined || expr === null) return '';
+  let e = String(expr);
+  const keys = Object.keys(vars).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    const val = vars[key];
+    if (typeof val === 'object' && val !== null) {
+      e = e.replace(new RegExp(key.replace(/\$/g, '\\$'), 'g'), `${val.x}_${val.y}_${val.z}`);
+    } else {
+      e = e.replace(new RegExp(key.replace(/\$/g, '\\$'), 'g'), val);
+    }
+  }
+  return e;
+}
+
+window.EnderTrack = window.EnderTrack || {};
+window.EnderTrack.ActionRegistry = new ActionRegistry();
+window.EnderTrack._evalExpr = _evalExpr;
+window.EnderTrack._evalStr = _evalStr;
+window.EnderTrack._resolveVars = _resolveVars;
