@@ -21,7 +21,6 @@
     <link rel="stylesheet" href="frontend/assets/styles/utilities.css">
     <link rel="stylesheet" href="frontend/assets/endertrack.css">
     <link rel="stylesheet" href="modules/scenario-builder/scenario-builder.css">
-    <!-- legacy: <link rel="stylesheet" href="modules/scenario-builder-legacy/scenario-builder.css"> -->
     <link rel="stylesheet" href="frontend/assets/styles/global-header.css">
     <link rel="stylesheet" href="frontend/assets/styles/canvas-overlays.css">
     <link rel="stylesheet" href="frontend/assets/styles/viewport-empty.css">
@@ -61,10 +60,10 @@
                     Positions
                 </button>
                 <button class="tab-btn" id="acquisitionTab" onclick="switchTab('acquisition')">
-                    Automatisation
+                    Acquisition
                 </button>
                 <button class="tab-btn" id="imageTab" onclick="switchTab('image')">
-                    Données
+                    Image
                 </button>
 
             </div>
@@ -619,12 +618,9 @@
                     <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
                 </div>
 
-                <!-- Automatisation Panel -->
+                <!-- Acquisition Panel -->
                 <div class="tab-panel" id="acquisitionTabContent">
-                    <div style="padding:12px; display:flex; flex-direction:column; gap:8px;">
-                        <button onclick="EnderTrack.ScenarioBuilder.open()" style="padding:8px 16px; border:none; border-radius:5px; background:var(--active-element); color:var(--text-selected); cursor:pointer; font-size:12px; font-weight:600;">🎬 Ouvrir le constructeur</button>
-                        <div id="sb-run-status" style="font-size:10px; color:#888;"></div>
-                    </div>
+                    <!-- Scenario Builder interface -->
                 </div>
 
                 <!-- Image Panel -->
@@ -817,30 +813,20 @@
     <!-- Overlays -->
     <script src="modules/overlays.js"></script>
     <script src="modules/lists.js"></script>
-
-    <!-- New minimal scenario builder -->
-    <script src="modules/scenario-builder/scenario-manager.js"></script>
-    <script src="modules/scenario-builder/scenario-executor.js"></script>
-    <script src="modules/scenario-builder/scenario-builder.js"></script>
-    <!-- Plugins -->
-    <script src="plugins/automate-microscopie/index.js"></script>
-    <script src="plugins/automate-python/index.js"></script>
-    <!-- Legacy (kept for reference)
-    <script src="modules/scenario-builder-legacy/utils/tree-utils.js"></script>
-    <script src="modules/scenario-builder-legacy/utils/condition-evaluator.js"></script>
-    <script src="modules/scenario-builder-legacy/nodes/loop-types.js"></script>
-    <script src="modules/scenario-builder-legacy/nodes/condition-types.js"></script>
-    <script src="modules/scenario-builder-legacy/nodes/action-registry.js"></script>
-    <script src="modules/scenario-builder-legacy/core/macro-registry.js"></script>
-    <script src="modules/scenario-builder-legacy/core/scenario-manager.js"></script>
-    <script src="modules/scenario-builder-legacy/core/scenario-executor.js"></script>
-    <script src="modules/scenario-builder-legacy/ui/variable-manager.js"></script>
-    <script src="modules/scenario-builder-legacy/ui/code-generator.js"></script>
-    <script src="modules/scenario-builder-legacy/ui/scenario-builder.js"></script>
-    <script src="modules/scenario-builder-legacy/core/scenario-module.js"></script>
-    -->
+    <!-- Scenario Builder -->
+    <script src="modules/scenario-builder/utils/tree-utils.js"></script>
+    <script src="modules/scenario-builder/utils/condition-evaluator.js"></script>
+    <script src="modules/scenario-builder/nodes/loop-types.js"></script>
+    <script src="modules/scenario-builder/nodes/condition-types.js"></script>
+    <script src="modules/scenario-builder/nodes/action-registry.js"></script>
+    <script src="modules/scenario-builder/core/macro-registry.js"></script>
+    <script src="modules/scenario-builder/core/scenario-manager.js"></script>
+    <script src="modules/scenario-builder/core/scenario-executor.js"></script>
+    <script src="modules/scenario-builder/ui/variable-manager.js"></script>
+    <script src="modules/scenario-builder/ui/code-generator.js"></script>
+    <script src="modules/scenario-builder/ui/scenario-builder.js"></script>
     <script src="modules/image/image-manager.js"></script>
-
+    <script src="modules/scenario-builder/core/scenario-module.js"></script>
 
     <!-- Camera -->
     <script src="modules/camera/luts.js"></script>
