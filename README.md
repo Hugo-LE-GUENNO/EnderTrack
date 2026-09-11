@@ -32,7 +32,7 @@ Each edition is a **branch** with its own feature set.
 | Edition | Features | Version |
 |---------|---------|---------|
 | [`basic`](../../tree/basic) | XYZ stage navigation, position lists | v2.4.1 |
-| [`imaging`](../../tree/imaging) | basic + image acquisition, camera control, lighting, image gallery | v1.2.4 |
+| [`imaging`](../../tree/imaging) | basic + image acquisition, camera control, lighting, image gallery | v1.2.5 |
 | [`plotter`](../../tree/plotter) | basic + pen plotter (image → XY path) | v1.0.0 |
 
 For another edition: `git clone -b <edition> https://github.com/Hugo-LE-GUENNO/EnderTrack.git`
