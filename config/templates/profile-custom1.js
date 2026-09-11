@@ -1,5 +1,5 @@
-// Profils custom 1 - Imprimantes spécialisées
-window.ProfileCustom1 = [
+// Profiles custom 1 - Imprimantes specialized
+window.ProfileeCustom1 = [
   {
     "id": "custom_large_printer",
     "name": "Imprimante Large Format",
@@ -11,7 +11,7 @@ window.ProfileCustom1 = [
       "z": { "min": 0, "max": 300 }
     },
     "axisOrientation": { "x": "right", "y": "down", "z": "up" },
-    "description": "Imprimante 3D grand format personnalisée",
+    "description": "Imprimante 3D grand format custom",
     "customCategory": "Custom",
     "gcode": true
   },

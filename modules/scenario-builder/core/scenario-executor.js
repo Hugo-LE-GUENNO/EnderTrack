@@ -23,6 +23,10 @@ class ScenarioExecutor {
     this.totalIterations = 0;
     this.lastWatcherState = {};
     this.currentLoopIndex = 0;
+
+    // Initialiser le VariableManager avec le scénario courant
+    const currentScenario = window.EnderTrack?.Scenario?.manager?.getCurrentScenario?.();
+    if (currentScenario) window.EnderTrack?.VariableManager?.init?.(currentScenario);
     
     if (window.EnderTrack?.Scenario) {
       window.EnderTrack.Scenario.isActive = true;
@@ -227,45 +231,40 @@ class ScenarioExecutor {
       return;
     }
 
-    const iterationCount = loopDef.getIterationCount(loopNode.params, this.context);
-    console.log('[Executor] executeLoop:', loopNode.loopId, 'iterations:', iterationCount, 'params:', JSON.stringify(loopNode.params));
+    this.updateVariables();
+    const resolvedCount = _evalExpr(loopNode.params?.count, this.context.variables);
+    const iterationCount = loopDef.getIterationCount(
+      { ...loopNode.params, count: resolvedCount },
+      this.context
+    );
     const loopVar = loopNode.params?.loopVar || '$i';
     const startIndex = loopNode.params?.startIndex || 0;
     const increment = loopNode.params?.increment || 1;
-    
+
     if (loopNode.params.showInLog && window.EnderTrack?.Scenario?.addLog) {
-      let message = loopNode.params.logMessage || `${loopNode.params.label || loopDef.label} (${iterationCount === Infinity ? '∞' : iterationCount}x)`;
+      const message = _resolveVars(loopNode.params.logMessage || `${loopNode.params.label || loopDef.label} (${iterationCount === Infinity ? '∞' : iterationCount}x)`, this.context);
       window.EnderTrack.Scenario.addLog(message, 'info');
     }
-    
-    // Show loop progress container
+
     const loopProgressContainer = document.getElementById('loop-progress-container');
     const loopTimingContainer = document.getElementById('loop-timing-container');
-    if (loopProgressContainer && iterationCount > 1 && iterationCount !== Infinity) {
-      loopProgressContainer.style.display = 'block';
-    }
-    if (loopTimingContainer && iterationCount > 1 && iterationCount !== Infinity) {
-      loopTimingContainer.style.display = 'block';
-    }
-    
+    if (loopProgressContainer && iterationCount > 1 && iterationCount !== Infinity) loopProgressContainer.style.display = 'block';
+    if (loopTimingContainer && iterationCount > 1 && iterationCount !== Infinity) loopTimingContainer.style.display = 'block';
     this.loopStartTime = Date.now();
 
-    // Boucle WHILE spéciale
+    // Boucle WHILE
     if (loopNode.loopId === 'while') {
       let i = 0;
       const maxIter = loopNode.params?.maxIterations || 100;
       const condition = loopNode.params?.condition || '$i < 10';
-      
       while (i < maxIter && this.isExecuting) {
         const loopValue = startIndex + (i * increment);
         this.totalIterations++;
         this.currentLoopIndex = loopValue;
-        
         while (this.isPaused) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(r => setTimeout(r, 100));
           if (!this.isExecuting) break;
         }
-        
         this.context.iteration = i;
         this.context.variables[loopVar] = loopValue;
         this.updateVariables();
@@ -273,117 +272,60 @@ class ScenarioExecutor {
         if (!this.isExecuting) break;
         let conditionResult = false;
         if (window.EnderTrack?.ConditionEvaluator) {
-          try {
-            conditionResult = window.EnderTrack.ConditionEvaluator.evaluate(condition, this.context.variables);
-          } catch (error) {
-            console.error('[Executor] While condition error:', error);
-            break;
-          }
+          try { conditionResult = window.EnderTrack.ConditionEvaluator.evaluate(condition, this.context.variables); }
+          catch (e) { console.error('[Executor] While condition error:', e); break; }
         }
-        
-        if (!conditionResult) {
-          break;
-        }
-        
-        if (loopNode.params.showInLog && loopNode.params.logMessage && window.EnderTrack?.Scenario?.addLog) {
-          let message = loopNode.params.logMessage;
-          message = message.replace(new RegExp(loopVar.replace(/\$/g, '\\$'), 'g'), loopValue);
-          if (this.context.variables) {
-            Object.keys(this.context.variables).forEach(key => {
-              const value = this.context.variables[key];
-              if (typeof value === 'object' && value !== null) {
-                message = message.replace(new RegExp(key.replace(/\$/g, '\\$'), 'g'), `(${value.x}, ${value.y}, ${value.z})`);
-              } else {
-                message = message.replace(new RegExp(key.replace(/\$/g, '\\$'), 'g'), value);
-              }
-            });
-          }
-          window.EnderTrack.Scenario.addLog(message, 'info');
-        }
-        
+        if (!conditionResult) break;
+        if (loopNode.params.showInLog && loopNode.params.logMessage && window.EnderTrack?.Scenario?.addLog)
+          window.EnderTrack.Scenario.addLog(_resolveVars(loopNode.params.logMessage, this.context), 'info');
         for (const child of loopNode.children || []) {
           if (!this.isExecuting) break;
           await this.executeNode(child);
         }
-        
         i++;
       }
-      
+      if (loopProgressContainer) loopProgressContainer.style.display = 'none';
+      if (loopTimingContainer) loopTimingContainer.style.display = 'none';
       return;
     }
 
     // Boucle FOR classique
     for (let i = 0; i < iterationCount; i++) {
       if (!this.isExecuting) break;
-      
       const loopValue = startIndex + (i * increment);
-      
       this.totalIterations++;
       this.currentLoopIndex = loopValue;
       this.currentLoopIteration = i + 1;
       this.totalLoopIterations = iterationCount;
-      
-      // Update loop progress
       this.updateLoopProgress(i + 1, iterationCount);
-      // Update right panel progress bar
-      if (window.EnderTrack?.Scenario?._updateRunUI) {
+      if (window.EnderTrack?.Scenario?._updateRunUI)
         window.EnderTrack.Scenario._updateRunUI(i + 1, iterationCount);
-      }
-      
       while (this.isPaused) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(r => setTimeout(r, 100));
         if (!this.isExecuting) break;
       }
-      
       this.context.iteration = i;
       this.context.variables[loopVar] = loopValue;
-      
-      if (loopDef.getVariables) {
-        const vars = loopDef.getVariables(loopNode.params, i);
-        Object.assign(this.context.variables, vars);
-      }
-      
+      if (loopDef.getVariables) Object.assign(this.context.variables, loopDef.getVariables(loopNode.params, i));
       this.updateVariables();
       await this.checkWatchers();
       if (!this.isExecuting) break;
-      
-      if (loopNode.params.showInLog && loopNode.params.logMessage && window.EnderTrack?.Scenario?.addLog) {
-        let message = loopNode.params.logMessage;
-        message = message.replace(new RegExp(loopVar.replace(/\$/g, '\\$'), 'g'), loopValue);
-        if (this.context.variables) {
-          Object.keys(this.context.variables).forEach(key => {
-            const value = this.context.variables[key];
-            if (typeof value === 'object' && value !== null) {
-              message = message.replace(new RegExp(key.replace(/\$/g, '\\$'), 'g'), `(${value.x}, ${value.y}, ${value.z})`);
-            } else {
-              message = message.replace(new RegExp(key.replace(/\$/g, '\\$'), 'g'), value);
-              }
-          });
-        }
-        window.EnderTrack.Scenario.addLog(message, 'info');
-      }
-      
-      if (loopDef.beforeIteration) {
-        await loopDef.beforeIteration(loopNode.params, this.context);
-      }
-      
+      if (loopNode.params.showInLog && loopNode.params.logMessage && window.EnderTrack?.Scenario?.addLog)
+        window.EnderTrack.Scenario.addLog(_resolveVars(loopNode.params.logMessage, this.context), 'info');
+      if (loopDef.beforeIteration) await loopDef.beforeIteration(loopNode.params, this.context);
       for (const child of loopNode.children || []) {
         if (!this.isExecuting) break;
         await this.executeNode(child);
       }
-      
-      // Update loop time
       this.updateLoopTime();
     }
-    
-    // Hide loop progress after completion
+
     if (loopProgressContainer) loopProgressContainer.style.display = 'none';
     if (loopTimingContainer) loopTimingContainer.style.display = 'none';
   }
 
   async executeAction(actionNode) {
     if (!this.isExecuting) return;
-    console.log('[Executor] executeAction:', actionNode.actionId);
     
     const actionDef = window.EnderTrack?.ActionRegistry?.get(actionNode.actionId);
     if (!actionDef) {
@@ -404,7 +346,6 @@ class ScenarioExecutor {
 
     try {
       const result = await actionDef.execute(actionNode.params, this.context);
-      console.log('[Executor] action done:', actionNode.actionId, result);
       
       // Mettre à jour le track si c'est un mouvement
       if (actionNode.actionId === 'move') {
@@ -582,7 +523,7 @@ class ScenarioExecutor {
       
       if (triggered) {
         if (window.EnderTrack?.Scenario?.addLog) {
-          window.EnderTrack.Scenario.addLog(`🛑 Condition de sécurité: ${condition.label || condition.type}`, 'warning');
+          window.EnderTrack.Scenario.addLog(`🛑 Safety condition: ${condition.label || condition.type}`, 'warning');
         }
         return true;
       }

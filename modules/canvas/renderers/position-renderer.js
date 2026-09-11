@@ -322,11 +322,11 @@ class PositionRenderer {
     if (!coords) return;
     
     const bounds = coords.getCoordinateBounds();
-    const isOnPlateau = state.pos.x >= bounds.minX && state.pos.x <= bounds.maxX &&
+    const isOnBed = state.pos.x >= bounds.minX && state.pos.x <= bounds.maxX &&
                        state.pos.y >= bounds.minY && state.pos.y <= bounds.maxY;
     
     // Ne pas afficher le crosshair si en dehors du plateau
-    if (!isOnPlateau) return;
+    if (!isOnBed) return;
     
     if (posX < -50 || posX > (ctx.canvas._cssW||ctx.canvas.width) + 50 || 
         posY < -50 || posY > (ctx.canvas._cssH||ctx.canvas.height) + 50) {

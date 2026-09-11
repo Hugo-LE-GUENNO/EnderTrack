@@ -1,7 +1,7 @@
 // modules/canvas/zoom-pan-modal.js - Modal for manual zoom/pan adjustment
 
 function openZoomPanModal(event) {
-  // Fermer toute modale existante
+  // Close toute modale existante
   const existing = document.querySelector('.zoom-pan-modal');
   if (existing) existing.remove();
 
@@ -14,7 +14,7 @@ function openZoomPanModal(event) {
   const safePanY = (state.panY != null && !isNaN(state.panY)) ? state.panY : 0;
   const safePanZ = (state.zPan != null && !isNaN(state.zPan)) ? state.zPan : 0;
   
-  // Créer la modale
+  // Create la modale
   const modal = document.createElement('div');
   modal.className = 'zoom-pan-modal';
   
@@ -50,8 +50,8 @@ function openZoomPanModal(event) {
     </div>
     
     <div class="modal-buttons">
-      <button class="btn-cancel">Annuler</button>
-      <button class="btn-validate">Valider</button>
+      <button class="btn-cancel">Cancel</button>
+      <button class="btn-validate">Confirm</button>
     </div>
   `;
   
@@ -75,7 +75,7 @@ function openZoomPanModal(event) {
     modal.remove();
   });
   
-  // Fermer avec Escape
+  // Close avec Escape
   const handleEscape = (e) => {
     if (e.key === 'Escape') {
       modal.remove();
@@ -84,7 +84,7 @@ function openZoomPanModal(event) {
   };
   document.addEventListener('keydown', handleEscape);
   
-  // Fermer en cliquant à l'extérieur
+  // Close en cliquant à l'extérieur
   setTimeout(() => {
     const handleClickOutside = (e) => {
       if (!modal.contains(e.target)) {
@@ -142,13 +142,13 @@ function applyZoomPan() {
   
   if (zoomXY < 0.1) {
     zoomXYInput.classList.add('invalid');
-    errorMsg = 'Zoom XY doit être ≥ 0.1';
+    errorMsg = 'Zoom XY must be ≥ 0.1';
     hasError = true;
   }
   
   if (zoomZ < 0.1) {
     zoomZInput.classList.add('invalid');
-    errorMsg = errorMsg || 'Zoom Z doit être ≥ 0.1';
+    errorMsg = errorMsg || 'Zoom Z must be ≥ 0.1';
     hasError = true;
   }
   

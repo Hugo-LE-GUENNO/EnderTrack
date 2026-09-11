@@ -2,12 +2,12 @@
 class ZUIRenderer {
   static render(ctx, canvas, state, zPan, zRange, zCompassHovered, zCompassBounds) {
     this.drawZLimits(ctx, canvas, state, zPan, zRange);
-    // Boussole Z désactivée - maintenant dans l'overlay unifié
+    // Boussole Z désactivatede - maintenant dans l'overlay unifié
     return null;
   }
 
   static drawZLimits(ctx, canvas, state, zPan, zRange) {
-    // Afficher les limites de sécurité Z avec pointillés discrets
+    // Show les limites de sécurité Z avec pointillés discrets
     if (window.EnderTrack?.StrategicPositions) {
       const limits = window.EnderTrack.StrategicPositions.getLimits();
       

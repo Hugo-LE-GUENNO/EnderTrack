@@ -1,6 +1,6 @@
 // modules/ui/plateau-templates.js - Gestion des profils de plateau
 
-class PlateauTemplates {
+class BedTemplates {
   constructor() {
     this.templates = [];
     this.currentFilter = 'all';
@@ -8,22 +8,22 @@ class PlateauTemplates {
 
   async init() {
     await this.loadTemplates();
-    await this.loadManualProfile();
+    await this.loadManualProfilee();
     return true;
   }
 
-  async loadManualProfile() {
+  async loadManualProfilee() {
     // Load manual profile from localStorage if it exists
-    const savedProfile = localStorage.getItem('endertrack_manual_profile');
-    if (savedProfile) {
+    const savedProfilee = localStorage.getItem('endertrack_manual_profile');
+    if (savedProfilee) {
       try {
-        const manualProfile = JSON.parse(savedProfile);
+        const manualProfilee = JSON.parse(savedProfilee);
         // Add to templates list if not already present
         const existingIndex = this.templates.findIndex(t => t.id === 'manual_profile');
         if (existingIndex >= 0) {
-          this.templates[existingIndex] = manualProfile;
+          this.templates[existingIndex] = manualProfilee;
         } else {
-          this.templates.unshift(manualProfile); // Add at beginning
+          this.templates.unshift(manualProfilee); // Add at beginning
         }
       } catch (e) {
         console.warn('Failed to load manual profile:', e);
@@ -34,28 +34,28 @@ class PlateauTemplates {
   async loadTemplates() {
     this.templates = [];
     
-    // Charger les profils principaux
-    if (window.ProfilesData?.main) {
-      this.templates = [...window.ProfilesData.main];
+    // Load les profils principaux
+    if (window.ProfileesData?.main) {
+      this.templates = [...window.ProfileesData.main];
     }
     
-    // Charger les profils Enderscope
-    if (window.ProfilesData?.enderscope) {
-      this.templates = [...this.templates, ...window.ProfilesData.enderscope];
+    // Load les profils Enderscope
+    if (window.ProfileesData?.enderscope) {
+      this.templates = [...this.templates, ...window.ProfileesData.enderscope];
     }
     
-    // Scanner automatiquement les profils custom (ProfileCustom1, ProfileCustom2, etc.)
+    // Scanner automatiquement les profils custom (ProfileeCustom1, ProfileeCustom2, etc.)
     let customIndex = 1;
-    while (window[`ProfileCustom${customIndex}`]) {
-      const customProfiles = window[`ProfileCustom${customIndex}`];
+    while (window[`ProfileeCustom${customIndex}`]) {
+      const customProfilees = window[`ProfileeCustom${customIndex}`];
       const categoryName = `Custom${customIndex}`;
       
-      // Ajouter la catégorie custom à chaque profil
-      customProfiles.forEach(profile => {
+      // Add la catégorie custom à chaque profil
+      customProfilees.forEach(profile => {
         profile.customCategory = categoryName;
       });
       
-      this.templates = [...this.templates, ...customProfiles];
+      this.templates = [...this.templates, ...customProfilees];
       customIndex++;
     }
     
@@ -64,7 +64,7 @@ class PlateauTemplates {
       this.templates = [
         {
           "id": "default_stage",
-          "name": "Stage par défaut",
+          "name": "Stage default",
           "brand": "Generic",
           "dimensions": { "x": 200, "y": 200, "z": 100 },
           "coordinateBounds": {
@@ -73,7 +73,7 @@ class PlateauTemplates {
             "z": { "min": 0, "max": 100 }
           },
           "axisOrientation": { "x": "right", "y": "up", "z": "up" },
-          "description": "Configuration par défaut",
+          "description": "Default configuration",
           "gcode": true
         }
       ];
@@ -100,10 +100,10 @@ class PlateauTemplates {
     document.getElementById('templateSearch').style.display = 'block';
     document.getElementById('templateList').style.display = 'block';
     document.getElementById('templateCard').style.display = 'none';
-    this.showProfileList();
+    this.showProfileeList();
   }
 
-  showProfileList() {
+  showProfileeList() {
     const listContainer = document.getElementById('templateList');
     if (!listContainer) return;
 
@@ -145,7 +145,7 @@ class PlateauTemplates {
     });
   }
 
-  filterProfiles(searchText) {
+  filterProfilees(searchText) {
     const listContainer = document.getElementById('templateList');
     if (!listContainer) return;
 
@@ -165,7 +165,7 @@ class PlateauTemplates {
     listContainer.innerHTML = '';
     
     if (filtered.length === 0) {
-      listContainer.innerHTML = '<div class="no-results">Aucun profil trouvé</div>';
+      listContainer.innerHTML = '<div class="no-results">No profile found</div>';
     } else {
       filtered.forEach(template => {
         const item = document.createElement('div');
@@ -193,7 +193,7 @@ class PlateauTemplates {
 
     const gcodeIcon = template.gcode ? '✅' : '❌';
     const gcodeClass = template.gcode ? 'supported' : 'not-supported';
-    const gcodeText = template.gcode ? 'Compatible G-code' : 'Protocole propriétaire';
+    const gcodeText = template.gcode ? 'Compatible G-code' : 'Proprietary protocol';
     const brandColor = template.brandColor || '#4a5568';
 
     card.innerHTML = `
@@ -217,15 +217,15 @@ class PlateauTemplates {
           </div>
           <div class="dimensions-row">
             <div class="dim-item">
-              <span class="dim-label">Largeur (X)</span>
+              <span class="dim-label">Width (X)</span>
               <span class="dim-value">${template.dimensions.x} mm</span>
             </div>
             <div class="dim-item">
-              <span class="dim-label">Profondeur (Y)</span>
+              <span class="dim-label">Depth (Y)</span>
               <span class="dim-value">${template.dimensions.y} mm</span>
             </div>
             <div class="dim-item">
-              <span class="dim-label">Hauteur (Z)</span>
+              <span class="dim-label">Height (Z)</span>
               <span class="dim-value">${template.dimensions.z} mm</span>
             </div>
           </div>
@@ -283,9 +283,9 @@ class PlateauTemplates {
       </div>
       
       <div class="template-actions">
-        <button class="template-back-btn btn" onclick="window.PlateauTemplates.resetModal()">← Retour à la liste</button>
-        <button class="template-apply-btn btn" onclick="window.PlateauTemplates.applyTemplate('${template.id}')">
-          ✅ Appliquer ce profil
+        <button class="template-back-btn btn" onclick="window.BedTemplates.resetModal()">← Back to list</button>
+        <button class="template-apply-btn btn" onclick="window.BedTemplates.applyTemplate('${template.id}')">
+          ✅ Apply ce profil
         </button>
       </div>
     `;
@@ -336,7 +336,7 @@ class PlateauTemplates {
       const coordConfig = window.EnderTrack.CoordinateConfig;
       
       // Update coordinate config with template data
-      coordConfig.setPlateauDimensions(template.dimensions.x, template.dimensions.y, template.dimensions.z);
+      coordConfig.setBedDimensions(template.dimensions.x, template.dimensions.y, template.dimensions.z);
       
       if (template.coordinateBounds) {
         coordConfig.setCoordinateBounds(template.coordinateBounds);
@@ -363,15 +363,15 @@ class PlateauTemplates {
     }
     
     // Update profile display in settings
-    this.updateProfileDisplay(template);
+    this.updateProfileeDisplay(template);
     
     // Force canvas re-render avec la même méthode que zoom/pan
     window.EnderTrack.Canvas.updateCoordinateSystem();
     window.EnderTrack.Canvas.requestRender();
     
-    // Appliquer automatiquement les limites de sécurité au plateau
-    if (window.resetLimitsToPlateauSize) {
-      window.resetLimitsToPlateauSize();
+    // Apply automatiquement les limites de sécurité au plateau
+    if (window.resetLimitsToBedSize) {
+      window.resetLimitsToBedSize();
     }
     
     // Close modal
@@ -380,7 +380,7 @@ class PlateauTemplates {
     // Show notification
     if (window.EnderTrack?.Notifications) {
       window.EnderTrack.Notifications.show(
-        `Profil "${template.name}" appliqué`, 
+        `Profile "${template.name}" applied`, 
         'success'
       );
     }
@@ -439,16 +439,16 @@ class PlateauTemplates {
     return true;
   }
 
-  updateProfileDisplay(template) {
+  updateProfileeDisplay(template) {
     // Update settings display
-    const selectedProfile = document.getElementById('selectedProfile');
+    const selectedProfilee = document.getElementById('selectedProfilee');
     const profileName = document.getElementById('profileName');
     const profileDimensions = document.getElementById('profileDimensions');
     
-    if (selectedProfile && profileName && profileDimensions) {
+    if (selectedProfilee && profileName && profileDimensions) {
       profileName.textContent = template.name;
       profileDimensions.textContent = `${template.dimensions.x}×${template.dimensions.y}×${template.dimensions.z}mm`;
-      selectedProfile.style.display = 'block';
+      selectedProfilee.style.display = 'block';
     }
     
     // Update canvas overlay display
@@ -463,13 +463,13 @@ class PlateauTemplates {
 }
 
 // Global functions
-function validatePlateauSize() {
-  if (window.PlateauTemplates) {
-    const success = window.PlateauTemplates.validateAndApply();
+function validateBedSize() {
+  if (window.BedTemplates) {
+    const success = window.BedTemplates.validateAndApply();
     
     if (success && window.EnderTrack?.UI?.showNotification) {
       window.EnderTrack.UI.showNotification(
-        'Dimensions du plateau validées', 
+        'Bed dimensions validated', 
         'success'
       );
     }
@@ -477,21 +477,21 @@ function validatePlateauSize() {
 }
 
 function openTemplateModal() {
-  if (window.PlateauTemplates) {
-    window.PlateauTemplates.openModal();
+  if (window.BedTemplates) {
+    window.BedTemplates.openModal();
   }
 }
 
 function closeTemplateModal() {
-  if (window.PlateauTemplates) {
-    window.PlateauTemplates.closeModal();
+  if (window.BedTemplates) {
+    window.BedTemplates.closeModal();
   }
 }
 
 function filterTemplateDropdown() {
   const searchText = document.getElementById('templateSearch').value;
-  if (window.PlateauTemplates) {
-    window.PlateauTemplates.filterDropdown(searchText);
+  if (window.BedTemplates) {
+    window.BedTemplates.filterDropdown(searchText);
     
     // Hide card when searching
     if (searchText.length > 0) {
@@ -500,12 +500,12 @@ function filterTemplateDropdown() {
   }
 }
 
-// Nouvelle fonction pour gérer le focus
+// New fonction pour gérer le focus
 function handleSearchFocus() {
   const dropdown = document.getElementById('templateDropdown');
-  if (dropdown && window.PlateauTemplates) {
-    // Afficher tous les profils au focus
-    window.PlateauTemplates.populateDropdown();
+  if (dropdown && window.BedTemplates) {
+    // Show tous les profils au focus
+    window.BedTemplates.populateDropdown();
     dropdown.style.display = 'block';
     
     // Calculer la hauteur maximale disponible dans le modal
@@ -523,10 +523,10 @@ function handleSearchFocus() {
   }
 }
 
-// Nouvelle fonction pour gérer la perte de focus
+// New fonction pour gérer la perte de focus
 function handleSearchBlur(event) {
   const dropdown = document.getElementById('templateDropdown');
-  // Délai pour permettre le clic sur le dropdown
+  // Delay pour permettre le clic sur le dropdown
   setTimeout(() => {
     if (dropdown && !dropdown.contains(document.activeElement)) {
       dropdown.style.display = 'none';
@@ -595,8 +595,8 @@ function selectTemplate() {
   const dropdown = document.getElementById('templateDropdown');
   const templateId = dropdown.value;
   
-  if (templateId && templateId !== '' && window.PlateauTemplates) {
-    const template = window.PlateauTemplates.templates.find(t => t.id === templateId);
+  if (templateId && templateId !== '' && window.BedTemplates) {
+    const template = window.BedTemplates.templates.find(t => t.id === templateId);
     
     if (template) {
       // Update search input with selected template name
@@ -604,7 +604,7 @@ function selectTemplate() {
       // Hide dropdown
       dropdown.style.display = 'none';
       // Show card
-      window.PlateauTemplates.showTemplateCard(templateId);
+      window.BedTemplates.showTemplateCard(templateId);
     }
   } else {
     // Hide card if no valid selection
@@ -614,4 +614,4 @@ function selectTemplate() {
 }
 
 // Global instance
-window.PlateauTemplates = new PlateauTemplates();
+window.BedTemplates = new BedTemplates();

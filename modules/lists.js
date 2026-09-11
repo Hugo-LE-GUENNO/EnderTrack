@@ -11,7 +11,7 @@ class ListManager {
     this._editingIdx = null;
     this._draggingIdx = null;
     this.load();
-    if (this.groups.length === 0) this.addGroup('Liste 1');
+    if (this.groups.length === 0) this.addGroup('List 1');
     window.addEventListener('load', () => this._startSync());
   }
 
@@ -62,7 +62,7 @@ class ListManager {
 
   addGroup(name) {
     const colors = ['#4a90e2', '#e2844a', '#4ae290', '#e24a90', '#90e24a', '#904ae2'];
-    const g = { id: this._nextGroupId++, name: name || `Liste ${this._nextGroupId - 1}`, positions: [], visible: true, pinned: false, color: colors[(this._nextGroupId - 2) % colors.length] };
+    const g = { id: this._nextGroupId++, name: name || `List ${this._nextGroupId - 1}`, positions: [], visible: true, pinned: false, color: colors[(this._nextGroupId - 2) % colors.length] };
     this.groups.push(g);
     this.activeGroupId = g.id;
     this.selectedIdx = null;
@@ -72,7 +72,7 @@ class ListManager {
   removeGroup(gid) {
     this.groups = this.groups.filter(g => g.id !== gid);
     if (this.activeGroupId === gid) { this.activeGroupId = this.groups[0]?.id || null; this.selectedIdx = null; }
-    if (this.groups.length === 0) this.addGroup('Liste 1');
+    if (this.groups.length === 0) this.addGroup('List 1');
     this.save(); this.renderUI(); EnderTrack.Canvas?.requestRender?.();
   }
 
@@ -565,7 +565,7 @@ class ListManager {
     a.download = `${g.name.replace(/[^a-z0-9]/gi, '_')}-positions.json`;
     a.click();
     URL.revokeObjectURL(a.href);
-    EnderTrack.UI?.showNotification?.(`"${g.name}" exportée (${g.positions.length} pts)`, 'success');
+    EnderTrack.UI?.showNotification?.(`"${g.name}" exported (${g.positions.length} pts)`, 'success');
   }
 
   exportToFile() {
@@ -579,7 +579,7 @@ class ListManager {
     a.download = `endertrack-positions-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
-    EnderTrack.UI?.showNotification?.('Positions exportées', 'success');
+    EnderTrack.UI?.showNotification?.('Positions exported', 'success');
   }
 
   importFromFile() {
@@ -604,7 +604,7 @@ class ListManager {
           this.save();
           this.renderUI();
           EnderTrack.Canvas?.requestRender?.();
-          EnderTrack.UI?.showNotification?.(`${data.groups.length} liste(s) importée(s)`, 'success');
+          EnderTrack.UI?.showNotification?.(`${data.groups.length} list(s) imported`, 'success');
         } catch (err) {
           EnderTrack.UI?.showNotification?.('Fichier invalide: ' + err.message, 'error');
         }
@@ -637,7 +637,7 @@ class ListManager {
       </div>
       <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
       <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; padding:0 4px 2px; font-size:9px; color:var(--text-general); opacity:0.5;">
-        <span></span><span>Nom</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
+        <span></span><span>Name</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
       </div>
       <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px 6px; border-bottom:1px solid #333; margin-bottom:4px;">
         <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:none; border:none; color:var(--coordinates-color); cursor:pointer; font-size:12px; padding:0; text-align:center; line-height:1;" title="Remplir avec la position actuelle">📍</button>
@@ -646,9 +646,9 @@ class ListManager {
         <input type="number" id="listAddY" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
         <input type="number" id="listAddZ" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
         <span></span>
-        <button onclick="EnderTrack.Lists.addManualPosition()" style="grid-column:2 / span 4; background:var(--button-bg); border:none; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:11px; padding:3px; margin-top:3px;">+ Ajouter</button>
+        <button onclick="EnderTrack.Lists.addManualPosition()" style="grid-column:2 / span 4; background:var(--button-bg); border:none; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:11px; padding:3px; margin-top:3px;">+ Add</button>
       </div>
-      ${!pts.length ? '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Cliquez sur le canvas pour ajouter des positions</div>' : ''}
+      ${!pts.length ? '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Click on the canvas to add waypoints</div>' : ''}
       ${pts.map((p, i) => this._renderRow(p, i)).join('')}
     `;
 
@@ -691,7 +691,7 @@ class ListManager {
         ondragleave="EnderTrack.Lists._dragLeave(event)"
         ondrop="EnderTrack.Lists._dragDrop(event, ${i})"
         ondragend="EnderTrack.Lists._dragEnd()">
-        <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.5; cursor:grab; user-select:none;" title="Glisser pour réordonner">${i + 1}</span>
+        <span style="text-align:center; color:var(--text-general); font-size:10px; opacity:0.5; cursor:grab; user-select:none;" title="Drag to reorder">${i + 1}</span>
         <input type="text" value="${nameEsc}" placeholder="—" data-pt-idx="${i}" data-pt-prop="name"
           style="background:transparent; border:none; border-bottom:1px solid transparent; color:${sel ? '#ffc107' : 'var(--text-general)'}; font-size:11px; min-width:0; outline:none; cursor:pointer; width:100%;"
           onfocus="${isFocus} this.style.color='#f59e0b';"
@@ -747,11 +747,11 @@ class ListManager {
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
     menu.innerHTML = `
-      <button onmousedown="EnderTrack.Lists.goToPosition(${idx}); this.parentElement.remove()">🎯 Aller à</button>
-      <button onmousedown="EnderTrack.Lists.duplicatePosition(${idx}); this.parentElement.remove()">⧉ Dupliquer</button>
-      <button onmousedown="EnderTrack.Lists.movePosition(${idx},-1); this.parentElement.remove()" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''}>▲ Monter</button>
-      <button onmousedown="EnderTrack.Lists.movePosition(${idx},1); this.parentElement.remove()" ${idx === total - 1 ? 'disabled style="opacity:0.3"' : ''}>▼ Descendre</button>
-      <button onmousedown="EnderTrack.Lists.removePosition(${idx}); this.parentElement.remove()" style="color:#e25555;">✕ Supprimer</button>
+      <button onmousedown="EnderTrack.Lists.goToPosition(${idx}); this.parentElement.remove()">🎯 Go to</button>
+      <button onmousedown="EnderTrack.Lists.duplicatePosition(${idx}); this.parentElement.remove()">⧉ Duplicate</button>
+      <button onmousedown="EnderTrack.Lists.movePosition(${idx},-1); this.parentElement.remove()" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''}>▲ Move up</button>
+      <button onmousedown="EnderTrack.Lists.movePosition(${idx},1); this.parentElement.remove()" ${idx === total - 1 ? 'disabled style="opacity:0.3"' : ''}>▼ Move down</button>
+      <button onmousedown="EnderTrack.Lists.removePosition(${idx}); this.parentElement.remove()" style="color:#e25555;">✕ Delete</button>
     `;
     document.body.appendChild(menu);
     const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
@@ -768,11 +768,11 @@ class ListManager {
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
     menu.innerHTML = `
-      <button onmousedown="EnderTrack.Lists.toggleGroupPinned(${gid}); this.parentElement.remove()">${g.pinned ? '📌 Désépingler' : 'Épingler'}</button>
-      <button onmousedown="const n=prompt('Nom:','${g.name.replace(/'/g, "\\'")}'); if(n) { EnderTrack.Lists.renameGroup(${gid},n); } this.parentElement.remove()">Renommer</button>
+      <button onmousedown="EnderTrack.Lists.toggleGroupPinned(${gid}); this.parentElement.remove()">${g.pinned ? '📌 Unpin' : 'Pin'}</button>
+      <button onmousedown="const n=prompt('Name:','${g.name.replace(/'/g, "\\'")}'); if(n) { EnderTrack.Lists.renameGroup(${gid},n); } this.parentElement.remove()">Rename</button>
       <button onmousedown="EnderTrack.Lists.exportGroup(${gid}); this.parentElement.remove()">Sauver</button>
       <button onmousedown="EnderTrack.Lists.importFromFile(); this.parentElement.remove()">Importer</button>
-      <button onmousedown="if(confirm('Supprimer ?')) EnderTrack.Lists.removeGroup(${gid}); this.parentElement.remove()">Supprimer</button>
+      <button onmousedown="if(confirm('Delete?')) EnderTrack.Lists.removeGroup(${gid}); this.parentElement.remove()">Supprimer</button>
     `;
     document.body.appendChild(menu);
     const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };

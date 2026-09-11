@@ -558,11 +558,11 @@ class OverlayManager {
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
     menu.innerHTML = `
-      <button onmousedown="const n=prompt('Nom:','${g.name.replace(/'/g, "\\'")}''); if(n) { EnderTrack.Overlays.renameGroup(${gid},n); EnderTrack.Overlays.renderUI(); } this.parentElement.remove()">Renommer</button>
+      <button onmousedown="const n=prompt('Name:','${g.name.replace(/'/g, "\\'")}''); if(n) { EnderTrack.Overlays.renameGroup(${gid},n); EnderTrack.Overlays.renderUI(); } this.parentElement.remove()">Rename</button>
       <button onmousedown="EnderTrack.Overlays.toggleGroupVisible(${gid}); this.parentElement.remove()">${g.visible ? 'Masquer' : 'Afficher'}</button>
       <button onmousedown="if(confirm('Vider les overlays ?')) EnderTrack.Overlays.clearGroup(); this.parentElement.remove()">Vider</button>
       <div class="ctx-separator"></div>
-      <button onmousedown="if(confirm('Supprimer ?')) EnderTrack.Overlays.removeGroup(${gid}); this.parentElement.remove()">Supprimer</button>
+      <button onmousedown="if(confirm('Delete?')) EnderTrack.Overlays.removeGroup(${gid}); this.parentElement.remove()">Delete</button>
     `;
     document.body.appendChild(menu);
     const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };

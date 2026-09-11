@@ -111,7 +111,7 @@ class XYCanvasManager {
         }
       });
       
-      // Listen for coordinate config changes
+      // Listn for coordinate config changes
       document.addEventListener('click', (e) => {
         if (e.target.classList.contains('preset-btn') || e.target.classList.contains('axis-btn')) {
           setTimeout(() => {
@@ -266,7 +266,7 @@ class XYCanvasManager {
 
 // Global instance - maintain compatibility
 window.EnderTrack = window.EnderTrack || {};
-// Sauvegarder les overlays avant d'écraser Canvas
+// Save les overlays avant d'écraser Canvas
 const compassOverlay = window.EnderTrack.Canvas?.CompassOverlay;
 const compassZOverlay = window.EnderTrack.Canvas?.CompassZOverlay;
 window.EnderTrack.Canvas = new XYCanvasManager();

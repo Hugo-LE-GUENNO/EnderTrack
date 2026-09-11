@@ -8,7 +8,7 @@ class TrackRenderer {
     if (!coords) return;
     
     this.renderContinuousTrack(ctx, state, coords);
-    // this.renderDiscreteTrack(ctx, state, coords); // Désactivé pour éviter le double tracé
+    // this.renderDiscreteTrack(ctx, state, coords); // Disabled pour éviter le double tracé
     this.renderTrackPoints(ctx, state, coords);
     this.renderListTracks(ctx, state, coords);
   }

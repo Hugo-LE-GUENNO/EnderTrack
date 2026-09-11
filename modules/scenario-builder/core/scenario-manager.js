@@ -6,7 +6,7 @@ class ScenarioManager {
     this.loadFromStorage();
   }
 
-  createScenario(name = 'Nouveau scénario') {
+  createScenario(name = 'New scenario') {
     const id = 'scenario_' + Date.now();
     const scenario = {
       id,
@@ -106,7 +106,7 @@ class ScenarioManager {
       const data = JSON.parse(jsonStr);
       if (!data.tree) throw new Error('Invalid scenario format');
       data.id = 'scenario_' + Date.now();
-      data.name = data.name || 'Scénario importé';
+      data.name = data.name || 'Imported scenario';
       data.createdAt = new Date().toISOString();
       this.scenarios.set(data.id, data);
       this.currentScenarioId = data.id;
@@ -155,6 +155,10 @@ class ScenarioManager {
 
   save() {
     try {
+      // Ensure currentScenarioId is always valid
+      if (!this.scenarios.has(this.currentScenarioId)) {
+        this.currentScenarioId = this.scenarios.keys().next().value || null;
+      }
       const data = {
         scenarios: Array.from(this.scenarios.entries()),
         currentScenarioId: this.currentScenarioId
@@ -180,10 +184,16 @@ class ScenarioManager {
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => {
         if (data.scenarios?.length) {
-          this.scenarios = new Map(data.scenarios);
-          this.currentScenarioId = data.currentScenarioId;
-          // Re-render UI if scenario module is active
-          window.EnderTrack?.Scenario?.createUI?.();
+          // Ignore server response if local state is more recent (e.g. after a delete)
+          const localIds = new Set(this.scenarios.keys());
+          const serverIds = data.scenarios.map(([id]) => id);
+          // Only apply if server has same or fewer scenarios (not a stale response with deleted ones)
+          const serverHasDeleted = serverIds.some(id => !localIds.has(id) && this.scenarios.size > 0);
+          if (!serverHasDeleted) {
+            this.scenarios = new Map(data.scenarios);
+            this.currentScenarioId = data.currentScenarioId;
+            window.EnderTrack?.Scenario?.createUI?.();
+          }
         }
       })
       .catch(() => {});

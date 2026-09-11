@@ -7,14 +7,14 @@ class VariableManager {
       { id: '$y', name: 'Position Y', description: 'Position actuelle en Y (mm)', category: 'position' },
       { id: '$z', name: 'Position Z', description: 'Position actuelle en Z (mm)', category: 'position' },
       // Temps
-      { id: '$time', name: 'Temps scénario', description: 'Temps depuis le début du scénario (s)', category: 'time' },
-      { id: '$iteration', name: 'Itération', description: 'Index de boucle courant', category: 'time' },
-      { id: '$feedrate', name: 'Vitesse', description: 'Vitesse de déplacement (mm/min)', category: 'time' }
+      { id: '$time', name: 'Scenario time', description: 'Time since scenario start (s)', category: 'time' },
+      { id: '$iteration', name: 'Iteration', description: 'Current loop index', category: 'time' },
+      { id: '$feedrate', name: 'Speed', description: 'Movement speed (mm/min)', category: 'time' }
     ];
     
     this.variableCategories = [
       { id: 'position', label: '📍 Position', icon: '📍' },
-      { id: 'time', label: '⏱️ Temps & Exécution', icon: '⏱️' },
+      { id: 'time', label: '⏱️ Time & Execution', icon: '⏱️' },
       { id: 'plugin', label: '🔌 Plugins', icon: '🔌' }
     ];
     
@@ -139,10 +139,10 @@ class VariableManager {
     }
     
     if (this.systemVariables.find(v => v.id === variable.id)) {
-      throw new Error('Cette variable système existe déjà');
+      throw new Error('This system variable already exists');
     }
     if (this.customVariables.find(v => v.id === variable.id)) {
-      throw new Error('Cette variable personnalisée existe déjà');
+      throw new Error('This custom variable already exists');
     }
     
     this.customVariables.push({
@@ -270,16 +270,16 @@ class VariableManager {
 
     return `
       <div style="padding:10px; height:100%; overflow-y:auto;">
-        <div style="font-size:12px; color:var(--text-selected); font-weight:600; margin-bottom:8px;">Variables du scénario</div>
+        <div style="font-size:12px; color:var(--text-selected); font-weight:600; margin-bottom:8px;">Scenario variables</div>
         ${this._getLoopVariablesHTML(values)}
         <div style="display:flex; justify-content:space-between; align-items:center; margin:12px 0 4px;">
-          <span style="font-size:10px; color:var(--text-general); font-weight:600;">✏️ Personnalisées</span>
+          <span style="font-size:10px; color:var(--text-general); font-weight:600;">✏️ Custom</span>
           <button onclick="window.EnderTrack.VariableManager.addInline()" style="padding:2px 8px; background:var(--active-element); border:none; border-radius:3px; color:var(--text-selected); cursor:pointer; font-size:10px;">+</button>
         </div>
         <div id="custom-variables-container">
           ${this.getCustomVariablesRows()}
         </div>
-        <div style="margin-top:16px; font-size:9px; color:var(--text-general); opacity:0.4;">Variables système et globales dans 🎩 Accessoires > Variables globales</div>
+        <div style="margin-top:16px; font-size:9px; color:var(--text-general); opacity:0.4;">System & global variables in 🎩 Accessories > Global variables</div>
       </div>
     `;
   }
@@ -386,7 +386,7 @@ class VariableManager {
     const homeXYZ = state.homePositions?.xyz || { x: 0, y: 0, z: 0 };
     return `
       <div>
-        <div style="font-size:12px; color:var(--text-selected); font-weight:600; margin-bottom:8px;">🚩 Positions stratégiques</div>
+        <div style="font-size:12px; color:var(--text-selected); font-weight:600; margin-bottom:8px;">🚩 Strategic positions</div>
         <div style="display:flex; flex-direction:column; gap:4px;">
           <div style="display:flex; justify-content:space-between; padding:4px 6px; background:var(--app-bg); border-radius:4px;">
             <span style="font-size:10px; color:var(--text-general);">🏠 HOME XY</span>
@@ -412,7 +412,7 @@ class VariableManager {
     if (!newId.startsWith('$')) newId = '$' + newId;
     if (newId === oldId) return;
     if (this.systemVariables.find(v => v.id === newId) || this.customVariables.find(v => v.id === newId)) {
-      alert('Ce nom existe déjà');
+      alert('This name already exists');
       this.refreshVariablesPanel();
       return;
     }

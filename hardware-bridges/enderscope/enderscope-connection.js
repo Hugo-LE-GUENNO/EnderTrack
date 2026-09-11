@@ -70,9 +70,9 @@ class EnderscopeConnection {
   showStartupNotification(connected) {
     if (!window.EnderTrack?.UI?.showNotification) return;
     if (connected) {
-      window.EnderTrack.UI.showNotification('🔬 Enderscope connecté', 'success');
+      window.EnderTrack.UI.showNotification('🔬 Enderscope connected', 'success');
     } else {
-      window.EnderTrack.UI.showNotification('🎮 Mode simulateur', 'info');
+      window.EnderTrack.UI.showNotification('🎮 Simulator mode', 'info');
     }
   }
 
@@ -88,7 +88,7 @@ class EnderscopeConnection {
       this.serverSimulationMode = status.simulation_mode || false;
       
       if (this.serverSimulationMode) {
-        console.warn('⚠️ Serveur Enderscope en MODE SIMULATION (enderscope.py non trouvé)');
+        console.warn('⚠️ Enderscope server in SIMULATION MODE (enderscope.py not found)');
       }
     } catch (error) {
       // Serveur non disponible
@@ -101,11 +101,11 @@ class EnderscopeConnection {
       const ports = await response.json();
       
       const select = document.getElementById('serialPort');
-      const currentValue = select.value; // Sauvegarder la sélection actuelle
+      const currentValue = select.value; // Save la current selection
       
       select.innerHTML = '';
       
-      // Ajouter /dev/ttyUSB0 par défaut s'il n'est pas dans la liste
+      // Add /dev/ttyUSB0 by default if not in list
       if (!ports.includes('/dev/ttyUSB0')) {
         const defaultOption = document.createElement('option');
         defaultOption.value = '/dev/ttyUSB0';
@@ -118,7 +118,7 @@ class EnderscopeConnection {
         option.value = port;
         option.textContent = port;
         if (port === '/dev/ttyUSB0') {
-          option.selected = true; // Sélectionner par défaut
+          option.selected = true; // Select by default
         }
         select.appendChild(option);
       });
@@ -127,7 +127,7 @@ class EnderscopeConnection {
       if (currentValue && ports.includes(currentValue)) {
         select.value = currentValue;
       } else {
-        select.value = '/dev/ttyUSB0'; // Défaut
+        select.value = '/dev/ttyUSB0'; // Default
       }
 
     } catch (error) {
@@ -145,7 +145,7 @@ class EnderscopeConnection {
     }
 
     // Show progress bar
-    this.showProgress('Connexion en cours...');
+    this.showProgress('Connection en cours...');
     
     try {
       
@@ -183,7 +183,7 @@ class EnderscopeConnection {
       }
     } catch (error) {
       if (error.name === 'AbortError') {
-        this.connectionError = 'Timeout de connexion';
+        this.connectionError = 'Connection timeout';
       } else {
         this.connectionError = 'Serveur non disponible';
       }
@@ -192,7 +192,7 @@ class EnderscopeConnection {
     }
   }
   
-  showProgress(text = 'Connexion en cours...') {
+  showProgress(text = 'Connection en cours...') {
     const progress = document.getElementById('connectionProgress');
     const progressText = progress?.querySelector('.progress-text');
     const statusIndicator = document.getElementById('connectionStatus');
@@ -221,7 +221,7 @@ class EnderscopeConnection {
       this.connectionError = null;
       this.updateConnectionStatus();
     } catch (error) {
-      // Erreur de déconnexion - mode silencieux
+      // Error de déconnexion - mode silencieux
     }
   }
 
@@ -237,7 +237,7 @@ class EnderscopeConnection {
         await this.syncPosition();
       }
     } catch (error) {
-      // Erreur homing - mode silencieux
+      // Error homing - mode silencieux
     }
   }
 
@@ -259,7 +259,7 @@ class EnderscopeConnection {
         }
       }
     } catch (error) {
-      // Erreur lecture position - mode silencieux
+      // Error lecture position - mode silencieux
     }
   }
 
@@ -401,9 +401,9 @@ class EnderscopeConnection {
 
     if (this.isConnected) {
       statusIndicator.classList.add('connected');
-      statusText.textContent = `Connecté (${this.currentPort})`;
+      statusText.textContent = `Connected (${this.currentPort})`;
       statusText.style.color = '#10b981';
-      connectBtn.textContent = 'Simulateur';
+      connectBtn.textContent = 'Simulator';
       connectBtn.onclick = () => { this.autoConnectEnabled = false; this.disconnect(); };
       if (controls) controls.style.display = 'block';
     } else {
@@ -411,7 +411,7 @@ class EnderscopeConnection {
         statusText.textContent = this.connectionError;
         statusText.style.color = '#ef4444';
       } else {
-        statusText.textContent = '🎮 Mode simulateur';
+        statusText.textContent = '🎮 Simulator mode';
         statusText.style.color = 'var(--text-general)';
       }
       connectBtn.textContent = 'Connecter';
@@ -491,7 +491,7 @@ class EnderscopeConnection {
       
       // Vérifier si la connexion série est toujours active
       if (status.connected === false && this.isConnected) {
-        this.handleConnectionLost('Port série déconnecté');
+        this.handleConnectionLost('Serial port disconnected');
       }
       
     } catch (error) {
@@ -504,12 +504,12 @@ class EnderscopeConnection {
   handleConnectionLost(reason) {
     this.isConnected = false;
     this.currentPort = null;
-    this.connectionError = `Déconnecté: ${reason}`;
+    this.connectionError = `Disconnected: ${reason}`;
     this.updateConnectionStatus();
     
     // Notification visuelle
     if (window.EnderTrack?.UI?.showNotification) {
-      window.EnderTrack.UI.showNotification(`⚠️ ${reason} - Retour en mode simulateur`, 'warning');
+      window.EnderTrack.UI.showNotification(`⚠️ ${reason} - Back en mode simulateur`, 'warning');
     }
   }
 
@@ -519,7 +519,7 @@ class EnderscopeConnection {
     const statusWidget = document.querySelector('.status-widget');
     if (!statusLabel) return;
     if (this.isConnected) {
-      statusLabel.innerHTML = '<span style="color:#10b981; font-weight:600;">CONNECTÉ</span> <span style="font-size:10px; opacity:0.6;">' + (this.currentPort || '') + '</span>';
+      statusLabel.innerHTML = '<span style="color:#10b981; font-weight:600;">CONNECTED</span> <span style="font-size:10px; opacity:0.6;">' + (this.currentPort || '') + '</span>';
       if (statusLight) { statusLight.style.background = '#10b981'; statusLight.style.boxShadow = '0 0 12px #10b981'; }
       if (statusWidget) { statusWidget.style.borderLeft = '3px solid #10b981'; }
     } else {
@@ -649,7 +649,7 @@ function testEnderscope() {
   }
 }
 
-// Emergency stop with G-code (PRIORITÉ MAX)
+// Emergency stop with G-code (MAX PRIORITY)
 async function emergencyStopGcode() {
   try {
     const response = await fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/emergency_stop', {
@@ -661,7 +661,7 @@ async function emergencyStopGcode() {
       body: JSON.stringify({
         command: 'M112', // Emergency stop G-code
         priority: 'EMERGENCY',
-        immediate: true // Passer devant toutes les autres commandes
+        immediate: true // Stepser devant toutes les autres commandes
       })
     });
     
@@ -758,10 +758,10 @@ async function resetEnderscope() {
 }
 
 async function resetFirmware() {
-  if (!confirm('Reset matériel du microcontrôleur (DTR toggle) ?\nLe firmware va redémarrer.')) return;
+  if (!confirm('Hardware reset of microcontroller (DTR toggle)?\nFirmware will restart.')) return;
   const serverUrl = window.EnderTrack?.Enderscope?.serverUrl || window.ENDERTRACK_SERVER || 'http://localhost:5000';
   try {
-    EnderTrack.UI?.showNotification?.('Reset matériel en cours...', 'warning');
+    EnderTrack.UI?.showNotification?.('Hardware reset in progress...', 'warning');
     const response = await fetch(serverUrl + '/api/reset_firmware', { method: 'POST' });
     const result = await response.json();
     if (result.success) {
@@ -771,7 +771,7 @@ async function resetFirmware() {
         setTimeout(() => window.EnderTrack.Enderscope.syncPosition(), 1000);
       }
     } else {
-      EnderTrack.UI?.showNotification?.(result.error || 'Reset échoué', 'error');
+      EnderTrack.UI?.showNotification?.(result.error || 'Reset failed', 'error');
     }
     if (window._updateStatusNow) window._updateStatusNow();
   } catch (e) {
@@ -804,32 +804,32 @@ function showGcodeHelp() {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;';
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
     const cmds = [
-      ['G0 / G1 X Y Z F', 'Déplacement (G0=rapide, G1=linéaire avec feedrate F)'],
+      ['G0 / G1 X Y Z F', 'Movement (G0=rapid, G1=linear with feedrate F)'],
       ['G28', 'Homing — retour origine tous axes'],
       ['G28 X / Y / Z', 'Homing axe individuel'],
       ['G90', 'Mode positionnement absolu'],
       ['G91', 'Mode positionnement relatif'],
-      ['G92 X0 Y0 Z0', 'Définir position actuelle comme origine'],
+      ['G92 X0 Y0 Z0', 'Set current position as origin'],
       ['M114', 'Position actuelle (X Y Z)'],
       ['M115', 'Info firmware (version, capabilities)'],
-      ['M119', 'État des endstops'],
+      ['M119', 'Endstop status'],
       ['M400', 'Attendre fin de tous les mouvements'],
-      ['M300 S440 P200', 'Bip (fréquence S, durée P ms)'],
-      ['M112', '⚠️ Arrêt d\'urgence immédiat'],
-      ['M999', 'Reset après arrêt d\'urgence'],
-      ['M17', 'Activer les moteurs'],
-      ['M18 / M84', 'Désactiver les moteurs'],
-      ['M201 X A Y A Z A', 'Accélération max par axe (mm/s²)'],
-      ['M203 X V Y V Z V', 'Vitesse max par axe (mm/s)'],
-      ['M204 P T', 'Accélération impression (P) / travel (T)'],
+      ['M300 S440 P200', 'Beep (frequency S, duration P ms)'],
+      ['M112', '⚠️ Immediate emergency stop'],
+      ['M999', 'Reset after emergency stop'],
+      ['M17', 'Enable les moteurs'],
+      ['M18 / M84', 'Disable les moteurs'],
+      ['M201 X A Y A Z A', 'Acceleration max par axe (mm/s²)'],
+      ['M203 X V Y V Z V', 'Speed max par axe (mm/s)'],
+      ['M204 P T', 'Acceleration impression (P) / travel (T)'],
       ['M205 X J Y J Z J', 'Jerk / Junction Deviation par axe'],
-      ['M211 S0 / S1', 'Désactiver / activer software endstops'],
-      ['M500', 'Sauvegarder config en EEPROM'],
-      ['M501', 'Charger config depuis EEPROM'],
+      ['M211 S0 / S1', 'Disable / activer software endstops'],
+      ['M500', 'Save config en EEPROM'],
+      ['M501', 'Load config depuis EEPROM'],
       ['M502', 'Reset config usine (sans sauver)'],
-      ['M503', 'Afficher config actuelle'],
-      ['G21', 'Unités en millimètres'],
-      ['G20', 'Unités en pouces'],
+      ['M503', 'Show config actuelle'],
+      ['G21', 'Units in millimeters'],
+      ['G20', 'Units in inches'],
     ];
     modal.innerHTML = `<div style="background:var(--container-bg,#2c2c2c);border-radius:8px;padding:20px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;color:#ccc;font-size:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -838,7 +838,7 @@ function showGcodeHelp() {
       </div>
       <table style="width:100%;border-collapse:collapse;">
         ${cmds.map(([cmd, desc]) => `<tr style="border-bottom:1px solid #333;">
-          <td style="padding:5px 8px 5px 0;font-family:monospace;color:#ffc107;white-space:nowrap;font-size:11px;cursor:pointer;" onclick="document.getElementById('gcodeInput').value='${cmd.split(' ')[0]}';document.getElementById('gcodeHelpModal').style.display='none';" title="Cliquer pour insérer">${cmd}</td>
+          <td style="padding:5px 8px 5px 0;font-family:monospace;color:#ffc107;white-space:nowrap;font-size:11px;cursor:pointer;" onclick="document.getElementById('gcodeInput').value='${cmd.split(' ')[0]}';document.getElementById('gcodeHelpModal').style.display='none';" title="Click to insert">${cmd}</td>
           <td style="padding:5px 0;color:#aaa;font-size:11px;">${desc}</td>
         </tr>`).join('')}
       </table>

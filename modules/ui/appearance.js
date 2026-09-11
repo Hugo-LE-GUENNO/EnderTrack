@@ -38,7 +38,7 @@
     const prefs = getPrefs();
     const currentTheme = prefs.visualTheme || 'enderscope';
     const currentLang = prefs.language || 'fr';
-    const currentProfile = prefs.profile || 'expert';
+    const currentProfilee = prefs.profile || 'expert';
 
     const row = (label, id, options, current) => `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
@@ -50,9 +50,9 @@
 
     el.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:8px;">
-        ${row('Thème', 'appThemeSelect', reg.themes, currentTheme)}
+        ${row('Theme', 'appThemeSelect', reg.themes, currentTheme)}
         ${row('Langue', 'appLangSelect', reg.languages, currentLang)}
-        ${row('Profil', 'appProfileSelect', reg.profiles, currentProfile)}
+        ${row('Profile', 'appProfileeSelect', reg.profiles, currentProfilee)}
       </div>`;
 
     document.getElementById('appThemeSelect')?.addEventListener('change', e => {
@@ -63,14 +63,14 @@
       const p = getPrefs(); p.language = e.target.value; savePrefs(p);
       applyLanguage(e.target.value);
     });
-    document.getElementById('appProfileSelect')?.addEventListener('change', e => {
+    document.getElementById('appProfileeSelect')?.addEventListener('change', e => {
       const p = getPrefs(); p.profile = e.target.value; savePrefs(p);
-      applyProfile(e.target.value);
+      applyProfilee(e.target.value);
     });
   }
 
-  function applyProfile(id) {
-    if (id !== 'expert' && !window.EnderTrackProfiles?.[id]) {
+  function applyProfilee(id) {
+    if (id !== 'expert' && !window.EnderTrackProfilees?.[id]) {
       const reg = getRegistry();
       const prof = reg.profiles.find(p => p.id === id);
       const folder = prof?.folder || id;
@@ -78,12 +78,12 @@
       if (!document.querySelector(`script[src="${src}"]`)) {
         const s = document.createElement('script');
         s.src = src;
-        s.onload = () => window.EnderTrack?.ThemeManager?.setProfile?.(id);
+        s.onload = () => window.EnderTrack?.ThemeManager?.setProfilee?.(id);
         document.head.appendChild(s);
         return;
       }
     }
-    window.EnderTrack?.ThemeManager?.setProfile?.(id);
+    window.EnderTrack?.ThemeManager?.setProfilee?.(id);
   }
 
   function loadPack() {
@@ -112,7 +112,7 @@
           localStorage.setItem('endertrack-appearance-registry', JSON.stringify(userPacks));
         }
         render();
-      } catch { alert('Erreur de lecture du manifest'); }
+      } catch { alert('Error de lecture du manifest'); }
     };
     input.click();
   }
@@ -126,14 +126,14 @@
 
     const sections = {
       theme: {
-        title: '🎨 Créer un thème',
+        title: '🎨 Create a theme',
         content: `<pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">themes/mon-theme/
 ├── manifest.json
 └── theme.css</pre>
 <p style="margin:8px 0 4px; font-weight:600; color:var(--text-selected);">manifest.json</p>
 <pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">{
   "id": "mon-theme", "type": "theme",
-  "name": "Mon Thème", "icon": "🎨"
+  "name": "Mon Theme", "icon": "🎨"
 }</pre>
 <p style="margin:8px 0 4px; font-weight:600; color:var(--text-selected);">theme.css</p>
 <pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">[data-theme="mon-theme"] {
@@ -147,26 +147,26 @@
 }</pre>`
       },
       profile: {
-        title: '👤 Créer un profil',
+        title: '👤 Create un profil',
         content: `<pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">themes/mon-profil/
 ├── manifest.json
 └── profile.js</pre>
 <p style="margin:8px 0 4px; font-weight:600; color:var(--text-selected);">manifest.json</p>
 <pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">{
   "id": "student", "type": "profile",
-  "name": "Étudiant",
-  "desc": "Interface pédagogique simplifiée"
+  "name": "Student",
+  "desc": "Interface simplified educational"
 }</pre>
-<p style="margin:8px 0 4px; font-weight:600; color:var(--text-selected);">profile.js — Masquer/afficher des éléments</p>
-<pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">window.EnderTrackProfiles = window.EnderTrackProfiles || {};
-window.EnderTrackProfiles['student'] = {
+<p style="margin:8px 0 4px; font-weight:600; color:var(--text-selected);">profile.js — Hide/afficher des elements</p>
+<pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">window.EnderTrackProfilees = window.EnderTrackProfilees || {};
+window.EnderTrackProfilees['student'] = {
   hideTabs: ['settings', 'others'],
   hideElements: ['.step-controls'],
   defaultPreset: 'coarse'
 };</pre>`
       },
       language: {
-        title: '🌐 Créer une langue',
+        title: '🌐 Create une langue',
         content: `<pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">themes/en/
 ├── manifest.json
 └── translations.js</pre>
@@ -179,15 +179,15 @@ window.EnderTrackProfiles['student'] = {
 <pre style="background:var(--app-bg); padding:10px; border-radius:4px; font-size:11px; color:var(--coordinates-color); margin:0;">window.EnderTrackTranslations = window.EnderTrackTranslations || {};
 window.EnderTrackTranslations['en'] = {
   'Navigation': 'Navigation',
-  'Listes': 'Lists',
-  'Scénario': 'Scenario',
+  'Lists': 'Lists',
+  'Scenario': 'Scenario',
   'Extensions': 'Extensions',
   'Configs': 'Settings'
 };</pre>`
       }
     };
 
-    const s = sections[type] || { title: '🎨 Créer un pack Apparence', content: Object.values(sections).map(s => s.content).join('<hr style="border-color:#333; margin:12px 0;">') };
+    const s = sections[type] || { title: '🎨 Create un pack Apparence', content: Object.values(sections).map(s => s.content).join('<hr style="border-color:#333; margin:12px 0;">') };
 
     modal.innerHTML = `
       <div class="enderscope-modal" style="max-width:520px;">
@@ -198,17 +198,17 @@ window.EnderTrackTranslations['en'] = {
         <div class="enderscope-modal-body" style="font-size:12px; color:var(--text-general);">
           ${s.content}
           <div style="margin-top:16px; padding-top:12px; border-top:1px solid #333;">
-            <div style="font-weight:600; color:var(--text-selected); margin-bottom:8px;">🤖 Générer avec une IA</div>
-            <p style="opacity:0.8; margin-bottom:8px;">Copiez ce prompt et donnez-le à un assistant IA avec votre description.</p>
+            <div style="font-weight:600; color:var(--text-selected); margin-bottom:8px;">🤖 Generate with AI</div>
+            <p style="opacity:0.8; margin-bottom:8px;">Copy this prompt et donnez-le to an AI assistant with your description.</p>
             <button class="enderscope-btn-primary" style="width:100%;" onclick="EnderTrack.Appearance.copyAIPrompt()">
-              📋 Copier le prompt IA
+              📋 Copy le prompt IA
             </button>
-            <div id="appearancePromptCopied" style="text-align:center; font-size:11px; color:#10b981; margin-top:4px; display:none;">✅ Copié !</div>
+            <div id="appearancePromptCopied" style="text-align:center; font-size:11px; color:#10b981; margin-top:4px; display:none;">✅ Copied!</div>
           </div>
         </div>
         <div class="enderscope-modal-footer">
           <div></div>
-          <button class="enderscope-btn-secondary" onclick="document.getElementById('appearanceGuideModal').remove()">Fermer</button>
+          <button class="enderscope-btn-secondary" onclick="document.getElementById('appearanceGuideModal').remove()">Close</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -254,13 +254,13 @@ window.EnderTrackTranslations['en'] = {
     ta.remove();
   }
   function generateAIPrompt() {
-    return `Tu dois créer un pack d'apparence pour EnderTrack, un simulateur de positionnement 3D pour microscope (Electron, vanilla JS).
+    return `You must create an appearance pack pour EnderTrack, un simulateur de positionnement 3D pour microscope (Electron, vanilla JS).
 
 ## Types de packs
 
 Il existe 3 types : **theme**, **language**, **profile**. Chaque pack vit dans \`themes/<mon-pack>/\` avec un \`manifest.json\` obligatoire.
 
-## 1. Thème
+## 1. Theme
 
 Structure :
 \`\`\`
@@ -274,21 +274,21 @@ manifest.json :
 {
   "id": "mon-theme",
   "type": "theme",
-  "name": "Mon Thème",
+  "name": "Mon Theme",
   "icon": "🎨",
   "version": "1.0.0",
-  "description": "Description du thème",
+  "description": "Theme description",
   "css": "theme.css"
 }
 \`\`\`
 
-theme.css — Surcharger les variables CSS avec le sélecteur \`[data-theme="mon-theme"]\` :
+theme.css — Override CSS variables with selector \`[data-theme="mon-theme"]\` :
 \`\`\`css
 [data-theme="mon-theme"] {
-  --coordinates-color: #ffc107;     /* Jaune - Valeurs numériques */
-  --text-general: #888888;          /* Gris - Texte standard */
-  --text-selected: #ffffff;         /* Blanc - Texte sélectionné */
-  --active-element: #4a5568;        /* Gris-bleu - Éléments actifs */
+  --coordinates-color: #ffc107;     /* Yellow - Numeric values */
+  --text-general: #888888;          /* Gris - Text standard */
+  --text-selected: #ffffff;         /* White - Selected text */
+  --active-element: #4a5568;        /* Gris-bleu - Elements actifs */
   --container-bg: #2c2c2c;          /* Background conteneurs */
   --column-bg: #333333;             /* Background colonnes */
   --app-bg: #181818;                /* Background application */
@@ -301,7 +301,7 @@ theme.css — Surcharger les variables CSS avec le sélecteur \`[data-theme="mon
 }
 \`\`\`
 
-Le thème Enderscope (défaut) est sombre. Pour un thème clair, inverser les backgrounds et ajuster les contrastes.
+The Enderscope theme (default) is dark. For a light theme, invert backgrounds and adjust contrasts.
 
 ## 2. Langue
 
@@ -323,48 +323,48 @@ manifest.json :
 }
 \`\`\`
 
-translations.js — Objet clé/valeur (clés = texte français source) :
+translations.js — Key/value object (keys = French source text) :
 \`\`\`javascript
 window.EnderTrackTranslations = window.EnderTrackTranslations || {};
 window.EnderTrackTranslations['ja'] = {
   'Navigation': 'ナビゲーション',
-  'Listes': 'リスト',
-  'Scénario': 'シナリオ',
+  'Lists': 'リスト',
+  'Scenario': 'シナリオ',
   'Extensions': '拡張機能',
   'Configs': '設定',
-  'Sensibilité': '感度',
-  'Exécuter': '実行',
+  'Sensitivity': '感度',
+  'Execute': '実行',
   'Pause': '一時停止',
   'Stop': '停止',
-  // ... toutes les clés françaises à traduire
+  // ... all French keys to translate
 };
 \`\`\`
 
-Le français est la langue source. La fonction \`EnderTrack.ThemeManager.t('clé')\` retourne la traduction ou la clé si absente.
+French is the source language. The function \`EnderTrack.ThemeManager.t('key')\` returns the translation or the key if absent.
 
-## 3. Profil utilisateur
+## 3. Profile utilisateur
 
 manifest.json :
 \`\`\`json
 {
   "id": "student",
   "type": "profile",
-  "name": "Étudiant",
-  "desc": "Interface pédagogique simplifiée",
+  "name": "Student",
+  "desc": "Interface simplified educational",
   "version": "1.0.0"
 }
 \`\`\`
 
 ## Installation
 
-1. Créer le dossier \`themes/mon-pack/\` avec manifest.json (+ theme.css si thème)
-2. Ajouter l'entrée dans \`themes/registry.js\` OU utiliser le bouton "📂 Charger un pack" dans l'interface
+1. Create the folder \`themes/mon-pack/\` with manifest.json (+ theme.css if theme)
+2. Add the entry in \`themes/registry.js\` OU utiliser le bouton "📂 Load a pack" dans l'interface
 
 ## Consignes
 
-- Respecter les variables CSS existantes pour la cohérence
-- Tester le contraste texte/background pour la lisibilité
-- Le sélecteur CSS DOIT être \`[data-theme="<id>"]\`
+- Respect existing CSS variables for consistency
+- Test text/background contrast for readability
+- The CSS selector MUST be \`[data-theme="<id>"]\`
 - L'id du manifest DOIT correspondre au nom du dossier`;
   }
 })();

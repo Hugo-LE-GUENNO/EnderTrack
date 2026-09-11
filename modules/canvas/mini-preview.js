@@ -22,7 +22,7 @@ class MiniPreview {
     // Vérifier si le conteneur parent est visible
     const parentContainer = container.parentElement;
     if (!parentContainer || parentContainer.classList.contains('collapsed')) {
-      this.cachedWidth = null; // Réinitialiser le cache si collapsed
+      this.cachedWidth = null; // Reset le cache si collapsed
       return;
     }
     
@@ -61,7 +61,7 @@ class MiniPreview {
     canvas.style.cursor = 'crosshair';
     container.appendChild(canvas);
     
-    // Ajouter les event listeners pour les clics
+    // Add les event listeners pour les clics
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
       const x = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -118,14 +118,14 @@ class MiniPreview {
     const plateauHeightMm = coordinateBounds.y.max - coordinateBounds.y.min;
     const maxDim = Math.max(plateauWidthMm, plateauHeightMm);
     
-    // Taille du plateau en pixels (60% de la minimap)
-    const maxPlateauSize = Math.min(canvasWidth, canvasHeight) * 0.6;
-    const plateauWidth = (plateauWidthMm / maxDim) * maxPlateauSize;
-    const plateauHeight = (plateauHeightMm / maxDim) * maxPlateauSize;
+    // Size du plateau en pixels (60% de la minimap)
+    const maxBedSize = Math.min(canvasWidth, canvasHeight) * 0.6;
+    const plateauWidth = (plateauWidthMm / maxDim) * maxBedSize;
+    const plateauHeight = (plateauHeightMm / maxDim) * maxBedSize;
     const plateauX = (canvasWidth - plateauWidth) / 2;
     const plateauY = (canvasHeight - plateauHeight) / 2;
     
-    // Plateau (gris foncé semi-transparent)
+    // Bed (gris foncé semi-transparent)
     ctx.fillStyle = 'rgba(60, 60, 60, 0.5)';
     ctx.fillRect(plateauX, plateauY, plateauWidth, plateauHeight);
     
@@ -192,10 +192,10 @@ class MiniPreview {
     if (state.mouseWorldPos && state.mouseWorldPos.x !== null && state.mouseWorldPos.y !== null) {
       const mx = state.mouseWorldPos.x;
       const my = state.mouseWorldPos.y;
-      const isOnPlateau = mx >= coordinateBounds.x.min && mx <= coordinateBounds.x.max &&
+      const isOnBed = mx >= coordinateBounds.x.min && mx <= coordinateBounds.x.max &&
                          my >= coordinateBounds.y.min && my <= coordinateBounds.y.max;
       
-      if (isOnPlateau) {
+      if (isOnBed) {
         const mousePoint = this.worldToPreviewHeader(mx, my, state, plateauX, plateauY, plateauWidth, plateauHeight);
         const posCursorColor = getComputedStyle(document.documentElement).getPropertyValue('--pos-cursor').trim() || '#00bcd4';
         ctx.strokeStyle = posCursorColor;
@@ -257,13 +257,13 @@ class MiniPreview {
     const plateauHeightMm = coordinateBounds.y.max - coordinateBounds.y.min;
     const maxDim = Math.max(plateauWidthMm, plateauHeightMm);
     
-    const maxPlateauSize = Math.min(canvasWidth, canvasHeight) * 0.6;
-    const plateauWidth = (plateauWidthMm / maxDim) * maxPlateauSize;
-    const plateauHeight = (plateauHeightMm / maxDim) * maxPlateauSize;
+    const maxBedSize = Math.min(canvasWidth, canvasHeight) * 0.6;
+    const plateauWidth = (plateauWidthMm / maxDim) * maxBedSize;
+    const plateauHeight = (plateauHeightMm / maxDim) * maxBedSize;
     const plateauX = (canvasWidth - plateauWidth) / 2;
     const plateauY = (canvasHeight - plateauHeight) / 2;
     
-    // Plateau
+    // Bed
     ctx.fillStyle = 'rgba(60, 60, 60, 0.5)';
     ctx.fillRect(plateauX, plateauY, plateauWidth, plateauHeight);
     ctx.strokeStyle = 'rgba(150, 150, 150, 0.8)';
@@ -327,10 +327,10 @@ class MiniPreview {
     if (state.mouseWorldPos && state.mouseWorldPos.x !== null && state.mouseWorldPos.y !== null) {
       const mx = state.mouseWorldPos.x;
       const my = state.mouseWorldPos.y;
-      const isOnPlateau = mx >= coordinateBounds.x.min && mx <= coordinateBounds.x.max &&
+      const isOnBed = mx >= coordinateBounds.x.min && mx <= coordinateBounds.x.max &&
                          my >= coordinateBounds.y.min && my <= coordinateBounds.y.max;
       
-      if (isOnPlateau) {
+      if (isOnBed) {
         const mousePoint = this.worldToPreviewHeader(mx, my, state, plateauX, plateauY, plateauWidth, plateauHeight);
         const posCursorColor = getComputedStyle(document.documentElement).getPropertyValue('--pos-cursor').trim() || '#00bcd4';
         ctx.strokeStyle = posCursorColor;
@@ -577,7 +577,7 @@ class MiniPreview {
     }
   }
 
-  // Afficher le menu contextuel
+  // Show le menu contextuel
   showContextMenu(x, y) {
     const menu = document.createElement('div');
     menu.style.cssText = `
@@ -589,7 +589,7 @@ class MiniPreview {
     
     const items = [
       {
-        label: this.followCursor ? '🔓 Déverrouiller suivi' : '🔒 Verrouiller sur curseur',
+        label: this.followCursor ? '🔓 Unlock suivi' : '🔒 Lock sur curseur',
         action: () => this.toggleFollowCursor()
       },
       { separator: true },
@@ -692,9 +692,9 @@ class MiniPreview {
     const plateauWidthMm = coordinateBounds.x.max - coordinateBounds.x.min;
     const plateauHeightMm = coordinateBounds.y.max - coordinateBounds.y.min;
     const maxDim = Math.max(plateauWidthMm, plateauHeightMm);
-    const maxPlateauSize = Math.min(canvasWidth, canvasHeight) * 0.6;
-    const plateauWidth = (plateauWidthMm / maxDim) * maxPlateauSize;
-    const plateauHeight = (plateauHeightMm / maxDim) * maxPlateauSize;
+    const maxBedSize = Math.min(canvasWidth, canvasHeight) * 0.6;
+    const plateauWidth = (plateauWidthMm / maxDim) * maxBedSize;
+    const plateauHeight = (plateauHeightMm / maxDim) * maxBedSize;
     const plateauX = (canvasWidth - plateauWidth) / 2;
     const plateauY = (canvasHeight - plateauHeight) / 2;
 

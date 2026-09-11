@@ -442,7 +442,7 @@ class StateManager {
       // Reset to live position when new position is recorded
       this.state.historyIndex = -1;
       
-      // Sauvegarder l'historique si activé
+      // Save l'historique si activated
       if (localStorage.getItem('endertrack_history_enabled') === 'true') {
         localStorage.setItem('endertrack_history', JSON.stringify(this.state.positionHistory));
       }
@@ -466,7 +466,7 @@ class StateManager {
       historyIndex: newMode ? (this.state.positionHistory.filter(p => p.isFinalPosition).length - 1) : -1
     });
     
-    // Afficher/masquer les contrôles d'affichage historique
+    // Show/masquer les contrôles d'affichage historique
     const historyControls = document.getElementById('historyDisplayControls');
     if (historyControls) {
       historyControls.style.display = newMode ? 'block' : 'none';
@@ -569,7 +569,7 @@ class StateManager {
       historyMode: false
     });
     
-    // Supprimer du localStorage
+    // Delete du localStorage
     localStorage.removeItem('endertrack_history');
     localStorage.removeItem('endertrack_track');
     

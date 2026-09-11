@@ -45,7 +45,7 @@ class KeyboardManager {
     document.getElementById('controllerMode')?.classList.add('active');
     document.getElementById('controllerModeToggle')?.style.setProperty('display', 'flex');
     
-    window.EnderTrack.KeyboardLogger?.addLogEntry('🕹️ Contrôleur activé');
+    window.EnderTrack.KeyboardLogger?.addLogEntry('🕹️ Controller activated');
     window.initControllerModeSettings?.();
     this.setupWheelHandler();
   }
@@ -64,7 +64,7 @@ class KeyboardManager {
     if (continuousControls) continuousControls.style.display = 'none';
     window.controllerMode = 'step';
     
-    window.EnderTrack.KeyboardLogger?.addLogEntry('🕹️ Contrôleur désactivé');
+    window.EnderTrack.KeyboardLogger?.addLogEntry('🕹️ Controller deactivated');
     window.stopContinuousMovement?.();
     this.removeWheelHandler();
     window.EnderTrack.KeyboardUI?.resetJoystick();
@@ -142,7 +142,7 @@ class KeyboardManager {
                             'PageUp', 'PageDown', 'KeyQ', 'KeyE'].includes(e.code);
       if (isMovementKey) {
         window.stopContinuousMovement();
-        window.EnderTrack.KeyboardLogger.addLogEntry('⏹️ Arrêt continu');
+        window.EnderTrack.KeyboardLogger.addLogEntry('⏹️ Continuous stop');
         
         const allButtons = ['up', 'down', 'left', 'right', 'zUp', 'zDown'];
         allButtons.forEach(btnId => window.EnderTrack.KeyboardUI.animateButton(btnId, false));

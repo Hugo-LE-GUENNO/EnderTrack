@@ -8,8 +8,8 @@ class ActionMapper {
     this.actions = {
       home_xy:      { label: '🏠 Home XY',       fn: () => window.goHome?.('xy') },
       home_xyz:     { label: '🏠 Home XYZ',      fn: () => window.goHome?.('xyz') },
-      stop:         { label: '🛑 Arrêt urgence', fn: () => window.EnderTrack?.App?.emergencyStop?.() },
-      add_pos:      { label: '➕ Ajouter pos.',  fn: () => window.EnderTrack?.Lists?.addCurrentPosition?.() },
+      stop:         { label: '🛑 Emergency stop', fn: () => window.EnderTrack?.App?.emergencyStop?.() },
+      add_pos:      { label: '➕ Add pos.',  fn: () => window.EnderTrack?.Lists?.addCurrentPosition?.() },
       toggle_mode:  { label: '⚡ Step/Continu',  fn: () => {
         const b = window.PiloteMoiPlusPlugin?.bridge;
         if (b) window.PiloteMoiPlusPlugin?.ui?.setMode(b.mode === 'step' ? 'continuous' : 'step');
@@ -27,13 +27,13 @@ class ActionMapper {
         ui.setFeedrate(cur <= ui.getSlow() ? ui.getFast() : ui.getSlow());
       }},
       save_track:   { label: '💾 Sauver track',  fn: () => window.saveTrack?.() },
-      load_track:   { label: '📂 Charger track', fn: () => window.loadTrack?.() },
+      load_track:   { label: '📂 Load track', fn: () => window.loadTrack?.() },
       history_mode: { label: '📜 Historique',     fn: () => window.EnderTrack?.State?.toggleHistoryMode?.() },
-      hist_prev:    { label: '⬅️ Hist. précéd.',  fn: () => window.EnderTrack?.State?.goToPreviousPosition?.() },
+      hist_prev:    { label: '⬅️ Hist. prev.',  fn: () => window.EnderTrack?.State?.goToPreviousPosition?.() },
       hist_next:    { label: '➡️ Hist. suivante', fn: () => window.EnderTrack?.State?.goToNextPosition?.() },
-      list_prev:    { label: '⬅️ Liste précéd.',  fn: () => window.EnderTrack?.Lists?.previousPosition?.() },
-      list_next:    { label: '➡️ Liste suivante', fn: () => window.EnderTrack?.Lists?.nextPosition?.() },
-      none:         { label: '— Aucune —',       fn: () => {} },
+      list_prev:    { label: '⬅️ List prev.',  fn: () => window.EnderTrack?.Lists?.previousPosition?.() },
+      list_next:    { label: '➡️ List suivante', fn: () => window.EnderTrack?.Lists?.nextPosition?.() },
+      none:         { label: '— Nonee —',       fn: () => {} },
     };
 
     // Default gamepad mapping (PS4/Xbox standard)

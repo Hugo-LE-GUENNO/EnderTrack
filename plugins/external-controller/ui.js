@@ -32,8 +32,8 @@ class ExternalControllerPluginUI {
     const row = document.createElement('div');
     row.className = 'cv2-toggle-row';
     row.innerHTML = `
-      <button id="ctrlV2Toggle" class="cv2-toggle" title="Mode contrôleur clavier">🕹️</button>
-      <span id="cv2GamepadStatus" class="cv2-gp-status" style="display:none" title="Gamepad connecté">🎮</span>
+      <button id="ctrlV2Toggle" class="cv2-toggle" title="Keyboard controller mode">🕹️</button>
+      <span id="cv2GamepadStatus" class="cv2-gp-status" style="display:none" title="Gamepad connected">🎮</span>
       <div class="cv2-mode-switch" id="cv2ModeSwitch" style="display:none">
         <button class="cv2-mode-btn active" id="cv2StepBtn2">Step</button>
         <button class="cv2-mode-btn" id="cv2ContBtn2">Continu</button>
@@ -94,7 +94,7 @@ class ExternalControllerPluginUI {
       <summary>${this.manifest.icon} ${this.manifest.name}</summary>
       <div class="setting-group">
         <div class="cv2-mode-row">
-          <span class="cv2-label">Paramètres</span>
+          <span class="cv2-label">Parameters</span>
           <div class="cv2-mode-switch">
             <button class="cv2-mode-btn active" id="cv2CfgTabStep"
               onclick="window.ExternalControllerPlugin?.ui?.showCfgTab('step')">Step</button>
@@ -212,15 +212,15 @@ class ExternalControllerPluginUI {
             <div id="cv2KbDirMappings" class="cv2-map-list"></div>
             <div class="cv2-map-section">Actions</div>
             <div id="cv2KeyMappings" class="cv2-map-list"></div>
-            <button class="action-btn" id="cv2AddKeyMap" style="width:100%;margin-top:8px">➕ Ajouter raccourci</button>
+            <button class="action-btn" id="cv2AddKeyMap" style="width:100%;margin-top:8px">➕ Add raccourci</button>
           </div>
           <div id="cv2MapGpContent" style="display:none">
-            ${gpName ? `<div class="cv2-map-device">🎮 ${gpName}</div>` : '<div class="cv2-map-device cv2-map-none">Aucun gamepad détecté</div>'}
+            ${gpName ? `<div class="cv2-map-device">🎮 ${gpName}</div>` : '<div class="cv2-map-device cv2-map-none">No gamepad detected</div>'}
             <div class="cv2-map-section">Directions</div>
             <div id="cv2DirMappings" class="cv2-map-list"></div>
-            <div class="cv2-map-section">Boutons</div>
+            <div class="cv2-map-section">Buttons</div>
             <div id="cv2BtnMappings" class="cv2-map-list"></div>
-            <button class="action-btn" id="cv2AddBtnMap" style="width:100%;margin-top:8px">➕ Ajouter bouton</button>
+            <button class="action-btn" id="cv2AddBtnMap" style="width:100%;margin-top:8px">➕ Add bouton</button>
           </div>
           <div style="display:flex;gap:8px;margin-top:16px">
             <button class="action-btn" id="cv2MapReset" style="flex:1">🔄 Reset</button>
@@ -304,7 +304,7 @@ class ExternalControllerPluginUI {
     container.innerHTML = '';
     const entries = Object.entries(mapper._keyMapping || {});
     if (!entries.length) {
-      container.innerHTML = '<div style="color:var(--text-general);font-size:11px">Aucun raccourci</div>';
+      container.innerHTML = '<div style="color:var(--text-general);font-size:11px">None raccourci</div>';
       return;
     }
     entries.forEach(([code, actionId]) => this._makeRow(container, code, actionId, mapper, 'key', code));
@@ -319,7 +319,7 @@ class ExternalControllerPluginUI {
     const btnLabels = { 0: '✕/A', 1: '○/B', 2: '□/X', 3: '△/Y', 4: 'LB', 5: 'RB', 6: 'LT', 7: 'RT', 8: 'Back', 9: 'Start', 10: 'L3', 11: 'R3' };
     const entries = Object.entries(mapper._btnMapping || {});
     if (!entries.length) {
-      container.innerHTML = '<div style="color:var(--text-general);font-size:11px">Aucun bouton mappé</div>';
+      container.innerHTML = '<div style="color:var(--text-general);font-size:11px">No button mapped</div>';
       return;
     }
     entries.forEach(([btn, actionId]) => {
@@ -328,7 +328,7 @@ class ExternalControllerPluginUI {
     });
   }
 
-  // --- Listen for key/button ---
+  // --- Listn for key/button ---
 
   _listenForKey() {
     const mapper = this.bridge._mapper;
@@ -493,7 +493,7 @@ class ExternalControllerPluginUI {
     overlay.innerHTML = `<div class="cv2-modal" style="width:320px;text-align:center;padding:24px">
       <div style="font-size:24px;margin-bottom:8px">🕹️</div>
       <div style="color:var(--text-selected);font-size:13px">Appuyez sur le bouton/axe pour <strong>${dirLabels[dirName]}</strong></div>
-      <div style="color:var(--text-general);font-size:11px;margin-top:8px">Bouton, trigger, axe de stick... | Echap pour annuler</div>
+      <div style="color:var(--text-general);font-size:11px;margin-top:8px">Button, trigger, axe de stick... | Echap pour annuler</div>
     </div>`;
     document.body.appendChild(overlay);
 

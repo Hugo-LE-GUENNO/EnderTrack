@@ -29,7 +29,7 @@ class EnderTrackApp {
     
     // Show startup notification
     setTimeout(() => {
-      EnderTrack.UI.showNotification('EnderTrack initialisé avec succès !', 'success');
+      EnderTrack.UI.showNotification('EnderTrack initialized successfully!', 'success');
     }, 500);
   }
 
@@ -296,32 +296,32 @@ class EnderTrackApp {
     const state = EnderTrack.State?.get();
     
     if (state?.emergencyStopActive) {
-      // Confirmation avant désactivation
-      if (confirm('⚠️ Êtes-vous sûr de vouloir réactiver le système ?\n\nCette action va débloquer tous les mouvements.')) {
+      // Confirmation avant deactivation
+      if (confirm('⚠️ Are you sure you want to re-enable the system?\n\nCette action va unlock all movements.')) {
         this.resetEmergencyMode();
       }
     } else {
-      // Sauvegarde automatique avant arrêt d'urgence
+      // Sauvegarde automatique avant emergency stop
       this.saveEmergencyState();
       
-      // Activer le mode d'urgence (premier clic)
+      // Enable le mode d'urgence (premier clic)
       if (EnderTrack.Movement) {
         EnderTrack.Movement.emergencyStopMovement();
       }
       
       this.activateEmergencyMode();
-      EnderTrack.UI.showNotification('Arrêt d\'urgence activé !', 'error');
+      EnderTrack.UI.showNotification('Emergency stop activated!', 'error');
     }
   }
   
   static activateEmergencyMode() {
-    // Bouton enfoncé
+    // Button enfoncé
     const emergencyBtn = document.getElementById('emergencyStop');
     if (emergencyBtn) {
       emergencyBtn.classList.add('emergency-active');
     }
     
-    // Activer le mode d'urgence sur l'app container
+    // Enable le mode d'urgence sur l'app container
     const appContainer = document.querySelector('.app-container');
     if (appContainer) {
       appContainer.classList.add('emergency-mode');
@@ -329,7 +329,7 @@ class EnderTrackApp {
     
     const statusTitle = document.getElementById('mainStatusLabel');
     if (statusTitle) {
-      statusTitle.textContent = '🛑 ÉTAT ACTUEL - EMERGENCY STOP';
+      statusTitle.textContent = '🛑 CURRENT STATE - EMERGENCY STOP';
     }
     
     // Mettre à jour l'état
@@ -349,7 +349,7 @@ class EnderTrackApp {
       EnderTrack.Movement.emergencyStop = false;
     }
     
-    // Désactiver le mode d'urgence
+    // Disable le mode d'urgence
     const appContainer = document.querySelector('.app-container');
     if (appContainer) {
       appContainer.classList.remove('emergency-mode');
@@ -371,7 +371,7 @@ class EnderTrackApp {
       resetEnderscope();
     }
     
-    EnderTrack.UI.showNotification('Système débloqué', 'success');
+    EnderTrack.UI.showNotification('System unlocked', 'success');
   }
   
   // Sauvegarde d'urgence
@@ -394,7 +394,7 @@ class EnderTrackApp {
         localStorage.setItem('endertrack_emergency_backup', JSON.stringify(emergencyBackup));
       }
     } catch (error) {
-      console.warn('Erreur sauvegarde d\'urgence:', error);
+      console.warn('Error sauvegarde d\'urgence:', error);
     }
   }
 
@@ -406,7 +406,7 @@ class EnderTrackApp {
     
     // Show user-friendly error
     if (EnderTrack.UI && EnderTrack.UI.showNotification) {
-      EnderTrack.UI.showNotification(`Erreur: ${errorMessage}`, 'error');
+      EnderTrack.UI.showNotification(`Error: ${errorMessage}`, 'error');
     }
     
     // Log detailed error for debugging
@@ -418,7 +418,7 @@ class EnderTrackApp {
     
     // Show user-friendly error
     if (EnderTrack.UI && EnderTrack.UI.showNotification) {
-      EnderTrack.UI.showNotification('Erreur de traitement asynchrone', 'error');
+      EnderTrack.UI.showNotification('Error de traitement asynchrone', 'error');
     }
     
     // Log detailed error

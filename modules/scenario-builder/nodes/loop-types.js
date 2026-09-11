@@ -7,29 +7,28 @@ class LoopTypesRegistry {
   }
 
   registerCoreLoops() {
-    // 🔁 Répéter
+    // Repeat
     this.register({
       id: 'simple',
-      label: '🔁 Répéter',
-      icon: '🔁',
+      label: 'Repeat',
+      icon: '↺',
       params: [
-        { name: 'label', label: 'Label', type: 'text', default: 'Répéter' },
-        { name: 'countMode', label: 'Répétitions', type: 'select', options: [
-          { value: 'number', label: '🔢 Nombre fixe' },
-          { value: 'list', label: '📍 Longueur de liste' },
-          { value: 'infinite', label: '♾️ Infini' }
+        { name: 'label', label: 'Label', type: 'text', default: 'Repeat' },
+        { name: 'countMode', label: 'Iterations', type: 'select', options: [
+          { value: 'number',   label: 'Fixed count' },
+          { value: 'list',     label: 'List length' },
+          { value: 'infinite', label: 'Infinite' }
         ], default: 'number' },
-        { name: 'count', label: 'Nombre', type: 'number', default: 5, min: 1, showIf: 'countMode=number' },
-        { name: 'countListId', label: 'Liste', type: 'list-select', default: '', showIf: 'countMode=list' },
-        { name: 'loopVar', label: 'Variable', type: 'text', default: '$i', readonly: true },
-        { name: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
-        { name: 'logMessage', label: 'Message', type: 'text', default: '', placeholder: 'Tour $i', showIf: 'showInLog' }
+        { name: 'count',       label: 'Count',    type: 'number', default: 5, min: 1, showIf: 'countMode=number' },
+        { name: 'countListId', label: 'List',     type: 'list-select', default: '', showIf: 'countMode=list' },
+        { name: 'loopVar',     label: 'Variable', type: 'text', default: '$i', readonly: true },
+        { name: 'showInLog',   label: 'Log',      type: 'checkbox', default: false },
+        { name: 'logMessage',  label: 'Message',  type: 'text', default: '', placeholder: 'Iteration $i', showIf: 'showInLog' }
       ],
       getIterationCount: (params) => {
         if (params.countMode === 'infinite') return Infinity;
         if (params.countMode === 'list') {
           let list = window.EnderTrack?.Lists?.manager?.getList?.(params.countListId);
-          // Fallback: if list not found, use first available list
           if (!list) {
             const all = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
             list = all[0];
@@ -38,24 +37,36 @@ class LoopTypesRegistry {
         }
         return Math.max(1, Math.floor(Number(params.count) || 1));
       },
-      getDefaultLogMessage: (params) => `🔁 ${params.label || 'Répéter'} — tour ${params.loopVar || '$i'}`
+      getDefaultLogMessage: (params) => `↺ ${params.label || 'Repeat'} — iteration ${params.loopVar || '$i'}`
     });
 
-    // ⚡ Tant que
+    // Group
+    this.register({
+      id: 'group',
+      label: 'Group',
+      icon: '▤',
+      params: [
+        { name: 'label', label: 'Label', type: 'text', default: 'Group' }
+      ],
+      getIterationCount: () => 1,
+      getDefaultLogMessage: (params) => `▤ ${params.label || 'Group'}`
+    });
+
+    // While
     this.register({
       id: 'while',
-      label: '⚡ Tant que',
-      icon: '⚡',
+      label: 'While',
+      icon: '⇄',
       params: [
-        { name: 'label', label: 'Label', type: 'text', default: 'Tant que' },
-        { name: 'condition', label: 'Condition', type: 'text', default: '$i < 10', placeholder: '$temp < 40' },
-        { name: 'maxIterations', label: 'Max itérations (sécurité)', type: 'number', default: 100, min: 1 },
-        { name: 'loopVar', label: 'Variable', type: 'text', default: '$i', readonly: true },
-        { name: 'showInLog', label: 'Afficher dans log', type: 'checkbox', default: false },
-        { name: 'logMessage', label: 'Message', type: 'text', default: '', placeholder: 'Tour $i', showIf: 'showInLog' }
+        { name: 'label',         label: 'Label',              type: 'text',   default: 'While' },
+        { name: 'condition',     label: 'Condition',          type: 'text',   default: '$i < 10', placeholder: '$temp < 40' },
+        { name: 'maxIterations', label: 'Max iterations',     type: 'number', default: 100, min: 1 },
+        { name: 'loopVar',       label: 'Variable',           type: 'text',   default: '$i', readonly: true },
+        { name: 'showInLog',     label: 'Log',                type: 'checkbox', default: false },
+        { name: 'logMessage',    label: 'Message',            type: 'text',   default: '', placeholder: 'Iteration $i', showIf: 'showInLog' }
       ],
       getIterationCount: (params) => params.maxIterations || 100,
-      getDefaultLogMessage: (params) => `⚡ ${params.label || 'Tant que'} — tour ${params.loopVar || '$i'}`
+      getDefaultLogMessage: (params) => `⇄ ${params.label || 'While'} — iteration ${params.loopVar || '$i'}`
     });
   }
 

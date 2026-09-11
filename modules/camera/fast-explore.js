@@ -233,7 +233,7 @@ class EnderpicamFastExplore {
           </div>
         </div>
         <div class="enderscope-modal-footer">
-          <button class="enderscope-btn-secondary" onclick="document.getElementById('enderpicam-explore-dialog').remove(); EnderTrack.Camera.fastExplore.deactivate()">Annuler</button>
+          <button class="enderscope-btn-secondary" onclick="document.getElementById('enderpicam-explore-dialog').remove(); EnderTrack.Camera.fastExplore.deactivate()">Cancel</button>
           <button class="enderscope-btn-primary" onclick="EnderTrack.Camera.fastExplore.startExploration()" ${tooMany ? 'disabled style="opacity:0.4"' : ''}>▶ Explorer</button>
         </div>
       </div>
@@ -297,7 +297,7 @@ class EnderpicamFastExplore {
       this.deactivate();
       window.switchTab?.('lists');
       if (window.EnderTrack?.UI?.showSuccess) {
-        window.EnderTrack.UI.showSuccess(`🗺 ${this.positions.length} positions générées`);
+        window.EnderTrack.UI.showSuccess(`🗺 ${this.positions.length} positions generated`);
       }
       return;
     }

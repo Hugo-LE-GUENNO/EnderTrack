@@ -36,7 +36,7 @@ class MovementEngine {
             EnderTrack.State?.update?.({ pos: { x: 0, y: 0, z: 0 }, isMoving: false });
             EnderTrack.Canvas?.requestRender?.();
             EnderTrack.ZVisualization?.render?.();
-            EnderTrack.UI?.showNotification?.('Homing terminé', 'success');
+            EnderTrack.UI?.showNotification?.('Homing done', 'success');
           } else if (evt.type === 'sync:overlays') {
             if (window.EnderTrack?.Overlays) {
               window.EnderTrack.Overlays._loadFromData(evt.data);
@@ -510,7 +510,7 @@ class MovementEngine {
       const key = axis.toUpperCase();
       const min = limits[`${axis}Min`], max = limits[`${axis}Max`];
       if (min !== null && max !== null && (val < min || val > max)) {
-        EnderTrack.UI?.showNotification?.(`Limite ${key} dépassée (${min} à ${max}mm)`, 'error');
+        EnderTrack.UI?.showNotification?.(`Limit ${key} exceeded (${min} to ${max}mm)`, 'error');
         return false;
       }
     }

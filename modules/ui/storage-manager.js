@@ -4,40 +4,40 @@ class StorageManager {
   constructor() {
     this.storageKeys = {
       // Configuration
-      'endertrack_state': { label: 'État application', category: 'config', default: false },
+      'endertrack_state': { label: 'App state', category: 'config', default: false },
       'endertrack_plateau_dimensions': { label: 'Dimensions plateau', category: 'config', default: false },
-      'endertrack_coordinate_bounds': { label: 'Plages coordonnées', category: 'config', default: false },
+      'endertrack_coordinate_bounds': { label: 'Coordinate ranges', category: 'config', default: false },
       'endertrack_axis_orientation': { label: 'Orientation axes', category: 'config', default: false },
-      'endertrack_safety_limits': { label: 'Limites sécurité', category: 'config', default: false },
+      'endertrack_safety_limits': { label: 'Safety limits', category: 'config', default: false },
       
-      // Historique
+      // History
       'showPositionXYHistory': { label: 'Affichage positions XY', category: 'history', default: false },
       'showPositionZHistory': { label: 'Affichage positions Z', category: 'history', default: false },
       'showTrackPositions': { label: 'Affichage track positions', category: 'history', default: false },
       'showTrackFree': { label: 'Affichage track continu', category: 'history', default: false },
-      'endertrack_history': { label: 'Historique positions', category: 'history', default: false },
-      'endertrack_track': { label: 'Track enregistré', category: 'history', default: false },
+      'endertrack_history': { label: 'History positions', category: 'history', default: false },
+      'endertrack_track': { label: 'Saved track', category: 'history', default: false },
       
-      // Positions stratégiques
-      'endertrack_strategic_positions': { label: 'Positions stratégiques', category: 'positions', default: false },
+      // Strategic positions
+      'endertrack_strategic_positions': { label: 'Strategic positions', category: 'positions', default: false },
       
-      // Listes
-      'endertrack_lists': { label: 'Listes sauvegardées', category: 'lists', default: false },
-      'endertrack_list_settings': { label: 'Paramètres listes', category: 'lists', default: false },
+      // Lists
+      'endertrack_lists': { label: 'Saved lists', category: 'lists', default: false },
+      'endertrack_list_settings': { label: 'Parameters listes', category: 'lists', default: false },
       
-      // Thème et UI
-      'endertrack_theme': { label: 'Thème visuel', category: 'ui', default: false },
-      'endertrack_custom_colors': { label: 'Couleurs personnalisées', category: 'ui', default: false },
-      'endertrack_ui_settings': { label: 'Paramètres interface', category: 'ui', default: false },
-      'endertrack_display_settings': { label: 'Paramètres affichage', category: 'ui', default: false }
+      // Theme et UI
+      'endertrack_theme': { label: 'Theme visuel', category: 'ui', default: false },
+      'endertrack_custom_colors': { label: 'Custom colors', category: 'ui', default: false },
+      'endertrack_ui_settings': { label: 'Parameters interface', category: 'ui', default: false },
+      'endertrack_display_settings': { label: 'Parameters affichage', category: 'ui', default: false }
     };
   }
 
-  // Sauvegarder tout le localStorage
+  // Save tout le localStorage
   saveAll() {
     const data = {};
     
-    // Sauvegarder TOUT le localStorage, pas seulement les clés définies
+    // Save TOUT le localStorage, pas seulement les clés sets
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       const value = localStorage.getItem(key);
@@ -55,11 +55,11 @@ class StorageManager {
     URL.revokeObjectURL(url);
     
     if (window.EnderTrack?.UI?.showSuccess) {
-      window.EnderTrack.UI.showSuccess('Configuration complète exportée');
+      window.EnderTrack.UI.showSuccess('Full configuration exported');
     }
   }
 
-  // Charger depuis un fichier
+  // Load depuis un fichier
   loadFromFile() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -79,13 +79,13 @@ class StorageManager {
           });
           
           if (window.EnderTrack?.UI?.showSuccess) {
-            window.EnderTrack.UI.showSuccess('Configuration chargée avec succès');
+            window.EnderTrack.UI.showSuccess('Configuration loaded successfully');
           }
           
           setTimeout(() => location.reload(), 1000);
         } catch (error) {
           if (window.EnderTrack?.UI?.showError) {
-            window.EnderTrack.UI.showError('Erreur lors du chargement du fichier');
+            window.EnderTrack.UI.showError('Error lors du chargement du fichier');
           }
         }
       };
@@ -95,12 +95,12 @@ class StorageManager {
     input.click();
   }
 
-  // Réinitialiser tout
+  // Reset tout
   resetAll() {
-    if (confirm('Réinitialiser TOUTES les données ? Cette action est irréversible.')) {
+    if (confirm('Reset ALL data? This action is irreversible.')) {
       localStorage.clear();
       if (window.EnderTrack?.UI?.showSuccess) {
-        window.EnderTrack.UI.showSuccess('Données réinitialisées');
+        window.EnderTrack.UI.showSuccess('Data reset');
       }
       setTimeout(() => location.reload(), 1000);
     }
@@ -150,7 +150,7 @@ class StorageManager {
     return stats;
   }
 
-  // Ouvrir le modal de personnalisation
+  // Open le modal de personnalisation
   openCustomizationModal() {
     const modal = document.getElementById('storageCustomizationModal');
     if (modal) {
@@ -159,7 +159,7 @@ class StorageManager {
     }
   }
 
-  // Fermer le modal
+  // Close le modal
   closeCustomizationModal() {
     const modal = document.getElementById('storageCustomizationModal');
     if (modal) {
@@ -174,9 +174,9 @@ class StorageManager {
     
     const categories = {
       config: '⚙️ Configuration',
-      history: '📈 Historique',
+      history: '📈 History',
       positions: '📍 Positions',
-      lists: '📋 Listes',
+      lists: '📋 Lists',
       ui: '🎨 Interface'
     };
     
@@ -214,7 +214,7 @@ class StorageManager {
     container.innerHTML = html;
   }
 
-  // Appliquer les changements de personnalisation
+  // Apply les changements de personnalisation
   applyCustomization() {
     const checkboxes = document.querySelectorAll('[data-storage-key]');
     
@@ -226,13 +226,13 @@ class StorageManager {
         localStorage.setItem(enableKey, 'true');
       } else {
         localStorage.removeItem(enableKey);
-        // Supprimer aussi les données si désactivé
+        // Delete aussi les données si désactivated
         localStorage.removeItem(key);
       }
     });
     
     if (window.EnderTrack?.UI?.showSuccess) {
-      window.EnderTrack.UI.showSuccess('Personnalisation appliquée');
+      window.EnderTrack.UI.showSuccess('Customization applied');
     }
     
     this.closeCustomizationModal();

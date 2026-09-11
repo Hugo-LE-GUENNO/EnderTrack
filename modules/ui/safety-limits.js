@@ -82,7 +82,7 @@ window.resetLimitsToPlateauSize = function() {
     
     // Notification
     if (window.EnderTrack?.UI?.showNotification) {
-        window.EnderTrack.UI.showNotification('Limites de sécurité définies selon les plages de coordonnées', 'success');
+        window.EnderTrack.UI.showNotification('Safety limits set from coordinate ranges', 'success');
     }
     
 };

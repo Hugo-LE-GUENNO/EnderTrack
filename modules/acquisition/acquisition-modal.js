@@ -57,7 +57,7 @@ class AcquisitionModal {
         </div>
         <div style="padding:12px 16px; border-top:1px solid #333; display:flex; gap:8px; justify-content:flex-end;">
           <button onclick="EnderTrack.AcquisitionModal.close()" style="padding:8px 16px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);">Annuler</button>
-          <button onclick="EnderTrack.AcquisitionModal._generate()" style="padding:8px 16px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); font-weight:600;">▶ Générer</button>
+          <button onclick="EnderTrack.AcquisitionModal._generate()" style="padding:8px 16px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); font-weight:600;">▶ Generate</button>
         </div>
       </div>`;
 
@@ -70,7 +70,7 @@ class AcquisitionModal {
       { id: 'timelapse', icon: '⏱️', name: 'Time-lapse' },
       { id: 'zstack', icon: '📚', name: 'Z-Stack' },
       { id: 'multipos', icon: '📍', name: 'Multi-pos' },
-      { id: 'mosaic', icon: '🧩', name: 'Mosaïque' }
+      { id: 'mosaic', icon: '🧩', name: 'Mosaic' }
     ];
     return `<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px;">
       ${types.map(t => `
@@ -90,13 +90,13 @@ class AcquisitionModal {
         this._field('Nombre d\'images', 'number', 'count', p.count, { min: 1 })
       ]);
       case 'zstack': return this._fieldGroup([
-        this._field('Z début (mm)', 'number', 'zStart', p.zStart, { step: 0.01 }),
+        this._field('Z start (mm)', 'number', 'zStart', p.zStart, { step: 0.01 }),
         this._field('Z fin (mm)', 'number', 'zEnd', p.zEnd, { step: 0.01 }),
         this._field('Pas Z (mm)', 'number', 'zStep', p.zStep, { min: 0.001, step: 0.005 })
       ]);
       case 'multipos': return this._fieldGroup([
-        this._fieldListSelect('Liste', 'listId', p.listId),
-        this._field('Délai entre pos (s)', 'number', 'delay', p.delay, { min: 0, step: 0.1 })
+        this._fieldListSelect('List', 'listId', p.listId),
+        this._field('Delay between pos (s)', 'number', 'delay', p.delay, { min: 0, step: 0.1 })
       ]);
       case 'mosaic': return this._fieldGroup([
         this._field('Colonnes', 'number', 'gridX', p.gridX, { min: 1 }),
@@ -137,7 +137,7 @@ class AcquisitionModal {
     if (p.enableZStack && this._selectedType !== 'zstack') {
       html += '<div style="margin-top:8px; padding:8px; background:var(--app-bg); border-radius:4px;">';
       html += this._fieldGroup([
-        this._field('Z début', 'number', 'zStart', p.zStart, { step: 0.01 }),
+        this._field('Z start', 'number', 'zStart', p.zStart, { step: 0.01 }),
         this._field('Z fin', 'number', 'zEnd', p.zEnd, { step: 0.01 }),
         this._field('Pas Z', 'number', 'zStep', p.zStep, { min: 0.001, step: 0.005 })
       ]);
@@ -147,7 +147,7 @@ class AcquisitionModal {
       html += '<div style="margin-top:8px; padding:8px; background:var(--app-bg); border-radius:4px;">';
       html += this._fieldGroup([
         this._field('Intervalle (s)', 'number', 'interval', p.interval, { min: 0.1, step: 0.1 }),
-        this._field('Répétitions', 'number', 'count', p.count, { min: 1 })
+        this._field('Repetitions', 'number', 'count', p.count, { min: 1 })
       ]);
       html += '</div>';
     }
@@ -169,8 +169,8 @@ class AcquisitionModal {
             { value: 'png', label: 'PNG' },
             { value: 'jpeg', label: 'JPEG' }
           ]),
-          this._fieldSelect('Éclairage', 'lightChannel', p.lightChannel, channelOpts),
-          this._field('Préfixe fichier', 'text', 'prefix', p.prefix)
+          this._fieldSelect('Lighting', 'lightChannel', p.lightChannel, channelOpts),
+          this._field('File prefix', 'text', 'prefix', p.prefix)
         ])}
       </div>`;
   }
@@ -353,8 +353,8 @@ class AcquisitionModal {
     // Create list
     const listManager = window.EnderTrack?.Lists?.manager;
     if (listManager) {
-      const list = listManager.createList?.(`Mosaïque ${p.gridX}×${p.gridY}`) ||
-        { id: 'mosaic_' + Date.now(), name: `Mosaïque ${p.gridX}×${p.gridY}`, positions: [] };
+      const list = listManager.createList?.(`Mosaic ${p.gridX}×${p.gridY}`) ||
+        { id: 'mosaic_' + Date.now(), name: `Mosaic ${p.gridX}×${p.gridY}`, positions: [] };
       if (list.positions !== undefined) {
         list.positions = positions;
         listManager.save?.();

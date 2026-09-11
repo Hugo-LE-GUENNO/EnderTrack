@@ -78,7 +78,7 @@ class ExternalController {
     const selector = document.getElementById('deviceSelector');
     if (!selector) return;
     
-    selector.innerHTML = '<option value="">-- Sélectionnez un périphérique --</option>';
+    selector.innerHTML = '<option value="">-- Select a device --</option>';
     
     this.detector.controllers.forEach((controller, id) => {
       const option = document.createElement('option');
@@ -114,7 +114,7 @@ class ExternalController {
     if (status && statusText) {
       status.style.display = 'block';
       status.style.background = controller.connected ? '#10b981' : '#ef4444';
-      statusText.textContent = `${controller.name} - ${controller.connected ? 'Connecté' : 'Déconnecté'}`;
+      statusText.textContent = `${controller.name} - ${controller.connected ? 'Connected' : 'Disconnected'}`;
     }
   }
 
@@ -125,14 +125,14 @@ class ExternalController {
     list.innerHTML = '';
     
     if (this.detector.controllers.size === 0) {
-      list.innerHTML = '<div style="color: #ffc107; padding: 8px;">Aucun contrôleur détecté</div>';
+      list.innerHTML = '<div style="color: #ffc107; padding: 8px;">No controller detected</div>';
       return;
     }
     
     this.detector.controllers.forEach((controller, id) => {
       const div = document.createElement('div');
       const statusColor = controller.connected ? '#10b981' : '#ef4444';
-      const statusText = controller.connected ? 'Connecté' : 'Déconnecté';
+      const statusText = controller.connected ? 'Connected' : 'Disconnected';
       
       div.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin: 4px 0; background: rgba(255,255,255,0.1); border-radius: 4px; border-left: 3px solid ${statusColor};">
@@ -140,7 +140,7 @@ class ExternalController {
             <div>${this.detector.getIcon(controller.type)} ${controller.name}</div>
             <small style="color: ${statusColor};">${statusText}</small>
           </div>
-          <button onclick="window.ExternalController.selectController('${id}')" style="padding: 4px 12px; font-size: 11px; background: #4a5568; border: none; color: white; border-radius: 4px; cursor: pointer;">Sélectionner</button>
+          <button onclick="window.ExternalController.selectController('${id}')" style="padding: 4px 12px; font-size: 11px; background: #4a5568; border: none; color: white; border-radius: 4px; cursor: pointer;">Select</button>
         </div>
       `;
       list.appendChild(div);
@@ -201,7 +201,7 @@ class ExternalController {
           valueSpan.textContent = this.mapper.formatMapping(mapping);
           valueSpan.style.color = '#10b981';
         } else {
-          valueSpan.textContent = 'Non mappé';
+          valueSpan.textContent = 'Not mapped';
           valueSpan.style.color = '#ef4444';
         }
       }

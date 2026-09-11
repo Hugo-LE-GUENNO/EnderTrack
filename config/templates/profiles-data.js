@@ -1,5 +1,5 @@
-// Données des profils - chargées directement sans fetch
-window.ProfilesData = {
+// Données des profils - loadedes directement sans fetch
+window.ProfileesData = {
   main: [
     {
       "id": "ender2",
@@ -40,7 +40,7 @@ window.ProfilesData = {
         "z": { "min": 0, "max": 250 }
       },
       "axisOrientation": { "x": "right", "y": "down", "z": "up" },
-      "description": "Ender-3 avec écran couleur et améliorations",
+      "description": "Ender-3 avec color screen and improvements",
       "gcode": true
     },
     {
@@ -54,7 +54,7 @@ window.ProfilesData = {
         "z": { "min": 0, "max": 210 }
       },
       "axisOrientation": { "x": "right", "y": "down", "z": "up" },
-      "description": "Référence en qualité d'impression",
+      "description": "Reference en print quality",
       "gcode": true
     },
     {
@@ -82,7 +82,7 @@ window.ProfilesData = {
         "z": { "min": -25, "max": 25 }
       },
       "axisOrientation": { "x": "right", "y": "up", "z": "up" },
-      "description": "Stage motorisé pour microscope de laboratoire",
+      "description": "Motorized stage for lab microscope",
       "gcode": true
     }
   ],
@@ -99,7 +99,7 @@ window.ProfilesData = {
         "z": { "min": 0, "max": 100 }
       },
       "axisOrientation": { "x": "right", "y": "up", "z": "up" },
-      "description": "Microscope automatisé Enderscope V1",
+      "description": "Automated microscope Enderscope V1",
       "customCategory": "Enderscope",
       "gcode": true
     }

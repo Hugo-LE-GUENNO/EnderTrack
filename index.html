@@ -50,26 +50,23 @@
         <div class="global-header">
             <div class="tab-system">
                 <button class="tab-btn" id="settingsTab" onclick="switchTab('settings')" style="opacity:0.5;">
-                    Réglages
+                    Settings
                 </button>
                 <div style="width:1px; height:20px; background:var(--border); margin:0 4px; align-self:center;"></div>
                 <button class="tab-btn active" id="navigationTab" onclick="switchTab('navigation')">
                     Navigation
                 </button>
                 <button class="tab-btn" id="listsTab" onclick="switchTab('lists')">
-                    Positions
+                    Waypoints
                 </button>
                 <button class="tab-btn" id="acquisitionTab" onclick="switchTab('acquisition')">
-                    Acquisition
-                </button>
-                <button class="tab-btn" id="imageTab" onclick="switchTab('image')">
-                    Image
+                    Automation
                 </button>
 
             </div>
             <div style="flex:1"></div>
             <button id="layoutBtn" onclick="EnderTrack.Display._showLayoutMenuFromBtn(this)" style="background:none; border:none; cursor:pointer; font-size:16px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Layout" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">⊞</button>
-            <button onclick="toggleFullscreen()" style="background:none; border:none; cursor:pointer; font-size:18px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Plein écran" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">&#x26F6;</button>
+            <button onclick="toggleFullscreen()" style="background:none; border:none; cursor:pointer; font-size:18px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Fullscreen" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">&#x26F6;</button>
             <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" onclick="showAboutModal()" style="height: 28px; cursor: pointer; opacity: 0.85; transition: opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">
         </div>
         
@@ -158,21 +155,21 @@
                 <!-- Settings Panel -->
                 <div class="tab-panel" id="settingsTabContent">
 
-                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Périphériques</div>
+                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Devices</div>
                     <!-- Platine XYZ - Connexion -->
                     <details open>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 Platine XYZ — Connexion</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 XYZ Stage — Connection</summary>
                         <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
                             
                             <!-- Status + Connect -->
                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                 <div class="status-indicator" id="connectionStatus"></div>
-                                <span id="connectionText" style="font-size:11px; color:var(--text-general); flex:1;">Déconnecté</span>
-                                <button id="connectBtn" onclick="toggleConnection()" style="padding:4px 12px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected);">Connecter</button>
+                                <span id="connectionText" style="font-size:11px; color:var(--text-general); flex:1;">Disconnected</span>
+                                <button id="connectBtn" onclick="toggleConnection()" style="padding:4px 12px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected);">Connect</button>
                             </div>
                             <div id="connectionProgress" class="progress-bar" style="display:none;">
                                 <div class="progress-fill"></div>
-                                <span class="progress-text">Connexion...</span>
+                                <span class="progress-text">Connecting...</span>
                             </div>
 
                             <!-- Port -->
@@ -181,13 +178,13 @@
                                 <select id="serialPort" style="flex:1; padding:4px 8px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--text-selected); font-size:11px;">
                                     <option value="/dev/ttyUSB0" selected>/dev/ttyUSB0</option>
                                 </select>
-                                <button onclick="resetSerialPort()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);" title="Actualiser">↻</button>
+                                <button onclick="resetSerialPort()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);" title="Refresh">↻</button>
                             </div>
                             <select id="baudRate" style="display:none;"><option value="115200" selected>115200</option></select>
 
                             <!-- Vitesse -->
                             <div class="config-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                <label style="font-size:11px; color:var(--text-general); min-width:40px;">Vitesse</label>
+                                <label style="font-size:11px; color:var(--text-general); min-width:40px;">Speed</label>
                                 <input type="range" id="feedrateSlider" min="100" max="10000" value="3000" step="100"
                                     oninput="updateFeedrate(this.value)"
                                     style="flex:1; min-width:60px; height:4px; -webkit-appearance:none; background:#404040; border-radius:2px;">
@@ -208,8 +205,8 @@
                                     <div style="display:flex; gap:4px;">
                                         <input type="text" id="gcodeInput" placeholder="G-code..." onkeypress="handleGcodeEnter(event)"
                                             style="flex:1; padding:4px 8px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--text-selected); font-size:11px; font-family:monospace;">
-                                        <button onclick="sendGcode()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--active-element); color:var(--text-selected);">Envoyer</button>
-                                        <button onclick="showGcodeHelp()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="Aide G-code">?</button>
+                                        <button onclick="sendGcode()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--active-element); color:var(--text-selected);">Send</button>
+                                        <button onclick="showGcodeHelp()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="G-code help">?</button>
                                     </div>
                                     <textarea id="gcodeOutput" readonly rows="3"
                                         style="width:100%; resize:vertical; background:var(--app-bg); color:var(--text-general); border:1px solid #333; border-radius:var(--radius-small); padding:6px 8px; font-family:monospace; font-size:10px; line-height:1.4;"></textarea>
@@ -219,10 +216,10 @@
                     </details>
 
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📷 Caméras</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📷 Cameras</summary>
                         <div style="padding:8px;" id="cameraSettingsContent">
                             <div id="cameraList"></div>
-                            <button onclick="window._showCameraTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter une caméra</button>
+                            <button onclick="window._showCameraTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Add camera</button>
                             <div id="cameraTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
                                 <div style="display:flex; flex-direction:column; gap:3px;">
                                     <button onclick="window._addCamera('webcam')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🔌 USB / Webcam</button>
@@ -258,7 +255,7 @@
                                 document.getElementById('cameraTypeMenu').style.display = 'none';
                                 let label = type;
                                 if (type === 'mjpeg') {
-                                  const url = prompt('URL du flux MJPEG :', 'http://192.168.1.x:8080/video');
+                                  const url = prompt('MJPEG stream URL:', 'http://192.168.1.x:8080/video');
                                   if (!url) return;
                                   label = url.replace('http://', '').slice(0, 25);
                                   await EnderTrack.Camera.setDriver('mjpeg');
@@ -319,14 +316,14 @@
 
                     <!-- Light -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💡 Éclairage</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💡 Lighting</summary>
                         <div style="padding:8px;" id="lightSettingsContent">
                             <div id="lightList"></div>
-                            <button onclick="window._showLightTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Ajouter une lumière</button>
+                            <button onclick="window._showLightTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Add light</button>
                             <div id="lightTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
                                 <div style="display:flex; flex-direction:column; gap:3px;">
                                     <button onclick="window._addLight('gpio')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 GPIO (Raspberry Pi)</button>
-                                    <button onclick="window._addLight('arduino')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">⚡ Arduino (Série)</button>
+                                    <button onclick="window._addLight('arduino')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">⚡ Arduino (Serial)</button>
                                 </div>
                             </div>
                             <script>
@@ -446,10 +443,10 @@
                         </div>
                     </details>
 
-                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Général</div>
+                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">General</div>
                     <!-- Platine XYZ - Zone de travail -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📐 Platine XYZ — Zone de travail</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📐 XYZ Stage — Work area</summary>
                         <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
 
                             <!-- Hidden profile elements for compatibility -->
@@ -459,7 +456,7 @@
                             <table style="width:100%; border-collapse:collapse; font-size:11px;">
                                 <thead>
                                     <tr style="color:var(--text-general); font-size:10px;">
-                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
+                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axis</th>
                                         <th style="text-align:center; padding:2px 4px;">Dimension</th>
                                         <th style="text-align:center; padding:2px 4px;">Min</th>
                                         <th style="text-align:center; padding:2px 4px;">Max</th>
@@ -514,7 +511,7 @@
                             <table style="width:100%; border-collapse:collapse; font-size:11px;">
                                 <thead>
                                     <tr style="color:var(--text-general); font-size:10px;">
-                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
+                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axis</th>
                                         <th style="text-align:center; padding:2px 4px; width:36px;">Lock</th>
                                         <th style="text-align:center; padding:2px 4px;">Home XY</th>
                                         <th style="text-align:center; padding:2px 4px;">Home XYZ</th>
@@ -544,35 +541,33 @@
 
                             <!-- Couplage XY -->
                             <div style="display:flex; align-items:center; gap:6px;">
-                                <button id="configCoupleXY" onclick="toggleCoupling(); updateConfigLocks()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔗 Coupler XY</button>
+                                <button id="configCoupleXY" onclick="toggleCoupling(); updateConfigLocks()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔗 Couple XY</button>
                             </div>
                         </div>
                     </details>
 
                     <!-- Stockage -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🖼 Calques / Overlays</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🖼 Layers / Overlays</summary>
                         <div id="overlaysTabContent" style="padding:8px;">
                             <label style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-general); padding:4px 0; border-bottom:1px solid #333; margin-bottom:6px;">
-                                <input type="checkbox" id="cameraLayerEnabled" onchange="if(window.EnderTrack.ImageManager) window.EnderTrack.ImageManager.cameraLayerEnabled=this.checked" style="margin:0;">
-                                Calque caméra automatique sur canvas
                             </label>
                             <!-- Overlays interface renders here -->
                         </div>
                     </details>
 
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💾 Stockage</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💾 Storage</summary>
                         <div style="padding:8px; display:flex; flex-direction:column; gap:6px;">
                             <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-general);">
                                 <div style="width:6px; height:6px; border-radius:50%; background:var(--success); flex-shrink:0;"></div>
-                                localStorage actif
+                                localStorage active
                                 <span id="storageSizeLabel" style="margin-left:auto; opacity:0.5; font-family:monospace;"></span>
                             </div>
                             <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                                <button onclick="saveAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Exporter</button>
-                                <button onclick="loadStorageFromFile()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Importer</button>
-                                <button onclick="resetAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Réinitialiser</button>
+                                <button onclick="saveAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Export</button>
+                                <button onclick="loadStorageFromFile()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Import</button>
+                                <button onclick="resetAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Reset</button>
                             </div>
                             <div style="display:flex; gap:4px; margin-top:4px;">
                                 <button onclick="clearHistory()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Reset tracks</button>
@@ -597,9 +592,9 @@
                     <details>
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 Extensions</summary>
                         <div style="padding:8px;">
-                            <input type="text" id="pluginSearchAll" placeholder="🔍 Rechercher..." oninput="window._filterAllPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
+                            <input type="text" id="pluginSearchAll" placeholder="🔍 Search..." oninput="window._filterAllPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
                             <div id="pluginsList"></div>
-                            <button id="catalogToggleBtn" onclick="window._openPluginCatalog()" style="width:100%; margin-top:8px; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">📦 Catalogue en ligne</button>
+                            <button id="catalogToggleBtn" onclick="window._openPluginCatalog()" style="width:100%; margin-top:8px; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">📦 Online catalog</button>
                             <div id="pluginCatalog" style="display:none; margin-top:8px;"></div>
                         </div>
                     </details>
@@ -618,27 +613,11 @@
                     <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
                 </div>
 
-                <!-- Acquisition Panel -->
+                <!-- Automatisation Panel -->
                 <div class="tab-panel" id="acquisitionTabContent">
-                    <!-- Scenario Builder interface -->
+                    <div id="automationPluginZone"></div>
                 </div>
 
-                <!-- Image Panel -->
-                <div class="tab-panel" id="imageTabContent">
-                    <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
-                        <div style="font-size:10px; color:var(--text-general); opacity:0.6;">Calque caméra sur canvas</div>
-                        <div id="imageLayerTable">
-                            <!-- Image layer table renders here -->
-                            <div style="text-align:center; color:#555; font-size:10px; padding:12px;">Aucune image</div>
-                        </div>
-                        <div style="border-top:1px solid #333; padding-top:8px;">
-                            <div style="font-size:10px; color:var(--text-general); opacity:0.6; margin-bottom:4px;">Galerie</div>
-                            <div id="imageGalleryList">
-                                <!-- Gallery list renders here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
 
                 
@@ -656,8 +635,8 @@
                 <!-- Empty State (shown when no widgets active) -->
                 <div class="viewport-empty-state" id="viewportEmptyState">
                     <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" class="empty-state-logo">
-                    <div class="empty-state-text">Aucun widget actif</div>
-                    <div class="empty-state-hint">Activez un widget depuis Configs → Visualisation</div>
+                    <div class="empty-state-text">No active widget</div>
+                    <div class="empty-state-hint">Enable a widget from Settings → Visualization</div>
                 </div>
                 
                 <!-- Stage Widget (XY + Z) - Hidden by default, shown when activated -->
@@ -691,7 +670,7 @@
                 <!-- Server status (parent) -->
                 <div id="statusHeader" style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
                     <div id="statusMainLight" style="width:10px; height:10px; border-radius:50%; background:var(--coordinates-color); flex-shrink:0;"></div>
-                    <span id="statusMainLabel" style="font-size:12px; font-weight:500; color:var(--text-general);">Simulateur</span>
+                    <span id="statusMainLabel" style="font-size:12px; font-weight:500; color:var(--text-general);">Simulator</span>
                 </div>
 
                 <!-- Children (indented under server) -->
@@ -825,7 +804,6 @@
     <script src="modules/scenario-builder/ui/variable-manager.js"></script>
     <script src="modules/scenario-builder/ui/code-generator.js"></script>
     <script src="modules/scenario-builder/ui/scenario-builder.js"></script>
-    <script src="modules/image/image-manager.js"></script>
     <script src="modules/scenario-builder/core/scenario-module.js"></script>
 
     <!-- Camera -->
@@ -995,7 +973,7 @@
       
       // Validation: min ne peut jamais être supérieur à max ET max ne peut jamais être inférieur à min
     if (!isNaN(min) && !isNaN(max) && min > max) {
-      alert(`Erreur: ${axis.toUpperCase()}min (${min}) ne peut pas être supérieur à ${axis.toUpperCase()}max (${max})`);
+      alert(`Error: ${axis.toUpperCase()}min (${min}) cannot be greater than ${axis.toUpperCase()}max (${max})`);
       // Restaurer la valeur précédente ou ajuster
       if (event.target === minInput) {
         minInput.value = max;
@@ -1009,20 +987,20 @@
     // Si min change, ajuster max pour maintenir |min| + max = dimension
       if (event.target === minInput) {
         if (min < -dimension) {
-          alert(`Erreur: Min ne peut pas être inférieur à -${dimension}mm`);
+          alert(`Error: Min cannot be less than -${dimension}mm`);
           minInput.value = -dimension;
           window.validatingCoordinates = false;
           return;
         }
         if (min > 0 && axis !== 'z') {
-          alert(`Erreur: Min ne peut pas être supérieur à 0 pour l'axe ${axis.toUpperCase()}`);
+          alert(`Error: Min cannot be greater than 0 for axis ${axis.toUpperCase()}`);
           minInput.value = 0;
           window.validatingCoordinates = false;
           return;
         }
-        // Condition spéciale pour Z: Zmin ne peut pas être supérieur à 0
+        // Condition spéciale pour Z: Zmin cannot be greater than 0
         if (axis === 'z' && min > 0) {
-          alert('Erreur: Zmin ne peut pas être supérieur à 0');
+          alert('Error: Zmin cannot be greater than 0');
           minInput.value = 0;
           window.validatingCoordinates = false;
           return;
@@ -1035,20 +1013,20 @@
       // Si max change, ajuster min pour maintenir |min| + max = dimension
       if (event.target === maxInput) {
         if (max > dimension) {
-          alert(`Erreur: Max ne peut pas être supérieur à ${dimension}mm`);
+          alert(`Error: Max cannot be greater than ${dimension}mm`);
           maxInput.value = dimension;
           window.validatingCoordinates = false;
           return;
         }
         if (max < 0 && axis !== 'z') {
-          alert(`Erreur: Max ne peut pas être inférieur à 0 pour l'axe ${axis.toUpperCase()}`);
+          alert(`Error: Max cannot be less than 0 for axis ${axis.toUpperCase()}`);
           maxInput.value = 0;
           window.validatingCoordinates = false;
           return;
         }
-        // Condition spéciale pour Z: Zmax ne peut pas descendre en dessous de 0
+        // Condition spéciale pour Z: Zmax cannot go below 0
         if (axis === 'z' && max < 0) {
-          alert('Erreur: Zmax ne peut pas descendre en dessous de 0');
+          alert('Error: Zmax cannot go below 0');
           maxInput.value = 0;
           window.validatingCoordinates = false;
           return;

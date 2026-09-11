@@ -32,7 +32,7 @@ window.updateSnakePoints = function() {
 // COORDINATE VALIDATION
 // ============================================================================
 
-window.validateLimitsAgainstPlateau = function() {
+window.validateLimitsAgainstBed = function() {
     // Placeholder for future validation logic
 };
 
@@ -54,7 +54,7 @@ window.validateCoordinateRange = function(axis) {
     const dimension = parseFloat(dimensionInput.value);
     
     if (event.target === dimensionInput) {
-        validateLimitsAgainstPlateau();
+        validateLimitsAgainstBed();
         const currentMin = parseFloat(minInput.value);
         const currentMax = parseFloat(maxInput.value);
         const isZeroMode = currentMin === 0;
@@ -72,36 +72,36 @@ window.validateCoordinateRange = function(axis) {
         
         if (window.EnderTrack?.State) {
             const currentState = window.EnderTrack.State.get();
-            const newPlateauDimensions = { ...currentState.plateauDimensions, [axis]: dimension };
+            const newBedDimensions = { ...currentState.plateauDimensions, [axis]: dimension };
             const newCoordinateBounds = {
                 ...currentState.coordinateBounds,
                 [axis]: { min: parseFloat(minInput.value), max: parseFloat(maxInput.value) }
             };
             
             window.EnderTrack.State.update({
-                plateauDimensions: newPlateauDimensions,
+                plateauDimensions: newBedDimensions,
                 coordinateBounds: newCoordinateBounds
             });
             
             if (localStorage.getItem('endertrack_plateau_dimensions_enabled') === 'true') {
-                localStorage.setItem('endertrack_plateau_dimensions', JSON.stringify(newPlateauDimensions));
+                localStorage.setItem('endertrack_plateau_dimensions', JSON.stringify(newBedDimensions));
             }
             if (localStorage.getItem('endertrack_coordinate_bounds_enabled') === 'true') {
                 localStorage.setItem('endertrack_coordinate_bounds', JSON.stringify(newCoordinateBounds));
             }
             
-            if (typeof resetLimitsToPlateauSize === 'function') {
-                resetLimitsToPlateauSize();
+            if (typeof resetLimitsToBedSize === 'function') {
+                resetLimitsToBedSize();
             }
         }
         
-        validateLimitsAgainstPlateau();
+        validateLimitsAgainstBed();
         window.validatingCoordinates = false;
         return;
     }
     
     if (!isNaN(min) && !isNaN(max) && min > max) {
-        alert(`Erreur: ${axis.toUpperCase()}min (${min}) ne peut pas être supérieur à ${axis.toUpperCase()}max (${max})`);
+        alert(`Error: ${axis.toUpperCase()}min (${min}) cannot be greater than ${axis.toUpperCase()}max (${max})`);
         if (event.target === minInput) {
             minInput.value = max;
         } else {
@@ -113,19 +113,19 @@ window.validateCoordinateRange = function(axis) {
     
     if (event.target === minInput) {
         if (min < -dimension) {
-            alert(`Erreur: Min ne peut pas être inférieur à -${dimension}mm`);
+            alert(`Error: Min cannot be less than -${dimension}mm`);
             minInput.value = -dimension;
             window.validatingCoordinates = false;
             return;
         }
         if (min > 0 && axis !== 'z') {
-            alert(`Erreur: Min ne peut pas être supérieur à 0 pour l'axe ${axis.toUpperCase()}`);
+            alert(`Error: Min cannot be greater than 0 for axis ${axis.toUpperCase()}`);
             minInput.value = 0;
             window.validatingCoordinates = false;
             return;
         }
         if (axis === 'z' && min > 0) {
-            alert('Erreur: Zmin ne peut pas être supérieur à 0');
+            alert('Error: Zmin cannot be greater than 0');
             minInput.value = 0;
             window.validatingCoordinates = false;
             return;
@@ -136,19 +136,19 @@ window.validateCoordinateRange = function(axis) {
     
     if (event.target === maxInput) {
         if (max > dimension) {
-            alert(`Erreur: Max ne peut pas être supérieur à ${dimension}mm`);
+            alert(`Error: Max cannot be greater than ${dimension}mm`);
             maxInput.value = dimension;
             window.validatingCoordinates = false;
             return;
         }
         if (max < 0 && axis !== 'z') {
-            alert(`Erreur: Max ne peut pas être inférieur à 0 pour l'axe ${axis.toUpperCase()}`);
+            alert(`Error: Max cannot be less than 0 for axis ${axis.toUpperCase()}`);
             maxInput.value = 0;
             window.validatingCoordinates = false;
             return;
         }
         if (axis === 'z' && max < 0) {
-            alert('Erreur: Zmax ne peut pas descendre en dessous de 0');
+            alert('Error: Zmax ne peut pas descendre en dessous de 0');
             maxInput.value = 0;
             window.validatingCoordinates = false;
             return;
@@ -159,26 +159,26 @@ window.validateCoordinateRange = function(axis) {
     
     if (window.EnderTrack?.State) {
         const currentState = window.EnderTrack.State.get();
-        const newPlateauDimensions = { ...currentState.plateauDimensions, [axis]: parseFloat(dimensionInput.value) };
+        const newBedDimensions = { ...currentState.plateauDimensions, [axis]: parseFloat(dimensionInput.value) };
         const newCoordinateBounds = {
             ...currentState.coordinateBounds,
             [axis]: { min: parseFloat(minInput.value), max: parseFloat(maxInput.value) }
         };
         
         window.EnderTrack.State.update({
-            plateauDimensions: newPlateauDimensions,
+            plateauDimensions: newBedDimensions,
             coordinateBounds: newCoordinateBounds
         });
         
         if (localStorage.getItem('endertrack_plateau_dimensions_enabled') === 'true') {
-            localStorage.setItem('endertrack_plateau_dimensions', JSON.stringify(newPlateauDimensions));
+            localStorage.setItem('endertrack_plateau_dimensions', JSON.stringify(newBedDimensions));
         }
         if (localStorage.getItem('endertrack_coordinate_bounds_enabled') === 'true') {
             localStorage.setItem('endertrack_coordinate_bounds', JSON.stringify(newCoordinateBounds));
         }
         
-        if (typeof resetLimitsToPlateauSize === 'function') {
-            resetLimitsToPlateauSize();
+        if (typeof resetLimitsToBedSize === 'function') {
+            resetLimitsToBedSize();
         }
     }
     
@@ -243,8 +243,8 @@ window.setAxisOrientation = function(xDir, yDir) {
         localStorage.setItem('endertrack_axis_orientation', JSON.stringify(EnderTrack.State.get().axisOrientation));
     }
     
-    if (typeof resetLimitsToPlateauSize === 'function') {
-        resetLimitsToPlateauSize();
+    if (typeof resetLimitsToBedSize === 'function') {
+        resetLimitsToBedSize();
     }
     
     document.querySelectorAll('.axis-btn[data-x]').forEach(btn => btn.classList.remove('active'));
@@ -299,11 +299,11 @@ window.switchTab = function(tabId) {
         const historySection = rightPanel.querySelector('.history-section');
         
         if (tabId === 'acquisition') {
-            // Masquer historique et graphiques
+            // Hide historique et graphiques
             if (graphsSection) graphsSection.style.display = 'none';
             if (historySection) historySection.style.display = 'none';
             
-            // Activer et afficher le module Scenario
+            // Enable et afficher le module Scenario
             if (window.EnderTrack?.Scenario) {
                 if (!window.EnderTrack.Scenario.isActive) {
                     window.EnderTrack.Scenario.activate();
@@ -313,11 +313,11 @@ window.switchTab = function(tabId) {
                 }
             }
         } else {
-            // Afficher historique et graphiques
+            // Show historique et graphiques
             if (graphsSection) graphsSection.style.display = 'block';
             if (historySection) historySection.style.display = 'block';
             
-            // Masquer section scénario
+            // Hide section scénario
             const scenarioOutput = document.getElementById('scenarioOutputSection');
             if (scenarioOutput) scenarioOutput.style.display = 'none';
         }
@@ -368,42 +368,42 @@ window.showGcodeHelp = function() {
         modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;';
         modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
         const cmds = [
-            ['G0 X Y Z', 'Déplacement rapide'],
-            ['G1 X Y Z F', 'Déplacement linéaire (F=feedrate)'],
-            ['G28', 'Homing — retour origine tous axes'],
+            ['G0 X Y Z', 'Rapid movement'],
+            ['G1 X Y Z F', 'Linear movement (F=feedrate)'],
+            ['G28', 'Homing — return to origin all axes'],
             ['G28 X / Y / Z', 'Homing axe individuel'],
-            ['G90', 'Mode positionnement absolu'],
-            ['G91', 'Mode positionnement relatif'],
-            ['G92 X0 Y0 Z0', 'Définir position actuelle comme origine'],
-            ['M114', 'Position actuelle (X Y Z)'],
-            ['M115', 'Info firmware (version, capabilities)'],
-            ['M119', 'État des endstops'],
-            ['M400', 'Attendre fin de tous les mouvements'],
-            ['M300 S440 P200', 'Bip (fréquence S, durée P ms)'],
-            ['M112', '⚠️ Arrêt d\'urgence immédiat'],
-            ['M999', 'Reset après arrêt d\'urgence'],
-            ['M17', 'Activer les moteurs'],
-            ['M18 / M84', 'Désactiver les moteurs'],
-            ['M201 X A Y A Z A', 'Accélération max par axe (mm/s²)'],
-            ['M203 X V Y V Z V', 'Vitesse max par axe (mm/s)'],
-            ['M204 P T', 'Accélération impression (P) / travel (T)'],
+            ['G90', 'Absolute positioning mode'],
+            ['G91', 'Relative positioning mode'],
+            ['G92 X0 Y0 Z0', 'Set current position as origin'],
+            ['M114', 'Current position (X Y Z)'],
+            ['M115', 'Firmware info (version, capabilities)'],
+            ['M119', 'Endstop status'],
+            ['M400', 'Wait for all moves to finish'],
+            ['M300 S440 P200', 'Beep (frequency S, duration P ms)'],
+            ['M112', '⚠️ Immediate emergency stop'],
+            ['M999', 'Reset after emergency stop'],
+            ['M17', 'Enable motors'],
+            ['M18 / M84', 'Disable motors'],
+            ['M201 X A Y A Z A', 'Max acceleration per axis (mm/s²)'],
+            ['M203 X V Y V Z V', 'Max speed per axis (mm/s)'],
+            ['M204 P T', 'Print acceleration (P) / travel (T)'],
             ['M205 X J Y J Z J', 'Jerk / Junction Deviation par axe'],
-            ['M211 S0 / S1', 'Désactiver / activer software endstops'],
-            ['M500', 'Sauvegarder config en EEPROM'],
-            ['M501', 'Charger config depuis EEPROM'],
-            ['M502', 'Reset config usine (sans sauver)'],
-            ['M503', 'Afficher config actuelle'],
-            ['G21', 'Unités en millimètres'],
-            ['G20', 'Unités en pouces'],
+            ['M211 S0 / S1', 'Disable / enable software endstops'],
+            ['M500', 'Save config to EEPROM'],
+            ['M501', 'Load config from EEPROM'],
+            ['M502', 'Factory reset config (without saving)'],
+            ['M503', 'Show current config'],
+            ['G21', 'Units in millimeters'],
+            ['G20', 'Units in inches'],
         ];
         modal.innerHTML = `<div style="background:var(--container-bg,#2c2c2c);border-radius:8px;padding:20px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;color:#ccc;font-size:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <h3 style="margin:0;color:#fff;font-size:15px;">📖 Commandes G-code</h3>
+                <h3 style="margin:0;color:#fff;font-size:15px;">📖 G-code commands</h3>
                 <button onclick="closeGcodeHelp()" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer;">✕</button>
             </div>
             <table style="width:100%;border-collapse:collapse;">
                 ${cmds.map(([cmd, desc]) => `<tr style="border-bottom:1px solid #333;">
-                    <td style="padding:5px 8px 5px 0;font-family:monospace;color:#ffc107;white-space:nowrap;font-size:11px;cursor:pointer;" onclick="document.getElementById('gcodeInput').value='${cmd.split(' ')[0]}';closeGcodeHelp();" title="Cliquer pour insérer">${cmd}</td>
+                    <td style="padding:5px 8px 5px 0;font-family:monospace;color:#ffc107;white-space:nowrap;font-size:11px;cursor:pointer;" onclick="document.getElementById('gcodeInput').value='${cmd.split(' ')[0]}';closeGcodeHelp();" title="Click to insert">${cmd}</td>
                     <td style="padding:5px 0;color:#aaa;font-size:11px;">${desc}</td>
                 </tr>`).join('')}
             </table>
@@ -420,14 +420,14 @@ window.closeGcodeHelp = function() {
 
 window.openTemplateModal = async function() {
     await window.ModalLoader.load('templateModal');
-    if (window.PlateauTemplates) {
-        window.PlateauTemplates.openModal();
+    if (window.BedTemplates) {
+        window.BedTemplates.openModal();
     }
 };
 
 window.closeTemplateModal = function() {
-    if (window.PlateauTemplates) {
-        window.PlateauTemplates.closeModal();
+    if (window.BedTemplates) {
+        window.BedTemplates.closeModal();
     }
 };
 
@@ -685,12 +685,12 @@ window.saveConfig = function() {
 };
 
 window.loadConfig = function() {
-    if (confirm('Charger une configuration remplacera les paramètres actuels. Continuer ?')) {
+    if (confirm('Loading a configuration will replace current settings. Continue?')) {
     }
 };
 
 window.resetToDefault = function() {
-    if (confirm('Réinitialiser aux paramètres par défaut ? Cette action est irréversible.')) {
+    if (confirm('Reset to default settings? This action is irreversible.')) {
     }
 };
 
@@ -709,7 +709,7 @@ window.validateAxisConfig = function() {
         const zMin = parseFloat(document.getElementById('zMin')?.value) || 0;
         const zMax = parseFloat(document.getElementById('zMax')?.value) || 100;
         
-        coordConfig.setPlateauDimensions(plateauX, plateauY, plateauZ);
+        coordConfig.setBedDimensions(plateauX, plateauY, plateauZ);
         coordConfig.setCoordinateBounds({
             x: { min: xMin, max: xMax },
             y: { min: yMin, max: yMax },
@@ -717,16 +717,16 @@ window.validateAxisConfig = function() {
         });
         
         if (window.EnderTrack?.Notifications) {
-            window.EnderTrack.Notifications.show('Configuration des coordonnées mise à jour', 'success');
+            window.EnderTrack.Notifications.show('Coordinate configuration updated', 'success');
         }
     }
 };
 
-window.validatePlateauSize = function() {
+window.validateBedSize = function() {
     validateAxisConfig();
 };
 
-window.resetLimitsToPlateauSize = function() {
+window.resetLimitsToBedSize = function() {
     const state = window.EnderTrack?.State?.get();
     let xMin, xMax, yMin, yMax, zMin, zMax;
     
@@ -791,7 +791,7 @@ window.resetLimitsToPlateauSize = function() {
     }, 100);
     
     if (window.EnderTrack?.UI?.showNotification) {
-        window.EnderTrack.UI.showNotification('Limites de sécurité définies selon les plages de coordonnées', 'success');
+        window.EnderTrack.UI.showNotification('Safety limits set from coordinate ranges', 'success');
     }
 };
 
