@@ -95,6 +95,8 @@ class ScenarioModule {
     
     this._showRunUI({ name: scenario?.name || 'Scenario', positions: [] });
     this.showExecutionUI();
+    const ppBtn = document.getElementById('sbPlayPauseBtn');
+    if (ppBtn) ppBtn.textContent = '\u23f8';
     EnderTrack.Events?.emit?.('scenario:activated');
 
     await this._executor.executeTree(scenario.tree, scenario.watchers);
@@ -169,10 +171,9 @@ class ScenarioModule {
         </div>
 
         <!-- Execute -->
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-          <button onclick="EnderTrack.Scenario.executeScenario()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#22c55e; color:#000; font-weight:600;" ${actionCount ? '' : 'disabled style="padding:10px; border:none; border-radius:4px; font-size:12px; opacity:0.3;"'}>\u25b6</button>
-          <button id="sbPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\u23f8</button>
-          <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">\u25a0</button>
+        <div style="display:flex; gap:6px;">
+          <button id="sbPlayPauseBtn" onclick="EnderTrack.Scenario.isExecuting ? EnderTrack.Scenario._togglePause() : EnderTrack.Scenario.executeScenario()" style="flex:1; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--active-element); color:var(--text-selected); font-weight:600;" ${actionCount ? '' : 'disabled'}>\u25b6</button>
+          <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px 14px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--button-bg); color:var(--text-general); font-weight:600;">\u25a0</button>
         </div>
       </div>`;
 
@@ -198,10 +199,9 @@ class ScenarioModule {
     container.innerHTML = `
       <div style="padding:10px; display:flex; flex-direction:column; gap:8px;">
         <div style="font-size:12px; color:var(--text-selected); font-weight:500;">▶ ${scenario?.name || '?'}</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-          <button onclick="EnderTrack.Scenario.executeScenario()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#22c55e; color:#000; font-weight:600;">▶</button>
-          <button id="sbPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:var(--active-element); color:var(--text-selected); font-weight:600;">⏸</button>
-          <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; background:#ef4444; color:#fff; font-weight:600;">■</button>
+        <div style="display:flex; gap:6px;">
+          <button onclick="EnderTrack.Scenario.executeScenario()" style="flex:1; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--active-element); color:var(--text-selected); font-weight:600;">▶</button>
+          <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px 14px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--button-bg); color:var(--text-general); font-weight:600;">■</button>
         </div>
       </div>`;
   }
@@ -357,7 +357,7 @@ ${p.label}:`, p.default ?? '');
     this._paused = !this._paused;
     const btn = document.getElementById('sbPlayPauseBtn');
     if (btn) btn.textContent = this._paused ? '▶' : '⏸';
-    this.addLog(this._paused ? '⏸ Pause' : '▶ Reprise', 'info');
+    this.addLog(this._paused ? '⏸ Paused' : '▶ Resumed', 'info');
   }
 
   stopExecution() {
@@ -394,7 +394,7 @@ ${p.label}:`, p.default ?? '');
         <div style="height:4px; background:var(--app-bg); border-radius:2px; overflow:hidden;">
           <div id="sbRunProgress" style="height:100%; width:0%; background:#22c55e; border-radius:2px; transition:width 0.3s;"></div>
         </div>
-        <div id="sbRunLog" style="max-height:150px; overflow-y:auto; background:var(--app-bg); border-radius:4px; padding:4px 6px; font-size:9px; font-family:var(--font-mono);"></div>
+        <div id="sbRunLog" style="max-height:220px; overflow-y:auto; background:var(--app-bg); border-radius:4px; padding:6px 8px; font-size:10px; font-family:monospace; line-height:1.6; letter-spacing:0.01em;"></div>
       </div>
     `;
     // Play/pause + stop in left panel (acquisition tab)
@@ -405,7 +405,7 @@ ${p.label}:`, p.default ?? '');
           <div style="font-size:11px; color:var(--text-selected); font-weight:500;">\u25b6 ${list.name}</div>
           <div style="display:flex; gap:6px; align-items:center;">
             <button id="sbPlayPauseBtn" onclick="EnderTrack.Scenario._togglePause()" style="flex:1; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--active-element); color:var(--text-selected); font-weight:600;">\u23f8</button>
-            <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px 16px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:#ef4444; color:#fff; font-weight:600;">\u25a0</button>
+            <button onclick="EnderTrack.Scenario.stopExecution()" style="padding:10px 14px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:var(--button-bg); color:var(--text-general); font-weight:600;">\u25a0</button>
           </div>
         </div>
       `;
@@ -430,7 +430,9 @@ ${p.label}:`, p.default ?? '');
     const colors = { info: 'var(--text-general)', warning: '#f59e0b', error: '#ef4444' };
     const el = document.getElementById('sbRunLog') || document.getElementById('scenarioRightLog');
     if (el) {
-      el.innerHTML += `<div style="color:${colors[type] || colors.info}; padding:1px 0;">${message}</div>`;
+      const ts = new Date().toLocaleTimeString('en', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      el.innerHTML += `<div style="color:${colors[type] || colors.info}; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; gap:6px;"><span style="opacity:0.35; flex-shrink:0;">${ts}</span><span>${message}</span></div>`;
+      el.scrollTop = el.scrollHeight;
       el.scrollTop = el.scrollHeight;
     }
   }
