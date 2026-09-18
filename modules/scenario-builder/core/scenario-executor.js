@@ -7,7 +7,10 @@ class ScenarioExecutor {
     this.context = {};
     this.safetyConditions = [];
     this.totalIterations = 0;
-    this.lastWatcherState = {}; // Mémoriser le dernier état de chaque watcher
+    this.lastWatcherState = {};
+    this._loopStack = [];
+    this._totalActions = 0;
+    this._doneActions = 0;
   }
 
   async executeTree(tree, watchers = []) {
@@ -23,6 +26,10 @@ class ScenarioExecutor {
     this.totalIterations = 0;
     this.lastWatcherState = {};
     this.currentLoopIndex = 0;
+    this._loopStack = [];
+    this._breakLoop = false;
+    this._doneActions = 0;
+    this._totalActions = window.EnderTrack?.TreeUtils?.countActions?.(tree) ?? 0;
 
     // Initialiser le VariableManager avec le scénario courant
     const currentScenario = window.EnderTrack?.Scenario?.manager?.getCurrentScenario?.();
@@ -167,8 +174,17 @@ class ScenarioExecutor {
         }
       }
     } else if (node.type === 'macro') {
-      // Macro: exécuter les enfants comme un root
-      for (const child of node.children || []) {
+      // Apply input values (exposed) and constant values (non-exposed) onto children params
+      const children = JSON.parse(JSON.stringify(node.children || []));
+      for (const inp of (node.inputs || [])) {
+        const val = inp.exposed
+          ? (node.inputValues?.[inp.id] ?? inp.default)
+          : (inp.constantValue !== undefined ? inp.constantValue : inp.default);
+        if (val === undefined || !inp.nodePath || !inp.paramName) continue;
+        const target = EnderTrack.TreeUtils.getNodeByPath({ type: 'root', children }, inp.nodePath);
+        if (target?.params) target.params[inp.paramName] = val;
+      }
+      for (const child of children) {
         if (!this.isExecuting) break;
         await this.executeNode(child);
       }
@@ -210,9 +226,9 @@ class ScenarioExecutor {
       }
     }
     
-    if (window.EnderTrack?.Scenario?.addLog) {
+    if (conditionNode.params?.showInLog && window.EnderTrack?.Scenario?.addLog) {
       const label = conditionNode.params?.label || 'Condition';
-      const matched = matchedBranch ? (matchedBranch.condition === null ? 'SINON' : matchedBranch.condition) : 'aucune';
+      const matched = matchedBranch ? (matchedBranch.condition === null ? 'ELSE' : matchedBranch.condition) : 'none';
       window.EnderTrack.Scenario.addLog(`👁️ ${label}: ${matched}`, 'info');
     }
     
@@ -257,7 +273,12 @@ class ScenarioExecutor {
       let i = 0;
       const maxIter = loopNode.params?.maxIterations || 100;
       const condition = loopNode.params?.condition || '$i < 10';
-      while (i < maxIter && this.isExecuting) {
+      if (!(loopVar in this.context.variables)) this.context.variables[loopVar] = startIndex;
+      const whileLabel = loopNode.params?.label || 'while';
+      const stackEntry = { label: whileLabel, current: 0, total: Infinity, condition, loopVar, isWhile: true };
+      this._loopStack.push(stackEntry);
+      this._notifyLoopStack();
+      while (i < maxIter && this.isExecuting && !this._breakLoop) {
         const loopValue = startIndex + (i * increment);
         this.totalIterations++;
         this.currentLoopIndex = loopValue;
@@ -267,6 +288,8 @@ class ScenarioExecutor {
         }
         this.context.iteration = i;
         this.context.variables[loopVar] = loopValue;
+        stackEntry.current = i + 1;
+        this._notifyLoopStack();
         this.updateVariables();
         await this.checkWatchers();
         if (!this.isExecuting) break;
@@ -278,25 +301,45 @@ class ScenarioExecutor {
         if (!conditionResult) break;
         if (loopNode.params.showInLog && loopNode.params.logMessage && window.EnderTrack?.Scenario?.addLog)
           window.EnderTrack.Scenario.addLog(_resolveVars(loopNode.params.logMessage, this.context), 'info');
+        this._whileCondition = { condition, variables: this.context.variables };
         for (const child of loopNode.children || []) {
           if (!this.isExecuting) break;
           await this.executeNode(child);
         }
+        this._whileCondition = null;
+        // Guarantee at least one await per iteration
+        await new Promise(r => setTimeout(r, 0));
         i++;
       }
+      this._loopStack.pop();
+      this._notifyLoopStack();
       if (loopProgressContainer) loopProgressContainer.style.display = 'none';
       if (loopTimingContainer) loopTimingContainer.style.display = 'none';
+      this._breakLoop = false;
       return;
     }
 
     // Boucle FOR classique
+    const loopLabel = loopNode.params?.label || loopNode.loopId;
+    const stackEntry = { label: loopLabel, current: 0, total: iterationCount, loopVar };
+    this._loopStack.push(stackEntry);
+    this._notifyLoopStack();
+
     for (let i = 0; i < iterationCount; i++) {
       if (!this.isExecuting) break;
+      // Check parent while condition if inside a while loop
+      if (this._whileCondition) {
+        let parentOk = false;
+        try { parentOk = window.EnderTrack.ConditionEvaluator.evaluate(this._whileCondition.condition, this.context.variables); } catch(e) {}
+        if (!parentOk) { this._breakLoop = true; break; }
+      }
       const loopValue = startIndex + (i * increment);
       this.totalIterations++;
       this.currentLoopIndex = loopValue;
       this.currentLoopIteration = i + 1;
       this.totalLoopIterations = iterationCount;
+      stackEntry.current = i + 1;
+      this._notifyLoopStack();
       this.updateLoopProgress(i + 1, iterationCount);
       if (window.EnderTrack?.Scenario?._updateRunUI)
         window.EnderTrack.Scenario._updateRunUI(i + 1, iterationCount);
@@ -317,9 +360,13 @@ class ScenarioExecutor {
         if (!this.isExecuting) break;
         await this.executeNode(child);
       }
+      // Guarantee at least one await per iteration to prevent blocking the thread
+      await new Promise(r => setTimeout(r, 0));
       this.updateLoopTime();
     }
 
+    this._loopStack.pop();
+    this._notifyLoopStack();
     if (loopProgressContainer) loopProgressContainer.style.display = 'none';
     if (loopTimingContainer) loopTimingContainer.style.display = 'none';
   }
@@ -346,11 +393,9 @@ class ScenarioExecutor {
 
     try {
       const result = await actionDef.execute(actionNode.params, this.context);
-      
-      // Mettre à jour le track si c'est un mouvement
-      if (actionNode.actionId === 'move') {
-        this.updateTrackProgress();
-      }
+      this._doneActions++;
+      window.EnderTrack?.Scenario?._updateGlobalBar?.(this._doneActions, this._totalActions);
+      if (actionNode.actionId === 'move') this.updateTrackProgress();
       
       // Si l'action a arrêté l'exécution (STOP)
       if (result?.stopped) {
@@ -362,6 +407,10 @@ class ScenarioExecutor {
         window.EnderTrack.Scenario.addLog(`❌ Erreur: ${error.message}`, 'error');
       }
     }
+  }
+
+  _notifyLoopStack() {
+    window.EnderTrack?.Scenario?._updateLoopBars?.(this._loopStack);
   }
 
   togglePause() {

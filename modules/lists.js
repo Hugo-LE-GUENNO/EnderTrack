@@ -62,7 +62,8 @@ class ListManager {
 
   addGroup(name) {
     const colors = ['#4a90e2', '#e2844a', '#4ae290', '#e24a90', '#90e24a', '#904ae2'];
-    const g = { id: this._nextGroupId++, name: name || `List ${this._nextGroupId - 1}`, positions: [], visible: true, pinned: false, color: colors[(this._nextGroupId - 2) % colors.length] };
+    const isFirst = this.groups.length === 0;
+    const g = { id: this._nextGroupId++, name: name || `List ${this._nextGroupId - 1}`, positions: [], visible: true, pinned: isFirst, color: colors[(this._nextGroupId - 2) % colors.length] };
     this.groups.push(g);
     this.activeGroupId = g.id;
     this.selectedIdx = null;
@@ -501,6 +502,9 @@ class ListManager {
     this.groups = raw.groups;
     this.activeGroupId = raw.activeGroupId || this.groups[0]?.id;
     this._nextGroupId = raw._nextGroupId || 1;
+    if (this.groups.length > 0 && !this.groups.some(g => g.pinned)) {
+      this.groups[0].pinned = true;
+    }
     this.renderUI?.();
     window.EnderTrack?.Canvas?.requestRender?.();
     window.EnderTrack?.ZVisualization?.render?.();
@@ -770,9 +774,9 @@ class ListManager {
     menu.innerHTML = `
       <button onmousedown="EnderTrack.Lists.toggleGroupPinned(${gid}); this.parentElement.remove()">${g.pinned ? '📌 Unpin' : 'Pin'}</button>
       <button onmousedown="const n=prompt('Name:','${g.name.replace(/'/g, "\\'")}'); if(n) { EnderTrack.Lists.renameGroup(${gid},n); } this.parentElement.remove()">Rename</button>
-      <button onmousedown="EnderTrack.Lists.exportGroup(${gid}); this.parentElement.remove()">Sauver</button>
-      <button onmousedown="EnderTrack.Lists.importFromFile(); this.parentElement.remove()">Importer</button>
-      <button onmousedown="if(confirm('Delete?')) EnderTrack.Lists.removeGroup(${gid}); this.parentElement.remove()">Supprimer</button>
+      <button onmousedown="EnderTrack.Lists.exportGroup(${gid}); this.parentElement.remove()">Save</button>
+      <button onmousedown="EnderTrack.Lists.importFromFile(); this.parentElement.remove()">Import</button>
+      <button onmousedown="if(confirm('Delete?')) EnderTrack.Lists.removeGroup(${gid}); this.parentElement.remove()">Delete</button>
     `;
     document.body.appendChild(menu);
     const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };

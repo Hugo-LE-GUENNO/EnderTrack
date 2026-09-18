@@ -4,10 +4,11 @@ class ScenarioBuilder {
   constructor() {
     this.scenario = null;
     this.selectedPath = null;
+    this.selectedPaths = [];
     this._undoStack = [];
     this._redoStack = [];
     this._viewMode = 'build';
-    this._openAccordions = { flow: false, actions: false, plugins: false };
+    this._openAccordions = { flow: false, actions: false, plugins: false, functions: false };
   }
 
   // === OPEN / CLOSE ===
@@ -16,6 +17,7 @@ class ScenarioBuilder {
     this.scenario = scenario;
     this._snapshot = JSON.stringify(scenario);
     this.selectedPath = null;
+    this.selectedPaths = [];
     this._undoStack = [];
     this._redoStack = [];
     this._renderModal();
@@ -27,20 +29,22 @@ class ScenarioBuilder {
       const me = this._macroEditMode;
       const m = EnderTrack.MacroRegistry?.get(me.macroId);
       if (m) {
-        m.children = JSON.parse(JSON.stringify(this.scenario.tree.children || []));
-        m.inputs = EnderTrack.TreeUtils.extractMacroInputs(m.children);
+        const groupNode = this.scenario.tree.children?.[0];
+        m.children = JSON.parse(JSON.stringify(groupNode?.children || this.scenario.tree.children || []));
+        m.inputs = groupNode?._pendingInputs
+          ? JSON.parse(JSON.stringify(groupNode._pendingInputs))
+          : EnderTrack.TreeUtils.extractMacroInputs(m.children);
         EnderTrack.MacroRegistry.persist();
       }
-      // Restore original scenario
       this.scenario = me.originalScenario;
       this._snapshot = me.originalSnapshot;
       this._macroEditMode = null;
-      this._editingMacroId = me.macroId;
-      // Go back to Function library
       const nameEl = document.querySelector('.sb-header-name');
       if (nameEl) nameEl.textContent = this.scenario.name;
-      this._setView('vars');
       this._refreshPalette();
+      this._setView('build');
+      this._refreshTree();
+      this._refreshProperties();
       return;
     }
     this._unbindKeyboard();
@@ -57,11 +61,12 @@ class ScenarioBuilder {
       this.scenario = me.originalScenario;
       this._snapshot = me.originalSnapshot;
       this._macroEditMode = null;
-      this._editingMacroId = me.macroId;
       const nameEl = document.querySelector('.sb-header-name');
       if (nameEl) nameEl.textContent = this.scenario.name;
-      this._setView('vars');
       this._refreshPalette();
+      this._setView('build');
+      this._refreshTree();
+      this._refreshProperties();
       return;
     }
     // Revert to snapshot
@@ -108,6 +113,29 @@ class ScenarioBuilder {
 
   // === NODE OPERATIONS ===
 
+  // Wrap selectedPaths into a container node (loop/condition). Returns true if wrapped, false if not applicable.
+  _wrapSelected(containerNode, childrenKey) {
+    if (this.selectedPaths.length < 2) return false;
+    const allDomPaths = Array.from(document.querySelectorAll('#sbTree [data-path]')).map(el => el.dataset.path);
+    const sorted = [...this.selectedPaths].sort((a, b) => allDomPaths.indexOf(a) - allDomPaths.indexOf(b));
+    // All must share the same parent array
+    const infos = sorted.map(p => EnderTrack.TreeUtils.getParentArray(this.scenario.tree, p));
+    if (infos.some(i => !i) || infos.some(i => i.array !== infos[0].array)) return false;
+    // Must be consecutive
+    const indices = infos.map(i => i.index).sort((a, b) => a - b);
+    for (let i = 1; i < indices.length; i++) if (indices[i] !== indices[i-1] + 1) return false;
+    // Clone nodes into container
+    const nodes = sorted.map(p => EnderTrack.TreeUtils.clone(EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, p)));
+    containerNode[childrenKey] = nodes;
+    // Delete originals (deepest first)
+    [...sorted].sort((a, b) => b.localeCompare(a)).forEach(p => EnderTrack.TreeUtils.deleteNode(this.scenario.tree, p));
+    // Insert container at first index
+    infos[0].array.splice(indices[0], 0, containerNode);
+    this.selectedPath = null;
+    this.selectedPaths = [];
+    return true;
+  }
+
   addLoop(loopId) {
     this._saveUndo();
     const loopDef = EnderTrack.LoopTypesRegistry?.get(loopId);
@@ -117,6 +145,7 @@ class ScenarioBuilder {
     const existing = this._countLoops(this.scenario.tree);
     node.params.loopVar = existing === 0 ? '$i' : `$${String.fromCharCode(105 + existing)}`;
     if (loopDef.onAdd) loopDef.onAdd(node);
+    if (this._wrapSelected(node, 'children')) { this._refresh(); return; }
     EnderTrack.TreeUtils.insertNode(this.scenario.tree, node, this.selectedPath);
     this._refresh();
   }
@@ -129,9 +158,12 @@ class ScenarioBuilder {
     if (actionDef.params) actionDef.params.forEach(p => { node.params[p.id || p.name] = p.default; });
     // Auto-set listIndex and listId from closest loop
     if (actionId === 'move') {
-      node.params.listIndex = this._getClosestLoopVar(this.selectedPath);
       const loopListId = this._getClosestLoopListId(this.selectedPath);
-      if (loopListId) node.params.listId = loopListId;
+      if (loopListId) {
+        node.params.moveType = 'list';
+        node.params.listId = loopListId;
+        node.params.listIndex = this._getClosestLoopVar(this.selectedPath);
+      }
     }
     // Auto-register output variables for python scripts
     if (actionId.startsWith('pyscript_')) {
@@ -163,6 +195,25 @@ class ScenarioBuilder {
       type: 'condition', params: { label: 'Condition' },
       branches: [{ condition: '$x > 0', actions: [] }]
     };
+    if (this.selectedPaths.length > 1) {
+      const allDomPaths = Array.from(document.querySelectorAll('#sbTree [data-path]')).map(el => el.dataset.path);
+      const sorted = [...this.selectedPaths].sort((a, b) => allDomPaths.indexOf(a) - allDomPaths.indexOf(b));
+      const infos = sorted.map(p => EnderTrack.TreeUtils.getParentArray(this.scenario.tree, p));
+      if (infos.every(i => i) && infos.every(i => i.array === infos[0].array)) {
+        const indices = infos.map(i => i.index).sort((a, b) => a - b);
+        if (indices.every((v, i) => i === 0 || v === indices[i-1] + 1)) {
+          const nodes = sorted.map(p => EnderTrack.TreeUtils.clone(EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, p)));
+          if (!node.branches?.length) node.branches = [{ condition: '$x > 0', actions: [] }];
+          node.branches[0].actions = nodes;
+          [...sorted].sort((a, b) => b.localeCompare(a)).forEach(p => EnderTrack.TreeUtils.deleteNode(this.scenario.tree, p));
+          infos[0].array.splice(indices[0], 0, node);
+          this.selectedPath = null;
+          this.selectedPaths = [];
+          this._refresh();
+          return;
+        }
+      }
+    }
     EnderTrack.TreeUtils.insertNode(this.scenario.tree, node, this.selectedPath);
     this._refresh();
   }
@@ -176,11 +227,128 @@ class ScenarioBuilder {
   }
 
   deleteSelected() {
-    if (!this.selectedPath) return;
+    const paths = this.selectedPaths.length > 1 ? this.selectedPaths : (this.selectedPath ? [this.selectedPath] : []);
+    if (!paths.length) return;
     this._saveUndo();
-    EnderTrack.TreeUtils.deleteNode(this.scenario.tree, this.selectedPath);
+    const sorted = [...paths].sort((a, b) => b.split('.').length - a.split('.').length || b.localeCompare(a));
+    sorted.forEach(p => EnderTrack.TreeUtils.deleteNode(this.scenario.tree, p));
     this.selectedPath = null;
+    this.selectedPaths = [];
     this._cleanOrphanScriptVars();
+    this._refresh();
+  }
+
+  _nodeContextMenu(event, path) {
+    document.getElementById('sbNodeCtxMenu')?.remove();
+    this.selectNode(path);
+    const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, path);
+    const menu = document.createElement('div');
+    menu.id = 'sbNodeCtxMenu';
+    menu.style.cssText = 'position:fixed; z-index:9000; background:var(--column-bg); border:1px solid #444; border-radius:4px; padding:4px 0; box-shadow:0 4px 12px rgba(0,0,0,0.5); min-width:130px;';
+    const item = (label, fn, danger) => {
+      const d = document.createElement('div');
+      d.textContent = label;
+      d.style.cssText = `padding:6px 12px; font-size:11px; cursor:pointer; color:${danger ? '#ef4444' : 'var(--text-general)'};`;
+      d.onmouseenter = () => d.style.background = 'var(--app-bg)';
+      d.onmouseleave = () => d.style.background = '';
+      d.onmousedown = (e) => { e.preventDefault(); menu.remove(); fn(); };
+      return d;
+    };
+    if (node?.type === 'macro') {
+      const srcId = node.sourceMacroId;
+      if (srcId) {
+        menu.appendChild(item('Edit', () => this._editMacroFromTree(srcId)));
+        menu.appendChild(item('Export', () => EnderTrack.MacroRegistry.exportToFile(srcId)));
+        menu.appendChild(item('Delete function', () => {
+          if (confirm('Delete this function from library?')) {
+            EnderTrack.MacroRegistry.delete(srcId);
+            this._refreshPalette();
+          }
+        }, true));
+      }
+    } else {
+      menu.appendChild(item('Copy', () => this._duplicateNode(path)));
+      menu.appendChild(item('Delete', () => { this.selectedPath = path; this.selectedPaths = [path]; this.deleteSelected(); }, true));
+    }
+    menu.style.top = Math.min(event.clientY, window.innerHeight - 80) + 'px';
+    menu.style.left = Math.min(event.clientX, window.innerWidth - 140) + 'px';
+    document.body.appendChild(menu);
+    const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
+    setTimeout(() => document.addEventListener('mousedown', close), 0);
+  }
+
+  _macroContextMenu(event, macroId) {
+    document.getElementById('sbMacroCtxMenu')?.remove();
+    const menu = document.createElement('div');
+    menu.id = 'sbMacroCtxMenu';
+    menu.style.cssText = 'position:fixed; z-index:9000; background:var(--column-bg); border:1px solid #444; border-radius:4px; padding:4px 0; box-shadow:0 4px 12px rgba(0,0,0,0.5); min-width:130px;';
+    const item = (label, fn, danger) => {
+      const d = document.createElement('div');
+      d.textContent = label;
+      d.style.cssText = `padding:6px 12px; font-size:11px; cursor:pointer; color:${danger ? '#ef4444' : 'var(--text-general)'};`;
+      d.onmouseenter = () => d.style.background = 'var(--app-bg)';
+      d.onmouseleave = () => d.style.background = '';
+      d.onmousedown = (e) => { e.preventDefault(); menu.remove(); fn(); };
+      return d;
+    };
+    menu.appendChild(item('Edit', () => this._editMacroFromTree(macroId)));
+    menu.appendChild(item('Export', () => EnderTrack.MacroRegistry.exportToFile(macroId)));
+    menu.appendChild(item('Delete', () => {
+      if (confirm('Delete this function?')) {
+        EnderTrack.MacroRegistry.delete(macroId);
+        this._refreshPalette();
+      }
+    }, true));
+    menu.style.top = Math.min(event.clientY, window.innerHeight - 100) + 'px';
+    menu.style.left = Math.min(event.clientX, window.innerWidth - 140) + 'px';
+    document.body.appendChild(menu);
+    const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
+    setTimeout(() => document.addEventListener('mousedown', close), 0);
+  }
+
+  _editMacroFromTree(macroId) {
+    const m = EnderTrack.MacroRegistry?.get(macroId);
+    if (!m) return;
+    // Build a group node with children + pendingInputs already set from saved inputs
+    const groupNode = {
+      type: 'loop', loopId: 'group',
+      label: m.name, params: { label: m.name },
+      children: JSON.parse(JSON.stringify(m.children || [])),
+      _pendingInputs: JSON.parse(JSON.stringify(m.inputs || []))
+    };
+    // Store original state
+    this._macroEditMode = {
+      macroId,
+      originalScenario: this.scenario,
+      originalSnapshot: this._snapshot
+    };
+    this.scenario = {
+      id: 'macro_edit_temp',
+      name: m.name,
+      tree: { type: 'root', children: [groupNode] },
+      watchers: []
+    };
+    this._snapshot = JSON.stringify(this.scenario);
+    this.selectedPath = 'children.0';
+    this.selectedPaths = ['children.0'];
+    this._undoStack = [];
+    this._redoStack = [];
+    const nameEl = document.querySelector('.sb-header-name');
+    if (nameEl) nameEl.textContent = m.name;
+    this._setView('build');
+    this._refreshPalette();
+    this._refreshTree();
+    this._refreshProperties();
+  }
+
+  _duplicateNode(path) {
+    this._saveUndo();
+    const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, path);
+    if (!node) return;
+    const copy = JSON.parse(JSON.stringify(node));
+    const result = EnderTrack.TreeUtils.getParentArray(this.scenario.tree, path);
+    if (!result) return;
+    result.array.splice(result.index + 1, 0, copy);
     this._refresh();
   }
 
@@ -241,20 +409,41 @@ class ScenarioBuilder {
     const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, pathStr);
     if (node?.params) {
       node.params[paramName] = value;
-      // When switching to relative, reset absolute sub-params
-      if (paramName === 'moveType' && value === 'relative') {
-        node.params.absSource = 'manual';
-      }
       // When switching absSource to list, auto-set listIndex
-      if (paramName === 'absSource' && value === 'list') {
+      if (paramName === 'moveType' && value === 'list') {
         node.params.listIndex = this._getClosestLoopVar(pathStr);
+        const loopListId = this._getClosestLoopListId(pathStr);
+        if (loopListId) node.params.listId = loopListId;
       }
       this._refresh();
     }
   }
 
-  selectNode(pathStr) {
-    this.selectedPath = pathStr;
+  selectNode(pathStr, shiftKey, ctrlKey) {
+    if (ctrlKey) {
+      // Ctrl+click: toggle individual
+      const idx = this.selectedPaths.indexOf(pathStr);
+      if (idx >= 0) {
+        this.selectedPaths.splice(idx, 1);
+        this.selectedPath = this.selectedPaths[this.selectedPaths.length - 1] || null;
+      } else {
+        this.selectedPaths.push(pathStr);
+        this.selectedPath = pathStr;
+      }
+    } else if (shiftKey && this.selectedPath) {
+      // Shift+click: range selection using DOM order
+      const allPaths = Array.from(document.querySelectorAll('#sbTree [data-path]')).map(el => el.dataset.path);
+      const a = allPaths.indexOf(this.selectedPath);
+      const b = allPaths.indexOf(pathStr);
+      if (a >= 0 && b >= 0) {
+        const [from, to] = a < b ? [a, b] : [b, a];
+        this.selectedPaths = allPaths.slice(from, to + 1);
+        this.selectedPath = pathStr;
+      }
+    } else {
+      this.selectedPath = pathStr;
+      this.selectedPaths = [pathStr];
+    }
     this._refreshTree();
     this._refreshProperties();
   }
@@ -263,6 +452,7 @@ class ScenarioBuilder {
     // Only deselect if click was directly on the tree zone, not on a node
     if (event.target.id === 'sbTree' || event.target.classList.contains('sb-tree-empty')) {
       this.selectedPath = null;
+      this.selectedPaths = [];
       this._refreshTree();
       this._refreshProperties();
     }
@@ -278,6 +468,22 @@ class ScenarioBuilder {
     modal.innerHTML = `
       <div class="sb-split-modal">
         <div class="sb-header">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="flex-shrink:0; margin:0 6px; opacity:0.6;">
+            <circle cx="10" cy="3" r="1.5"/>
+            <line x1="10" y1="4.5" x2="10" y2="8"/>
+            <line x1="10" y1="8" x2="5" y2="11"/>
+            <line x1="10" y1="8" x2="15" y2="11"/>
+            <circle cx="5" cy="12.5" r="1.5"/>
+            <circle cx="15" cy="12.5" r="1.5"/>
+            <line x1="5" y1="14" x2="3" y2="17"/>
+            <line x1="5" y1="14" x2="7" y2="17"/>
+            <line x1="15" y1="14" x2="13" y2="17"/>
+            <line x1="15" y1="14" x2="17" y2="17"/>
+            <circle cx="3" cy="17.5" r="1"/>
+            <circle cx="7" cy="17.5" r="1"/>
+            <circle cx="13" cy="17.5" r="1"/>
+            <circle cx="17" cy="17.5" r="1"/>
+          </svg>
           <div id="sbScenarioTabs" style="flex:1; display:flex; gap:2px; align-items:center; overflow-x:auto; padding:0 4px;"></div>
           <button onclick="EnderTrack.ScenarioBuilder.close()" class="sb-header-close" title="Close">\u2715</button>
         </div>
@@ -313,7 +519,7 @@ class ScenarioBuilder {
     this._unbindKeyboard();
     this._keyHandler = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-      if (e.key === 'Delete' && this.selectedPath) { e.preventDefault(); this.deleteSelected(); }
+      if (e.key === 'Delete' && (this.selectedPath || this.selectedPaths.length)) { e.preventDefault(); this.deleteSelected(); }
       else if (e.key === 'ArrowUp' && e.altKey && this.selectedPath) { e.preventDefault(); this.moveSelected('up'); }
       else if (e.key === 'ArrowDown' && e.altKey && this.selectedPath) { e.preventDefault(); this.moveSelected('down'); }
       else if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) { e.preventDefault(); this.undo(); }
@@ -843,7 +1049,7 @@ class ScenarioBuilder {
       macros.forEach(macro => {
         const active = this._editingMacroId === macro.macroId;
         html += `<div onclick="EnderTrack.ScenarioBuilder._editMacro('${macro.macroId}')" style="padding:6px 8px; margin-bottom:2px; background:${active ? 'var(--active-element)' : 'transparent'}; border-radius:4px; cursor:pointer; border-left:3px solid ${active ? 'var(--coordinates-color)' : 'transparent'};">
-          <span style="font-size:11px; color:var(--text-selected);">${macro.icon || '📦'} ${this._escapeHtml(macro.name)}</span>
+          <span style="font-size:11px; color:var(--text-selected);">${this._escapeHtml(macro.name)}</span>
           ${macro.description ? `<div style="font-size:9px; color:var(--text-general); opacity:0.5; margin-top:1px;">${this._escapeHtml(macro.description.substring(0, 40))}</div>` : ''}
         </div>`;
       });
@@ -894,7 +1100,7 @@ class ScenarioBuilder {
           if (b.actions) html += this._renderMacroTree(b.actions, indent + 2);
         });
       } else if (node.type === 'macro') {
-        html += `<div style="${sp} padding:3px 0; font-size:10px; color:var(--text-selected);">${node.icon || '📦'} ${this._escapeHtml(node.name || 'Macro')}</div>`;
+        html += `<div style="${sp} padding:3px 0; font-size:10px; color:var(--text-selected);">${this._escapeHtml(node.name || 'Macro')}</div>`;
         if (node.children && !node.collapsed) html += this._renderMacroTree(node.children, indent + 1);
       }
     }
@@ -903,43 +1109,53 @@ class ScenarioBuilder {
 
   _renderMacroEditor(m) {
     const inputs = m.inputs || [];
+    const exposedCount = inputs.filter(i => i.exposed).length;
     let html = `
       <div style="font-size:11px; color:var(--text-selected); font-weight:600; margin-bottom:10px;">Properties</div>
       <div class="sb-param"><label class="sb-param-label">Name</label>
         <input type="text" value="${this._escapeAttr(m.name)}" onchange="EnderTrack.ScenarioBuilder._saveMacroProp('${m.macroId}', 'name', this.value)" class="sb-input"></div>
-      <div class="sb-param"><label class="sb-param-label">Icon</label>
-        <input type="text" value="${this._escapeAttr(m.icon || '📦')}" onchange="EnderTrack.ScenarioBuilder._saveMacroProp('${m.macroId}', 'icon', this.value)" class="sb-input" style="width:50px;"></div>
       <div class="sb-param"><label class="sb-param-label">Description</label>
         <textarea onchange="EnderTrack.ScenarioBuilder._saveMacroProp('${m.macroId}', 'description', this.value)" class="sb-input" rows="2" style="resize:vertical;">${this._escapeHtml(m.description || '')}</textarea></div>`;
 
-    // Inputs
     html += `<div style="border-top:1px solid #333; margin-top:8px; padding-top:8px;">
-      <div style="font-size:10px; color:var(--text-selected); font-weight:600; margin-bottom:6px;">Parameters (${inputs.length})</div>`;
+      <div style="font-size:10px; color:var(--text-selected); font-weight:600; margin-bottom:6px;">Parameters <span style="color:#666; font-weight:400;">(${exposedCount} exposed / ${inputs.length} total)</span></div>`;
+
     if (inputs.length === 0) {
-      html += '<div style="font-size:9px; color:var(--text-general); opacity:0.4; padding:6px;">No parameters</div>';
+      html += '<div style="font-size:9px; color:var(--text-general); opacity:0.4; padding:6px;">No parameters detected</div>';
     } else {
       inputs.forEach((inp, idx) => {
-        html += `<div style="background:var(--app-bg); border-radius:4px; padding:5px 6px; margin-bottom:3px;">
-          <div style="display:flex; align-items:center; gap:4px;">
-            <input type="text" value="${this._escapeAttr(inp.label)}" 
-              onchange="EnderTrack.ScenarioBuilder._saveMacroInputProp('${m.macroId}', ${idx}, 'label', this.value)"
-              style="flex:1; padding:2px 4px; background:transparent; border:1px solid var(--border); border-radius:3px; color:var(--text-selected); font-size:9px;">
-            <label style="display:flex; align-items:center; gap:3px; font-size:8px; color:var(--text-general); cursor:pointer; white-space:nowrap;">
-              <input type="checkbox" ${inp.hidden ? '' : 'checked'}
-                onchange="EnderTrack.ScenarioBuilder._saveMacroInputProp('${m.macroId}', ${idx}, 'hidden', !this.checked)"> visible
-            </label>
+        const isExposed = !!inp.exposed;
+        const constVal = inp.constantValue !== undefined ? inp.constantValue : inp.default ?? '';
+        html += `<div style="background:var(--app-bg); border-radius:4px; padding:7px 8px; margin-bottom:5px;">
+          <div style="display:flex; gap:6px; margin-bottom:${isExposed ? 6 : 0}px;">
+            <button onmousedown="EnderTrack.ScenarioBuilder._saveMacroInputProp('${m.macroId}', ${idx}, 'exposed', ${!isExposed})"
+              style="flex-shrink:0; padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; font-weight:600;
+                background:${isExposed ? 'rgba(245,158,11,0.25)' : 'var(--container-bg)'};
+                color:${isExposed ? 'rgba(245,158,11,1)' : '#555'};
+                border:1px solid ${isExposed ? 'rgba(245,158,11,0.5)' : '#333'};">${isExposed ? 'param' : 'const'}</button>
+            <span style="flex:1; font-size:10px; color:${isExposed ? 'var(--text-selected)' : '#555'}; align-self:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${this._escapeHtml(inp.label || inp.id)}</span>
           </div>
-          <div style="font-size:8px; color:var(--text-general); opacity:0.4; margin-top:2px;">Default: ${this._escapeHtml(String(inp.default ?? ''))} • ${inp.type}</div>
+          ${isExposed ? `
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <input type="text" value="${this._escapeAttr(inp.label)}" placeholder="Label..."
+              onchange="EnderTrack.ScenarioBuilder._saveMacroInputProp('${m.macroId}', ${idx}, 'label', this.value)"
+              style="padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+            <input type="text" value="${this._escapeAttr(inp.default ?? '')}" placeholder="Default value"
+              onchange="EnderTrack.ScenarioBuilder._saveMacroInputProp('${m.macroId}', ${idx}, 'default', this.value)"
+              style="padding:4px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:rgba(245,158,11,0.8); font-size:10px; font-family:monospace;">
+          </div>` : `
+          <input type="text" value="${this._escapeAttr(constVal)}" placeholder="fixed value"
+            onchange="EnderTrack.ScenarioBuilder._saveMacroInputProp('${m.macroId}', ${idx}, 'constantValue', this.value)"
+            style="width:100%; box-sizing:border-box; padding:4px 6px; background:var(--container-bg); border:1px solid #333; border-radius:3px; color:#555; font-size:10px; font-family:monospace;">`}
         </div>`;
       });
     }
     html += `</div>`;
 
-    // Actions
     html += `<div style="display:flex; gap:4px; margin-top:10px; padding-top:8px; border-top:1px solid #333;">
       <button onclick="EnderTrack.ScenarioBuilder._editMacroInConstructor('${m.macroId}')" class="sb-mini-btn" style="flex:1; background:var(--active-element); color:var(--text-selected);">Edit</button>
       <button onclick="EnderTrack.MacroRegistry.exportToFile('${m.macroId}')" class="sb-mini-btn">💾</button>
-      <button onclick="if(confirm('Supprimer ?')){EnderTrack.MacroRegistry.delete('${m.macroId}'); EnderTrack.ScenarioBuilder._editingMacroId=null; EnderTrack.ScenarioBuilder._renderMacrosContent(); EnderTrack.ScenarioBuilder._refreshPalette();}" class="sb-mini-btn sb-btn-danger">✕</button>
+      <button onclick="if(confirm('Delete?')){EnderTrack.MacroRegistry.delete('${m.macroId}'); EnderTrack.ScenarioBuilder._editingMacroId=null; EnderTrack.ScenarioBuilder._renderMacrosContent(); EnderTrack.ScenarioBuilder._refreshPalette();}" class="sb-mini-btn sb-btn-danger">✕</button>
     </div>`;
     return html;
   }
@@ -1272,20 +1488,23 @@ class ScenarioBuilder {
   _saveGroupAsAction(pathStr) {
     const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, pathStr);
     if (!node) return;
-    const name = prompt('Action name:', node.label || node.params?.label || 'Group');
-    if (!name) return;
+    const name = node.label || node.params?.label || 'Function';
+    // Use inputs already stored on node (built live in props), or extract fresh
+    const inputs = node._pendingInputs || EnderTrack.TreeUtils.extractMacroInputs(node.children || []);
     const macro = {
       type: 'macro',
       macroId: 'macro_' + Date.now(),
       name,
-      icon: '▤',
       collapsed: true,
       children: EnderTrack.TreeUtils.clone(node.children || []),
-      inputs: EnderTrack.TreeUtils.extractMacroInputs(node.children || []),
+      inputs,
       inputValues: {}
     };
+    inputs.forEach(inp => { macro.inputValues[inp.id] = inp.default; });
     EnderTrack.MacroRegistry?.save(macro);
+    this._editingMacroId = macro.macroId;
     this._refreshPalette();
+    this._setView('functions');
   }
 
   _toggleCode() {}
@@ -1317,7 +1536,7 @@ class ScenarioBuilder {
     const flowItems =
       flowLoops.map(l => item(l.label, `EnderTrack.ScenarioBuilder.addLoop('${l.id}')`)).join('') +
       item('If / Else', `EnderTrack.ScenarioBuilder.addCondition()`) +
-      item('Group', `EnderTrack.ScenarioBuilder.addLoop('group')`);
+      item('Function', `EnderTrack.ScenarioBuilder.addLoop('group')`);
 
     const actionItems = coreActions.map(a =>
       item(a.label, `EnderTrack.ScenarioBuilder.addAction('${a.id}')`)
@@ -1327,10 +1546,18 @@ class ScenarioBuilder {
       ? pluginActions.map(a => item(`${a.icon} ${a.label}`, `EnderTrack.ScenarioBuilder.addPluginAction('${a.id}')`)).join('')
       : '';
 
+    const macros = EnderTrack.MacroRegistry?.getAll() || [];
+    const macroItems = macros.length
+      ? macros.map(m => `<div class="sb-palette-item"
+          onclick="EnderTrack.ScenarioBuilder.addMacroFromLibrary('${m.macroId}')"
+          oncontextmenu="event.preventDefault(); EnderTrack.ScenarioBuilder._macroContextMenu(event,'${m.macroId}')">${this._escapeHtml(m.name)}</div>`).join('')
+      : '<div class="sb-palette-empty">No functions yet</div>';
+
     el.innerHTML =
       accordion('flow', '', 'Structure', flowItems, flowLoops.length + 2) +
       accordion('actions', '', 'Actions', actionItems, coreActions.length) +
-      (pluginActions.length ? accordion('plugins', '', 'Plugins', pluginItems, pluginActions.length) : '');
+      (pluginActions.length ? accordion('plugins', '', 'Plugins', pluginItems, pluginActions.length) : '') +
+      accordion('functions', '', 'Functions', macroItems, macros.length || null);
   }
 
   // === PLUGIN ACTION DISCOVERY ===
@@ -1427,7 +1654,34 @@ class ScenarioBuilder {
     const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, path);
     if (!node) return;
     node.label = val;
+    if (node.params) node.params.label = val;
     EnderTrack.Scenario?.manager?.save?.();
+    this._refreshTree();
+  }
+
+  _toggleGroupInput(pathStr, idx, exposed) {
+    const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, pathStr);
+    if (!node?._pendingInputs?.[idx]) return;
+    node._pendingInputs[idx].exposed = exposed;
+    this._refreshProperties();
+  }
+
+  _setGroupInputLabel(pathStr, idx, label) {
+    const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, pathStr);
+    if (!node?._pendingInputs?.[idx]) return;
+    node._pendingInputs[idx].label = label;
+  }
+
+  _setGroupInputDefault(pathStr, idx, value) {
+    const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, pathStr);
+    if (!node?._pendingInputs?.[idx]) return;
+    node._pendingInputs[idx].default = value;
+  }
+
+  _toggleMacroExpand(path) {
+    const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, path);
+    if (!node) return;
+    node._uiExpanded = !node._uiExpanded;
     this._refreshTree();
   }
 
@@ -1440,11 +1694,12 @@ class ScenarioBuilder {
 
   _renderNode(node, path) {
     if (!node) return '';
-    const isSelected = this.selectedPath === path;
+    const isSelected = this.selectedPaths.includes(path);
     const selClass = isSelected ? ' sb-node-selected' : '';
-    const click = path ? `onclick="event.stopPropagation(); EnderTrack.ScenarioBuilder.selectNode('${path}')"` : '';
+    const click = path ? `onclick="event.stopPropagation(); EnderTrack.ScenarioBuilder.selectNode('${path}', event.shiftKey, event.ctrlKey||event.metaKey)"` : '';
+    const ctx = path ? `oncontextmenu="event.preventDefault(); event.stopPropagation(); EnderTrack.ScenarioBuilder._nodeContextMenu(event,'${path}')"` : '';
     const drag = path ? `draggable="true"
-      ondragstart="event.stopPropagation(); event.dataTransfer.effectAllowed='move'; EnderTrack.ScenarioBuilder._dragFrom='${path}'; this.style.opacity='0.4';"
+      ondragstart="event.stopPropagation(); event.dataTransfer.effectAllowed='move'; EnderTrack.ScenarioBuilder._dragStart('${path}', this);"
       ondragend="EnderTrack.ScenarioBuilder._dragCleanup(this)"` : '';
     const drop = path ? `
       ondragover="event.preventDefault(); event.stopPropagation(); EnderTrack.ScenarioBuilder._dragOver(event,this,'${path}');"
@@ -1462,10 +1717,29 @@ class ScenarioBuilder {
       const collapsed = node._uiCollapsed;
       const count = (node.children || []).length;
       const countHint = node.loopId === 'simple'
-        ? `<span class="sb-node-meta" style="font-style:normal; color:${String(node.params?.count||'').startsWith('$') ? 'var(--coordinates-color)' : 'inherit'}">${node.params?.countMode === 'infinite' ? '∞' : (node.params?.count ?? '?')}×</span>`
+        ? (() => {
+            const cm = node.params?.countMode;
+            const loopVar = node.params?.loopVar || '$i';
+            if (cm === 'infinite') return `<span class="sb-node-meta sb-meta-var">${loopVar} ∞</span>`;
+            if (cm === 'list') {
+              const lists = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+              const list = lists.find(l => String(l.id) === String(node.params?.countListId)) || lists[0];
+              const n = list?.positions?.length ?? '?';
+              const name = list?.name || 'List';
+              return `<span class="sb-node-meta"><span class="sb-meta-var">${loopVar}</span> <span class="sb-meta-count">×${n}</span> <span class="sb-meta-list">(${name})</span></span>`;
+            }
+            const c = node.params?.count ?? '?';
+            return `<span class="sb-node-meta"><span class="sb-meta-var">${loopVar}</span> <span class="sb-meta-count">×${c}</span></span>`;
+          })()
+        : node.loopId === 'while'
+        ? (() => {
+            const loopVar = node.params?.loopVar || '$i';
+            const cond = node.params?.condition || '';
+            return `<span class="sb-node-meta"><span class="sb-meta-var">${loopVar}</span>${cond ? ` <span class="sb-meta-list">${cond}</span>` : ''}</span>`;
+          })()
         : '';
       const dotColor = node.loopId === 'group' && node.params?.color
-        ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${node.params.color};margin-right:5px;flex-shrink:0;"></span>` : '';
+        ? `<span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${node.params.color};border-radius:2px 0 0 2px;"></span>` : '';
       const children = collapsed ? '' : (node.children || []).map((c, i) =>
         this._renderNode(c, `${path}.children.${i}`)
       ).join('');
@@ -1474,7 +1748,7 @@ class ScenarioBuilder {
         ondragleave="this.style.background='';"
         ondrop="event.preventDefault(); event.stopPropagation(); this.style.background=''; EnderTrack.ScenarioBuilder._dragDropInto('${path}.children', 0);"
       >·</div>`;
-      return `<div ${drag} ${drop} ${click} class="sb-node sb-node-loop${selClass}" data-loop="${node.loopId}" data-path="${path}">
+      return `<div ${drag} ${drop} ${click} ${ctx} class="sb-node sb-node-loop${selClass}" data-loop="${node.loopId}" data-path="${path}">
         <div class="sb-node-header">
           <button onclick="event.stopPropagation(); EnderTrack.ScenarioBuilder._toggleNodeCollapse('${path}')" class="sb-collapse-btn">${collapsed ? '\u25b8' : '\u25be'}</button>
           ${dotColor}${this._escapeHtml(title)} ${countHint}
@@ -1500,24 +1774,41 @@ class ScenarioBuilder {
           <div class="sb-node-children sb-children-cond">${actions || emptyDrop}</div>
         </div>`;
       }).join('');
-      return `<div ${drag} ${drop} ${click} class="sb-node sb-node-condition${selClass}" data-path="${path}">
+      return `<div ${drag} ${drop} ${click} ${ctx} class="sb-node sb-node-condition${selClass}" data-path="${path}">
         <div class="sb-node-header">\u{1f441}\ufe0f ${this._escapeHtml(node.label || node.params?.label || 'Condition')}</div>
         ${branches}
       </div>`;
     }
 
     if (node.type === 'macro') {
-      if (node.collapsed) {
-        return `<div ${drag} ${drop} ${click} class="sb-node sb-node-macro${selClass}" data-path="${path}">
-          <span>${node.icon || '\ud83d\udce6'} ${this._escapeHtml(node.name || 'Macro')}</span>
-          <span class="sb-node-meta">${EnderTrack.TreeUtils.countActions(node)} actions</span>
+      const collapsed = node.collapsed && !node._uiExpanded;
+      const exposedInputs = (node.inputs || []).filter(i => i.exposed);
+      const paramSummary = exposedInputs.map(i => {
+        let v = node.inputValues?.[i.id] ?? i.default ?? '';
+        if (i.type === 'list-select') {
+          const l = EnderTrack.Lists?.manager?.getList?.(v);
+          if (l) v = l.name;
+        }
+        return `${i.label || i.id}=${v}`;
+      }).join(', ');
+      if (collapsed) {
+        return `<div ${drag} ${drop} ${click} ${ctx} class="sb-node sb-node-macro${selClass}" data-path="${path}">
+          <div style="display:flex; align-items:center; gap:4px;">
+            <button onclick="event.stopPropagation(); EnderTrack.ScenarioBuilder._toggleMacroExpand('${path}')" class="sb-collapse-btn">&#9658;</button>
+            <span>${''} ${this._escapeHtml(node.name || 'Macro')}</span>
+            ${paramSummary ? `<span class="sb-node-meta">${this._escapeHtml(paramSummary)}</span>` : `<span class="sb-node-meta">${EnderTrack.TreeUtils.countActions(node)} actions</span>`}
+          </div>
         </div>`;
       }
       const children = (node.children || []).map((c, i) =>
         this._renderNode(c, `${path}.children.${i}`)
       ).join('');
-      return `<div ${drag} ${drop} ${click} class="sb-node sb-node-macro${selClass}" data-path="${path}">
-        <div class="sb-node-header">${node.icon || '\ud83d\udce6'} ${this._escapeHtml(node.label || node.name || 'Macro')}</div>
+      return `<div ${drag} ${drop} ${click} ${ctx} class="sb-node sb-node-macro${selClass}" data-path="${path}">
+        <div class="sb-node-header" style="display:flex; align-items:center; gap:4px;">
+          <button onclick="event.stopPropagation(); EnderTrack.ScenarioBuilder._toggleMacroExpand('${path}')" class="sb-collapse-btn">&#9660;</button>
+          ${''} ${this._escapeHtml(node.label || node.name || 'Macro')}
+          ${paramSummary ? `<span class="sb-node-meta">${this._escapeHtml(paramSummary)}</span>` : ''}
+        </div>
         <div class="sb-node-children sb-children-macro">${children}</div>
       </div>`;
     }
@@ -1527,12 +1818,21 @@ class ScenarioBuilder {
       const name = actionDef?.label || node.actionId;
       const display = node.label || name;
       const summary = this._actionSummary(node);
-      return `<div ${drag} ${drop} ${click} class="sb-node sb-node-action${selClass}" data-action="${node.actionId}" data-path="${path}">
+      return `<div ${drag} ${drop} ${click} ${ctx} class="sb-node sb-node-action${selClass}" data-action="${node.actionId}" data-path="${path}">
         ${this._escapeHtml(display)}${summary ? `<span class="sb-node-meta">${summary}</span>` : ''}
       </div>`;
     }
 
     return '';
+  }
+
+  _dragStart(path, el) {
+    this._dragFrom = path;
+    // If dragged node is part of multi-selection, drag all; otherwise drag only this one
+    this._dragFromPaths = this.selectedPaths.includes(path) && this.selectedPaths.length > 1
+      ? [...this.selectedPaths]
+      : [path];
+    el.style.opacity = '0.4';
   }
 
   _dragOver(e, el, path) {
@@ -1563,48 +1863,52 @@ class ScenarioBuilder {
   _dragDrop(e, el, toPath) {
     el.style.borderTop = '';
     el.style.borderBottom = '';
-    const fromPath = this._dragFrom;
+    const fromPaths = this._dragFromPaths || [this._dragFrom];
     this._dragFrom = null;
-    if (!fromPath || fromPath === toPath) return;
-    if (toPath.startsWith(fromPath + '.')) return;
+    this._dragFromPaths = null;
+    if (!fromPaths.length || fromPaths.includes(toPath)) return;
+    if (fromPaths.some(p => toPath.startsWith(p + '.'))) return;
 
     const insertAfter = e.clientY >= el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
-
     this._saveUndo();
-    const node = EnderTrack.TreeUtils.clone(EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, fromPath));
-    if (!node) return;
 
-    // Capture array reference and index BEFORE deletion
+    // Sort by DOM order (deepest last, then by path string)
+    const allDomPaths = Array.from(document.querySelectorAll('#sbTree [data-path]')).map(el => el.dataset.path);
+    const sorted = [...fromPaths].sort((a, b) => allDomPaths.indexOf(a) - allDomPaths.indexOf(b));
+
+    const nodes = sorted.map(p => EnderTrack.TreeUtils.clone(EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, p))).filter(Boolean);
+
     const toInfo = EnderTrack.TreeUtils.getParentArray(this.scenario.tree, toPath);
     if (!toInfo) return;
-    const { array, index } = toInfo;
 
-    // Check if from and to share the same parent array
-    const fromInfo = EnderTrack.TreeUtils.getParentArray(this.scenario.tree, fromPath);
-    const sameParent = fromInfo && fromInfo.array === array;
+    // Delete all from paths (sort deepest first to avoid index shift)
+    const sortedForDelete = [...sorted].sort((a, b) => b.split('.').length - a.split('.').length || b.localeCompare(a));
+    sortedForDelete.forEach(p => EnderTrack.TreeUtils.deleteNode(this.scenario.tree, p));
 
-    EnderTrack.TreeUtils.deleteNode(this.scenario.tree, fromPath);
-
-    // Adjust target index if same parent and from was before to
-    let insertIdx = index;
-    if (sameParent && fromInfo.index < index) insertIdx--;
-    if (insertAfter) insertIdx++;
-    array.splice(Math.max(0, insertIdx), 0, node);
+    // Re-resolve toInfo after deletions
+    const toInfo2 = EnderTrack.TreeUtils.getParentArray(this.scenario.tree, toPath);
+    if (!toInfo2) { this._refresh(); return; }
+    const { array, index } = toInfo2;
+    let insertIdx = insertAfter ? index + 1 : index;
+    nodes.forEach((node, i) => array.splice(insertIdx + i, 0, node));
 
     this.selectedPath = null;
+    this.selectedPaths = [];
     this._refresh();
   }
 
   _dragDropInto(arrayPath, idx) {
-    const fromPath = this._dragFrom;
+    const fromPaths = this._dragFromPaths || [this._dragFrom];
     this._dragFrom = null;
-    if (!fromPath) return;
-    if (arrayPath.startsWith(fromPath + '.')) return;
+    this._dragFromPaths = null;
+    if (!fromPaths.length) return;
+    if (fromPaths.some(p => arrayPath.startsWith(p + '.'))) return;
     this._saveUndo();
-    const node = EnderTrack.TreeUtils.clone(EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, fromPath));
-    if (!node) return;
 
-    // Capture target array reference BEFORE deletion
+    const allDomPaths = Array.from(document.querySelectorAll('#sbTree [data-path]')).map(el => el.dataset.path);
+    const sorted = [...fromPaths].sort((a, b) => allDomPaths.indexOf(a) - allDomPaths.indexOf(b));
+    const nodes = sorted.map(p => EnderTrack.TreeUtils.clone(EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, p))).filter(Boolean);
+
     const parts = arrayPath.split('.');
     const arrKey = parts.pop();
     const parentPath = parts.join('.');
@@ -1612,27 +1916,31 @@ class ScenarioBuilder {
     if (!parent?.[arrKey]) return;
     const array = parent[arrKey];
 
-    // Check if from is in same array (adjust idx)
-    const fromInfo = EnderTrack.TreeUtils.getParentArray(this.scenario.tree, fromPath);
-    const sameParent = fromInfo && fromInfo.array === array;
+    const sortedForDelete = [...sorted].sort((a, b) => b.split('.').length - a.split('.').length || b.localeCompare(a));
+    sortedForDelete.forEach(p => EnderTrack.TreeUtils.deleteNode(this.scenario.tree, p));
 
-    EnderTrack.TreeUtils.deleteNode(this.scenario.tree, fromPath);
-
-    let insertIdx = idx;
-    if (sameParent && fromInfo.index < insertIdx) insertIdx--;
-    array.splice(Math.max(0, insertIdx), 0, node);
+    nodes.forEach((node, i) => array.splice(Math.max(0, idx + i), 0, node));
 
     this.selectedPath = null;
+    this.selectedPaths = [];
     this._refresh();
   }
 
-  _renderParams(paramDefs, values, pathStr) {
+  _renderParams(paramDefs, values, pathStr, parentMacro = null) {
     if (!paramDefs?.length) return '';
     // Check if this node is inside a loop (for 'inLoop' showIf)
     const inLoop = this._isInsideLoop(pathStr);
     return paramDefs.map(p => {
       const name = p.id || p.name;
       const val = values?.[name] ?? p.default ?? '';
+
+      // If inside a macro, lock params that are not exposed
+      let forcedReadonly = false;
+      if (parentMacro) {
+        const inputId = `${parentMacro.relativePath}.${name}`.replace(/\./g, '_');
+        const exposed = parentMacro.macro.inputs?.find(i => i.id === inputId && i.exposed);
+        if (!exposed) forcedReadonly = true;
+      }
 
       // showIf logic: comma-separated conditions
       if (p.showIf) {
@@ -1649,14 +1957,15 @@ class ScenarioBuilder {
         if (!visible) return '';
       }
 
-      // Disable field not needed anymore (showIf handles visibility)
       const disabled = '';
-
-      const oc = `EnderTrack.ScenarioBuilder.updateParam('${pathStr}', '${name}', this.${p.type === 'checkbox' ? 'checked' : 'value'})`;
+      const oc = forcedReadonly ? '' : `EnderTrack.ScenarioBuilder.updateParam('${pathStr}', '${name}', this.${p.type === 'checkbox' ? 'checked' : 'value'})`;
+      const ocSelect = forcedReadonly ? '' : (parentMacro
+        ? `EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',this.value); EnderTrack.ScenarioBuilder._syncExposedToMacro('${parentMacro.macroPath}','${pathStr}','${name}')`
+        : `EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',this.value)`);
 
       if (p.type === 'checkbox') {
-        return `<label class="sb-param sb-param-check">
-          <input type="checkbox" ${val ? 'checked' : ''} onchange="${oc}">
+        return `<label class="sb-param sb-param-check" style="${forcedReadonly ? 'opacity:0.4; pointer-events:none;' : ''}">
+          <input type="checkbox" ${val ? 'checked' : ''} ${forcedReadonly ? 'disabled' : `onchange="${oc}"`}>
           ${this._escapeHtml(p.label)}</label>`;
       }
       if (p.type === 'select') {
@@ -1664,7 +1973,7 @@ class ScenarioBuilder {
           `<option value="${o.value}" ${String(val) === String(o.value) ? 'selected' : ''}>${o.label}</option>`
         ).join('');
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <select onchange="${oc}" class="sb-input">${opts}</select></div>`;
+          <select ${forcedReadonly ? 'disabled style="opacity:0.4;"' : `onchange="${ocSelect}"`} class="sb-input">${opts}</select></div>`;
       }
       if (p.type === 'list-select') {
         const lists = EnderTrack.Lists?.manager?.getAllLists?.() || [];
@@ -1673,7 +1982,7 @@ class ScenarioBuilder {
         // Auto-save if val is empty but a list exists
         if (!val && selected && values) { values[name] = selected; }
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <select onchange="${oc}" class="sb-input">
+          <select onchange="${ocSelect}" class="sb-input">
             ${lists.map(l => `<option value="${l.id}" ${String(selected) === String(l.id) ? 'selected' : ''}>${l.name} (${l.positions?.length || 0})</option>`).join('')}
           </select></div>`;
       }
@@ -1682,7 +1991,7 @@ class ScenarioBuilder {
         const list = listId ? EnderTrack.Lists?.manager?.getList?.(listId) : null;
         const positions = list?.positions || [];
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <select onchange="${oc}" class="sb-input">
+          <select onchange="${ocSelect}" class="sb-input">
             ${positions.map((pos, idx) => `<option value="${idx}" ${String(val) === String(idx) ? 'selected' : ''}>#${idx} (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})</option>`).join('') || '<option value="">No position</option>'}
           </select></div>`;
       }
@@ -1693,7 +2002,7 @@ class ScenarioBuilder {
           { value: 'homeXYZ', label: '\ud83c\udfe0 HOME XYZ' }
         ];
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <select onchange="${oc}" class="sb-input">
+          <select onchange="${ocSelect}" class="sb-input">
             ${opts.map(o => `<option value="${o.value}" ${String(val) === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
           </select></div>`;
       }
@@ -1703,7 +2012,7 @@ class ScenarioBuilder {
           ? cameras.map(c => `<option value="${c.id}" ${String(val) === String(c.id) ? 'selected' : ''}>${c.label || c.type} (${c.id})</option>`).join('')
           : `<option value="">— Not configured —</option>`;
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <select onchange="${oc}" class="sb-input">${opts}</select></div>`;
+          <select onchange="${ocSelect}" class="sb-input">${opts}</select></div>`;
       }
       if (p.type === 'light-select') {
         const lights = window._lights || [];
@@ -1711,20 +2020,69 @@ class ScenarioBuilder {
           ? lights.map(l => `<option value="${l.id}" ${String(val) === String(l.id) ? 'selected' : ''}>${l.name || l.id}</option>`).join('')
           : `<option value="">— Not configured —</option>`;
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <select onchange="${oc}" class="sb-input">${opts}</select></div>`;
+          <select onchange="${ocSelect}" class="sb-input">${opts}</select></div>`;
+      }
+      if (p.type === 'feedrate') {
+        if (forcedReadonly) {
+          const curVal = values?.[name] ?? p.default ?? 0;
+          const displayVal = (!curVal || curVal === '0' || curVal === 0) ? 'global' : String(curVal);
+          return `<div class="sb-param"><label class="sb-param-label" style="opacity:0.4;">${this._escapeHtml(p.label)}</label>
+            <span style="font-size:11px; color:#555; font-family:monospace; opacity:0.4;">${this._escapeHtml(displayVal)}</span></div>`;
+        }
+        const globalFr = window.EnderTrack?.State?.get()?.feedrate || 3000;
+        const curVal = values?.[name] ?? p.default ?? 0;
+        const isVar = String(curVal).startsWith('$');
+        const numVal = isVar ? globalFr : (parseInt(curVal) || 0);
+        const useGlobal = !isVar && numVal === 0;
+        const displayVal = useGlobal ? globalFr : numVal;
+        const sliderId = `frs_${pathStr}_${name}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        const inputId = `fr_${pathStr}_${name}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        const dim = useGlobal ? 'opacity:0.4;' : '';
+        const ocFr = parentMacro
+          ? `EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',parseInt(this.value)); EnderTrack.ScenarioBuilder._syncExposedToMacro('${parentMacro.macroPath}','${pathStr}','${name}')`
+          : `EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',parseInt(this.value))`;
+        if (isVar) {
+          return `<div class="sb-param">
+            <label class="sb-param-label">${this._escapeHtml(p.label)}</label>
+            <input type="text" value="${this._escapeAttr(curVal)}" placeholder="$mySpeed"
+              onchange="EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',this.value)${parentMacro ? `; EnderTrack.ScenarioBuilder._syncExposedToMacro('${parentMacro.macroPath}','${pathStr}','${name}')` : ''}"
+              oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))"
+              class="sb-input sb-var" style="font-family:monospace;">
+            <button title="Reset" onmousedown="EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',0); EnderTrack.ScenarioBuilder._refresh()" style="flex-shrink:0; border:none; background:none; color:#666; cursor:pointer; font-size:12px; padding:0 2px;">↺</button>
+          </div>`;
+        }
+        return `<div class="sb-param">
+          <label class="sb-param-label">${this._escapeHtml(p.label)}</label>
+          <input type="range" id="${sliderId}" min="100" max="10000" step="100" value="${displayVal}"
+            oninput="document.getElementById('${inputId}').value=this.value;"
+            onchange="${ocFr}"
+            style="flex:1; height:4px; accent-color:var(--coordinates-color); min-width:0; ${dim}">
+          <input type="number" id="${inputId}" value="${displayVal}" min="100" max="10000" step="100"
+            oninput="document.getElementById('${sliderId}').value=this.value;"
+            onchange="${ocFr}"
+            style="width:48px; flex-shrink:0; padding:2px 3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:11px; text-align:center; font-family:monospace; height:22px; ${dim}">
+          ${!useGlobal ? `<button title="Reset" onmousedown="EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',0); EnderTrack.ScenarioBuilder._refresh()" style="flex-shrink:0; border:none; background:none; color:#666; cursor:pointer; font-size:12px; padding:0 2px;">↺</button>` : ''}
+          <button title="Use variable" onmousedown="EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}','$'); EnderTrack.ScenarioBuilder._refresh()" style="flex-shrink:0; border:none; background:none; color:#666; cursor:pointer; font-size:11px; padding:0 2px;">$</button>
+        </div>`;
       }
       if (p.type === 'number') {
         const isVar = String(val).startsWith('$');
-        return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <input type="text" value="${this._escapeAttr(val)}" placeholder="${p.default ?? 0}" onchange="${oc}" oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))" class="sb-input sb-input-num${isVar ? ' sb-var' : ''}" ${disabled}></div>`;
+        const ocNum = forcedReadonly ? '' : (parentMacro
+          ? `EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',this.value); EnderTrack.ScenarioBuilder._syncExposedToMacro('${parentMacro.macroPath}','${pathStr}','${name}')`
+          : oc);
+        return `<div class="sb-param"><label class="sb-param-label" style="${forcedReadonly?'opacity:0.4;':''}">${this._escapeHtml(p.label)}</label>
+          <input type="text" value="${this._escapeAttr(val)}" placeholder="${p.default ?? 0}" ${forcedReadonly ? 'readonly style="opacity:0.4; pointer-events:none;"' : `onchange="${ocNum}" oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))"`} class="sb-input sb-input-num${isVar ? ' sb-var' : ''}"></div>`;
       }
       if (p.readonly) {
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <input type="text" value="${this._escapeAttr(val)}" class="sb-input" readonly style="opacity:0.6;"></div>`;
+          <input type="text" value="${this._escapeAttr(val)}" class="sb-input sb-var" readonly style="opacity:0.8;"></div>`;
       }
       const isVarText = String(val).startsWith('$');
-      return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-        <input type="text" value="${this._escapeAttr(val)}" placeholder="${this._escapeAttr(p.placeholder || '')}" onchange="${oc}" oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))" class="sb-input${isVarText ? ' sb-var' : ''}" ${disabled}></div>`;
+      const ocText = forcedReadonly ? '' : (parentMacro
+        ? `EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',this.value); EnderTrack.ScenarioBuilder._syncExposedToMacro('${parentMacro.macroPath}','${pathStr}','${name}')`
+        : oc);
+      return `<div class="sb-param"><label class="sb-param-label" style="${forcedReadonly?'opacity:0.4;':''}">${this._escapeHtml(p.label)}</label>
+        <input type="text" value="${this._escapeAttr(val)}" placeholder="${this._escapeAttr(p.placeholder || '')}" ${forcedReadonly ? 'readonly style="opacity:0.4; pointer-events:none;"' : `onchange="${ocText}" oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))"`} class="sb-input${isVarText ? ' sb-var' : ''}"></div>`;
     }).join('');
   }
 
@@ -1734,7 +2092,8 @@ class ScenarioBuilder {
       const label = b.condition === null ? 'ELSE' : (i === 0 ? 'IF' : 'ELSE IF');
       return `<div class="sb-param">
         <label class="sb-param-label" style="color:var(--coordinates-color);">${label}</label>
-        ${b.condition !== null ? `<input type="text" value="${this._escapeAttr(b.condition)}" onchange="EnderTrack.ScenarioBuilder._updateBranchCondition('${this.selectedPath}', ${i}, this.value)" class="sb-input" style="font-family:monospace;">` : ''}
+        ${b.condition !== null ? `<input type="text" value="${this._escapeAttr(b.condition)}" onchange="EnderTrack.ScenarioBuilder._updateBranchCondition('${this.selectedPath}', ${i}, this.value)" class="sb-input" style="font-family:monospace;">` : '<span style="flex:1;"></span>'}
+        ${i > 0 ? `<button onmousedown="EnderTrack.ScenarioBuilder._removeBranch('${this.selectedPath}',${i})" style="flex-shrink:0; border:none; background:none; color:#666; cursor:pointer; font-size:13px; padding:0 2px;" onmouseenter="this.style.color='#e25555'" onmouseleave="this.style.color='#666'">✕</button>` : ''}
       </div>`;
     }).join('') + `
       <div style="display:flex; gap:4px; padding:4px 8px;">
@@ -1759,8 +2118,22 @@ class ScenarioBuilder {
     const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, this.selectedPath);
     if (!node?.branches) return;
     const condDef = EnderTrack.ConditionTypesRegistry?.get('default');
-    if (type === 'sinon') condDef?.addSinon?.(node) || node.branches.push({ condition: null, actions: [] });
-    else condDef?.addOuSi?.(node) || node.branches.push({ condition: '$x > 0', actions: [] });
+    if (type === 'sinon') {
+      if (condDef?.addSinon) condDef.addSinon(node);
+      else node.branches.push({ condition: null, actions: [] });
+    } else {
+      if (condDef?.addOuSi) condDef.addOuSi(node);
+      else node.branches.push({ condition: '$x > 0', actions: [] });
+    }
+    this._refresh();
+  }
+
+  _removeBranch(pathStr, branchIndex) {
+    this._saveUndo();
+    const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, pathStr);
+    if (!node?.branches || branchIndex === 0) return;
+    node.branches.splice(branchIndex, 1);
+    this.selectedPath = pathStr;
     this._refresh();
   }
 
@@ -1772,17 +2145,13 @@ class ScenarioBuilder {
   _updateMacroInput(pathStr, inputId, value) {
     const macro = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, pathStr);
     if (!macro?.inputs) return;
-    // Store the value
     if (!macro.inputValues) macro.inputValues = {};
     macro.inputValues[inputId] = value;
-    // Propagate to the actual node param inside children
+    // Propagate to children param in-place
     const input = macro.inputs.find(i => i.id === inputId);
     if (input?.nodePath && input?.paramName) {
-      // Navigate inside macro children
-      const innerNode = EnderTrack.TreeUtils.getNodeByPath({ children: macro.children }, 'children.' + input.nodePath);
-      if (innerNode?.params) {
-        innerNode.params[input.paramName] = value;
-      }
+      const innerNode = EnderTrack.TreeUtils.getNodeByPath({ type: 'root', children: macro.children }, input.nodePath);
+      if (innerNode?.params) innerNode.params[input.paramName] = value;
     }
     this._refresh();
   }
@@ -1791,7 +2160,7 @@ class ScenarioBuilder {
     const macro = await EnderTrack.MacroRegistry?.importFromFile();
     if (macro) {
       this._refreshPalette();
-      EnderTrack.Scenario?.addLog?.(`📦 Macro "${macro.name}" imported`, 'info');
+      EnderTrack.Scenario?.addLog?.(`Function "${macro.name}" imported`, 'info');
     }
   }
 
@@ -1812,6 +2181,42 @@ class ScenarioBuilder {
       if (node?.type === 'loop') return true;
     }
     return false;
+  }
+
+  _syncExposedToMacro(macroPath, nodePath, paramName) {
+    const macro = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, macroPath);
+    if (!macro?.inputs) return;
+    
+    // relativePath = nodePath stripped of macroPath + '.children.'
+    const prefix = macroPath + '.children.';
+    const relativePath = nodePath.startsWith(prefix) ? nodePath.slice(prefix.length) : nodePath;
+    const inputId = `${relativePath}.${paramName}`.replace(/\./g, '_');
+    const input = macro.inputs.find(i => i.id === inputId);
+    if (!input) return;
+    const innerNode = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, nodePath);
+    if (!innerNode?.params) return;
+    const newVal = innerNode.params[paramName];
+    if (!macro.inputValues) macro.inputValues = {};
+    macro.inputValues[inputId] = newVal;
+    input.default = newVal;
+    this._refresh();
+  }
+
+  _getParentMacro(pathStr) {
+    if (!pathStr) return null;
+    const parts = pathStr.split('.');
+    for (let i = parts.length - 1; i >= 1; i--) {
+      // Skip if this part is 'children'/'branches'/'actions' — not a real node
+      if (parts[i - 1] === 'children' || parts[i - 1] === 'branches' || parts[i - 1] === 'actions') continue;
+      const parentPath = parts.slice(0, i).join('.');
+      const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, parentPath);
+      if (node?.type === 'macro') {
+        const afterMacro = parts.slice(i).join('.');
+        const relativePath = afterMacro.replace(/^children\./, '');
+        return { macro: node, macroPath: parentPath, relativePath };
+      }
+    }
+    return null;
   }
 
   _getClosestLoopVar(pathStr) {
@@ -1843,24 +2248,53 @@ class ScenarioBuilder {
   _actionSummary(node) {
     const p = node.params || {};
     const v = s => String(s || '');
-    const w = s => v(s).startsWith('$') ? `<span style="color:var(--coordinates-color);font-family:monospace;">${this._escapeHtml(v(s))}</span>` : this._escapeHtml(v(s));
+    const wVar = s => `<span class="sb-meta-var">${this._escapeHtml(v(s))}</span>`;
+    const w = s => v(s).startsWith('$') ? wVar(s) : `<span class="sb-meta-value">${this._escapeHtml(v(s))}</span>`;
     if (node.actionId === 'move') {
-      if (p.moveType === 'relative') return `Δ(${w(p.dx||0)}, ${w(p.dy||0)}, ${w(p.dz||0)})`;
-      if (p.absSource === 'list') {
-        if (p.listPickMode === 'pick') return `→ liste[#${w(p.listPick||0)}]`;
-        return `→ liste[${w(p.listIndex||'$i')}]`;
+      if (p.moveType === 'relative') return `<span class="sb-meta-value">Δ(${w(p.dx||0)}, ${w(p.dy||0)}, ${w(p.dz||0)})</span>`;
+      if (p.moveType === 'list') {
+        const lists = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+        const list = lists.find(l => String(l.id) === String(p.listId)) || lists[0];
+        const listName = list?.name || 'List';
+        return `→ <span class="sb-meta-list">${this._escapeHtml(listName)}</span>[${wVar(p.listIndex||'$i')}]`;
       }
-      if (p.absSource === 'strategic') return `→ ${w(p.strategicId||'home')}`;
-      return `→(${w(p.x||0)}, ${w(p.y||0)}, ${w(p.z||0)})`;
+      return `<span class="sb-meta-value">→(${w(p.x||0)}, ${w(p.y||0)}, ${w(p.z||0)})</span>`;
     }
-    if (node.actionId === 'wait') return `${w(p.duration||0)}s`;
-    if (node.actionId === 'log') return `"${w((p.message||'').substring(0,20))}"`;
+    if (node.actionId === 'wait') return `<span class="sb-meta-value">${w(p.duration||0)}s</span>`;
+    if (node.actionId === 'log') return `<span class="sb-meta-value">"${this._escapeHtml((p.message||'').substring(0,20))}"</span>`;
     return '';
   }
 
   _refreshProperties() {
     const el = document.getElementById('sbProps');
     if (!el) return;
+
+    if (this.selectedPaths.length > 1) {
+      const allDomPaths = Array.from(document.querySelectorAll('#sbTree [data-path]')).map(e => e.dataset.path);
+      const sorted = [...this.selectedPaths].sort((a, b) => allDomPaths.indexOf(a) - allDomPaths.indexOf(b));
+      const items = sorted.map(p => {
+        const n = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, p);
+        if (!n) return '';
+        let label = n.label || n.params?.label || '';
+        let type = '';
+        if (n.type === 'action') type = EnderTrack.ActionRegistry?.get(n.actionId)?.label || n.actionId;
+        else if (n.type === 'loop') type = EnderTrack.LoopTypesRegistry?.get(n.loopId)?.label || 'Loop';
+        else if (n.type === 'condition') type = 'Condition';
+        const display = label || type;
+        return `<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:3px;background:var(--app-bg);margin-bottom:3px;">
+          <span style="font-size:10px;color:var(--text-selected);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._escapeHtml(display)}</span>
+          <span style="font-size:9px;color:#666;">${this._escapeHtml(type !== display ? type : n.type)}</span>
+        </div>`;
+      }).join('');
+      el.innerHTML = `<div style="padding:8px;">
+        <div style="font-size:10px;color:#666;margin-bottom:6px;">${sorted.length} nodes selected</div>
+        ${items}
+        <div style="margin-top:8px;">
+          <button onclick="EnderTrack.ScenarioBuilder.deleteSelected()" style="width:100%;padding:4px;border:none;border-radius:3px;cursor:pointer;font-size:10px;background:transparent;color:#ef4444;">Delete all</button>
+        </div>
+      </div>`;
+      return;
+    }
 
     if (!this.selectedPath) {
       el.innerHTML = '<div class="sb-props-empty">Select a node</div>';
@@ -1870,19 +2304,22 @@ class ScenarioBuilder {
     const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, this.selectedPath);
     if (!node) { el.innerHTML = ''; return; }
 
-    let html = `<div class="sb-props-actions">
-      ${node.type === 'macro' && node.collapsed
-        ? `<button onclick="EnderTrack.ScenarioBuilder.expandSelected()" class="sb-mini-btn" title="Expand">📂</button>
-           <button onclick="EnderTrack.MacroRegistry.exportToFile('${node.macroId}')" class="sb-mini-btn" title="Export">💾</button>`
-        : ''}
+    // Detect if selected node is inside a macro
+    const parentMacro = this._getParentMacro(this.selectedPath);
+
+    let html = '';
+    if (parentMacro) {
+      html += `<div style="font-size:9px; color:rgba(245,158,11,0.6); padding:3px 8px; border-bottom:1px solid #2a2a2a; margin-bottom:2px;">Inside — ${this._escapeHtml(parentMacro.macro.name || 'Function')}</div>`;
+    }
+    html += `<div class="sb-props-actions">
       ${node.type === 'loop' && node.loopId === 'group'
-        ? `<button onclick="EnderTrack.ScenarioBuilder._saveGroupAsAction('${this.selectedPath}')" class="sb-mini-btn" title="Save as action">💾</button>`
+        ? `<button onclick="EnderTrack.ScenarioBuilder._saveGroupAsAction('${this.selectedPath}')" class="sb-mini-btn">Save as function</button>`
         : ''}
     </div>
     <div class="sb-props-label-section">
       <div class="sb-param">
         <label class="sb-param-label">Label</label>
-        <input type="text" value="${this._escapeAttr(node.label || node.params?.label || '')}" placeholder="${this._escapeAttr(node.type === 'action' ? (EnderTrack.ActionRegistry?.get(node.actionId)?.label || node.actionId) : node.type === 'loop' ? (EnderTrack.LoopTypesRegistry?.get(node.loopId)?.label || 'Loop') : 'Condition')}"
+        <input type="text" value="${this._escapeAttr(node.label || node.params?.label || '')}" placeholder="${this._escapeAttr(node.type === 'action' ? (EnderTrack.ActionRegistry?.get(node.actionId)?.label || node.actionId) : node.type === 'loop' ? (EnderTrack.LoopTypesRegistry?.get(node.loopId)?.label || 'Function') : 'Condition')}"
           onchange="EnderTrack.ScenarioBuilder._setNodeLabel('${this.selectedPath}', this.value)"
           class="sb-input">
       </div>
@@ -1891,79 +2328,147 @@ class ScenarioBuilder {
 
     if (node.type === 'loop') {
       if (node.loopId === 'group') {
-        // Color dot picker
-        const color = node.params?.color || '';
-        const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#6b7280'];
-        html += `<div class="sb-param"><label class="sb-param-label">Color</label>
-          <div style="display:flex; gap:4px; align-items:center;">
-            ${colors.map(c => `<div onclick="EnderTrack.ScenarioBuilder.updateParam('${this.selectedPath}','color','${c}')" style="width:14px;height:14px;border-radius:50%;background:${c};cursor:pointer;outline:${color===c?'2px solid #fff':'none'};outline-offset:1px;"></div>`).join('')}
-            <div onclick="EnderTrack.ScenarioBuilder.updateParam('${this.selectedPath}','color','')" style="width:14px;height:14px;border-radius:50%;background:rgba(150,150,150,0.3);cursor:pointer;outline:${!color?'2px solid #fff':'none'};outline-offset:1px;"></div>
-          </div></div>`;
-        // Params of child actions
-        const childActions = (node.children || []).filter(c => c.type === 'action');
-        if (childActions.length) {
-          html += `<div style="border-top:1px solid #333;margin-top:6px;padding-top:6px;"><div class="sb-param-label" style="font-weight:600;margin-bottom:4px;">Actions params</div>`;
-          childActions.forEach((child, ci) => {
-            const def = EnderTrack.ActionRegistry?.get(child.actionId);
-            if (!def?.params?.length) return;
-            const childPath = `${this.selectedPath}.children.${(node.children||[]).indexOf(child)}`;
-            html += `<div style="font-size:10px;color:var(--text-general);margin:4px 0 2px;opacity:0.6;">${def.label}</div>`;
-            html += this._renderParams(def.params, child.params, childPath);
+        const inputs = EnderTrack.TreeUtils.extractMacroInputs(node.children || []);
+        // Restore exposed/label state from previously saved _pendingInputs
+        if (node._pendingInputs) {
+          inputs.forEach(inp => {
+            const saved = node._pendingInputs.find(s => s.id === inp.id);
+            if (saved) { inp.exposed = saved.exposed; inp.label = saved.label ?? inp.label; }
+          });
+        }
+        node._pendingInputs = inputs;
+        if (inputs.length) {
+          html += `<div style="margin-bottom:6px;">`;
+          // Group by source node (nodePath)
+          let lastNodePath = null;
+          inputs.forEach((inp, idx) => {
+            // Section separator when source node changes
+            if (inp.nodePath !== lastNodePath) {
+              lastNodePath = inp.nodePath;
+              const sectionLabel = inp.label.includes('→') ? inp.label.split('→')[0].trim() : '';
+              if (sectionLabel) html += `<div class="sb-props-section-label">${this._escapeHtml(sectionLabel)}</div>`;
+            }
+            const isExposed = !!inp.exposed;
+            const shortLabel = inp.label.includes('→') ? inp.label.split('→').pop().trim() : inp.label;
+            // Add index if multiple inputs share same shortLabel
+            const sameCount = inputs.filter(i => (i.label.includes('→') ? i.label.split('→').pop().trim() : i.label) === shortLabel);
+            const displayLabel = sameCount.length > 1 ? `${shortLabel} ${sameCount.indexOf(inp) + 1}` : shortLabel;
+            const defDisplay = (inp.type === 'feedrate' && (inp.default === 0 || inp.default === '0' || inp.default === '')) ? 'global' : String(inp.default ?? '');
+            html += `<div style="display:flex; align-items:center; gap:4px; padding:2px 6px; margin-bottom:1px;">
+              <button onmousedown="EnderTrack.ScenarioBuilder._toggleGroupInput('${this.selectedPath}', ${idx}, ${!isExposed})"
+                title="${isExposed ? 'Lock' : 'Expose as parameter'}"
+                style="flex-shrink:0; padding:0px 4px; border:none; border-radius:2px; cursor:pointer; font-size:9px;
+                  background:${isExposed ? 'rgba(245,158,11,0.15)' : 'transparent'};
+                  color:${isExposed ? 'rgba(245,158,11,0.9)' : '#3a3a3a'};
+                  border:1px solid ${isExposed ? 'rgba(245,158,11,0.3)' : '#2e2e2e'};">${isExposed ? 'param' : '—'}</button>
+              <span style="flex:1; font-size:10px; color:${isExposed ? 'var(--text-selected)' : '#666'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${this._escapeHtml(displayLabel)}</span>
+              ${!isExposed
+                ? `<span style="font-size:10px; color:#555; font-family:monospace;">${this._escapeHtml(defDisplay)}</span>`
+                : `<input type="text" value="${this._escapeAttr(inp.label || displayLabel)}" placeholder="Label"
+                    onchange="EnderTrack.ScenarioBuilder._setGroupInputLabel('${this.selectedPath}', ${idx}, this.value)"
+                    style="width:60px; padding:1px 4px; background:var(--app-bg); border:1px solid rgba(245,158,11,0.3); border-radius:3px; color:var(--text-selected); font-size:10px;">
+                  <input type="text" value="${this._escapeAttr(defDisplay)}"
+                    onchange="EnderTrack.ScenarioBuilder._setGroupInputDefault('${this.selectedPath}', ${idx}, this.value)"
+                    placeholder="default"
+                    style="width:40px; padding:1px 4px; background:var(--app-bg); border:1px solid rgba(245,158,11,0.3); border-radius:3px; color:rgba(245,158,11,0.9); font-size:10px; font-family:monospace;">`
+              }
+            </div>`;
           });
           html += `</div>`;
+        } else {
+          html += `<div style="font-size:9px; color:#555; padding:4px 0;">No parameters detected</div>`;
         }
+        html += `<label class="sb-param sb-param-check">
+          <input type="checkbox" ${node.params?.showInLog ? 'checked' : ''} onchange="EnderTrack.ScenarioBuilder.updateParam('${this.selectedPath}','showInLog',this.checked)" style="accent-color:var(--coordinates-color);">
+          Log</label>`;
       } else {
         const loopDef = EnderTrack.LoopTypesRegistry?.get(node.loopId);
         const filteredParams = (loopDef?.params || []).filter(p => p.name !== 'label');
-        html += this._renderParams(filteredParams, node.params, this.selectedPath);
+        if (filteredParams.length) {
+          html += `<div class="sb-props-section-label">${this._escapeHtml(loopDef?.label || 'Loop')}</div>`;
+          html += this._renderParams(filteredParams, node.params, this.selectedPath, parentMacro);
+        }
       }
     } else if (node.type === 'action') {
       const actionDef = EnderTrack.ActionRegistry?.get(node.actionId);
-      html += this._renderParams(actionDef?.params || [], node.params, this.selectedPath);
+      if (actionDef?.params?.length) {
+        html += `<div class="sb-props-section-label">${this._escapeHtml(actionDef.label)}</div>`;
+        html += this._renderParams(actionDef.params, node.params, this.selectedPath, parentMacro);
+      }
     } else if (node.type === 'condition') {
       html += this._renderConditionProps(node);
       html += `<label class="sb-param sb-param-check">
-        <input type="checkbox" ${node.showInLog ? 'checked' : ''} onchange="EnderTrack.ScenarioBuilder._setNodeProp('${this.selectedPath}','showInLog',this.checked)">
+        <input type="checkbox" ${node.params?.showInLog ? 'checked' : ''} onchange="EnderTrack.ScenarioBuilder.updateParam('${this.selectedPath}','showInLog',this.checked)">
         Log
       </label>`;
     } else if (node.type === 'macro') {
-      html += `<div class="sb-param">
-        <label class="sb-param-label">Name</label>
-        <input type="text" value="${this._escapeAttr(node.name || '')}" onchange="EnderTrack.ScenarioBuilder._updateMacroProp('${this.selectedPath}', 'name', this.value)" class="sb-input">
-      </div>
-      <div class="sb-param-hint">${EnderTrack.TreeUtils.countActions(node)} actions inside</div>`;
-      if (node.inputs?.length) {
+      const srcId = node.sourceMacroId;
+      const exposedInputs = (node.inputs || []).filter(i => i.exposed);
+      html += `<div class="sb-param-hint">${EnderTrack.TreeUtils.countActions(node)} actions inside</div>`;
+      if (exposedInputs.length) {
         html += `<div style="border-top:1px solid #333; margin-top:6px; padding-top:6px;">
           <div class="sb-param-label" style="font-weight:600; margin-bottom:4px;">Parameters</div>`;
-        node.inputs.forEach(inp => {
+        exposedInputs.forEach(inp => {
           const val = node.inputValues?.[inp.id] ?? inp.default ?? '';
           const oc = `EnderTrack.ScenarioBuilder._updateMacroInput('${this.selectedPath}', '${inp.id}', this.value)`;
-          if (inp.type === 'number') {
-            const isMacroVar = String(val).startsWith('$');
-            html += `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(inp.label)}</label>
-              <input type="text" value="${this._escapeAttr(val)}" placeholder="0" onchange="${oc}" oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))" class="sb-input sb-input-num${isMacroVar ? ' sb-var' : ''}"></div>`;
-          } else if (inp.type === 'checkbox') {
-            html += `<label class="sb-param sb-param-check">
-              <input type="checkbox" ${val ? 'checked' : ''} onchange="EnderTrack.ScenarioBuilder._updateMacroInput('${this.selectedPath}', '${inp.id}', this.checked)">
-              ${this._escapeHtml(inp.label)}</label>`;
+          const label = this._escapeHtml(inp.label || inp.id);
+          if (inp.type === 'feedrate') {
+            const globalFr = window.EnderTrack?.State?.get?.()?.feedrate || 3000;
+            const isVar = String(val).startsWith('$');
+            const numVal = isVar ? globalFr : (parseInt(val) || 0);
+            const useGlobal = !isVar && numVal === 0;
+            const displayVal = useGlobal ? globalFr : numVal;
+            const sliderId = `frs_mi_${inp.id}`.replace(/[^a-zA-Z0-9_]/g, '_');
+            const inputId = `fr_mi_${inp.id}`.replace(/[^a-zA-Z0-9_]/g, '_');
+            const dim = useGlobal ? 'opacity:0.4;' : '';
+            const ocFr = `EnderTrack.ScenarioBuilder._updateMacroInput('${this.selectedPath}','${inp.id}',parseInt(this.value))`;
+            if (isVar) {
+              html += `<div class="sb-param">
+                <label class="sb-param-label">${label}</label>
+                <input type="text" value="${this._escapeAttr(val)}" placeholder="$mySpeed"
+                  onchange="EnderTrack.ScenarioBuilder._updateMacroInput('${this.selectedPath}','${inp.id}',this.value)"
+                  oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))"
+                  class="sb-input sb-var" style="font-family:monospace;">
+                <button title="Reset" onmousedown="EnderTrack.ScenarioBuilder._updateMacroInput('${this.selectedPath}','${inp.id}',0); EnderTrack.ScenarioBuilder._refresh()" style="flex-shrink:0; border:none; background:none; color:#666; cursor:pointer; font-size:12px; padding:0 2px;">↺</button>
+              </div>`;
+            } else {
+            html += `<div class="sb-param">
+              <label class="sb-param-label">${label}</label>
+              <input type="range" id="${sliderId}" min="100" max="10000" step="100" value="${displayVal}"
+                oninput="document.getElementById('${inputId}').value=this.value;"
+                onchange="${ocFr}"
+                style="flex:1; height:4px; accent-color:var(--coordinates-color); min-width:0; ${dim}">
+              <input type="number" id="${inputId}" value="${displayVal}" min="100" max="10000" step="100"
+                oninput="document.getElementById('${sliderId}').value=this.value;"
+                onchange="${ocFr}"
+                style="width:48px; flex-shrink:0; padding:2px 3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:11px; text-align:center; font-family:monospace; height:22px; ${dim}">
+              ${!useGlobal ? `<button title="Reset" onmousedown="EnderTrack.ScenarioBuilder._updateMacroInput('${this.selectedPath}','${inp.id}',0); EnderTrack.ScenarioBuilder._refresh()" style="flex-shrink:0; border:none; background:none; color:#666; cursor:pointer; font-size:12px; padding:0 2px;">↺</button>` : ''}
+              <button title="Use variable" onmousedown="EnderTrack.ScenarioBuilder._updateMacroInput('${this.selectedPath}','${inp.id}','$'); EnderTrack.ScenarioBuilder._refresh()" style="flex-shrink:0; border:none; background:none; color:#666; cursor:pointer; font-size:11px; padding:0 2px;">$</button>
+            </div>`;
+            }
           } else if (inp.type === 'list-select') {
             const lists = EnderTrack.Lists?.manager?.getAllLists?.() || [];
-            html += `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(inp.label)}</label>
+            html += `<div class="sb-param"><label class="sb-param-label">${label}</label>
               <select onchange="${oc}" class="sb-input">
-                ${lists.map(l => `<option value="${l.id}" ${String(val) === String(l.id) ? 'selected' : ''}>${l.name}</option>`).join('')}
+                ${lists.map(l => `<option value="${l.id}" ${String(val) === String(l.id) ? 'selected' : ''}>${l.name} (${l.positions?.length || 0})</option>`).join('')}
               </select></div>`;
           } else {
-            const isMacroVarText = String(val).startsWith('$');
-            html += `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(inp.label)}</label>
-              <input type="text" value="${this._escapeAttr(val)}" onchange="${oc}" oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))" class="sb-input${isMacroVarText ? ' sb-var' : ''}"></div>`;
+            html += `<div class="sb-param"><label class="sb-param-label">${label}</label>
+              <input type="text" value="${this._escapeAttr(val)}" placeholder="${this._escapeAttr(String(inp.default ?? ''))}" onchange="${oc}" class="sb-input"></div>`;
           }
         });
         html += `</div>`;
       }
-      html += `<label class="sb-param sb-param-check">
+      html += `<label class="sb-param sb-param-check" style="margin-top:6px;">
         <input type="checkbox" ${node.showInLog ? 'checked' : ''} onchange="EnderTrack.ScenarioBuilder._setNodeProp('${this.selectedPath}','showInLog',this.checked)">
         Log
       </label>`;
+      if (srcId) {
+        html += `<div style="display:flex; gap:4px; margin-top:10px; padding-top:8px; border-top:1px solid #333;">
+          <button onclick="EnderTrack.ScenarioBuilder._editMacroInConstructor('${srcId}')" class="sb-mini-btn" style="flex:1;">Edit function</button>
+          <button onclick="if(confirm('Delete function from library?')){EnderTrack.MacroRegistry.delete('${srcId}'); EnderTrack.ScenarioBuilder._refreshPalette();}" class="sb-mini-btn sb-btn-danger">✕</button>
+        </div>`;
+      }
     }
 
     el.innerHTML = html;
@@ -1982,7 +2487,7 @@ class ScenarioBuilder {
       <div class="sb-menu-item" onclick="EnderTrack.ScenarioBuilder._renameScenario()">Rename</div>
       <div class="sb-menu-item" onclick="EnderTrack.ScenarioBuilder._exportScenario()">💾 Sauvegarder (JSON)</div>
       <div class="sb-menu-item" onclick="EnderTrack.ScenarioBuilder._duplicateScenario()">📋 Copier</div>
-      <div class="sb-menu-item" onclick="EnderTrack.ScenarioBuilder._collapseScenarioToFunction()">📦 Create function</div>
+      <div class="sb-menu-item" onclick="EnderTrack.ScenarioBuilder._collapseScenarioToFunction()">Create function</div>
       <div class="sb-menu-item sb-menu-danger" onclick="EnderTrack.ScenarioBuilder._deleteScenario()">Delete</div>
       <div class="sb-menu-item sb-menu-danger" onclick="EnderTrack.ScenarioBuilder._deleteAllScenarios()">💥 Tout supprimer</div>
     `;
@@ -2087,7 +2592,7 @@ class ScenarioBuilder {
       type: 'macro',
       macroId: 'macro_' + Date.now(),
       name,
-      icon: '📦',
+      icon: '',
       collapsed: true,
       children,
       inputs,

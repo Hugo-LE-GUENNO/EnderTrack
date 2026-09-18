@@ -341,50 +341,34 @@ class EnderscopeConnection {
     });
   }
 
-  async moveAbsolute(x, y, z) {
+  async moveAbsolute(x, y, z, feedrate) {
     if (!this.isConnected) return false;
-
+    const fr = feedrate || window.EnderTrack?.State?.get()?.feedrate || 3000;
     try {
       const response = await fetch(`${this.serverUrl}/api/move/absolute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x, y, z })
+        body: JSON.stringify({ x, y, z, feedrate: fr })
       });
-
       const result = await response.json();
-      
-      if (result.success) {
-        // Synchroniser la position après le mouvement
-        await this.syncPosition();
-        return true;
-      }
+      if (result.success) { await this.syncPosition(); return true; }
       return false;
-    } catch (error) {
-      return false;
-    }
+    } catch (error) { return false; }
   }
 
-  async moveRelative(dx, dy, dz) {
+  async moveRelative(dx, dy, dz, feedrate) {
     if (!this.isConnected) return false;
-
+    const fr = feedrate || window.EnderTrack?.State?.get()?.feedrate || 3000;
     try {
       const response = await fetch(`${this.serverUrl}/api/move/relative`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dx, dy, dz })
+        body: JSON.stringify({ dx, dy, dz, feedrate: fr })
       });
-
       const result = await response.json();
-      
-      if (result.success) {
-        // Synchroniser la position après le mouvement
-        await this.syncPosition();
-        return true;
-      }
+      if (result.success) { await this.syncPosition(); return true; }
       return false;
-    } catch (error) {
-      return false;
-    }
+    } catch (error) { return false; }
   }
 
   updateConnectionStatus() {
@@ -531,12 +515,12 @@ class EnderscopeConnection {
   // === MOVEMENT METHODS (fusionnés depuis enderscope-movement.js) ===
   
   // Move to absolute position with hardware integration
-  async moveAbsoluteHardware(x, y, z) {
+  async moveAbsoluteHardware(x, y, z, feedrate) {
     if (!this.isConnected) {
       return false;
     }
 
-    const feedrate = window.EnderTrack?.State?.get()?.feedrate || 3000;
+    feedrate = feedrate || window.EnderTrack?.State?.get()?.feedrate || 3000;
     
     try {
       const response = await fetch(`${this.serverUrl}/api/move/absolute`, {
@@ -560,12 +544,12 @@ class EnderscopeConnection {
   }
 
   // Move relative to current position with hardware integration
-  async moveRelativeHardware(dx, dy, dz) {
+  async moveRelativeHardware(dx, dy, dz, feedrate) {
     if (!this.isConnected) {
       return false;
     }
 
-    const feedrate = window.EnderTrack?.State?.get()?.feedrate || 3000;
+    feedrate = feedrate || window.EnderTrack?.State?.get()?.feedrate || 3000;
     
     try {
       const response = await fetch(`${this.serverUrl}/api/move/relative`, {
@@ -889,12 +873,12 @@ class EnderscopeMovement {
     return window.EnderTrack?.Enderscope?.isConnected || false;
   }
 
-  async moveAbsolute(x, y, z) {
-    return await window.EnderTrack.Enderscope.moveAbsoluteHardware(x, y, z);
+  async moveAbsolute(x, y, z, feedrate) {
+    return await window.EnderTrack.Enderscope.moveAbsoluteHardware(x, y, z, feedrate);
   }
 
-  async moveRelative(dx, dy, dz) {
-    return await window.EnderTrack.Enderscope.moveRelativeHardware(dx, dy, dz);
+  async moveRelative(dx, dy, dz, feedrate) {
+    return await window.EnderTrack.Enderscope.moveRelativeHardware(dx, dy, dz, feedrate);
   }
 
   async home() {

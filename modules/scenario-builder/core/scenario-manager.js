@@ -155,16 +155,15 @@ class ScenarioManager {
 
   save() {
     try {
-      // Ensure currentScenarioId is always valid
       if (!this.scenarios.has(this.currentScenarioId)) {
         this.currentScenarioId = this.scenarios.keys().next().value || null;
       }
       const data = {
         scenarios: Array.from(this.scenarios.entries()),
-        currentScenarioId: this.currentScenarioId
+        currentScenarioId: this.currentScenarioId,
+        savedAt: Date.now()
       };
       localStorage.setItem('endertrack_scenarios', JSON.stringify(data));
-      // Sync to server
       const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
       fetch(url + '/api/sync/scenarios', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -176,24 +175,22 @@ class ScenarioManager {
   }
 
   loadFromStorage() {
-    // Load from localStorage FIRST (synchronous, immediate)
     this._loadLocal();
-    // Then try server (async update)
+    const localSavedAt = this._localSavedAt;
     const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     fetch(url + '/api/sync/scenarios', { signal: AbortSignal.timeout(2000) })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => {
-        if (data.scenarios?.length) {
-          // Ignore server response if local state is more recent (e.g. after a delete)
-          const localIds = new Set(this.scenarios.keys());
-          const serverIds = data.scenarios.map(([id]) => id);
-          // Only apply if server has same or fewer scenarios (not a stale response with deleted ones)
-          const serverHasDeleted = serverIds.some(id => !localIds.has(id) && this.scenarios.size > 0);
-          if (!serverHasDeleted) {
-            this.scenarios = new Map(data.scenarios);
-            this.currentScenarioId = data.currentScenarioId;
-            window.EnderTrack?.Scenario?.createUI?.();
-          }
+        if (!data.scenarios?.length) return;
+        // Ignore server if local is more recent
+        if (localSavedAt && data.savedAt && localSavedAt >= data.savedAt) return;
+        // Ignore server if local has fewer scenarios (means user deleted some)
+        if (data.scenarios.length > this.scenarios.size) {
+          this.scenarios = new Map(data.scenarios);
+          this.currentScenarioId = data.currentScenarioId;
+          if (!this.scenarios.has(this.currentScenarioId))
+            this.currentScenarioId = this.scenarios.keys().next().value || null;
+          window.EnderTrack?.Scenario?.createUI?.();
         }
       })
       .catch(() => {});
@@ -206,6 +203,7 @@ class ScenarioManager {
         const data = JSON.parse(stored);
         this.scenarios = new Map(data.scenarios);
         this.currentScenarioId = data.currentScenarioId;
+        this._localSavedAt = data.savedAt || 0;
       }
       if (this.scenarios.size === 0) this.createScenario('Scenario 1');
     } catch (error) {

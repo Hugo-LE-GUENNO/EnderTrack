@@ -132,16 +132,15 @@ class MovementEngine {
     }).catch(() => {});
   }
 
-  async moveAbsolute(targetX, targetY, targetZ) {
+  async moveAbsolute(targetX, targetY, targetZ, feedrate) {
     const state = EnderTrack.State.get();
-
     const target = this.validateCoordinates(targetX, targetY, targetZ);
     if (!target) return false;
     if (!this.checkSafetyLimits(target.x, target.y, target.z)) return false;
-    return await this.executeMovement(this.calculateMovement(state.pos, target));
+    return await this.executeMovement(this.calculateMovement(state.pos, target, feedrate), feedrate);
   }
 
-  async moveRelative(dx, dy, dz) {
+  async moveRelative(dx, dy, dz, feedrate) {
     const state = EnderTrack.State.get();
     const tx = state.pos.x + Number(dx);
     const ty = state.pos.y + Number(dy);
@@ -177,7 +176,7 @@ class MovementEngine {
       this.currentAnimation = requestAnimationFrame(animateHw);
 
       try {
-        const ok = await window.EnderTrack.EnderscopeMovement.moveRelative(Number(dx), Number(dy), Number(dz));
+        const ok = await window.EnderTrack.EnderscopeMovement.moveRelative(Number(dx), Number(dy), Number(dz), feedrate);
         this._cancelAnim();
         if (ok) { this.completeMovement(target, true); return true; }
         else { this.completeMovement(state.pos, false); return false; }
@@ -189,7 +188,7 @@ class MovementEngine {
     }
 
     // Simulation: convert to absolute
-    return await this.moveAbsolute(tx, ty, tz);
+    return await this.moveAbsolute(tx, ty, tz, feedrate);
   }
 
   async moveDirection(direction, customDistance = null) {
@@ -249,12 +248,12 @@ class MovementEngine {
     return await this.moveRelative(dx, dy, dz);
   }
 
-  calculateMovement(start, target) {
+  calculateMovement(start, target, feedrate) {
     const distXY = Math.sqrt((target.x - start.x) ** 2 + (target.y - start.y) ** 2);
     const distZ = Math.abs(target.z - start.z);
-    const feedrate = EnderTrack.State.get().feedrate || 3000;
-    const speedXY = feedrate / 60; // mm/s
-    const speedZ = Math.min(feedrate / 60, 5); // Z capped at 5 mm/s (~300 mm/min)
+    const fr = feedrate || EnderTrack.State.get().feedrate || 3000;
+    const speedXY = fr / 60;
+    const speedZ = Math.min(fr / 60, 5);
     const timeXY = distXY > 0 ? distXY / speedXY : 0;
     const timeZ = distZ > 0 ? distZ / speedZ : 0;
     const duration = Math.max(timeXY, timeZ) * 1000; // longest axis dictates duration
@@ -267,7 +266,7 @@ class MovementEngine {
     };
   }
 
-  async executeMovement(movement) {
+  async executeMovement(movement, feedrate) {
     return new Promise(async (resolve, reject) => {
       const state = EnderTrack.State.get();
       if (state.emergencyStopActive) {
@@ -307,7 +306,7 @@ class MovementEngine {
         this.currentAnimation = requestAnimationFrame(animateHw);
 
         try {
-          const ok = await window.EnderTrack.EnderscopeMovement.moveAbsolute(movement.target.x, movement.target.y, movement.target.z);
+          const ok = await window.EnderTrack.EnderscopeMovement.moveAbsolute(movement.target.x, movement.target.y, movement.target.z, feedrate);
           this._cancelAnim();
           if (ok) { this.completeMovement(movement.target, true); resolve(true); }
           else { this.completeMovement(EnderTrack.State.get().pos, false); reject(new Error('Hardware movement failed')); }

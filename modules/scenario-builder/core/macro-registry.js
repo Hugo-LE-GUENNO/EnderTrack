@@ -11,7 +11,7 @@ class MacroRegistry {
     const entry = {
       macroId: macro.macroId,
       name: macro.name || 'Macro',
-      icon: macro.icon || '📦',
+      icon: macro.icon || '',
       description: macro.description || '',
       children: JSON.parse(JSON.stringify(macro.children || [])),
       inputs: JSON.parse(JSON.stringify(macro.inputs || [])),

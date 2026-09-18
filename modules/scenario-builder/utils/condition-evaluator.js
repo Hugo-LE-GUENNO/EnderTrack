@@ -27,6 +27,9 @@ class ConditionEvaluator {
           expr = expr.replace(new RegExp(`\\${key}`, 'g'), value);
         }
       }
+
+      // Replace any remaining unresolved $vars with 0 to avoid ReferenceError
+      expr = expr.replace(/\$[a-zA-Z_][a-zA-Z0-9_]*/g, '0');
       
       // French logical operators
       expr = expr.replace(/\s+et\s+/gi, ' && ');

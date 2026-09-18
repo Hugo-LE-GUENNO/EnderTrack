@@ -242,12 +242,32 @@ class TreeUtils {
   }
 
   // Count total actions in tree
+  // Returns: number (known), Infinity (for infinite), NaN (while/conditional - unknown but finite)
   static countActions(node) {
     if (!node) return 0;
     let count = node.type === 'action' ? 1 : 0;
-    if (node.children) for (const c of node.children) count += this.countActions(c);
+    if (node.type === 'loop') {
+      const loopDef = window.EnderTrack?.LoopTypesRegistry?.get(node.loopId);
+      const iters = loopDef ? loopDef.getIterationCount(node.params || {}) : 1;
+      if (iters === Infinity) return Infinity;
+      if (node.loopId === 'while') return NaN;
+      const childCount = (node.children || []).reduce((s, c) => s + this.countActions(c), 0);
+      if (!isFinite(childCount)) return childCount; // propagate Infinity or NaN
+      return iters * childCount;
+    }
+    if (node.children) for (const c of node.children) {
+      const cc = this.countActions(c);
+      if (cc === Infinity) return Infinity;
+      if (isNaN(cc)) count = NaN;
+      else if (!isNaN(count)) count += cc;
+    }
     if (node.branches) for (const b of node.branches) {
-      if (b.actions) for (const a of b.actions) count += this.countActions(a);
+      if (b.actions) for (const a of b.actions) {
+        const ac = this.countActions(a);
+        if (ac === Infinity) return Infinity;
+        if (isNaN(ac)) count = NaN;
+        else if (!isNaN(count)) count += ac;
+      }
     }
     return count;
   }
@@ -270,7 +290,7 @@ class TreeUtils {
   }
 
   // Collapse: wrap selected nodes into a macro node
-  static collapseToMacro(tree, pathStr, name = 'Macro', icon = '📦') {
+  static collapseToMacro(tree, pathStr, name = 'Macro', icon = '') {
     const info = this.getParentArray(tree, pathStr);
     if (!info) return null;
 
@@ -304,9 +324,12 @@ class TreeUtils {
         if (!actionDef?.params) return;
         actionDef.params.forEach(p => {
           const pid = p.id || p.name;
-          if (pid === 'label' || pid === 'showInLog' || pid === 'logMessage') return;
-          const val = node.params[pid];
-          if (val === undefined || val === null) return;
+          if (pid === 'label' || pid === 'showInLog' || pid === 'moveType') return;
+          if (p.showIf) {
+            const [condKey, condVal] = p.showIf.split('=');
+            if (String(node.params[condKey] ?? '') !== condVal) return;
+          }
+          const val = node.params[pid] ?? p.default ?? '';
           inputs.push({
             id: `${path}.${pid}`.replace(/\./g, '_'),
             label: `${actionDef.label} → ${p.label}`,
@@ -322,8 +345,11 @@ class TreeUtils {
         if (loopDef?.params) {
           loopDef.params.forEach(p => {
             if (p.name === 'label' || p.name === 'showInLog' || p.name === 'logMessage' || p.name === 'loopVar') return;
-            const val = node.params[p.name];
-            if (val === undefined || val === null) return;
+            if (p.showIf) {
+              const [condKey, condVal] = p.showIf.split('=');
+              if (String(node.params[condKey] ?? '') !== condVal) return;
+            }
+            const val = node.params[p.name] ?? p.default ?? '';
             inputs.push({
               id: `${path}.${p.name}`.replace(/\./g, '_'),
               label: `${loopDef.label} → ${p.label}`,

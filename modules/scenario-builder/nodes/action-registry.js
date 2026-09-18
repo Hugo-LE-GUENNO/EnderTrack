@@ -29,24 +29,31 @@ class ActionRegistry {
         { id: 'dz', label: 'ΔZ (mm)', type: 'text', default: '0', showIf: 'moveType=relative' },
         { id: 'listId',    label: 'List',  type: 'list-select', default: '', showIf: 'moveType=list' },
         { id: 'listIndex', label: 'Index', type: 'text', default: '$i', placeholder: '$i', showIf: 'moveType=list' },
+        { id: 'speedRate', label: 'Speed', type: 'feedrate', default: 0 },
         { id: 'showInLog', label: 'Log', type: 'checkbox', default: false },
       ],
       execute: async (params, context) => {
         const vars = context?.variables || {};
+        const baseFeedrate = window.EnderTrack?.State?.get()?.feedrate || 3000;
+        const srRaw = _evalAny(params.speedRate, context?.variables || {});
+        const sr = typeof srRaw === 'number' ? srRaw : parseInt(srRaw) || 0;
+        const feedrate = (sr > 0) ? Math.max(100, Math.min(10000, sr)) : baseFeedrate;
         let x = 0, y = 0, z = 0;
         if (params.moveType === 'relative') {
           x = _evalExpr(params.dx, vars); y = _evalExpr(params.dy, vars); z = _evalExpr(params.dz, vars);
-          await window.EnderTrack?.Movement?.moveRelative(x, y, z);
+          await window.EnderTrack?.Movement?.moveRelative(x, y, z, feedrate);
         } else if (params.moveType === 'list') {
-          const list = window.EnderTrack?.Lists?.manager?.getList?.(params.listId);
+          const lists = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
+          const list = lists[Math.max(0, Math.floor(Number(params.listId) || 0))] || lists[0];
           const idx = Math.floor(_evalExpr(params.listIndex, vars));
           const pos = list?.positions?.[idx];
-          if (pos) { x = pos.x; y = pos.y; z = pos.z; await window.EnderTrack?.Movement?.moveAbsolute(x, y, z); }
+          if (pos) { x = pos.x; y = pos.y; z = pos.z; await window.EnderTrack?.Movement?.moveAbsolute(x, y, z, feedrate); }
+          else { await new Promise(r => setTimeout(r, 0)); }
         } else {
           x = _evalExpr(params.x, vars); y = _evalExpr(params.y, vars); z = _evalExpr(params.z, vars);
-          await window.EnderTrack?.Movement?.moveAbsolute(x, y, z);
+          await window.EnderTrack?.Movement?.moveAbsolute(x, y, z, feedrate);
         }
-        if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`🎯 (${x}, ${y}, ${z})`, 'info');
+        if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`🎯 (${x}, ${y}, ${z}) @${feedrate}mm/min`, 'info');
         return { success: true };
       }
     });
@@ -63,8 +70,16 @@ class ActionRegistry {
       ],
       execute: async (params, context) => {
         const d = _evalExpr(params.duration, context?.variables || {});
-        if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`⏱️ Attendre ${d}s`, 'info');
-        await new Promise(r => setTimeout(r, d * 1000));
+        if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`\u23f1 Wait ${d}s`, 'info');
+        window.EnderTrack?.Scenario?._showWaitTimer?.(d);
+        const end = Date.now() + d * 1000;
+        while (Date.now() < end) {
+          if (!window.EnderTrack?.Scenario?.isExecuting) break;
+          while (window.EnderTrack?.Scenario?._executor?.isPaused) {
+            await new Promise(r => setTimeout(r, 100));
+          }
+          await new Promise(r => setTimeout(r, 100));
+        }
         return { success: true };
       }
     });
@@ -81,6 +96,36 @@ class ActionRegistry {
       execute: async (params, context) => {
         const msg = _resolveVars(params.message || '', context);
         window.EnderTrack?.Scenario?.addLog?.(msg, 'info');
+        return { success: true };
+      }
+    });
+
+    // Set variable
+    this.register({
+      id: 'setvar',
+      label: 'Set variable',
+      icon: '=',
+      category: 'core',
+      params: [
+        { id: 'varId',     label: 'Variable', type: 'text', default: '$result', placeholder: '$myVar' },
+        { id: 'value',     label: 'Value',    type: 'text', default: '0',       placeholder: '0 or $x + 1' },
+        { id: 'showInLog', label: 'Log',      type: 'checkbox', default: false },
+      ],
+      execute: async (params, context) => {
+        const vars = context?.variables || {};
+        const varId = String(params.varId || '').trim();
+        if (!varId.startsWith('$')) return { success: false };
+        const result = _evalAny(params.value, vars);
+        vars[varId] = result;
+        // Persist into VariableManager so the value survives updateVariables() calls
+        const vm = window.EnderTrack?.VariableManager;
+        if (vm) {
+          const custom = vm.customVariables?.find(v => v.id === varId);
+          if (custom) custom.formula = String(result);
+          const global = vm.globalVariables?.find(v => v.id === varId);
+          if (global) global.formula = String(result);
+        }
+        if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`= ${varId} ← ${result}`, 'info');
         return { success: true };
       }
     });
@@ -206,6 +251,26 @@ function _evalExpr(expr, vars) {
   } catch { return 0; }
 }
 
+function _evalAny(expr, vars) {
+  if (expr === undefined || expr === null || expr === '') return 0;
+  const s = String(expr);
+  // Pure number
+  const num = Number(s.replace(',', '.'));
+  if (!isNaN(num)) return num;
+  // Resolve variables first
+  let resolved = s;
+  const keys = Object.keys(vars).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    resolved = resolved.replace(new RegExp(key.replace(/\$/g, '\\$'), 'g'), vars[key]);
+  }
+  // Try numeric expression
+  try {
+    const r = Function('"use strict"; return (' + resolved + ')')();
+    if (r !== undefined && r !== null && !isNaN(Number(r))) return Number(r);
+    return r;
+  } catch { return resolved; }
+}
+
 function _evalStr(expr, vars) {
   if (!expr) return '';
   let e = String(expr);
@@ -221,5 +286,6 @@ function _evalStr(expr, vars) {
 window.EnderTrack = window.EnderTrack || {};
 window.EnderTrack.ActionRegistry = new ActionRegistry();
 window.EnderTrack._evalExpr = _evalExpr;
+window.EnderTrack._evalAny  = _evalAny;
 window.EnderTrack._evalStr  = _evalStr;
 window.EnderTrack._resolveVars = _resolveVars;

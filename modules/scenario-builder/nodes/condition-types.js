@@ -15,9 +15,9 @@ class ConditionTypesRegistry {
       create: () => ({
         type: 'condition',
         conditionType: 'default',
-        params: { label: 'Condition' },
+        params: { label: 'Condition', showInLog: false },
         branches: [
-          { condition: '$x > 0', actions: [] }  // Just IF at start
+          { condition: '$x > 0', actions: [] }
         ]
       }),
       addSinon: (node) => {

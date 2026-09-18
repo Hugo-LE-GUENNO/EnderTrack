@@ -43,13 +43,13 @@ class LoopTypesRegistry {
     // Group
     this.register({
       id: 'group',
-      label: 'Group',
-      icon: '▤',
+      label: 'Function',
+      icon: '',
       params: [
-        { name: 'label', label: 'Label', type: 'text', default: 'Group' }
+        { name: 'label', label: 'Label', type: 'text', default: 'Function' }
       ],
       getIterationCount: () => 1,
-      getDefaultLogMessage: (params) => `▤ ${params.label || 'Group'}`
+      getDefaultLogMessage: (params) => `${params.label || 'Function'}`
     });
 
     // While
