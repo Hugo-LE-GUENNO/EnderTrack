@@ -44,7 +44,7 @@ class ActionRegistry {
           await window.EnderTrack?.Movement?.moveRelative(x, y, z, feedrate);
         } else if (params.moveType === 'list') {
           const lists = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
-          const list = lists[Math.max(0, Math.floor(Number(params.listId) || 0))] || lists[0];
+          const list = lists.find(l => String(l.id) === String(params.listId)) || lists[0];
           const idx = Math.floor(_evalExpr(params.listIndex, vars));
           const pos = list?.positions?.[idx];
           if (pos) { x = pos.x; y = pos.y; z = pos.z; await window.EnderTrack?.Movement?.moveAbsolute(x, y, z, feedrate); }
