@@ -1293,30 +1293,33 @@ class ScenarioBuilder {
     const icons = ['🔬','🧪','📷','🌟','💡','🧬','🧠','🌿','🐛','🔍','🎯','📊','📈','⭐','📚','📍','⏱️','🧩','🎬','🛠️','⚙️','🚀','🌊','🔥','❄️','🌈','💎','🧊','🍀'];
     const panel = document.createElement('div');
     panel.id = 'sbEditPanel';
-    panel.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--column-bg); border:1px solid #444; border-radius:8px; padding:14px; z-index:6000; box-shadow:0 4px 20px rgba(0,0,0,0.5); min-width:240px;';
+    panel.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--column-bg); border:1px solid #444; border-radius:8px; padding:14px; z-index:6000; box-shadow:0 4px 20px rgba(0,0,0,0.5); min-width:260px; max-width:320px;';
     panel.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <input type="text" id="sbEditName" value="${this._escapeHtml(s.name)}" style="flex:1; padding:4px 6px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:12px; margin-right:8px;">
         <button onclick="document.getElementById('sbEditPanel').remove()" style="background:none; border:none; color:var(--text-general); cursor:pointer; font-size:14px;">✕</button>
       </div>
-      <div style="display:flex; gap:5px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
-        ${['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#6b7280',''].map(col => {
-          const active = (s.color||'') === col;
-          const bg = col || 'rgba(150,150,150,0.2)';
-          return `<div onclick="EnderTrack.ScenarioBuilder._setCurrentColor('${col}'); this.closest('#sbEditPanel').querySelectorAll('.sb-color-swatch').forEach(d=>d.style.outline='none'); this.style.outline='2px solid #fff';" class="sb-color-swatch" style="width:16px;height:16px;border-radius:50%;background:${bg};cursor:pointer;flex-shrink:0;outline:${active?'2px solid #fff':'none'};outline-offset:2px;"></div>`;
-        }).join('')}
-      </div>
-      <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:3px; margin-bottom:10px;">
-        ${icons.map(i => `<button onclick="EnderTrack.ScenarioBuilder._setCurrentIcon('${i}'); this.closest('#sbEditPanel').querySelectorAll('.sb-icon-btn').forEach(b=>b.style.outline='none'); this.style.outline='2px solid var(--coordinates-color)'" class="sb-icon-btn" style="padding:5px; border:none; border-radius:3px; cursor:pointer; font-size:18px; background:var(--app-bg); outline:${(s.icon||'🎬')===i?'2px solid var(--coordinates-color)':'none'};" onmouseenter="this.style.background='var(--active-element)'" onmouseleave="this.style.background='var(--app-bg)'">${i}</button>`).join('')}
-      </div>
       <textarea id="sbEditDesc" placeholder="Description..." rows="2" style="width:100%; box-sizing:border-box; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-general); font-size:11px; padding:4px 6px; resize:vertical; margin-bottom:8px;">${s.description || ''}</textarea>
-      <div style="border-top:1px solid #333; margin-bottom:8px; padding-top:8px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="font-size:11px; color:var(--text-selected); font-weight:600;">Local variables</span>
-          <button onclick="EnderTrack.ScenarioBuilder._addEditPanelVar('${id}')" class="sb-mini-btn" style="font-size:10px; padding:1px 6px;">+</button>
+      <details style="margin-bottom:6px;">
+        <summary style="font-size:10px; color:#666; cursor:pointer; user-select:none; padding:2px 0; list-style:none;">▸ Color &amp; Icon</summary>
+        <div style="display:flex; gap:5px; align-items:center; margin:6px 0 4px; flex-wrap:wrap;">
+          ${['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#6b7280',''].map(col => {
+            const active = (s.color||'') === col;
+            const bg = col || 'rgba(150,150,150,0.2)';
+            return `<div onclick="EnderTrack.ScenarioBuilder._setCurrentColor('${col}'); this.closest('#sbEditPanel').querySelectorAll('.sb-color-swatch').forEach(d=>d.style.outline='none'); this.style.outline='2px solid #fff';" class="sb-color-swatch" style="width:16px;height:16px;border-radius:50%;background:${bg};cursor:pointer;flex-shrink:0;outline:${active?'2px solid #fff':'none'};outline-offset:2px;"></div>`;
+          }).join('')}
         </div>
-        <div id="sbEditVars">${this._renderEditPanelVars(id)}</div>
-      </div>
+        <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:3px; margin-bottom:4px;">
+          ${icons.map(i => `<button onclick="EnderTrack.ScenarioBuilder._setCurrentIcon('${i}'); this.closest('#sbEditPanel').querySelectorAll('.sb-icon-btn').forEach(b=>b.style.outline='none'); this.style.outline='2px solid var(--coordinates-color)'" class="sb-icon-btn" style="padding:5px; border:none; border-radius:3px; cursor:pointer; font-size:18px; background:var(--app-bg); outline:${(s.icon||'🎬')===i?'2px solid var(--coordinates-color)':'none'};" onmouseenter="this.style.background='var(--active-element)'" onmouseleave="this.style.background='var(--app-bg)'">${i}</button>`).join('')}
+        </div>
+      </details>
+      <details style="margin-bottom:8px;">
+        <summary style="font-size:10px; color:#666; cursor:pointer; user-select:none; padding:2px 0; display:flex; justify-content:space-between; align-items:center; list-style:none;">
+          <span>▸ Variables</span>
+          <button onmousedown="event.preventDefault(); event.stopPropagation(); EnderTrack.ScenarioBuilder._addEditPanelVar('${id}')" class="sb-mini-btn" style="font-size:9px; padding:0px 5px;">+</button>
+        </summary>
+        <div id="sbEditVars" style="margin-top:4px;">${this._renderEditPanelVars(id)}</div>
+      </details>
       <button onclick="
         const n=document.getElementById('sbEditName').value;
         const d=document.getElementById('sbEditDesc').value;
@@ -1329,7 +1332,6 @@ class ScenarioBuilder {
     const close = (e) => { if (!panel.contains(e.target)) { panel.remove(); document.removeEventListener('mousedown', close); } };
     setTimeout(() => document.addEventListener('mousedown', close), 0);
   }
-
   _setDesc(id, desc) {
     const mgr = EnderTrack.Scenario?.manager;
     const s = mgr?.getAllScenarios().find(s => s.id === id);
@@ -1341,20 +1343,27 @@ class ScenarioBuilder {
   _renderEditPanelVars(id) {
     const mgr = EnderTrack.Scenario?.manager;
     const s = mgr?.getAllScenarios().find(s => s.id === id);
-    const vars = s?.customVariables || [];
-    if (!vars.length) return '<div style="font-size:10px; color:var(--text-general); opacity:0.4; padding:4px;">Aucune variable</div>';
-    return vars.map((v, i) => `
-      <div style="display:flex; align-items:center; gap:4px; padding:2px 0; border-bottom:1px solid #333;">
-        <span style="color:var(--text-general); font-size:10px;">$</span>
+    const local = s?.customVariables || [];
+    const global = window.EnderTrack?.VariableManager?.globalVariables || [];
+    const row = (v, i, isGlobal) => {
+      const tag = isGlobal ? `<span style="font-size:8px;color:#f59e0b;border:1px solid rgba(245,158,11,0.4);border-radius:2px;padding:0 2px;">global</span>` : `<span style="font-size:8px;color:#666;border:1px solid #333;border-radius:2px;padding:0 2px;">local</span>`;
+      const updateFn = isGlobal ? `EnderTrack.ScenarioBuilder._updateEditPanelGlobalVar(${i},'id','$'+this.value)` : `EnderTrack.ScenarioBuilder._updateEditPanelVar('${id}',${i},'id','$'+this.value)`;
+      const updateFormula = isGlobal ? `EnderTrack.ScenarioBuilder._updateEditPanelGlobalVar(${i},'formula',this.value)` : `EnderTrack.ScenarioBuilder._updateEditPanelVar('${id}',${i},'formula',this.value)`;
+      const removeFn = isGlobal ? `EnderTrack.ScenarioBuilder._removeEditPanelGlobalVar(${i})` : `EnderTrack.ScenarioBuilder._removeEditPanelVar('${id}',${i})`;
+      return `<div style="display:flex; align-items:center; gap:4px; padding:2px 0; border-bottom:1px solid #2a2a2a;">
+        ${tag}
         <input type="text" value="${v.id.replace('$','')}" placeholder="name"
-          onchange="EnderTrack.ScenarioBuilder._updateEditPanelVar('${id}',${i},'id','$'+this.value); document.getElementById('sbEditVars').innerHTML=EnderTrack.ScenarioBuilder._renderEditPanelVars('${id}')"
-          style="width:60px; padding:2px 3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-family:monospace; font-size:10px;">
-        <span style="color:var(--text-general); font-size:10px;">=</span>
+          onchange="${updateFn}; document.getElementById('sbEditVars').innerHTML=EnderTrack.ScenarioBuilder._renderEditPanelVars('${id}')"
+          style="width:55px; padding:2px 3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-family:monospace; font-size:10px;">
+        <span style="color:#555; font-size:10px;">=</span>
         <input type="text" value="${v.formula || ''}" placeholder="0"
-          onchange="EnderTrack.ScenarioBuilder._updateEditPanelVar('${id}',${i},'formula',this.value)"
+          onchange="${updateFormula}"
           style="flex:1; padding:2px 3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-family:monospace; font-size:10px;">
-        <button onclick="EnderTrack.ScenarioBuilder._removeEditPanelVar('${id}',${i}); document.getElementById('sbEditVars').innerHTML=EnderTrack.ScenarioBuilder._renderEditPanelVars('${id}')" style="padding:1px 4px; background:transparent; border:1px solid #444; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:9px;">✕</button>
-      </div>`).join('');
+        <button onclick="${removeFn}; document.getElementById('sbEditVars').innerHTML=EnderTrack.ScenarioBuilder._renderEditPanelVars('${id}')" style="padding:1px 4px; background:transparent; border:1px solid #333; border-radius:3px; color:#555; cursor:pointer; font-size:9px;">✕</button>
+      </div>`;
+    };
+    const rows = [...local.map((v,i) => row(v,i,false)), ...global.map((v,i) => row(v,i,true))];
+    return rows.length ? rows.join('') : '<div style="font-size:10px; color:var(--text-general); opacity:0.4; padding:4px;">No variables</div>';
   }
 
   _addEditPanelVar(id) {
@@ -1386,6 +1395,23 @@ class ScenarioBuilder {
     if (!s?.customVariables) return;
     s.customVariables.splice(idx, 1);
     mgr.save();
+    const el = document.getElementById('sbEditVars');
+    if (el) el.innerHTML = this._renderEditPanelVars(id);
+  }
+
+  _updateEditPanelGlobalVar(idx, prop, value) {
+    const vm = window.EnderTrack?.VariableManager;
+    if (!vm?.globalVariables?.[idx]) return;
+    if (prop === 'id') { vm.globalVariables[idx].id = value; vm.globalVariables[idx].name = value; }
+    else vm.globalVariables[idx][prop] = value;
+    vm.save?.();
+  }
+
+  _removeEditPanelGlobalVar(idx) {
+    const vm = window.EnderTrack?.VariableManager;
+    if (!vm?.globalVariables) return;
+    vm.globalVariables.splice(idx, 1);
+    vm.save?.();
   }
 
   _renameTo(id, name) {
