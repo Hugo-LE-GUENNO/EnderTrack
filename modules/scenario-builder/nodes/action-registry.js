@@ -124,6 +124,7 @@ class ActionRegistry {
           if (custom) custom.formula = String(result);
           const global = vm.globalVariables?.find(v => v.id === varId);
           if (global) global.formula = String(result);
+          else if (!custom) vm.addGlobalVariable?.({ id: varId, formula: String(result) });
         }
         if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`= ${varId} ← ${result}`, 'info');
         return { success: true };
