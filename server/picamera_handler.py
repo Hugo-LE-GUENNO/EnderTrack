@@ -108,14 +108,25 @@ def _restart_camera(new_res):
 
 def register_routes(app):
     """Register picamera2 routes if available."""
+    from flask import Response, request, jsonify
+
+    @app.route('/api/camera/picam/devices')
+    def _picam_devices():
+        if not HAS_PICAMERA2:
+            return jsonify({'devices': []})
+        try:
+            from picamera2 import Picamera2
+            infos = Picamera2.global_camera_info()
+            devices = [{'id': str(i), 'name': info.get('Model', f'Camera {i}')} for i, info in enumerate(infos)]
+        except Exception as e:
+            devices = []
+        return jsonify({'devices': devices})
+
     if not HAS_PICAMERA2:
         print("  ⚠️  picamera2 not available — camera routes disabled")
         return
 
-    from flask import Response, request, jsonify
-
     _load_config()
-
     @app.route('/api/camera/picam/stream')
     def _picam_stream():
         """MJPEG stream from picamera2."""

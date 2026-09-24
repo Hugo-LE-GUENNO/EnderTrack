@@ -172,7 +172,10 @@ class EnderTrackBootstrap {
   static async initializeUI() {
     // UI system
     await EnderTrack.UI.init();
-    
+
+    // Plugin system
+    if (EnderTrack.PluginManager) EnderTrack.PluginManager.init();
+
     // Canvas interactions
     const canvas = document.getElementById('mapCanvas');
     if (canvas && EnderTrack.CanvasInteractions) {
@@ -484,6 +487,9 @@ window.switchTab = (tabId) => {
   if (window.EnderTrack?.Scenario?.isActive && !window.EnderTrack.Scenario.isExecuting) {
     window.EnderTrack.Scenario.deactivate();
   }
+  // Hide plugin right panels when leaving
+  EnderTrack.PluginManager?.plugins?.forEach(p => p.isActive && p.ui?.onTabLeave?.());
+
   
   // Reset canvas
   const canvas = window.EnderTrack?.Canvas?.getCanvas();
@@ -531,13 +537,11 @@ window.switchTab = (tabId) => {
   } else if (tabId === 'overlays' && window.EnderTrack?.Overlays) {
     window.EnderTrack.Overlays.activate();
   } else if (tabId === 'settings') {
-    // Calques are now in Configs tab
     window.EnderTrack?.Overlays?.activate?.();
-    // Sync navigation config
     if (typeof updateConfigLocks === 'function') updateConfigLocks();
-    // Update storage size
     const sizeLabel = document.getElementById('storageSizeLabel');
     if (sizeLabel && window.EnderTrack?.StorageManager) sizeLabel.textContent = window.EnderTrack.StorageManager.getStorageSize() + ' KB';
+    EnderTrack.PluginManager?.renderPluginList?.();
   } else if (tabId === 'lists' && window.EnderTrack?.Lists) {
     window.EnderTrack.Lists.activate();
     // Scenario is embedded in Positions tab
@@ -547,6 +551,9 @@ window.switchTab = (tabId) => {
   } else if (tabId === 'acquisition' && window.EnderTrack?.Scenario) {
     canvas.classList.add('scenario-mode');
     window.EnderTrack.Scenario.activate();
+  } else {
+    // Generic plugin tab — delegate to plugin UI
+    EnderTrack.PluginManager?.plugins?.get(tabId)?.ui?.onTabEnter?.();
   }
   
   // === STEP 5: INIT OVERLAYS/TRACKS ===
@@ -831,7 +838,7 @@ window.showAboutModal = async function() {
       >GitHub</a>
       <div style="font-size:11px; color:var(--text-general); margin-bottom:14px; line-height:1.6; text-align:left;">
         Web interface + Python Flask server to control or simulate an XYZ stage.
-        Waypoints, lists, automations and extensions.
+        Camera control, image acquisition, lighting, histogram, scenario builder and Fast Explore.
       </div>
       <div style="font-size:11px; color:var(--text-general); margin-bottom:14px; line-height:1.6; text-align:left;">
         USB connection (PC or RPi) via <a href="https://github.com/mutterer/enderscopy" target="_blank" style="color:var(--coordinates-color);">enderscope.py</a> (<a href="https://dx.doi.org/10.1016/j.softx.2025.102210" target="_blank" style="color:var(--coordinates-color);">publi</a>)

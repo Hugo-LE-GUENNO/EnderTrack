@@ -1,0 +1,25 @@
+{
+  "title": "Advanced stage",
+  "cells": [
+    {
+      "comment": "Connect to stage — in EnderTrack, stage is already available:",
+      "code": "# from enderscope import Stage  (standalone script)\n# stage = Stage('/dev/ttyUSB0', 115200)"
+    },
+    {
+      "comment": "Home and move to absolute position",
+      "code": "stage.home()\nstage.move_absolute(10, 10, 10)"
+    },
+    {
+      "comment": "Send G-code to read device parameters\n(output is returned as a list)",
+      "code": "print(stage.send_gcode('M114'))"
+    },
+    {
+      "comment": "Change Z axis speed, move fast up, restore speed, move down slowly",
+      "code": "print(stage.send_gcode('M203 Z50'))  # increase z speed to 50\nstage.move_relative(0, 0, 40)        # go up fast\nprint(stage.send_gcode('M203 Z5'))   # restore z speed to 5\nstage.move_relative(0, 0, -40)       # go down slowly"
+    },
+    {
+      "comment": "Follow a G-code path from a file\n(create curve in Inkscape, export as SVG, import in slicer, export G-code)",
+      "code": "import os\n\ndef read_gcode(fname):\n    with open(os.path.join('.', fname), 'r') as f:\n        return f.read()\n\n# path = read_gcode('tests/path2.gcode')\n# for line in path.split('\\n')[:50]:\n#     if line.startswith('G1'):\n#         cmd = line[:line.index('E')-1]\n#         stage.send_gcode(cmd)\nprint('Uncomment above to run a G-code path')"
+    }
+  ]
+}

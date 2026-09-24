@@ -1,0 +1,11 @@
+{
+  "id": "pythonEditor",
+  "name": "Enderscopy",
+  "folder": "python-editor",
+  "description": "Interactive Python editor — control the stage, camera and lighting with code",
+  "version": "1.0.0",
+  "icon": "",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

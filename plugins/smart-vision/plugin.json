@@ -1,0 +1,11 @@
+{
+  "id": "smartVision",
+  "name": "Smart Vision",
+  "folder": "smart-vision",
+  "version": "1.0.0",
+  "description": "Live camera processing with custom Python scripts — object tracking, auto-focus, feedback to stage",
+  "icon": "🔬",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

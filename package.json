@@ -1,6 +1,6 @@
 {
   "name": "endertrack",
-  "version": "1.2.5",
+  "version": "1.3.1",
   "description": "3D position controller for motorized XYZ stages",
   "main": "main.js",
   "scripts": {

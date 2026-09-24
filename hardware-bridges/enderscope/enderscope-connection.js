@@ -42,11 +42,12 @@ class EnderscopeConnection {
         // Only the first client auto-connects (others just check status)
         const port = document.getElementById('serialPort')?.value || '/dev/ttyUSB0';
         const baudRate = parseInt(document.getElementById('baudRate')?.value) || 115200;
+        this._setConnecting(port);
         const connectResponse = await fetch(`${this.serverUrl}/api/connect`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ port, baudRate }),
-          signal: AbortSignal.timeout(10000)
+          signal: AbortSignal.timeout(15000)
         });
         const result = await connectResponse.json();
         if (result.success) {
@@ -57,12 +58,15 @@ class EnderscopeConnection {
           await this.syncPosition();
           this.showStartupNotification(true);
         } else {
+          this.connectionError = result.error;
+          this.updateConnectionStatus();
           this.showStartupNotification(false);
         }
       } else {
         this.showStartupNotification(false);
       }
     } catch (error) {
+      this.updateConnectionStatus();
       this.showStartupNotification(false);
     }
   }
@@ -145,7 +149,7 @@ class EnderscopeConnection {
     }
 
     // Show progress bar
-    this.showProgress('Connection en cours...');
+    this._setConnecting(port);
     
     try {
       
@@ -174,8 +178,8 @@ class EnderscopeConnection {
         this.currentBaudRate = baudRate;
         this.hideProgress();
         this.updateConnectionStatus();
-        // Synchroniser la position après connexion
         await this.syncPosition();
+        window.EnderTrack?.UI?.showNotification?.(`✅ Connecté à ${port}`, 'success');
       } else {
         this.connectionError = result.error;
         this.hideProgress();
@@ -293,11 +297,8 @@ class EnderscopeConnection {
     await this.queryDeviceInfo();
 
     try {
-      // Récupérer la position actuelle de l'interface
-      const currentInterfacePos = window.EnderTrack?.State?.get()?.pos || { x: 0, y: 0, z: 0 };
-      
-      // Récupérer la position de l'Enderscope
-      const response = await fetch(`${this.serverUrl}/api/position`);
+      // Récupérer la vraie position depuis le firmware (M114)
+      const response = await fetch(`${this.serverUrl}/api/position/real`);
       const result = await response.json();
       
       if (result.success) {
@@ -369,6 +370,20 @@ class EnderscopeConnection {
       if (result.success) { await this.syncPosition(); return true; }
       return false;
     } catch (error) { return false; }
+  }
+
+  _setConnecting(port) {
+    const statusIndicator = document.getElementById('connectionStatus');
+    const statusText = document.getElementById('connectionText');
+    if (statusIndicator) {
+      statusIndicator.classList.remove('connected');
+      statusIndicator.classList.add('connecting');
+    }
+    if (statusText) {
+      statusText.textContent = `Connexion… (${port})`;
+      statusText.style.color = '#f59e0b';
+    }
+    window.EnderTrack?.UI?.showNotification?.(`⏳ Connexion à ${port}…`, 'info');
   }
 
   updateConnectionStatus() {
@@ -774,26 +789,44 @@ function resetBaudRate() {
   refreshSerialPorts(); // Actualise aussi les ports série
 }
 
+const _gcodeHistory = [];
+let _gcodeHistoryIdx = -1;
+
 function handleGcodeEnter(event) {
+  const input = document.getElementById('gcodeInput');
   if (event.key === 'Enter') {
+    const cmd = input.value.trim();
+    if (cmd) {
+      if (_gcodeHistory[0] !== cmd) _gcodeHistory.unshift(cmd);
+      _gcodeHistoryIdx = -1;
+    }
     sendGcode();
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    if (_gcodeHistory.length === 0) return;
+    _gcodeHistoryIdx = Math.min(_gcodeHistoryIdx + 1, _gcodeHistory.length - 1);
+    input.value = _gcodeHistory[_gcodeHistoryIdx];
+  } else if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    _gcodeHistoryIdx = Math.max(_gcodeHistoryIdx - 1, -1);
+    input.value = _gcodeHistoryIdx === -1 ? '' : _gcodeHistory[_gcodeHistoryIdx];
   }
 }
 
 function showGcodeHelp() {
-  let modal = document.getElementById('gcodeHelpModal');
-  if (!modal) {
-    modal = document.createElement('div');
+  const existing = document.getElementById('gcodeHelpModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
     modal.id = 'gcodeHelpModal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;';
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
     const cmds = [
       ['G0 / G1 X Y Z F', 'Movement (G0=rapid, G1=linear with feedrate F)'],
-      ['G28', 'Homing — retour origine tous axes'],
-      ['G28 X / Y / Z', 'Homing axe individuel'],
+      ['G28 X Y', 'Homing X et Y — évite de bouger Z (utile si Z fragile)'],
+      ['G28', 'Homing tous axes (X Y Z)'],
       ['G90', 'Mode positionnement absolu'],
       ['G91', 'Mode positionnement relatif'],
-      ['G92 X0 Y0 Z0', 'Set current position as origin'],
+      ['G92 X0 Y0', 'Définit la position courante comme origine XY'],
       ['M114', 'Position actuelle (X Y Z)'],
       ['M115', 'Info firmware (version, capabilities)'],
       ['M119', 'Endstop status'],
@@ -822,19 +855,24 @@ function showGcodeHelp() {
       </div>
       <table style="width:100%;border-collapse:collapse;">
         ${cmds.map(([cmd, desc]) => `<tr style="border-bottom:1px solid #333;">
-          <td style="padding:5px 8px 5px 0;font-family:monospace;color:#ffc107;white-space:nowrap;font-size:11px;cursor:pointer;" onclick="document.getElementById('gcodeInput').value='${cmd.split(' ')[0]}';document.getElementById('gcodeHelpModal').style.display='none';" title="Click to insert">${cmd}</td>
+          <td style="padding:5px 8px 5px 0;font-family:monospace;color:#ffc107;white-space:nowrap;font-size:11px;cursor:pointer;" onclick="_gcodeHelpInsert('${cmd}')" title="Click to insert">${cmd}</td>
           <td style="padding:5px 0;color:#aaa;font-size:11px;">${desc}</td>
         </tr>`).join('')}
       </table>
     </div>`;
     document.body.appendChild(modal);
-  }
   modal.style.display = 'flex';
 }
 
 function closeGcodeHelp() {
   const modal = document.getElementById('gcodeHelpModal');
   if (modal) modal.style.display = 'none';
+}
+
+function _gcodeHelpInsert(cmd) {
+  document.getElementById('gcodeHelpModal').style.display = 'none';
+  document.getElementById('gcodeInput').value = cmd;
+  document.getElementById('gcodeInput').focus();
 }
 
 async function getEnderscopeInfo() {

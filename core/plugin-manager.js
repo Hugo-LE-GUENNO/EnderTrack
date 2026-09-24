@@ -7,6 +7,13 @@ class PluginManager {
   static init() {
     this.createAPI();
     this.isInitialized = true;
+    // Restore previously active plugins after discovery
+    const active = JSON.parse(localStorage.getItem('endertrack-active-plugins') || '[]');
+    if (active.length) {
+      this.discover().then(() => {
+        active.forEach(id => this.activate(id).catch(() => {}));
+      }).catch(() => {});
+    }
     return true;
   }
 
@@ -113,18 +120,16 @@ class PluginManager {
     }
     if (plugin.isActive) return true;
 
-    plugin.ui.init();
+    plugin.ui.init?.();
     plugin.isActive = true;
 
-    // Expose globally for onclick handlers
-    window[`${this.capitalize(pluginId)}Plugin`] = plugin;
+    // Show tab if exists
+    const tabEl = document.getElementById(`${pluginId}Tab`);
+    if (tabEl) tabEl.style.display = '';
 
-    // Notify server to load Python modules
+    window[`${this.capitalize(pluginId)}Plugin`] = plugin.ui;
     this.notifyServerPluginActive(pluginId, true);
-
-    // Register plugin widgets in viewport
     this.registerPluginWidgets(plugin);
-
     EnderTrack.Events?.emit?.('plugin:activated', { id: pluginId });
     return true;
   }
@@ -133,14 +138,19 @@ class PluginManager {
     const plugin = this.plugins.get(pluginId);
     if (!plugin || !plugin.isActive) return false;
 
-    plugin.ui.destroy();
+    plugin.ui.destroy?.();
     plugin.isActive = false;
 
-    delete window[`${this.capitalize(pluginId)}Plugin`];
+    // Hide tab, switch away if active
+    const tabEl = document.getElementById(`${pluginId}Tab`);
+    if (tabEl) tabEl.style.display = 'none';
+    if (window.switchTab && document.getElementById(`${pluginId}TabContent`)?.classList.contains('active')) {
+      window.switchTab('navigation');
+    }
 
+    delete window[`${this.capitalize(pluginId)}Plugin`];
     this.notifyServerPluginActive(pluginId, false);
     this.unregisterPluginWidgets(plugin);
-
     EnderTrack.Events?.emit?.('plugin:deactivated', { id: pluginId });
     return true;
   }
@@ -725,6 +735,12 @@ Ne PAS modifier index.html ni registry.js — l'utilisateur charge le plugin via
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
   }
 
+  static _saveActivePlugins() {
+    const active = Array.from(this.plugins.entries())
+      .filter(([_, p]) => p.isActive).map(([id]) => id);
+    localStorage.setItem('endertrack-active-plugins', JSON.stringify(active));
+  }
+
   static async togglePlugin(pluginId) {
     const plugin = this.plugins.get(pluginId);
     const wasActive = plugin?.isActive;
@@ -736,6 +752,7 @@ Ne PAS modifier index.html ni registry.js — l'utilisateur charge le plugin via
         await this.activate(pluginId);
         this._notify('✅ Plugin ' + pluginId + ' activated', 'success');
       }
+      this._saveActivePlugins();
     } catch(e) {
       this._notify('❌ Plugin ' + pluginId + ': ' + e.message, 'error');
       console.error('[PluginManager] Toggle error:', e);

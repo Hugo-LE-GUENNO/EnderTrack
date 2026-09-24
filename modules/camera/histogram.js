@@ -174,7 +174,11 @@ class CameraHistogram {
   }
 
   _redraw() {
-    if (this._histR) this._draw(this._histR, this._histG, this._histB, this._histL);
+    const empty = new Uint32Array(256);
+    this._draw(
+      this._histR || empty, this._histG || empty,
+      this._histB || empty, this._histL || empty
+    );
   }
 
   // Right-click menu: LUT + Log toggle

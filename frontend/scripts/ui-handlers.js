@@ -361,55 +361,65 @@ window.switchDisplayTab = function(tabName) {
 // ============================================================================
 
 window.showGcodeHelp = function() {
-    let modal = document.getElementById('gcodeHelpModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'gcodeHelpModal';
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;';
-        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
-        const cmds = [
-            ['G0 X Y Z', 'Rapid movement'],
-            ['G1 X Y Z F', 'Linear movement (F=feedrate)'],
-            ['G28', 'Homing — return to origin all axes'],
-            ['G28 X / Y / Z', 'Homing axe individuel'],
-            ['G90', 'Absolute positioning mode'],
-            ['G91', 'Relative positioning mode'],
-            ['G92 X0 Y0 Z0', 'Set current position as origin'],
-            ['M114', 'Current position (X Y Z)'],
-            ['M115', 'Firmware info (version, capabilities)'],
-            ['M119', 'Endstop status'],
-            ['M400', 'Wait for all moves to finish'],
-            ['M300 S440 P200', 'Beep (frequency S, duration P ms)'],
-            ['M112', '⚠️ Immediate emergency stop'],
-            ['M999', 'Reset after emergency stop'],
-            ['M17', 'Enable motors'],
-            ['M18 / M84', 'Disable motors'],
-            ['M201 X A Y A Z A', 'Max acceleration per axis (mm/s²)'],
-            ['M203 X V Y V Z V', 'Max speed per axis (mm/s)'],
-            ['M204 P T', 'Print acceleration (P) / travel (T)'],
-            ['M205 X J Y J Z J', 'Jerk / Junction Deviation par axe'],
-            ['M211 S0 / S1', 'Disable / enable software endstops'],
-            ['M500', 'Save config to EEPROM'],
-            ['M501', 'Load config from EEPROM'],
-            ['M502', 'Factory reset config (without saving)'],
-            ['M503', 'Show current config'],
-            ['G21', 'Units in millimeters'],
-            ['G20', 'Units in inches'],
-        ];
-        modal.innerHTML = `<div style="background:var(--container-bg,#2c2c2c);border-radius:8px;padding:20px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;color:#ccc;font-size:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <h3 style="margin:0;color:#fff;font-size:15px;">📖 G-code commands</h3>
-                <button onclick="closeGcodeHelp()" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer;">✕</button>
-            </div>
-            <table style="width:100%;border-collapse:collapse;">
-                ${cmds.map(([cmd, desc]) => `<tr style="border-bottom:1px solid #333;">
-                    <td style="padding:5px 8px 5px 0;font-family:monospace;color:#ffc107;white-space:nowrap;font-size:11px;cursor:pointer;" onclick="document.getElementById('gcodeInput').value='${cmd.split(' ')[0]}';closeGcodeHelp();" title="Click to insert">${cmd}</td>
-                    <td style="padding:5px 0;color:#aaa;font-size:11px;">${desc}</td>
-                </tr>`).join('')}
-            </table>
-        </div>`;
-        document.body.appendChild(modal);
-    }
+    const existing = document.getElementById('gcodeHelpModal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'gcodeHelpModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    const cmds = [
+        ['M115', 'Firmware info (version, capabilities)'],
+        ['M300 S440 P200', 'Beep'],
+        ['G28 X Y', 'Home X and Y — avoids moving Z'],
+        ['G28', 'Home all axes (X Y Z)'],
+        ['G92 X0 Y0', 'Set current position as XY origin'],
+        ['G90', 'Switch to absolute positioning mode'],
+        ['G91', 'Switch to relative positioning mode'],
+        ['G0 X Y Z', 'Rapid movement'],
+        ['G1 X Y Z F', 'Linear movement (F=feedrate)'],
+        ['M114', 'Get current position (X Y Z)'],
+    ];
+    const others = [
+        ['M119', 'Endstop status'],
+        ['M400', 'Wait for all moves to finish'],
+        ['M17', 'Enable motors'],
+        ['M18 / M84', 'Disable motors'],
+        ['M211 S0 / S1', 'Disable / enable software endstops'],
+        ['M500', 'Save config to EEPROM'],
+        ['M503', 'Show current config'],
+        ['G21', 'Units in millimeters'],
+        ['G20', 'Units in inches'],
+    ];
+    const danger = [
+        ['M112', '⚠️ Immediate emergency stop'],
+        ['M999', 'Reset after emergency stop'],
+    ];
+    const row = ([cmd, desc]) => `<tr style="border-bottom:1px solid #333;">
+        <td style="padding:5px 8px 5px 0;font-family:monospace;color:#ffc107;white-space:nowrap;font-size:11px;cursor:pointer;" onclick="_gcodeHelpInsert('${cmd}')" title="Click to insert">${cmd}</td>
+        <td style="padding:5px 0;color:#aaa;font-size:11px;">${desc}</td>
+    </tr>`;
+    const sep = '<tr><td colspan="2" style="padding:4px 0;"><hr style="border:none;border-top:1px solid #444;margin:0;"></td></tr>';
+    modal.innerHTML = `<div style="background:var(--container-bg,#2c2c2c);border-radius:8px;padding:20px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;color:#ccc;font-size:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:8px;"><h3 style="margin:0;color:#fff;font-size:15px;">📖 G-code commands</h3><a href="https://marlinfw.org/meta/gcode/" target="_blank" style="color:#aaa;font-size:11px;text-decoration:none;" title="Marlin G-code reference">📖 marlinfw.org ↗</a></div>
+            <button onclick="closeGcodeHelp()" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer;">✕</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+            ${cmds.map(row).join('')}
+            ${sep}
+            <tr><td colspan="2">
+                <details style="margin:4px 0;">
+                    <summary style="cursor:pointer;color:#888;font-size:11px;padding:4px 0;list-style:none;display:block;">Other commands</summary>
+                    <table style="width:100%;border-collapse:collapse;margin-top:4px;">
+                        ${others.map(row).join('')}
+                    </table>
+                </details>
+            </td></tr>
+            ${sep}
+            ${danger.map(row).join('')}
+        </table>
+    </div>`;
+    document.body.appendChild(modal);
     modal.style.display = 'flex';
 };
 
@@ -418,6 +428,11 @@ window.closeGcodeHelp = function() {
     if (modal) modal.style.display = 'none';
 };
 
+window._gcodeHelpInsert = function(cmd) {
+    closeGcodeHelp();
+    document.getElementById('gcodeInput').value = cmd;
+    document.getElementById('gcodeInput').focus();
+};
 window.openTemplateModal = async function() {
     await window.ModalLoader.load('templateModal');
     if (window.BedTemplates) {

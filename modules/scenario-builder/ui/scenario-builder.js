@@ -513,6 +513,50 @@ class ScenarioBuilder {
     this._refreshProperties();
     this._renderScenarioTabs();
     this._bindKeyboard();
+    this._makeDraggable(modal.querySelector('.sb-split-modal'));
+  }
+
+  _makeDraggable(el) {
+    const header = el.querySelector('.sb-header');
+    header.addEventListener('mousedown', e => {
+      if (e.target.closest('button, input, select')) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      el.style.transform = 'none';
+      el.style.left = r.left + 'px';
+      el.style.top = r.top + 'px';
+      const ox = r.left, oy = r.top, sx = e.clientX, sy = e.clientY;
+      const onMove = ev => {
+        el.style.left = Math.max(0, Math.min(window.innerWidth  - 80, ox + ev.clientX - sx)) + 'px';
+        el.style.top  = Math.max(0, Math.min(window.innerHeight - 40, oy + ev.clientY - sy)) + 'px';
+      };
+      const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    // Resize handle
+    const handle = document.createElement('div');
+    handle.style.cssText = 'position:absolute; bottom:0; right:0; width:16px; height:16px; cursor:se-resize; z-index:10;';
+    handle.innerHTML = `<svg width="10" height="10" viewBox="0 0 10 10" style="position:absolute;bottom:3px;right:3px;opacity:0.35;"><path d="M9 1L1 9M9 5L5 9M9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    el.style.position = 'fixed';
+    el.appendChild(handle);
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = el.getBoundingClientRect();
+      el.style.transform = 'none';
+      el.style.left = r.left + 'px';
+      el.style.top = r.top + 'px';
+      const ow = r.width, oh = r.height, sx = e.clientX, sy = e.clientY;
+      const onMove = ev => {
+        el.style.width  = Math.max(420, ow + ev.clientX - sx) + 'px';
+        el.style.height = Math.max(300, oh + ev.clientY - sy) + 'px';
+      };
+      const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
   }
 
   _bindKeyboard() {

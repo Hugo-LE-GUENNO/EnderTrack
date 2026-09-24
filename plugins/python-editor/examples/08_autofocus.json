@@ -1,0 +1,21 @@
+{
+  "title": "Autofocus",
+  "cells": [
+    {
+      "comment": "Autofocus requires both cam and stage — both are available in EnderTrack:",
+      "code": "# from EnderPiCam import EnderPiCam  (standalone script)\n# cam = EnderPiCam(resolution=(1280, 720), exposure=50000, stage=stage)"
+    },
+    {
+      "comment": "Run autofocus — moves stage in Z to find sharpest focus",
+      "code": "best_pos = cam.autofocus()\nprint('Best focus position:', best_pos)"
+    },
+    {
+      "comment": "Capture at best focus position",
+      "code": "import matplotlib.pyplot as plt\nimg = cam.capture()\nplt.imshow(img, cmap='gray')\nplt.title('In focus')\nplt.show()"
+    },
+    {
+      "comment": "Full workflow: light on → autofocus → capture → light off",
+      "code": "light.toggle()                    # light on\nbest_pos = cam.autofocus()        # find focus\nprint('Focus Z:', best_pos[2])\ncam.capture(path='~/captures/focused.png')\nlight.toggle()                    # light off"
+    }
+  ]
+}

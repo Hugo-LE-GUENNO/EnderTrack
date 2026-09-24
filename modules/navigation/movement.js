@@ -56,9 +56,19 @@ class MovementEngine {
               EnderTrack.State?.update?.({
                 plateauDimensions: evt.data.plateauDimensions,
                 coordinateBounds: evt.data.coordinateBounds,
+                safetyLimits: evt.data.safetyLimits,
                 axisOrientation: evt.data.axisOrientation,
                 feedrate: evt.data.feedrate
               });
+              // Persister pour que le refresh conserve les vraies limites
+              if (evt.data.coordinateBounds) {
+                localStorage.setItem('endertrack_coordinate_bounds_enabled', 'true');
+                localStorage.setItem('endertrack_coordinate_bounds', JSON.stringify(evt.data.coordinateBounds));
+                localStorage.setItem('endertrack_safety_limits_enabled', 'true');
+                localStorage.setItem('endertrack_safety_limits', JSON.stringify(evt.data.safetyLimits));
+                localStorage.setItem('endertrack_plateau_dimensions_enabled', 'true');
+                localStorage.setItem('endertrack_plateau_dimensions', JSON.stringify(evt.data.plateauDimensions));
+              }
               if (typeof EnderTrackBootstrap?.syncUIWithState === 'function') {
                 EnderTrackBootstrap.syncUIWithState();
               }

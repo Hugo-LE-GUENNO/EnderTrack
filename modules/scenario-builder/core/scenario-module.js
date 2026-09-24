@@ -490,6 +490,10 @@ ${p.label}:`, p.default ?? '');
 
   stop() { this.stopExecution(); }
 
+  _updateRunUI(done, total) {
+    this._updateGlobalBar(done, total);
+  }
+
   _showRunUI(list) {
     const zone = document.getElementById('rightPluginZone');
     if (!zone) return;

@@ -10,6 +10,7 @@ class EnderpicamFastExplore {
     this.overlap = 0.1;
     this.sweep = 'random';
     this.afEnabled = false;
+    this.captureEnabled = true;
     this.listOnly = false;
     this.positions = [];
     this._renderBound = this._renderOverlay.bind(this);
@@ -140,19 +141,68 @@ class EnderpicamFastExplore {
       }
     }
     if (!localPositions) {
-      localPositions = [];
       const ox = -(cols - 1) * step.x / 2;
       const oy = -(rows - 1) * step.y / 2;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          localPositions.push({ x: ox + c * step.x, y: oy + r * step.y });
+      localPositions = [];
+      switch (this.sweep) {
+        case 'snake':
+          for (let r = 0; r < rows; r++) {
+            const rowCols = r % 2 === 0 ? [...Array(cols).keys()] : [...Array(cols).keys()].reverse();
+            for (const c of rowCols) localPositions.push({ x: ox + c * step.x, y: oy + r * step.y });
+          }
+          break;
+        case 'reverse':
+          for (let r = rows - 1; r >= 0; r--)
+            for (let c = cols - 1; c >= 0; c--)
+              localPositions.push({ x: ox + c * step.x, y: oy + r * step.y });
+          break;
+        case 'snake-reverse':
+          for (let r = rows - 1; r >= 0; r--) {
+            const rowCols = r % 2 === 0 ? [...Array(cols).keys()].reverse() : [...Array(cols).keys()];
+            for (const c of rowCols) localPositions.push({ x: ox + c * step.x, y: oy + r * step.y });
+          }
+          break;
+        case 'spiral-out': {
+          // Build grid, then reorder from center outward
+          const grid = [];
+          for (let r = 0; r < rows; r++)
+            for (let c = 0; c < cols; c++)
+              grid.push({ x: ox + c * step.x, y: oy + r * step.y, r, c });
+          grid.sort((a, b) => {
+            const da = Math.max(Math.abs(a.r - (rows-1)/2), Math.abs(a.c - (cols-1)/2));
+            const db = Math.max(Math.abs(b.r - (rows-1)/2), Math.abs(b.c - (cols-1)/2));
+            return da - db;
+          });
+          localPositions = grid.map(({ x, y }) => ({ x, y }));
+          break;
         }
-      }
-      if (this.sweep === 'random') {
-        for (let i = localPositions.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [localPositions[i], localPositions[j]] = [localPositions[j], localPositions[i]];
+        case 'spiral-in': {
+          // Classic spiral: top→right→bottom→left inward
+          let top = 0, bottom = rows - 1, left = 0, right = cols - 1;
+          while (top <= bottom && left <= right) {
+            for (let c = left; c <= right; c++)  localPositions.push({ x: ox + c * step.x, y: oy + top * step.y });
+            top++;
+            for (let r = top; r <= bottom; r++)  localPositions.push({ x: ox + right * step.x, y: oy + r * step.y });
+            right--;
+            if (top <= bottom) { for (let c = right; c >= left; c--) localPositions.push({ x: ox + c * step.x, y: oy + bottom * step.y }); bottom--; }
+            if (left <= right) { for (let r = bottom; r >= top; r--) localPositions.push({ x: ox + left * step.x, y: oy + r * step.y }); left++; }
+          }
+          break;
         }
+        case 'random': {
+          for (let r = 0; r < rows; r++)
+            for (let c = 0; c < cols; c++)
+              localPositions.push({ x: ox + c * step.x, y: oy + r * step.y });
+          for (let i = localPositions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [localPositions[i], localPositions[j]] = [localPositions[j], localPositions[i]];
+          }
+          break;
+        }
+        default: // normal
+          for (let r = 0; r < rows; r++)
+            for (let c = 0; c < cols; c++)
+              localPositions.push({ x: ox + c * step.x, y: oy + r * step.y });
       }
     }
 
@@ -207,13 +257,13 @@ class EnderpicamFastExplore {
               <label style="width:60px;">Pattern</label>
               <select id="explore-sweep" onchange="EnderTrack.Camera.fastExplore._onSweepChange(this.value)"
                 style="flex:1; padding:3px 6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
-                <option value="random" ${this.sweep === 'random' ? 'selected' : ''}>🎲 Random</option>
-                <option value="snake" ${this.sweep === 'snake' ? 'selected' : ''}>🐍 Snake</option>
-                <option value="normal" ${this.sweep === 'normal' ? 'selected' : ''}>➡ Row by row</option>
-                <option value="reverse" ${this.sweep === 'reverse' ? 'selected' : ''}>⬅ Reverse</option>
-                <option value="snake-reverse" ${this.sweep === 'snake-reverse' ? 'selected' : ''}>🐍 Snake reverse</option>
-                <option value="spiral-out" ${this.sweep === 'spiral-out' ? 'selected' : ''}>🌀 Spiral out</option>
-                <option value="spiral-in" ${this.sweep === 'spiral-in' ? 'selected' : ''}>🌀 Spiral in</option>
+                <option value="random" ${this.sweep === 'random' ? 'selected' : ''}>Random</option>
+                <option value="snake" ${this.sweep === 'snake' ? 'selected' : ''}>Snake</option>
+                <option value="normal" ${this.sweep === 'normal' ? 'selected' : ''}>Row by row</option>
+                <option value="reverse" ${this.sweep === 'reverse' ? 'selected' : ''}>Reverse</option>
+                <option value="snake-reverse" ${this.sweep === 'snake-reverse' ? 'selected' : ''}>Snake reverse</option>
+                <option value="spiral-out" ${this.sweep === 'spiral-out' ? 'selected' : ''}>Spiral out</option>
+                <option value="spiral-in" ${this.sweep === 'spiral-in' ? 'selected' : ''}>Spiral in</option>
               </select>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
@@ -221,7 +271,15 @@ class EnderpicamFastExplore {
               <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:4px;">
                 <input type="checkbox" id="explore-af" ${this.afEnabled ? 'checked' : ''}
                   onchange="EnderTrack.Camera.fastExplore.afEnabled = this.checked">
-                <span style="color:var(--text-general);">🔬 AF at each position</span>
+                <span style="color:var(--text-general);">AF at each position</span>
+              </label>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <label style="width:60px;">Capture</label>
+              <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                <input type="checkbox" id="explore-capture" ${this.captureEnabled ? 'checked' : ''}
+                  onchange="EnderTrack.Camera.fastExplore.captureEnabled = this.checked">
+                <span style="color:var(--text-general);">Capture at each position</span>
               </label>
             </div>
             <div id="explore-info" style="color:var(--text-general);">
@@ -285,46 +343,59 @@ class EnderpicamFastExplore {
     const lists = window.EnderTrack?.Lists;
     if (!lists) { console.warn('Lists module not available'); return; }
 
-    // 1. Create a new list with the grid positions
-    lists.addGroup('🗺 Exploration');
+    EnderpicamFastExplore._exploreCount = (EnderpicamFastExplore._exploreCount || 0) + 1;
+    const exploreName = `🗺 Exploration ${EnderpicamFastExplore._exploreCount}`;
+    lists.addGroup(exploreName);
     const z = window.EnderTrack?.State?.get?.()?.pos?.z || 0;
     for (const pos of this.positions) {
       lists.addPosition(pos.x, pos.y, z);
     }
+    const activeList = lists._activeGroup();
 
     if (listOnly) {
       document.body.style.cursor = '';
       this.deactivate();
       window.switchTab?.('lists');
-      if (window.EnderTrack?.UI?.showSuccess) {
-        window.EnderTrack.UI.showSuccess(`🗺 ${this.positions.length} positions generated`);
-      }
+      window.EnderTrack?.UI?.showNotification?.(`🗺 ${this.positions.length} positions generated`, 'success');
       return;
     }
 
-    // 2. Enable navigator mode for tile capture
     EnderTrack.Camera.navigatorMode = true;
     EnderTrack.Camera.showMosaic = true;
     EnderTrack.Camera._hookMosaic?.();
 
-    // 3. Select the list in scenario and configure
-    const scenario = window.EnderTrack?.Scenario;
-    if (!scenario) { console.warn('Scenario module not available'); this.deactivate(); return; }
-    const activeList = lists._activeGroup();
-    if (activeList) {
-      scenario.selectedListId = String(activeList.id);
-      // Delay = settle(500ms) + exposure×2 + capture(500ms) + margin
-      const expUs = EnderTrack.Camera.picamConfig.exposure || 100000;
-      const expDelay = Math.ceil(expUs / 1000) * 2;
-      const afDelay = this.afEnabled ? 20000 : 0; // AF can take up to 20s
-      scenario.delay = Math.max(2000, expDelay + 1500 + afDelay);
-      scenario.loops = 1;
-    }
+    const scenarioModule = window.EnderTrack?.Scenario;
+    if (!scenarioModule) { console.warn('Scenario module not available'); this.deactivate(); return; }
 
-    // 4. Run scenario (iterate positions)
+    // Create a new scenario in the manager
+    const listId = String(activeList.id);
+    const expUs = EnderTrack.Camera?.picamConfig?.exposure || 100000;
+    const expDelay = Math.ceil(expUs / 1000) * 2;
+    const afDelay = this.afEnabled ? 20000 : 0;
+    const waitSec = parseFloat(((Math.max(2000, expDelay + 1500 + afDelay)) / 1000).toFixed(1));
+
+    const loopChildren = [
+      { type: 'action', actionId: 'move', params: { moveType: 'list', listId, listIndex: '$i' } },
+      { type: 'action', actionId: 'wait', params: { duration: waitSec } },
+    ];
+    if (this.captureEnabled) loopChildren.push({ type: 'action', actionId: 'capture', params: {} });
+
+    const newScenario = scenarioModule.manager.createScenario(exploreName);
+    newScenario.tree = {
+      type: 'root',
+      children: [{
+        type: 'loop', loopId: 'simple',
+        params: { label: exploreName, countMode: 'list', countListId: listId, loopVar: '$i', showInLog: false },
+        children: loopChildren
+      }]
+    };
+    scenarioModule.manager.save?.();
+    scenarioModule.updateCanvasOverlay?.();
+    scenarioModule.createUI?.();
+
     document.body.style.cursor = '';
     this.deactivate();
-    scenario.run();
+    scenarioModule.executeScenario();
   }
 
   // Draw selection rectangle + grid preview on canvas

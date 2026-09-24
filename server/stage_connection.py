@@ -28,6 +28,7 @@ class Stage:
         self.baudrate = baudrate
         self.position = {'X': 0.0, 'Y': 0.0, 'Z': 0.0}
         self.firmware_name = None
+        self.limits = None  # {'x': (min, max), 'y': (min, max), 'z': (min, max)}
 
         self.ser = serial.Serial(port, baudrate, timeout=2)
         time.sleep(2)
@@ -42,13 +43,38 @@ class Stage:
                     self.firmware_name = line.split('FIRMWARE_NAME:')[1].split(' ')[0].strip()
             self.send_gcode("G21", wait_ok=True)
             self.send_gcode("G90", wait_ok=True)
+            self._probe_limits()
             if homing:
                 self.home()
             name = self.firmware_name or 'G-code device'
             print(f"  ✅ Stage connecté: {port} @ {baudrate} ({name})")
+            if self.limits:
+                l = self.limits
+                print(f"  📏 Limites: X[{l['x'][0]}, {l['x'][1]}] Y[{l['y'][0]}, {l['y'][1]}] Z[{l['z'][0]}, {l['z'][1]}]")
         else:
             self.ser.close()
             raise Exception(f"Le device sur {port} ne répond pas au G-code (pas de réponse à M115)")
+
+    def _probe_limits(self):
+        """Parse M211 to get real axis limits from firmware."""
+        try:
+            lines = self.send_gcode("M211", wait_ok=True, timeout=5)
+            import re
+            for line in lines:
+                # Marlin: "echo:Soft endstops: ON  Min: X-27.00 Y-11.00 Z0.00  Max: X220.00 Y220.00 Z250.00"
+                m = re.search(
+                    r'Min:\s*X([\d.\-]+)\s+Y([\d.\-]+)\s+Z([\d.\-]+)\s+Max:\s*X([\d.\-]+)\s+Y([\d.\-]+)\s+Z([\d.\-]+)',
+                    line, re.IGNORECASE
+                )
+                if m:
+                    self.limits = {
+                        'x': (float(m.group(1)), float(m.group(4))),
+                        'y': (float(m.group(2)), float(m.group(5))),
+                        'z': (float(m.group(3)), float(m.group(6))),
+                    }
+                    return
+        except Exception:
+            pass
 
     def send_gcode(self, command, wait_ok=False, timeout=10, _log=True):
         if not self.ser.is_open:
@@ -97,7 +123,7 @@ class Stage:
     def home(self):
         self.send_gcode("G28", wait_ok=True)
         self.send_gcode("M400", wait_ok=True)
-        self.position = {'X': 0.0, 'Y': 0.0, 'Z': 0.0}
+        self.get_position()  # lit la vraie position firmware via M114
 
     def get_position(self, as_dict=False):
         """Read real position from firmware via M114."""
@@ -183,7 +209,28 @@ def register_routes(app):
             stage = Stage(port, baud, homing=False)
             _last_fail.pop(port, None)
             _connecting = False
-            return jsonify({'success': True, 'message': f'Connecté à {port}', 'firmware': stage.firmware_name})
+            # Publier les dimensions réelles vers le frontend
+            if stage.limits:
+                l = stage.limits
+                config = {
+                    'plateauDimensions': {'x': l['x'][1], 'y': l['y'][1], 'z': l['z'][1]},
+                    'coordinateBounds': {
+                        'x': {'min': l['x'][0], 'max': l['x'][1]},
+                        'y': {'min': l['y'][0], 'max': l['y'][1]},
+                        'z': {'min': l['z'][0], 'max': l['z'][1]},
+                    },
+                    'safetyLimits': {
+                        'x': {'min': l['x'][0], 'max': l['x'][1]},
+                        'y': {'min': l['y'][0], 'max': l['y'][1]},
+                        'z': {'min': l['z'][0], 'max': l['z'][1]},
+                    },
+                }
+                try:
+                    from server.event_stream import bus
+                    bus.publish('sync:config', config)
+                except Exception:
+                    pass
+            return jsonify({'success': True, 'message': f'Connecté à {port}', 'firmware': stage.firmware_name, 'limits': stage.limits})
         except Exception as e:
             _connecting = False
             if _last_fail.get(port) != str(e):
@@ -222,64 +269,59 @@ def register_routes(app):
         data = request.get_json() or {}
         x, y, z = data.get('x', 0), data.get('y', 0), data.get('z', 0)
         feedrate = data.get('feedrate', 3000)
-        if stage:
-            # Get current position for animation start
-            cur = stage.get_position(as_dict=True)
+        import math
+        try:
+            from server.event_stream import bus
+            cur = stage.get_position(as_dict=True) if stage else {'X': 0, 'Y': 0, 'Z': 0}
             sx, sy, sz = cur.get('X', 0), cur.get('Y', 0), cur.get('Z', 0)
-            # Estimate duration
-            import math
             distXY = math.sqrt((x - sx)**2 + (y - sy)**2)
             distZ = abs(z - sz)
             speedXY = feedrate / 60
             speedZ = min(feedrate / 60, 5)
-            duration = max(distXY / speedXY if distXY > 0 else 0, distZ / speedZ if distZ > 0 else 0) * 1000
-            duration = max(duration, 200)
-            # Broadcast animation start BEFORE moving
-            try:
-                from server.event_stream import bus
-                bus.publish('position:moving', {'x': x, 'y': y, 'z': z, 'sx': sx, 'sy': sy, 'sz': sz, 'duration': duration})
-            except: pass
+            duration = max(distXY / speedXY if distXY > 0 else 0, distZ / speedZ if distZ > 0 else 0)
+            duration = max(duration, 0.2)
+            bus.publish('position:moving', {'x': x, 'y': y, 'z': z, 'sx': sx, 'sy': sy, 'sz': sz, 'duration': duration * 1000})
+        except: duration = 0.2
+        if stage:
             stage.move_absolute(x, y, z, feedrate=feedrate)
             t0 = time.time()
             stage.finish_moves()
-            dt = time.time() - t0
-            try:
-                from server.event_stream import bus
-                bus.publish('position:arrived', {'x': x, 'y': y, 'z': z})
-            except: pass
-            return jsonify({'success': True, 'm400_duration': round(dt, 3)})
-        return jsonify({'success': True, 'simulation': True})
+            duration = time.time() - t0
+        try:
+            from server.event_stream import bus
+            bus.publish('position:arrived', {'x': x, 'y': y, 'z': z})
+        except: pass
+        return jsonify({'success': True, 'duration': round(duration, 3)})
 
     @app.route('/api/move/relative', methods=['POST'])
     def _move_rel():
         data = request.get_json() or {}
         dx, dy, dz = data.get('dx', 0), data.get('dy', 0), data.get('dz', 0)
         feedrate = data.get('feedrate', 3000)
-        if stage:
-            cur = stage.get_position(as_dict=True)
+        import math
+        try:
+            from server.event_stream import bus
+            cur = stage.get_position(as_dict=True) if stage else {'X': 0, 'Y': 0, 'Z': 0}
             sx, sy, sz = cur.get('X', 0), cur.get('Y', 0), cur.get('Z', 0)
             tx, ty, tz = sx + dx, sy + dy, sz + dz
-            import math
             distXY = math.sqrt(dx**2 + dy**2)
             distZ = abs(dz)
             speedXY = feedrate / 60
             speedZ = min(feedrate / 60, 5)
-            duration = max(distXY / speedXY if distXY > 0 else 0, distZ / speedZ if distZ > 0 else 0) * 1000
-            duration = max(duration, 200)
-            try:
-                from server.event_stream import bus
-                bus.publish('position:moving', {'x': tx, 'y': ty, 'z': tz, 'sx': sx, 'sy': sy, 'sz': sz, 'duration': duration})
-            except: pass
+            duration = max(distXY / speedXY if distXY > 0 else 0, distZ / speedZ if distZ > 0 else 0)
+            duration = max(duration, 0.2)
+            bus.publish('position:moving', {'x': tx, 'y': ty, 'z': tz, 'sx': sx, 'sy': sy, 'sz': sz, 'duration': duration * 1000})
+        except: duration = 0.2
+        if stage:
             stage.move_relative(dx, dy, dz, feedrate=feedrate)
             t0 = time.time()
             stage.finish_moves()
-            dt = time.time() - t0
-            try:
-                from server.event_stream import bus
-                bus.publish('position:arrived', {'x': tx, 'y': ty, 'z': tz})
-            except: pass
-            return jsonify({'success': True, 'm400_duration': round(dt, 3)})
-        return jsonify({'success': True, 'simulation': True})
+            duration = time.time() - t0
+        try:
+            from server.event_stream import bus
+            bus.publish('position:arrived', {'x': tx, 'y': ty, 'z': tz})
+        except: pass
+        return jsonify({'success': True, 'duration': round(duration, 3)})
 
     @app.route('/api/home', methods=['POST'])
     def _home():
@@ -289,9 +331,10 @@ def register_routes(app):
                 bus.publish('position:moving', {'x': 0, 'y': 0, 'z': 0})
             except: pass
             stage.home()
+            p = stage.position
             try:
                 from server.event_stream import bus
-                bus.publish('position:homed', {'x': 0, 'y': 0, 'z': 0})
+                bus.publish('position:arrived', {'x': p['X'], 'y': p['Y'], 'z': p['Z']})
             except: pass
         return jsonify({'success': True})
 
@@ -306,6 +349,15 @@ def register_routes(app):
             return jsonify({'success': False, 'error': f'Commande bloquée: {command.split()[0]}'})
         if stage:
             lines = stage.send_gcode(command, wait_ok=True)
+            # Si G28 ou G92, resync la position réelle
+            cmd_upper = command.strip().upper()
+            if cmd_upper.startswith('G28') or cmd_upper.startswith('G92'):
+                stage.get_position()
+                p = stage.position
+                try:
+                    from server.event_stream import bus
+                    bus.publish('position:arrived', {'x': p['X'], 'y': p['Y'], 'z': p['Z']})
+                except: pass
             return jsonify({'success': True, 'response': lines})
         return jsonify({'success': True, 'response': [f'[SIM] {command}', 'ok']})
 

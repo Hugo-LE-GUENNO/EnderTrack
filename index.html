@@ -33,6 +33,11 @@
     <link rel="stylesheet" href="frontend/assets/styles/template-modal.css">
     <link rel="stylesheet" href="frontend/assets/styles/strategic-positions.css">
     <link rel="stylesheet" href="frontend/assets/styles/responsive.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/theme/dracula.min.css">
+  <style>
+    #pythonEditorTabContent.active { display:flex !important; }
+  </style>
 </head>
 <body>
     <!-- Loading Screen -->
@@ -61,6 +66,12 @@
                 </button>
                 <button class="tab-btn" id="acquisitionTab" onclick="switchTab('acquisition')">
                     Automation
+                </button>
+                <button class="tab-btn" id="smartVisionTab" onclick="switchTab('smartVision')" style="display:none">
+                    Smart Vision
+                </button>
+                <button class="tab-btn" id="pythonEditorTab" onclick="switchTab('pythonEditor')" style="display:none">
+                    Enderscopy
                 </button>
 
             </div>
@@ -196,14 +207,8 @@
                             <!-- G-code (visible si connecté) -->
                             <div id="enderscopeControls" style="display:none;">
                                 <div style="border-top:1px solid #333; padding-top:8px; margin-top:4px; display:flex; flex-direction:column; gap:6px;">
-                                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                                        <button onclick="sendBeep()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔊 Bip</button>
-                                        <button onclick="homeEnderscope()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🏠 Home</button>
-                                        <button onclick="getEnderscopeInfo()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">📝 Info</button>
-                                        <button onclick="resetEnderscope()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔄 Reset</button>
-                                    </div>
                                     <div style="display:flex; gap:4px;">
-                                        <input type="text" id="gcodeInput" placeholder="G-code..." onkeypress="handleGcodeEnter(event)"
+                                        <input type="text" id="gcodeInput" placeholder="G-code..." onkeydown="handleGcodeEnter(event)"
                                             style="flex:1; padding:4px 8px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--text-selected); font-size:11px; font-family:monospace;">
                                         <button onclick="sendGcode()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--active-element); color:var(--text-selected);">Send</button>
                                         <button onclick="showGcodeHelp()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="G-code help">?</button>
@@ -219,15 +224,7 @@
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📷 Cameras</summary>
                         <div style="padding:8px;" id="cameraSettingsContent">
                             <div id="cameraList"></div>
-                            <button onclick="window._showCameraTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Add camera</button>
-                            <div id="cameraTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
-                                <div style="display:flex; flex-direction:column; gap:3px;">
-                                    <button onclick="window._addCamera('webcam')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🔌 USB / Webcam</button>
-                                    <button onclick="window._addCamera('picamera2')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 Raspberry Pi Camera</button>
-                                    <button onclick="window._addCamera('mjpeg')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🌐 MJPEG Stream (IP cam)</button>
-                                    <button onclick="window._addCamera('simulation')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🎮 Simulation</button>
-                                </div>
-                            </div>
+                            <button onclick="window._openAddCameraModal()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Add camera</button>
                             <script>
                               window._cameras = [];
                               window._savePeripherals = () => {
@@ -239,76 +236,181 @@
                                   const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
                                   const res = await fetch(url + '/api/sync/config');
                                   const data = await res.json();
-                                  if (data.cameras?.length) { window._cameras = data.cameras; window._renderCameras?.(); }
+                                  if (data.cameras?.length) {
+                                    window._cameras = data.cameras;
+                                    window._renderCameras?.();
+                                    await EnderTrack.Camera._loadPicamConfig();
+                                    // Reconnect each camera
+                                    for (let i = 0; i < window._cameras.length; i++) {
+                                      const cam = window._cameras[i];
+                                      if (cam.type === 'picamera2') {
+                                        await EnderTrack.Camera._connectPicam(cam.deviceId, cam.resolution, cam.format);
+                                      } else {
+                                        await EnderTrack.Camera.setDriver('webcam');
+                                        if (cam.deviceId) await EnderTrack.Camera.configure({ deviceId: cam.deviceId });
+                                        await EnderTrack.Camera.startLive();
+                                        EnderTrack.Camera._applyWebcamMeta(i);
+                                      }
+                                    }
+                                    window._updateCameraLayout?.();
+                                  }
                                   if (data.lights?.length) { window._lights = data.lights; window._renderLights?.(); }
+                                  if (data.tiles?.length) EnderTrack.Camera.loadTiles(data.tiles);
                                 } catch(e) {}
                               };
                               setTimeout(() => window._loadPeripherals(), 500);
                               // Auto-save config every 5s if changed
                               let _lastSave = '';
                               setInterval(() => { const s = JSON.stringify({c:window._cameras,l:window._lights||[]}); if (s !== _lastSave) { _lastSave = s; window._savePeripherals(); } }, 5000);
-                              window._showCameraTypeMenu = () => {
-                                const m = document.getElementById('cameraTypeMenu');
-                                m.style.display = m.style.display === 'none' ? '' : 'none';
+
+                              window._openAddCameraModal = async () => {
+                                document.getElementById('addCameraModal')?.remove();
+                                let picamDevices = [];
+                                let webcamDevices = [];
+                                try {
+                                  const r = await fetch((window.ENDERTRACK_SERVER||'http://localhost:5000') + '/api/camera/picam/devices');
+                                  picamDevices = (await r.json()).devices || [];
+                                } catch {}
+                                try {
+                                  webcamDevices = await (EnderTrack.CameraDrivers.webcam?.listDevices?.() || Promise.resolve([]));
+                                } catch {}
+                                const modal = document.createElement('div');
+                                modal.id = 'addCameraModal';
+                                modal.style.cssText = 'position:fixed;inset:0;z-index:10100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);';
+                                modal.innerHTML = `
+                                  <div style="background:var(--container-bg);border:1px solid #555;border-radius:8px;padding:20px;min-width:300px;display:flex;flex-direction:column;gap:12px;">
+                                    <div style="font-size:12px;font-weight:600;color:var(--text-selected);">Add camera</div>
+                                    <div style="display:flex;flex-direction:column;gap:8px;">
+                                      <div style="display:flex;gap:8px;align-items:center;">
+                                        <label style="width:80px;font-size:10px;color:var(--text-general);">Name</label>
+                                        <input id="acName" type="text" value="Camera" style="flex:1;padding:4px 6px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                      </div>
+                                      <div style="display:flex;gap:8px;align-items:center;">
+                                        <label style="width:80px;font-size:10px;color:var(--text-general);">Type</label>
+                                        <select id="acType" onchange="window._onAddCamTypeChange()" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                          <option value="webcam">USB / Webcam</option>
+                                          <option value="picamera2">Raspberry Pi Camera</option>
+                                        </select>
+                                      </div>
+                                      <div id="acWebcamFields" style="display:flex;flex-direction:column;gap:8px;">
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                          <label style="width:80px;font-size:10px;color:var(--text-general);">Device</label>
+                                          <select id="acWebcamDevice" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                            ${webcamDevices.length ? webcamDevices.map(d=>`<option value="${d.id}">${d.label}</option>`).join('') : '<option value="">No device found</option>'}
+                                          </select>
+                                        </div>
+                                      </div>
+                                      <div id="acPicamFields" style="display:none;flex-direction:column;gap:8px;">
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                          <label style="width:80px;font-size:10px;color:var(--text-general);">Device</label>
+                                          <select id="acDevice" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                            ${picamDevices.length ? picamDevices.map(d=>`<option value="${d.id}">${d.name}</option>`).join('') : '<option value="">No device found</option>'}
+                                          </select>
+                                        </div>
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                          <label style="width:80px;font-size:10px;color:var(--text-general);">Resolution</label>
+                                          <select id="acRes" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                            <option value="4056,3040">4056×3040 (Full)</option>
+                                            <option value="2028,1520">2028×1520 (Half)</option>
+                                            <option value="1280,720" selected>1280×720 (HD)</option>
+                                            <option value="640,480">640×480 (Preview)</option>
+                                          </select>
+                                        </div>
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                          <label style="width:80px;font-size:10px;color:var(--text-general);">Format</label>
+                                          <select id="acFormat" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                            <option value="RGB888">RGB888</option>
+                                            <option value="XRGB8888">XRGB8888</option>
+                                            <option value="YUV420">YUV420</option>
+                                          </select>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+                                      <div style="display:flex;gap:8px;align-items:center;">
+                                        <label style="width:80px;font-size:10px;color:var(--text-general);">Pixel size</label>
+                                        <input id="acPixelSize" type="number" value="1.0" min="0.01" step="0.01" style="width:60px;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:10px;text-align:center;">
+                                        <span style="font-size:9px;color:#555;">µm/px</span>
+                                      </div>
+                                      <div style="display:flex;gap:8px;align-items:center;">
+                                        <label style="width:80px;font-size:10px;color:var(--text-general);">Rotation</label>
+                                        <input id="acRotation" type="number" value="0" min="0" max="360" step="0.5" style="width:60px;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:10px;text-align:center;">°
+                                      </div>
+                                    </div>
+                                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+                                      <button onclick="document.getElementById('addCameraModal').remove()" style="padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:10px;background:var(--app-bg);color:var(--text-general);">Cancel</button>
+                                      <button onclick="window._confirmAddCamera()" style="padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:10px;background:var(--active-element);color:var(--text-selected);">Create</button>
+                                    </div>
+                                  </div>
+                                `;
+                                document.body.appendChild(modal);
+                                modal.addEventListener('mousedown', e => { if (e.target === modal) modal.remove(); });
                               };
-                              window._addCamera = async (type) => {
-                                document.getElementById('cameraTypeMenu').style.display = 'none';
-                                let label = type;
-                                if (type === 'mjpeg') {
-                                  const url = prompt('MJPEG stream URL:', 'http://192.168.1.x:8080/video');
-                                  if (!url) return;
-                                  label = url.replace('http://', '').slice(0, 25);
-                                  await EnderTrack.Camera.setDriver('mjpeg');
-                                  await EnderTrack.Camera.configure({ streamUrl: url });
-                                } else if (type === 'webcam') {
-                                  const devices = await (EnderTrack.CameraDrivers.webcam.listDevices?.() || Promise.resolve([]));
-                                  await EnderTrack.Camera.setDriver('webcam');
-                                  if (devices.length) {
-                                    label = devices[0].label || 'USB Camera';
-                                    await EnderTrack.Camera.configure({ deviceId: devices[0].id });
-                                  }
-                                } else if (type === 'picamera2') {
-                                  await EnderTrack.Camera.setDriver('simulation');
-                                  label = 'RPi Camera';
+
+                              window._onAddCamTypeChange = () => {
+                                const t = document.getElementById('acType')?.value;
+                                const fp = document.getElementById('acPicamFields');
+                                const fw = document.getElementById('acWebcamFields');
+                                if (fp) fp.style.display = t === 'picamera2' ? 'flex' : 'none';
+                                if (fw) fw.style.display = t === 'webcam' ? 'flex' : 'none';
+                              };
+
+                              window._confirmAddCamera = async () => {
+                                const type = document.getElementById('acType')?.value;
+                                const label = document.getElementById('acName')?.value || type;
+                                const pixel_size = parseFloat(document.getElementById('acPixelSize')?.value) || 1.0;
+                                const rotation = parseFloat(document.getElementById('acRotation')?.value) || 0;
+                                document.getElementById('addCameraModal')?.remove();
+                                if (type === 'picamera2') {
+                                  const deviceId = document.getElementById('acDevice')?.value || '0';
+                                  const res = (document.getElementById('acRes')?.value || '1280,720').split(',').map(Number);
+                                  const fmt = document.getElementById('acFormat')?.value || 'RGB888';
+                                  window._cameras.push({ type, label, id: Date.now(), deviceId, resolution: res, format: fmt, pixel_size, rotation });
+                                  window._renderCameras(); window._savePeripherals();
+                                  await EnderTrack.Camera._connectPicam(deviceId, res, fmt);
                                 } else {
-                                  await EnderTrack.Camera.setDriver('simulation');
-                                  label = 'Simulation';
+                                  const deviceId = document.getElementById('acWebcamDevice')?.value || '';
+                                  window._cameras.push({ type, label, id: Date.now(), deviceId, pixel_size, rotation });
+                                  window._renderCameras(); window._savePeripherals();
+                                  await EnderTrack.Camera.setDriver('webcam');
+                                  if (deviceId) await EnderTrack.Camera.configure({ deviceId });
+                                  await EnderTrack.Camera.startLive();
+                                  EnderTrack.Camera._applyWebcamMeta(window._cameras.length - 1);
+                                  window._updateCameraLayout();
                                 }
-                                window._cameras.push({ type, label, id: Date.now() });
-                                window._renderCameras(); window._savePeripherals();
-                                await EnderTrack.Camera.startLive();
-                                window._updateCameraLayout();
                               };
+
                               window._removeCamera = async (idx) => {
                                 window._cameras.splice(idx, 1);
                                 window._renderCameras(); window._savePeripherals();
-                                // Remove last viewport (shrink)
-                                const display = EnderTrack.Display;
-                                display.setLayout(window._cameras.length + 1);
+                                EnderTrack.Display.setLayout(window._cameras.length + 1);
                               };
+
                               window._renderCameras = () => {
                                 const el = document.getElementById('cameraList');
                                 if (!el) return;
                                 el.innerHTML = window._cameras.map((c, i) => `
-                                  <div style="display:flex; align-items:center; gap:6px; padding:6px; margin-bottom:4px; background:var(--app-bg); border-radius:4px;">
-                                    <span style="font-size:10px; color:var(--text-selected); flex:1;">📷 ${c.label}</span>
-                                    <span style="font-size:9px; color:var(--text-general);">${c.type}</span>
-                                    <button onclick="window._removeCamera(${i})" style="padding:3px 6px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:none; color:#ef4444;">✕</button>
+                                  <div style="padding:8px;margin-bottom:6px;background:var(--app-bg);border-radius:4px;">
+                                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+                                      <input type="text" value="${c.label}" onchange="window._cameras[${i}].label=this.value;window._savePeripherals();EnderTrack.Camera._renderNav?.();"
+                                        style="flex:1;padding:3px 6px;background:var(--container-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                      <span style="font-size:9px;color:#555;">${c.type}</span>
+                                      <button onclick="window._removeCamera(${i})" style="padding:2px 6px;border:none;border-radius:3px;cursor:pointer;font-size:9px;background:none;color:#ef4444;">✕</button>
+                                    </div>
+                                    <div id="camConfig_${i}"></div>
                                   </div>
                                 `).join('');
+                                window._cameras.forEach((c, i) => {
+                                  EnderTrack.Camera._renderCamCard(i);
+                                });
                               };
+
                               window._updateCameraLayout = () => {
                                 const n = window._cameras.length;
                                 EnderTrack.Display.setLayout(n + 1);
                                 setTimeout(() => {
-                                  for (let i = 0; i < n; i++) {
-                                    EnderTrack.Display.assignSource(i + 1, 'camera:' + i);
-                                  }
+                                  for (let i = 0; i < n; i++) EnderTrack.Display.assignSource(i + 1, 'camera:' + i);
                                 }, 100);
-                              };
-                              window._liveAndSplit = async () => {
-                                await EnderTrack.Camera.startLive();
-                                window._updateCameraLayout();
                               };
                             </script>
                         </div>
@@ -618,6 +720,14 @@
                     <div id="automationPluginZone"></div>
                 </div>
 
+                <!-- Smart Vision Panel -->
+                <div class="tab-panel" id="smartVisionTabContent">
+                    <div id="svScriptPanel"></div>
+                </div>
+
+                <!-- Python Editor Panel -->
+                <div class="tab-panel" id="pythonEditorTabContent"></div>
+
 
 
                 
@@ -652,6 +762,13 @@
                             <div class="z-preview" id="zPreview"></div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Smart Vision Widget -->
+                <div class="widget-container" id="widget-smartvision" style="display:none; position:relative; width:100%; height:100%;">
+                    <img id="svFeedImg" style="width:100%; height:100%; object-fit:contain; display:block;" src="" onerror="this.style.opacity=0.2">
+                    <canvas id="svOverlay" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
+                    <div id="svNoFeed" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#555; font-size:13px;">📷 No camera feed</div>
                 </div>
             </div>
         </div>
@@ -809,8 +926,8 @@
     <!-- Camera -->
     <script src="modules/camera/luts.js"></script>
     <script src="modules/camera/histogram.js"></script>
+    <script src="modules/image/live-renderer.js"></script>
     <script src="modules/camera/fast-explore.js"></script>
-    <script src="modules/camera/drivers/simulation.js"></script>
     <script src="modules/camera/drivers/webcam.js"></script>
     <script src="modules/camera/drivers/mjpeg.js"></script>
     <script src="modules/camera/camera.js"></script>
@@ -1078,5 +1195,8 @@
     <script src="main.js"></script>
     <script src="frontend/scripts/init-display.js"></script>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/python/python.min.js"></script>
+  <script src="plugins/python-editor/ui.js"></script>
 </body>
 </html>

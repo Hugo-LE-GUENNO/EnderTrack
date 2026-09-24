@@ -15,13 +15,13 @@ class StateManager {
       mapSizeMm: 220, // Kept for backward compatibility
       plateauDimensions: { x: 220, y: 220, z: 250 },
       coordinateBounds: {
-        x: { min: 0, max: 220 },
-        y: { min: 0, max: 220 },
+        x: { min: -30, max: 220 },
+        y: { min: -30, max: 220 },
         z: { min: 0, max: 250 }
       },
       safetyLimits: {
-        x: { min: 0, max: 220 },
-        y: { min: 0, max: 220 },
+        x: { min: -30, max: 220 },
+        y: { min: -30, max: 220 },
         z: { min: 0, max: 250 }
       },
       axisOrientation: {

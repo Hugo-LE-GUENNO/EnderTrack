@@ -1,0 +1,17 @@
+{
+  "title": "Scan grid (12 wells)",
+  "cells": [
+    {
+      "comment": "Connect to stage — in EnderTrack, stage is already available:",
+      "code": "# from enderscope import Stage  (standalone script)\n# stage = Stage('/dev/ttyUSB0', 115200)"
+    },
+    {
+      "comment": "Home and move up slightly",
+      "code": "stage.home()\nstage.move_relative(0, 0, 10)"
+    },
+    {
+      "comment": "Create a raster grid of positions and visit each one\n(simulates a 4x3 = 12-well plate scan)",
+      "code": "import numpy as np\nimport time\n\norigin = [56, 100]   # coordinates of first position\nsteps  = [25, -25]   # x and y offsets to next item\n\ngrid = np.array([(x, y)\n                 for y in range(3)\n                 for x in range(4)]) * steps + origin\n\nfor p in grid:\n    stage.move_absolute(p[0], p[1], 10)\n    print('At:', stage.get_position())\n    time.sleep(0.2)   # pause at each well\n\nstage.move_absolute(origin[0], origin[1], 10)\nprint('Back to origin')"
+    }
+  ]
+}

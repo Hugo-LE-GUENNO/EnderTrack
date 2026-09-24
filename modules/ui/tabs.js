@@ -92,7 +92,7 @@ class TabManager {
     });
 
     // Register default plugin tabs (will be managed by plugin system)
-    const defaultPlugins = ['sequences', 'drivers', 'enderman'];
+    const defaultPlugins = ['sequences', 'drivers', 'enderman', 'smartVision', 'pythonEditor'];
     
     defaultPlugins.forEach(pluginId => {
       const tabElement = document.getElementById(`${pluginId}Tab`);
@@ -423,24 +423,25 @@ class TabManager {
   }
 
   onPluginActivated(pluginData) {
-    // Plugin is now available for use
-    const tab = this.pluginTabs.get(pluginData.id);
+    const id = pluginData.id;
+    // Direct DOM lookup as fallback
+    const el = document.getElementById(`${id}Tab`);
+    if (el) el.style.display = '';
+    const tab = this.pluginTabs.get(id);
     if (tab) {
-      tab.element.style.display = 'block';
+      tab.element.style.display = '';
       tab.isLoaded = true;
     }
   }
 
   onPluginDeactivated(pluginData) {
-    // Hide plugin tab but don't remove it
-    const tab = this.pluginTabs.get(pluginData.id);
+    const id = pluginData.id;
+    const el = document.getElementById(`${id}Tab`);
+    if (el) el.style.display = 'none';
+    const tab = this.pluginTabs.get(id);
     if (tab) {
       tab.element.style.display = 'none';
-      
-      // Switch away if currently active
-      if (this.currentTab === pluginData.id) {
-        this.switchTab('navigation');
-      }
+      if (this.currentTab === id) this.switchTab('navigation');
     }
   }
 

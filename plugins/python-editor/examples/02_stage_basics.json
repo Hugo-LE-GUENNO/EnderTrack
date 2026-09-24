@@ -1,0 +1,29 @@
+{
+  "title": "Stage basics",
+  "cells": [
+    {
+      "comment": "Connect to stage — in EnderTrack, stage is already available:",
+      "code": "# from enderscope import Stage  (standalone script)\n# stage = Stage('/dev/ttyUSB0', 115200)"
+    },
+    {
+      "comment": "Get current position",
+      "code": "x, y, z = stage.get_position()\nprint('Position:', x, y, z)"
+    },
+    {
+      "comment": "Move to absolute coordinates",
+      "code": "stage.move_absolute(10, 10, 10)"
+    },
+    {
+      "comment": "Move relative to current position",
+      "code": "stage.move_relative(5, 0, 0)\nprint(stage.get_position())"
+    },
+    {
+      "comment": "Home the stage — XY only (safe_home avoids Z if not configured)",
+      "code": "# stage.home()       # homes all axes — only if Z endstop is configured\nstage.safe_home()   # homes XY only, leaves Z untouched\nprint(stage.get_position())"
+    },
+    {
+      "comment": "Send raw G-code (output is returned as a list)",
+      "code": "print(stage.send_gcode('M114'))"
+    }
+  ]
+}

@@ -245,13 +245,11 @@ class DisplayModule {
             liveRenderer.setCanvas(canvas);
             liveRenderer._liveImg = liveImg; // ref for toggling
             liveRenderer.start();
-            // Override _renderFrame to toggle img/canvas visibility
-            const origRender = liveRenderer._renderFrame.bind(liveRenderer);
             liveRenderer._renderFrame = () => {
               if (liveRenderer.enabled) {
                 liveImg.style.display = 'none';
                 canvas.style.display = '';
-                origRender();
+                liveRenderer._nativeRenderFrame();
               } else {
                 canvas.style.display = 'none';
                 liveImg.style.display = '';
@@ -259,7 +257,7 @@ class DisplayModule {
             };
           }
         } else {
-          // Webcam: visible video + canvas overlay for LUT/contrast
+          // Webcam: video element + canvas overlay for LUT/contrast
           const video = document.createElement('video');
           video.autoplay = true; video.muted = true; video.playsInline = true;
           video.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000;';
@@ -275,7 +273,7 @@ class DisplayModule {
 
           const canvas = document.createElement('canvas');
           canvas.id = 'liveDisplayCanvas';
-          canvas.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:none;';
+          canvas.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; display:none;';
           cell.appendChild(canvas);
 
           const liveRenderer = window.EnderTrack?.LiveRenderer;
@@ -283,9 +281,19 @@ class DisplayModule {
             liveRenderer.setImage(null);
             liveRenderer.setVideo(video);
             liveRenderer.setCanvas(canvas);
-            liveRenderer._videoEl = video;  // ref for toggling
+            liveRenderer._videoEl = video;
             liveRenderer._canvasEl = canvas;
             liveRenderer.start();
+            liveRenderer._renderFrame = () => {
+              if (liveRenderer.enabled) {
+                video.style.display = 'none';
+                canvas.style.display = 'block';
+                liveRenderer._nativeRenderFrame();
+              } else {
+                canvas.style.display = 'none';
+                video.style.display = '';
+              }
+            };
           }
         }
       };
