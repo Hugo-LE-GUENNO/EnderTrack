@@ -72,7 +72,10 @@ class XYCanvasManager {
       if (this.shouldUpdateCoordinates(newState, oldState)) {
         this.updateCoordinateSystem();
       }
-      this.requestRender();
+      // Skip render if movement engine is animating (it calls render() directly)
+      if (!window.EnderTrack?.Movement?.isMoving) {
+        this.requestRender();
+      }
     });
     
     window.addEventListener('resize', () => this.handleResize());

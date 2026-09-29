@@ -8,8 +8,9 @@ class MjpegCameraDriver {
     this._ctx = null;
     this._live = false;
     this._timer = null;
-    this.streamUrl = ''; // base URL, e.g. http://host:5000/api/camera/picam
-    this._frameUrl = ''; // single frame endpoint
+    this._failCount = 0;
+    this.streamUrl = '';
+    this._frameUrl = '';
   }
 
   async init(config) {
@@ -62,19 +63,24 @@ class MjpegCameraDriver {
         const prev = this._img.src;
         this._img.onload = () => {
           if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+          this._failCount = 0;
           this.camera._emitFrame({ width: this._img.naturalWidth, height: this._img.naturalHeight, timestamp: Date.now() });
-          // Schedule next poll (~5 fps target, minus fetch time)
           const elapsed = Date.now() - t0;
           const delay = Math.max(30, 200 - elapsed);
           this._timer = setTimeout(() => this._poll(), delay);
         };
         this._img.onerror = () => {
+          this._failCount++;
+          if (this._failCount >= 3) this.camera._onDriverError();
           this._timer = setTimeout(() => this._poll(), 500);
         };
         this._img.src = url;
       })
       .catch(() => {
-        if (this._live) this._timer = setTimeout(() => this._poll(), 1000);
+        if (!this._live) return;
+        this._failCount++;
+        if (this._failCount >= 3) this.camera._onDriverError();
+        this._timer = setTimeout(() => this._poll(), 1000);
       });
   }
 

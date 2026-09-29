@@ -283,7 +283,7 @@ class StateManager {
       localStorage.removeItem('endertrack_history');
     }
     
-    if (localStorage.getItem('endertrack_track_enabled') === 'true') {
+    if (localStorage.getItem('endertrack_tracking') === 'true') {
       const savedTrack = localStorage.getItem('endertrack_track');
       if (savedTrack) {
         try {
@@ -293,6 +293,7 @@ class StateManager {
         }
       }
     } else {
+      this.state.track = [];
       localStorage.removeItem('endertrack_track');
     }
     
@@ -413,7 +414,7 @@ class StateManager {
     }
     
     // Add to track immediately for final positions
-    if (isFinalPosition) {
+    if (isFinalPosition && window._trackingEnabled) {
       const lastTrackPoint = this.state.track[this.state.track.length - 1];
       if (!lastTrackPoint || 
           Math.abs(lastTrackPoint.x - pos.x) > 0.01 || 

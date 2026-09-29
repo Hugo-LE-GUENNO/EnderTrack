@@ -171,9 +171,10 @@ class MovementEngine {
 
       // Animate locally
       movement.startTime = Date.now();
+      let animDuration = movement.duration;
       const animateHw = () => {
         if (!this.isMoving) return;
-        const progress = Math.min((Date.now() - movement.startTime) / movement.duration, 1);
+        const progress = Math.min((Date.now() - movement.startTime) / animDuration, 1);
         const tXY = EnderTrack.Math.easeTrapezoidalXY(progress);
         const tZ = EnderTrack.Math.easeTrapezoidalZ(progress);
         this._updatePos({
@@ -187,6 +188,7 @@ class MovementEngine {
 
       try {
         const ok = await window.EnderTrack.EnderscopeMovement.moveRelative(Number(dx), Number(dy), Number(dz), feedrate);
+        if (ok?.duration) animDuration = ok.duration * 1000;
         this._cancelAnim();
         if (ok) { this.completeMovement(target, true); return true; }
         else { this.completeMovement(state.pos, false); return false; }
@@ -299,10 +301,12 @@ class MovementEngine {
       // Hardware path
       const enderscope = window.EnderTrack?.Enderscope;
       if (enderscope?.isConnected) {
+        // Start animation immediately, duration will be recalibrated from server response
         movement.startTime = Date.now();
+        let animDuration = movement.duration;
         const animateHw = () => {
           if (this.emergencyStop || !this.isMoving) return;
-          const progress = Math.min((Date.now() - movement.startTime) / movement.duration, 1);
+          const progress = Math.min((Date.now() - movement.startTime) / animDuration, 1);
           const tXY = EnderTrack.Math.easeTrapezoidalXY(progress);
           const tZ = EnderTrack.Math.easeTrapezoidalZ(progress);
           const pos = {
@@ -317,6 +321,8 @@ class MovementEngine {
 
         try {
           const ok = await window.EnderTrack.EnderscopeMovement.moveAbsolute(movement.target.x, movement.target.y, movement.target.z, feedrate);
+          // Recalibrate animation duration from actual move time
+          if (ok?.duration) animDuration = ok.duration * 1000;
           this._cancelAnim();
           if (ok) { this.completeMovement(movement.target, true); resolve(true); }
           else { this.completeMovement(EnderTrack.State.get().pos, false); reject(new Error('Hardware movement failed')); }
@@ -368,9 +374,15 @@ class MovementEngine {
   }
 
   _updatePos(pos) {
-    const ct = EnderTrack.State.get().continuousTrack || [];
-    ct.push({ x: pos.x, y: pos.y, z: pos.z, timestamp: Date.now() });
-    EnderTrack.State.update({ pos, continuousTrack: ct });
+    if (window._trackingEnabled) {
+      const ct = EnderTrack.State.get().continuousTrack || [];
+      ct.push({ x: pos.x, y: pos.y, z: pos.z, timestamp: Date.now() });
+      EnderTrack.State.update({ pos, continuousTrack: ct });
+    } else {
+      EnderTrack.State.update({ pos });
+    }
+    // Render directly during animation — bypass state:changed event chain
+    EnderTrack.Canvas?.render?.();
   }
 
   _cancelAnim() {
@@ -402,19 +414,21 @@ class MovementEngine {
       body: JSON.stringify({ position: { x: roundedPos.x, y: roundedPos.y, z: roundedPos.z } })
     }).catch(() => {});
     EnderTrack.Events.notifyListeners('movement:completed', { position: finalPos, success });
-    // Sync tracks to server (debounced)
-    if (this._trackSyncTimer) clearTimeout(this._trackSyncTimer);
-    this._trackSyncTimer = setTimeout(() => {
-      const state = EnderTrack.State.get();
-      const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
-      fetch(url + '/api/sync/tracks', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          positionHistory: state.positionHistory || [],
-          continuousTrack: state.continuousTrack || []
-        })
-      }).catch(() => {});
-    }, 100);
+    // Sync tracks to server (debounced, only if tracking enabled)
+    if (window._trackingEnabled) {
+      if (this._trackSyncTimer) clearTimeout(this._trackSyncTimer);
+      this._trackSyncTimer = setTimeout(() => {
+        const state = EnderTrack.State.get();
+        const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
+        fetch(url + '/api/sync/tracks', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            positionHistory: state.positionHistory || [],
+            continuousTrack: state.continuousTrack || []
+          })
+        }).catch(() => {});
+      }, 100);
+    }
   }
 
   stopMovement(silent = false) {

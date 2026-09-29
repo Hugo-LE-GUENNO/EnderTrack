@@ -248,6 +248,7 @@ class PositionRenderer {
   static renderHistoryPositions(ctx, state, coords) {
     // Don't show history in Scenario mode
     if (window.EnderTrack?.Scenario?.isActive) return;
+    if (!window._trackingEnabled) return;
     
     const showPositionXYHistory = document.getElementById('showPositionXYHistory');
     const showHistoryXYEnabled = !showPositionXYHistory || showPositionXYHistory.checked;

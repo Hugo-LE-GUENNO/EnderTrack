@@ -30,6 +30,10 @@ class DisplayModule {
       e.preventDefault();
       this._showSourceMenu(e.clientX, e.clientY, 0);
     });
+    this._stageWrap.addEventListener('dblclick', () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else this._stageWrap.requestFullscreen?.();
+    });
   }
 
   // === LAYOUT ===
@@ -126,6 +130,10 @@ class DisplayModule {
       e.preventDefault();
       e.stopPropagation();
       this._showSourceMenu(e.clientX, e.clientY, id);
+    });
+    cell.addEventListener('dblclick', () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else cell.requestFullscreen?.();
     });
 
     this._container.appendChild(cell);

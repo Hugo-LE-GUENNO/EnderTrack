@@ -107,9 +107,9 @@ class ActionRegistry {
       icon: '=',
       category: 'core',
       params: [
-        { id: 'varId',     label: 'Variable', type: 'text', default: '$result', placeholder: '$myVar' },
-        { id: 'value',     label: 'Value',    type: 'text', default: '0',       placeholder: '0 or $x + 1' },
-        { id: 'showInLog', label: 'Log',      type: 'checkbox', default: false },
+        { id: 'varId',     label: 'Variable',    type: 'text', default: '$result', placeholder: '$myVar' },
+        { id: 'value',     label: 'Value',        type: 'text', default: '0',       placeholder: '0 or $x + 1' },
+        { id: 'showInLog', label: 'Log',          type: 'checkbox', default: false },
       ],
       execute: async (params, context) => {
         const vars = context?.variables || {};
@@ -120,11 +120,24 @@ class ActionRegistry {
         // Persist into VariableManager so the value survives updateVariables() calls
         const vm = window.EnderTrack?.VariableManager;
         if (vm) {
-          const custom = vm.customVariables?.find(v => v.id === varId);
-          if (custom) custom.formula = String(result);
-          const global = vm.globalVariables?.find(v => v.id === varId);
-          if (global) global.formula = String(result);
-          else if (!custom) vm.addGlobalVariable?.({ id: varId, formula: String(result) });
+          const isSystem = vm.systemVariables?.find(v => v.id === varId);
+          const isGlobal = vm.globalVariables?.find(v => v.id === varId);
+          if (isGlobal) {
+            isGlobal.formula = String(result);
+          } else if (!isSystem) {
+            // Create/update as local variable on the current scenario
+            const scenario = window.EnderTrack?.Scenario?.manager?.getCurrentScenario();
+            if (scenario) {
+              if (!scenario.customVariables) scenario.customVariables = [];
+              const local = scenario.customVariables.find(v => v.id === varId);
+              if (local) local.formula = String(result);
+              else scenario.customVariables.push({ id: varId, name: varId, formula: String(result), type: 'number' });
+              window.EnderTrack.Scenario.manager.save?.();
+            }
+            // Keep VariableManager in sync
+            const vmLocal = vm.customVariables?.find(v => v.id === varId);
+            if (vmLocal) vmLocal.formula = String(result);
+          }
         }
         if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`= ${varId} ← ${result}`, 'info');
         return { success: true };

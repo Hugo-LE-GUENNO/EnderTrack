@@ -671,22 +671,22 @@ window.emergencyStop = () => EnderTrack.App.emergencyStop();
         if (light) { light.style.background = 'var(--success)'; light.style.boxShadow = '0 0 6px var(--success)'; }
         if (label) label.textContent = 'Server ' + urlShort;
 
-        if (status.connected) {
-          // Stage connected
-          if (light) { light.style.background = 'var(--success)'; light.style.boxShadow = '0 0 6px var(--success)'; }
-          if (label) label.textContent = 'Server ' + urlShort;
-          coordColor('var(--text-selected)');
-          previousStageConnected = true;
-          wasEverConnected = true;
-          // Show device row only when M115 info is ready
-          if (enderscope?.deviceInfoReady !== false) {
+        if (status.connected && status.firmware) {
+            coordColor('var(--text-selected)');
+            previousStageConnected = true;
+            wasEverConnected = true;
             if (stageLight) { stageLight.style.background = 'var(--success)'; stageLight.style.boxShadow = '0 0 4px var(--success)'; stageLight.style.animation = ''; }
             if (deviceRow) deviceRow.style.display = 'flex';
             if (deviceInfo) {
-              const name = enderscope?.deviceName || status.printer_name || 'Platine XYZ';
-              deviceInfo.textContent = name + ' \u2014 ' + (status.port || 'USB');
+              const name = enderscope?.deviceName || status.firmware || 'XYZ Stage';
+              deviceInfo.textContent = name + ' — ' + (status.port || 'USB');
             }
-          }
+        } else if (enderscope?.autoConnectEnabled === false) {
+          // Simulator mode volontaire → orange
+          if (stageLight) { stageLight.style.background = 'var(--coordinates-color)'; stageLight.style.boxShadow = '0 0 4px var(--coordinates-color)'; stageLight.style.animation = ''; }
+          if (deviceRow) deviceRow.style.display = 'flex';
+          if (deviceInfo) deviceInfo.textContent = 'Simulator mode';
+          coordColor('var(--coordinates-color)');
         } else if (wasEverConnected) {
           // Was connected before, now lost → red blink stays
           if (stageLight) { stageLight.style.background = 'var(--danger)'; stageLight.style.boxShadow = '0 0 6px var(--danger)'; stageLight.style.animation = 'statusBlink 1s ease-in-out infinite'; }
@@ -695,8 +695,8 @@ window.emergencyStop = () => EnderTrack.App.emergencyStop();
           coordColor('var(--coordinates-color)');
           previousStageConnected = false;
         } else {
-          // Server up, never had stage → orange
-          if (stageLight) { stageLight.style.background = 'var(--coordinates-color)'; stageLight.style.boxShadow = '0 0 4px var(--coordinates-color)'; stageLight.style.animation = ''; }
+          // Server up, never had stage → red
+          if (stageLight) { stageLight.style.background = 'var(--danger)'; stageLight.style.boxShadow = '0 0 4px var(--danger)'; stageLight.style.animation = ''; }
           if (deviceRow) deviceRow.style.display = 'flex';
           if (deviceInfo) deviceInfo.textContent = 'XYZ Stage not connected';
           coordColor('var(--coordinates-color)');

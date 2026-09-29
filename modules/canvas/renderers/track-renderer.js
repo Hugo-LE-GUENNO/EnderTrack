@@ -14,6 +14,7 @@ class TrackRenderer {
   }
 
   static renderContinuousTrack(ctx, state, coords) {
+    if (!window._trackingEnabled) return;
     const showTrackFree = document.getElementById('showTrackFree');
     const showTrackFreeEnabled = !showTrackFree || showTrackFree.checked;
     
@@ -70,6 +71,7 @@ class TrackRenderer {
   }
 
   static renderTrackPoints(ctx, state, coords) {
+    if (!window._trackingEnabled) return;
     const showTrackPositions = document.getElementById('showTrackPositions');
     const showPositionXYHistory = document.getElementById('showPositionXYHistory');
     const showTrackPositionsEnabled = !showTrackPositions || showTrackPositions.checked;

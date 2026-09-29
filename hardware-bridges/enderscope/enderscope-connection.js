@@ -3,6 +3,7 @@
 class EnderscopeConnection {
   constructor() {
     this.isConnected = false;
+    this.firmwareName = null;
     this.serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     this.currentPort = null;
     this.position = { x: 0, y: 0, z: 0 };
@@ -33,11 +34,12 @@ class EnderscopeConnection {
       const status = await response.json();
       
       if (status.connected) {
-        this.isConnected = true;
+        this.isConnected = !!status.firmware;
+        this.firmwareName = status.firmware || null;
         this.currentPort = status.port;
         this.updateConnectionStatus();
         await this.syncPosition();
-        this.showStartupNotification(true);
+        this.showStartupNotification(!!status.firmware);
       } else if (this.autoConnectEnabled) {
         // Only the first client auto-connects (others just check status)
         const port = document.getElementById('serialPort')?.value || '/dev/ttyUSB0';
@@ -51,12 +53,13 @@ class EnderscopeConnection {
         });
         const result = await connectResponse.json();
         if (result.success) {
-          this.isConnected = true;
+          this.isConnected = !!result.firmware;
+          this.firmwareName = result.firmware || null;
           this.currentPort = port;
           this.currentBaudRate = baudRate;
           this.updateConnectionStatus();
           await this.syncPosition();
-          this.showStartupNotification(true);
+          this.showStartupNotification(!!result.firmware);
         } else {
           this.connectionError = result.error;
           this.updateConnectionStatus();
@@ -76,7 +79,7 @@ class EnderscopeConnection {
     if (connected) {
       window.EnderTrack.UI.showNotification('🔬 Enderscope connected', 'success');
     } else {
-      window.EnderTrack.UI.showNotification('🎮 Simulator mode', 'info');
+      window.EnderTrack.UI.showNotification('Simulator mode', 'info');
     }
   }
 
@@ -143,12 +146,10 @@ class EnderscopeConnection {
     const port = document.getElementById('serialPort').value;
     const baudRate = parseInt(document.getElementById('baudRate').value) || 115200;
     
-    
-    if (!port) {
-      return;
-    }
+    if (!port) return;
 
-    // Show progress bar
+    // Pause monitor during connection attempt
+    if (this.connectionMonitor) { clearInterval(this.connectionMonitor); this.connectionMonitor = null; }
     this._setConnecting(port);
     
     try {
@@ -173,26 +174,30 @@ class EnderscopeConnection {
       const result = await response.json();
       
       if (result.success) {
-        this.isConnected = true;
+        this.isConnected = !!result.firmware;
+        this.firmwareName = result.firmware || null;
         this.currentPort = port;
         this.currentBaudRate = baudRate;
         this.hideProgress();
         this.updateConnectionStatus();
-        await this.syncPosition();
-        window.EnderTrack?.UI?.showNotification?.(`✅ Connecté à ${port}`, 'success');
+        if (this.isConnected) {
+          await this.syncPosition();
+          window.EnderTrack?.UI?.showNotification?.(`✅ Connected to ${port}`, 'success');
+        } else {
+          window.EnderTrack?.UI?.showNotification?.(`⚠️ ${port} open but no firmware response`, 'warning');
+        }
       } else {
         this.connectionError = result.error;
         this.hideProgress();
         this.updateConnectionStatus();
       }
     } catch (error) {
-      if (error.name === 'AbortError') {
-        this.connectionError = 'Connection timeout';
-      } else {
-        this.connectionError = 'Serveur non disponible';
-      }
+      this.connectionError = error.name === 'AbortError' ? 'Connection timeout' : 'Server unavailable';
       this.hideProgress();
       this.updateConnectionStatus();
+    } finally {
+      // Always restart monitor
+      this.startConnectionMonitor();
     }
   }
   
@@ -220,6 +225,7 @@ class EnderscopeConnection {
     try {
       await fetch(`${this.serverUrl}/api/disconnect`, { method: 'POST' });
       this.isConnected = false;
+      this.firmwareName = null;
       this.currentPort = null;
       this.currentBaudRate = null;
       this.connectionError = null;
@@ -294,34 +300,19 @@ class EnderscopeConnection {
 
   async syncPosition() {
     if (!this.isConnected) return;
-    await this.queryDeviceInfo();
-
     try {
-      // Récupérer la vraie position depuis le firmware (M114)
-      const response = await fetch(`${this.serverUrl}/api/position/real`);
+      const response = await fetch(`${this.serverUrl}/api/position`);
       const result = await response.json();
-      
       if (result.success) {
         const p = result.position;
-        const enderscopePos = { x: p.x ?? p.X ?? 0, y: p.y ?? p.Y ?? 0, z: p.z ?? p.Z ?? 0 };
-        
-        // Synchroniser l'interface avec la position réelle de l'Enderscope
-        this.position = enderscopePos;
-        
+        this.position = { x: p.x ?? 0, y: p.y ?? 0, z: p.z ?? 0 };
         if (window.EnderTrack?.State) {
-          window.EnderTrack.State.update({ 
-            pos: enderscopePos,
-            // Mettre à jour aussi les inputs absolus
-            targetPosition: enderscopePos
-          });
+          window.EnderTrack.State.update({ pos: this.position });
         }
-        
-        // Mettre à jour les inputs d'interface
-        this.updateAbsoluteInputs(enderscopePos);
+        this.updateAbsoluteInputs(this.position);
         this.updatePositionDisplay();
       }
-    } catch (error) {
-    }
+    } catch {}
   }
 
   updateAbsoluteInputs(position) {
@@ -352,7 +343,7 @@ class EnderscopeConnection {
         body: JSON.stringify({ x, y, z, feedrate: fr })
       });
       const result = await response.json();
-      if (result.success) { await this.syncPosition(); return true; }
+      if (result.success) { return true; }
       return false;
     } catch (error) { return false; }
   }
@@ -367,7 +358,7 @@ class EnderscopeConnection {
         body: JSON.stringify({ dx, dy, dz, feedrate: fr })
       });
       const result = await response.json();
-      if (result.success) { await this.syncPosition(); return true; }
+      if (result.success) { return true; }
       return false;
     } catch (error) { return false; }
   }
@@ -392,28 +383,28 @@ class EnderscopeConnection {
     const connectBtn = document.getElementById('connectBtn');
     const controls = document.getElementById('enderscopeControls');
 
-    // Trigger instant status widget update
     if (window._updateStatusNow) window._updateStatusNow();
-
     if (!statusIndicator) return;
     statusIndicator.classList.remove('connected', 'connecting');
 
     if (this.isConnected) {
       statusIndicator.classList.add('connected');
+      statusIndicator.style.background = '';
       statusText.textContent = `Connected (${this.currentPort})`;
       statusText.style.color = '#10b981';
       connectBtn.textContent = 'Simulator';
       connectBtn.onclick = () => { this.autoConnectEnabled = false; this.disconnect(); };
       if (controls) controls.style.display = 'block';
     } else {
+      statusIndicator.style.background = this.autoConnectEnabled ? '' : 'var(--coordinates-color)';
       if (this.connectionError) {
         statusText.textContent = this.connectionError;
         statusText.style.color = '#ef4444';
       } else {
-        statusText.textContent = '🎮 Simulator mode';
-        statusText.style.color = 'var(--text-general)';
+        statusText.textContent = 'Simulator mode';
+        statusText.style.color = this.autoConnectEnabled ? 'var(--text-general)' : 'var(--coordinates-color)';
       }
-      connectBtn.textContent = 'Connecter';
+      connectBtn.textContent = 'Connect';
       connectBtn.onclick = () => { this.autoConnectEnabled = true; this.connect(); };
       if (controls) controls.style.display = 'none';
     }
@@ -430,7 +421,8 @@ class EnderscopeConnection {
   startConnectionMonitor() {
     // Vérification toutes les 3 secondes
     this.connectionMonitor = setInterval(() => {
-      if (this.isConnected) {
+      if (this.currentPort) {
+        // Always health-check if a port is open (connected or firmware-less)
         this.checkConnectionHealth();
       } else {
         this.tryReconnect();
@@ -445,11 +437,12 @@ class EnderscopeConnection {
       const statusResp = await fetch(`${this.serverUrl}/api/status`, { signal: AbortSignal.timeout(2000) });
       const status = await statusResp.json();
       if (status.connected) {
-        this.isConnected = true;
         this.currentPort = status.port;
+        this.isConnected = !!status.firmware;
+        this.firmwareName = status.firmware || null;
         this.connectionError = null;
         this.updateConnectionStatus();
-        await this.syncPosition();
+        if (this.isConnected) await this.syncPosition();
         return;
       }
       // Server not connected — try to connect
@@ -465,7 +458,8 @@ class EnderscopeConnection {
         });
         const result = await resp.json();
         if (result.success) {
-          this.isConnected = true;
+          this.isConnected = !!result.firmware;
+          this.firmwareName = result.firmware || null;
           this.currentPort = usbPort;
           this.connectionError = null;
           this.updateConnectionStatus();
@@ -477,39 +471,31 @@ class EnderscopeConnection {
 
   async checkConnectionHealth() {
     try {
-      const response = await fetch(`${this.serverUrl}/api/status`, {
-        method: 'GET',
-        timeout: 2000
-      });
-      
-      if (!response.ok) {
-        throw new Error('Serveur non disponible');
-      }
-      
+      const response = await fetch(`${this.serverUrl}/api/status`, { signal: AbortSignal.timeout(3000) });
+      if (!response.ok) throw new Error('Server unavailable');
       const status = await response.json();
-      
-      // Vérifier si la connexion série est toujours active
-      if (status.connected === false && this.isConnected) {
+      if (!status.connected) {
         this.handleConnectionLost('Serial port disconnected');
+      } else if (status.firmware && !this.isConnected) {
+        // Recovered
+        this.isConnected = true;
+        this.firmwareName = status.firmware;
+        this.connectionError = null;
+        this.updateConnectionStatus();
+        await this.syncPosition();
       }
-      
-    } catch (error) {
-      if (this.isConnected) {
-        this.handleConnectionLost('Serveur Enderscope non disponible');
-      }
+    } catch {
+      if (this.isConnected) this.handleConnectionLost('Server unavailable');
     }
   }
 
   handleConnectionLost(reason) {
     this.isConnected = false;
     this.currentPort = null;
+    this.firmwareName = null;
     this.connectionError = `Disconnected: ${reason}`;
     this.updateConnectionStatus();
-    
-    // Notification visuelle
-    if (window.EnderTrack?.UI?.showNotification) {
-      window.EnderTrack.UI.showNotification(`⚠️ ${reason} - Back en mode simulateur`, 'warning');
-    }
+    window.EnderTrack?.UI?.showNotification?.(`⚠️ ${reason}`, 'warning');
   }
 
   updateMainModeIndicator() {
@@ -531,60 +517,33 @@ class EnderscopeConnection {
   
   // Move to absolute position with hardware integration
   async moveAbsoluteHardware(x, y, z, feedrate) {
-    if (!this.isConnected) {
-      return false;
-    }
-
+    if (!this.isConnected) return false;
     feedrate = feedrate || window.EnderTrack?.State?.get()?.feedrate || 3000;
-    
     try {
       const response = await fetch(`${this.serverUrl}/api/move/absolute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ x, y, z, feedrate })
       });
-
       const result = await response.json();
-      
-      if (result.m400_duration !== undefined) {
-      }
-      
-      if (result.success) {
-        return true;
-      }
+      if (result.success) return { duration: result.duration };
       return false;
-    } catch (error) {
-      return false;
-    }
+    } catch { return false; }
   }
 
-  // Move relative to current position with hardware integration
   async moveRelativeHardware(dx, dy, dz, feedrate) {
-    if (!this.isConnected) {
-      return false;
-    }
-
+    if (!this.isConnected) return false;
     feedrate = feedrate || window.EnderTrack?.State?.get()?.feedrate || 3000;
-    
     try {
       const response = await fetch(`${this.serverUrl}/api/move/relative`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dx, dy, dz, feedrate })
       });
-
       const result = await response.json();
-      
-      if (result.m400_duration !== undefined) {
-      }
-      
-      if (result.success) {
-        return true;
-      }
+      if (result.success) return { duration: result.duration };
       return false;
-    } catch (error) {
-      return false;
-    }
+    } catch { return false; }
   }
 
   // Home all axes with hardware integration
@@ -767,7 +726,7 @@ async function resetFirmware() {
       EnderTrack.UI?.showNotification?.('Firmware reset OK', 'success');
       // Re-sync position
       if (window.EnderTrack?.Enderscope?.syncPosition) {
-        setTimeout(() => window.EnderTrack.Enderscope.syncPosition(), 1000);
+        setTimeout(() => window.EnderTrack.Enderscope.syncPosition(), 500);
       }
     } else {
       EnderTrack.UI?.showNotification?.(result.error || 'Reset failed', 'error');

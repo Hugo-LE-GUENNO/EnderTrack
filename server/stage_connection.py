@@ -33,9 +33,16 @@ class Stage:
         self.ser = serial.Serial(port, baudrate, timeout=2)
         time.sleep(2)
         self.ser.reset_input_buffer()
+        self.ser.reset_output_buffer()
 
-        # Verify this is a G-code device via M115
-        lines = self.send_gcode("M115", wait_ok=True, timeout=5)
+        # Verify this is a G-code device via M115 (retry to survive boot noise)
+        lines = []
+        for attempt in range(3):
+            self.ser.reset_input_buffer()
+            lines = self.send_gcode("M115", wait_ok=True, timeout=5)
+            if any('FIRMWARE_NAME' in l or l.startswith('ok') for l in lines):
+                break
+            time.sleep(1)
         response = ' '.join(lines)
         if 'FIRMWARE_NAME' in response or 'ok' in response.lower():
             for line in lines:
@@ -102,14 +109,16 @@ class Stage:
 
     def move_absolute(self, x, y, z, feedrate=3000):
         print(f"  > [ABS] G1 X{x} Y{y} Z{z} F{feedrate}")
-        self.send_gcode(f"G1 X{x} Y{y} Z{z} F{feedrate}", wait_ok=True, _log=False)
+        lines = self.send_gcode(f"G1 X{x} Y{y} Z{z} F{feedrate}", wait_ok=True, _log=False)
+        if 'timeout' in lines: self.firmware_name = None; return
         self.position = {'X': float(x), 'Y': float(y), 'Z': float(z)}
 
     def move_relative(self, dx, dy, dz, feedrate=3000):
         print(f"  > [REL] G1 X{dx} Y{dy} Z{dz} F{feedrate}")
         self.send_gcode("G91", wait_ok=True, _log=False)
         try:
-            self.send_gcode(f"G1 X{dx} Y{dy} Z{dz} F{feedrate}", wait_ok=True, _log=False)
+            lines = self.send_gcode(f"G1 X{dx} Y{dy} Z{dz} F{feedrate}", wait_ok=True, _log=False)
+            if 'timeout' in lines: self.firmware_name = None; return
             self.position['X'] += float(dx)
             self.position['Y'] += float(dy)
             self.position['Z'] += float(dz)
@@ -125,23 +134,18 @@ class Stage:
         self.send_gcode("M400", wait_ok=True)
         self.get_position()  # lit la vraie position firmware via M114
 
-    def get_position(self, as_dict=False):
-        """Read real position from firmware via M114."""
+    def get_position(self, as_dict=False, timeout=10):
         try:
-            lines = self.send_gcode("M114", wait_ok=True)
-            for line in lines:
-                if 'X:' in line:
-                    # M114 returns: "X:38.90 Y:19.73 Z:0.00 E:0.00 Count X:3112 Y:1578 Z:-13"
-                    # We want the first set (mm), not the Count (steps)
-                    before_count = line.split('Count')[0]
-                    for part in before_count.split():
-                        if part.startswith('X:'):
-                            self.position['X'] = float(part[2:])
-                        elif part.startswith('Y:'):
-                            self.position['Y'] = float(part[2:])
-                        elif part.startswith('Z:'):
-                            self.position['Z'] = float(part[2:])
-                    break
+            lines = self.send_gcode("M114", wait_ok=True, timeout=timeout)
+            if 'timeout' not in lines:
+                for line in lines:
+                    if 'X:' in line:
+                        before_count = line.split('Count')[0]
+                        for part in before_count.split():
+                            if part.startswith('X:'): self.position['X'] = float(part[2:])
+                            elif part.startswith('Y:'): self.position['Y'] = float(part[2:])
+                            elif part.startswith('Z:'): self.position['Z'] = float(part[2:])
+                        break
         except Exception:
             pass
         if as_dict:
@@ -240,10 +244,11 @@ def register_routes(app):
 
     @app.route('/api/disconnect', methods=['POST'])
     def _disconnect():
-        global stage
+        global stage, _connecting
         if stage:
             stage.close()
         stage = None
+        _connecting = False
         print('  - Deconnecte')
         return jsonify({'success': True})
 
@@ -252,6 +257,7 @@ def register_routes(app):
         return jsonify({
             'success': True,
             'connected': is_connected(),
+            'firmware': getattr(stage, 'firmware_name', None) if stage else None,
             'simulation_mode': not HAS_SERIAL,
             'port': stage.port if stage else None,
             'message': 'EnderTrack server running'
@@ -259,10 +265,8 @@ def register_routes(app):
 
     @app.route('/api/position', methods=['GET'])
     def _position():
-        if stage:
-            p = stage.get_position(as_dict=True)
-            return jsonify({'success': True, 'position': {'x': p.get('X', p.get('x', 0)), 'y': p.get('Y', p.get('y', 0)), 'z': p.get('Z', p.get('z', 0))}})
-        return jsonify({'success': True, 'position': {'x': 0.0, 'y': 0.0, 'z': 0.0}})
+        p = stage.position if stage else {'X': 0.0, 'Y': 0.0, 'Z': 0.0}
+        return jsonify({'success': True, 'position': {'x': p.get('X', 0), 'y': p.get('Y', 0), 'z': p.get('Z', 0)}})
 
     @app.route('/api/move/absolute', methods=['POST'])
     def _move_abs():
@@ -272,7 +276,7 @@ def register_routes(app):
         import math
         try:
             from server.event_stream import bus
-            cur = stage.get_position(as_dict=True) if stage else {'X': 0, 'Y': 0, 'Z': 0}
+            cur = stage.position if stage else {'X': 0, 'Y': 0, 'Z': 0}
             sx, sy, sz = cur.get('X', 0), cur.get('Y', 0), cur.get('Z', 0)
             distXY = math.sqrt((x - sx)**2 + (y - sy)**2)
             distZ = abs(z - sz)
@@ -301,7 +305,7 @@ def register_routes(app):
         import math
         try:
             from server.event_stream import bus
-            cur = stage.get_position(as_dict=True) if stage else {'X': 0, 'Y': 0, 'Z': 0}
+            cur = stage.position if stage else {'X': 0, 'Y': 0, 'Z': 0}
             sx, sy, sz = cur.get('X', 0), cur.get('Y', 0), cur.get('Z', 0)
             tx, ty, tz = sx + dx, sy + dy, sz + dz
             distXY = math.sqrt(dx**2 + dy**2)
@@ -367,8 +371,6 @@ def register_routes(app):
         if stage:
             try:
                 stage.send_gcode("M410")
-                time.sleep(0.1)
-                stage.send_gcode("M114")
                 print('  ! Emergency stop')
             except:
                 pass

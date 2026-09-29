@@ -1,4 +1,4 @@
-# EnderTrack — imaging v1.3.1
+# EnderTrack — imaging v1.3.2
 
 <p align="center">
   <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" height="64">
@@ -45,6 +45,20 @@ python3 endertrack-server.py --lan
 👉 [Network, hotspot, RPi setup](docs/network.md)
 
 ## Changelog
+
+### v1.3.2
+- Performance: removed M114 position polling after every move — dead-reckoning only, M114 only on initial connect
+- Performance: canvas render loop decoupled from state events during animation — direct `render()` call from movement RAF
+- Performance: track recording and mosaic tiles disabled by default, opt-in toggles in Settings
+- Stage settings: movement animation now synced to real hardware duration (server returns actual M400 time)
+- Camera: mosaic tile appears instantly on canvas (added to tile array only after image decode)
+- Camera: connection status text colored green/red matching XYZ Stage style
+- Camera: double-click on any viewport → fullscreen
+- Camera: "No device" label replaced by real device label from `enumerateDevices()`
+- Settings: removed all emoji icons from section headers and Home button
+- Track/history points hidden on canvas when "Record track" is unchecked
+- Tiles: `navigatorMode` controlled by tiles toggle
+- Fixed `_trackingEnabled` key mismatch between localStorage and state.js
 
 ### v1.3.1
 - Fast Explore: creates a dedicated scenario in the scenario builder (move → wait → capture), with configurable sweep patterns (snake, spiral-in, spiral-out, reverse, random, row by row)

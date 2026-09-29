@@ -34,6 +34,27 @@ class CameraModule {
     this.tiles = [];
     // Register scenario action early (even without driver)
     setTimeout(() => this._registerScenarioAction(), 100);
+    // Detect new device plugged in
+    navigator.mediaDevices?.addEventListener('devicechange', async () => {
+      if (!this.live && this.driverName) {
+        // Try to reconnect with same driver
+        const cams = window._cameras || [];
+        const cam = cams.find(c => c.type === this.driverName);
+        if (cam) {
+          const ok = await this.setDriver(this.driverName, { deviceId: cam.deviceId, url: cam.url });
+          if (ok) {
+            await this.startLive();
+            // Refresh viewport with new stream
+            const display = window.EnderTrack?.Display;
+            if (display) {
+              const vpIdx = display.viewports.length > 1 ? 1 : 0;
+              display.assignSource(vpIdx, null);
+              setTimeout(() => display.assignSource(vpIdx, 'camera:0'), 100);
+            }
+          }
+        }
+      }
+    });
   }
 
   // === DRIVER MANAGEMENT ===
@@ -135,7 +156,7 @@ class CameraModule {
   async startLive() {
     if (!this.driver) return false;
     const ok = await this.driver.startLive();
-    if (ok) { this.live = true; this._renderNav(); }
+    if (ok) { this.live = true; this._renderNav(); this._updateStatus(); }
     return ok;
   }
 
@@ -144,6 +165,7 @@ class CameraModule {
     await this.driver.stopLive();
     this.live = false;
     this._renderNav();
+    this._updateStatus();
     return true;
   }
 
@@ -459,7 +481,7 @@ class CameraModule {
     // Grab tile after movement
     window.EnderTrack?.Events?.on?.('movement:completed', () => {
       console.log('[Mosaic] movement:completed, navigatorMode:', this.navigatorMode, 'live:', this.live);
-      if (this.navigatorMode && this.live) {
+      if (this.navigatorMode && this.live && window._tilesEnabled) {
         clearTimeout(this._navDebounce);
         this._navDebounce = setTimeout(() => this._grabNavigatorTile(), 500);
       }
@@ -500,13 +522,18 @@ class CameraModule {
     const heightMm = (h_px * ps) / 1000;
 
     const tileImg = new Image();
+    tileImg.onload = () => {
+      // Replace existing tile at same position
+      const existing = this.tiles.findIndex(t => Math.abs(t.x - x) < 0.01 && Math.abs(t.y - y) < 0.01);
+      if (existing >= 0) this.tiles[existing] = tile;
+      else this.tiles.push(tile);
+      this._renderTilesPanel();
+      this._renderNav();
+      window.EnderTrack?.Canvas?.requestRender?.();
+      this._saveTiles();
+    };
     tileImg.src = 'data:image/jpeg;base64,' + frameData.frame;
     const tile = { img: tileImg, x, y, w_px, h_px, widthMm, heightMm, timestamp: Date.now(), visible: true };
-
-    // Replace existing tile at same position
-    const existing = this.tiles.findIndex(t => Math.abs(t.x - x) < 0.01 && Math.abs(t.y - y) < 0.01);
-    if (existing >= 0) this.tiles[existing] = tile;
-    else this.tiles.push(tile);
 
     // Save to server gallery
     const path = './captures/mosaic_X' + x.toFixed(2) + '_Y' + y.toFixed(2) + '.png';
@@ -517,12 +544,6 @@ class CameraModule {
     }).catch(() => {});
     // Copy live contrast/LUT settings to gallery for this image
     this._saveLiveSettingsForImage(path);
-
-    this._renderTilesPanel();
-    this._renderNav();
-    window.EnderTrack?.Canvas?.requestRender?.();
-    // Persist tile metadata
-    this._saveTiles();
   }
 
   _saveTiles() {
@@ -865,18 +886,25 @@ class CameraModule {
 
   // === STATUS WIDGET ===
 
+  _onDriverError() {
+    if (!this.live) return;
+    this.live = false;
+    this._updateStatus();
+    this._renderCameraConfig();
+  }
+
   _updateStatus() {
     const sp = window.EnderTrack?.StatusPeripherals;
     if (!sp) return;
     const cameras = window._cameras || [];
-    // Remove old entries
     for (let i = 0; i < 8; i++) sp.remove('camera_' + i);
-    if (!cameras.length) return;    cameras.forEach((cam, i) => {
+    if (!cameras.length) return;
+    cameras.forEach((cam, i) => {
+      const connected = this.live && this.driverName === (cam.type === 'picamera2' ? 'picamera2' : cam.type);
       sp.set('camera_' + i, {
-        name: cam.label,
-        icon: '📷',
-        state: 'connected',
-        detail: cam.type
+        name: cam.label || cam.type,
+        state: connected ? 'connected' : 'disconnected',
+        detail: connected ? (this.deviceLabel || cam.type) : null
       });
     });
   }
@@ -957,31 +985,34 @@ class CameraModule {
     const rot = cam.rotation || 0;
     const infoLine = isPicam
       ? `<span>Device ${cam.deviceId ?? '—'}</span><span>${cam.resolution?.join('×') ?? '—'}</span><span>${cam.format ?? '—'}</span>`
-      : `<span>${cam.deviceId ? cam.deviceId.slice(0,16) + '…' : 'No device'}</span>`;
+      : `<span>${this.deviceLabel || cam.deviceId?.slice(0,16) || cam.type}</span>`;
     zone.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:5px;font-size:10px;">
-        <div style="display:flex;gap:8px;color:#555;font-size:9px;padding-bottom:5px;border-bottom:1px solid #333;">${infoLine}</div>
-        <div id="camStatusMsg_${idx}" style="font-size:9px;color:#ef4444;display:${connected?'none':''};">Not connected</div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <label style="width:65px;color:var(--text-general);">Pixel size</label>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:11px;">
+        <div style="display:flex;gap:8px;color:var(--text-general);font-size:11px;padding-bottom:5px;border-bottom:1px solid #333;">${infoLine}</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="status-indicator ${connected ? 'connected' : ''}"></div>
+          <span style="font-size:11px;color:${connected ? '#10b981' : '#ef4444'}">${connected ? 'Connected (' + (this.deviceLabel || cam.type) + ')' : 'Not connected'}</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="width:40px;color:var(--text-general);">Pixel size</label>
           <input type="range" min="0.1" max="20" value="${ps}" step="0.01"
             oninput="this.nextElementSibling.value=this.value"
             onchange="window._cameras[${idx}].pixel_size=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({pixel_size:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
-            style="flex:1;height:3px;">
+            style="flex:1;height:4px;">
           <input type="number" value="${ps}" min="0.01" step="0.01"
             onchange="window._cameras[${idx}].pixel_size=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({pixel_size:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
-            style="width:38px;padding:2px;background:var(--container-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:10px;text-align:center;">
-          <span style="font-size:9px;color:#555;">µm/px</span>
+            style="width:45px;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
+          <span style="font-size:11px;color:var(--text-general);">µm/px</span>
         </div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <label style="width:65px;color:var(--text-general);">Rotation</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="width:40px;color:var(--text-general);">Rotation</label>
           <input type="range" min="0" max="360" value="${rot}" step="0.5"
             oninput="this.nextElementSibling.value=this.value"
             onchange="window._cameras[${idx}].rotation=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
-            style="flex:1;height:3px;">
+            style="flex:1;height:4px;">
           <input type="number" value="${rot}" min="0" max="360" step="0.5"
             onchange="window._cameras[${idx}].rotation=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
-            style="width:38px;padding:2px;background:var(--container-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:10px;text-align:center;">
+            style="width:45px;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
         </div>
       </div>
     `;
