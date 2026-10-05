@@ -1,0 +1,11 @@
+{
+  "id": "gamepadSimple",
+  "name": "Gamepad Simple",
+  "folder": "gamepad-simple",
+  "version": "1.0.0",
+  "description": "Manette PS4/Xbox — stick gauche XY, gâchettes Z, boutons actions",
+  "icon": "🎮",
+  "tools": [],
+  "widgets": [],
+  "navButtons": []
+}

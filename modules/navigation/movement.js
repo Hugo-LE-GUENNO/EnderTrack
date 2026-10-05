@@ -37,6 +37,12 @@ class MovementEngine {
             EnderTrack.Canvas?.requestRender?.();
             EnderTrack.ZVisualization?.render?.();
             EnderTrack.UI?.showNotification?.('Homing done', 'success');
+          } else if (evt.type === 'position:gcode') {
+            // G28/G92 depuis console — bypass _isLocalMove, snap immédiat
+            this._cancelAnim();
+            this.isMoving = false;
+            this._isLocalMove = false;
+            this._remoteArrive(evt.data);
           } else if (evt.type === 'sync:overlays') {
             if (window.EnderTrack?.Overlays) {
               window.EnderTrack.Overlays._loadFromData(evt.data);
@@ -121,18 +127,18 @@ class MovementEngine {
   }
 
   _remoteArrive(data) {
-    // Don't cancel animation - just ensure final position when it ends
+    this._cancelAnim();
     this.isMoving = false;
     const pos = { x: data.x, y: data.y, z: data.z };
     EnderTrack.State.update({ pos, isMoving: false });
     EnderTrack.Events.notifyListeners('position:changed', pos);
-    // Sync inputs
     const ix = document.getElementById('inputX');
     const iy = document.getElementById('inputY');
     const iz = document.getElementById('inputZ');
     if (ix) ix.value = pos.x.toFixed(2);
     if (iy) iy.value = pos.y.toFixed(2);
     if (iz) iz.value = pos.z.toFixed(2);
+    EnderTrack.Canvas?.render?.();
   }
 
   _broadcast(type, data) {

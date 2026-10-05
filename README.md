@@ -1,4 +1,4 @@
-# EnderTrack — imaging v1.3.2
+# EnderTrack — imaging v1.3.3
 
 <p align="center">
   <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" height="64">
@@ -45,6 +45,14 @@ python3 endertrack-server.py --lan
 👉 [Network, hotspot, RPi setup](docs/network.md)
 
 ## Changelog
+
+### v1.3.3
+- Navigation: G28/G92 from G-code console now correctly updates simulator position (new `position:gcode` SSE event, bypasses `_isLocalMove`)
+- Navigation: `_remoteArrive` now calls `Canvas.render()` directly to bypass the `isMoving` guard in `state:changed`
+- Camera: mosaic tiles correctly rendered in RGB mode — cache invalidated on LUT/RGB switch
+- Plugin: new **Gamepad Simple** plugin — D-pad XY, L1/R1 Z, face buttons for capture/home/scenario/add position, Options → G28 XY homing
+- Stage: G-code console logs all commands and responses (`[GCODE]`, `[RESP]`, `[POS]`)
+- Stage: M400 sent before M114 after G28/G92 to ensure homing is complete before reading position
 
 ### v1.3.2
 - Performance: removed M114 position polling after every move — dead-reckoning only, M114 only on initial connect

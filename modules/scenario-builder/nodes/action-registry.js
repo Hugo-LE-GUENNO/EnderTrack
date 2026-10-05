@@ -41,17 +41,19 @@ class ActionRegistry {
         let x = 0, y = 0, z = 0;
         if (params.moveType === 'relative') {
           x = _evalExpr(params.dx, vars); y = _evalExpr(params.dy, vars); z = _evalExpr(params.dz, vars);
-          await window.EnderTrack?.Movement?.moveRelative(x, y, z, feedrate);
+          const r1 = await window.EnderTrack?.Movement?.moveRelative(x, y, z, feedrate);
+          context._lastMoveDuration = (typeof r1 === 'object' && r1?.duration) ? r1.duration * 1000 : 0;
         } else if (params.moveType === 'list') {
           const lists = window.EnderTrack?.Lists?.manager?.getAllLists?.() || [];
           const list = lists.find(l => String(l.id) === String(params.listId)) || lists[0];
           const idx = Math.floor(_evalExpr(params.listIndex, vars));
           const pos = list?.positions?.[idx];
-          if (pos) { x = pos.x; y = pos.y; z = pos.z; await window.EnderTrack?.Movement?.moveAbsolute(x, y, z, feedrate); }
-          else { await new Promise(r => setTimeout(r, 0)); }
+          if (pos) { x = pos.x; y = pos.y; z = pos.z; const r2 = await window.EnderTrack?.Movement?.moveAbsolute(x, y, z, feedrate); context._lastMoveDuration = (typeof r2 === 'object' && r2?.duration) ? r2.duration * 1000 : 0; }
+          else { await new Promise(r => setTimeout(r, 0)); context._lastMoveDuration = 0; }
         } else {
           x = _evalExpr(params.x, vars); y = _evalExpr(params.y, vars); z = _evalExpr(params.z, vars);
-          await window.EnderTrack?.Movement?.moveAbsolute(x, y, z, feedrate);
+          const r3 = await window.EnderTrack?.Movement?.moveAbsolute(x, y, z, feedrate);
+          context._lastMoveDuration = (typeof r3 === 'object' && r3?.duration) ? r3.duration * 1000 : 0;
         }
         if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`🎯 (${x}, ${y}, ${z}) @${feedrate}mm/min`, 'info');
         return { success: true };
@@ -174,6 +176,10 @@ class ActionRegistry {
         const fullPath = `${params.path || './captures'}/${name}.${params.format || 'tiff'}`;
         const result = await camera.capture({ format: params.format || 'tiff', path: fullPath, cameraId: params.camera });
         if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`📷 ${result.path || fullPath}`, 'info');
+        if (camera.navigatorMode && camera.live && window._tilesEnabled) {
+          const f = await camera.getFrame();
+          if (f?.frame) camera._addTile(f);
+        }
         return { success: !!result.path, path: result.path };
       }
     });

@@ -208,7 +208,7 @@ class CameraModule {
     rgbRow.innerHTML = `<span style="width:14px; display:inline-block;">${!renderer?.enabled ? '\u2713' : ''}</span>RGB (no LUT)`;
     rgbRow.onmouseenter = () => rgbRow.style.background = 'var(--app-bg)';
     rgbRow.onmouseleave = () => rgbRow.style.background = '';
-    rgbRow.onclick = () => { if (renderer) { renderer.enabled = false; renderer.lutId = 'gray'; renderer._lutTable = null; } this._liveLutId = 'gray'; this._saveLiveSettings(); menu.remove(); };
+    rgbRow.onclick = () => { if (renderer) { renderer.enabled = false; renderer.lutId = 'gray'; renderer._lutTable = null; } this._liveLutId = 'gray'; this._saveLiveSettings(); this.tiles.forEach(t => { t._processed = null; }); EnderTrack.Canvas?.requestRender?.(); menu.remove(); };
     menu.appendChild(rgbRow);
     const sep = document.createElement('div');
     sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
@@ -221,7 +221,7 @@ class CameraModule {
       row.textContent = def.name;
       row.onmouseenter = () => { if (!active) row.style.background = 'var(--app-bg)'; };
       row.onmouseleave = () => { if (!active) row.style.background = ''; };
-      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.LiveRenderer; if (renderer) { renderer.setLut(id); renderer.enabled = true; }; this.histogram?._redraw?.(); this._saveLiveSettings(); menu.remove(); };
+      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.LiveRenderer; if (renderer) { renderer.setLut(id); renderer.enabled = true; }; this.histogram?._redraw?.(); this._saveLiveSettings(); this.tiles.forEach(t => { t._processed = null; }); EnderTrack.Canvas?.requestRender?.(); menu.remove(); };
       menu.appendChild(row);
     }
     document.body.appendChild(menu);
@@ -252,7 +252,7 @@ class CameraModule {
       </style>
       ${cameras.map((cam, i) => {
         const isPicam = cam.type === 'picamera2';
-        const connected = this.live && (isPicam ? this.driverName === 'picamera2' : this.driverName === cam.type);
+        const connected = this.live && (isPicam ? this.driverName === 'mjpeg' : this.driverName === cam.type);
         const dis = connected ? '' : 'disabled';
         const ps = cam.pixel_size || this.picamConfig.pixel_size || 1.0;
         const rot = cam.rotation || this.picamConfig.rotation || 0;
@@ -478,32 +478,32 @@ class CameraModule {
     // Tiles are now rendered directly by xy-canvas.js (before cursor)
     // Render gallery panel
     this._renderTilesPanel();
-    // Grab tile after movement
-    window.EnderTrack?.Events?.on?.('movement:completed', () => {
-      console.log('[Mosaic] movement:completed, navigatorMode:', this.navigatorMode, 'live:', this.live);
-      if (this.navigatorMode && this.live && window._tilesEnabled) {
-        clearTimeout(this._navDebounce);
-        this._navDebounce = setTimeout(() => this._grabNavigatorTile(), 500);
-      }
-    });
-    // Grab tile during scenario
-    window.EnderTrack?.Events?.on?.('scenario:position_reached', () => {
-      if (this.live) {
-        const expMs = (this.picamConfig.exposure || 100000) / 1000;
-        setTimeout(() => this._grabNavigatorTile(), Math.max(500, expMs * 2));
-      }
+    // Grab tile après mouvement — navigation manuelle uniquement (pas pendant un scenario)
+    window.EnderTrack?.Events?.on?.('movement:completed', ({ position, success } = {}) => {
+      if (!this.navigatorMode || !this.live || !window._tilesEnabled) return;
+      if (window.EnderTrack?.Scenario?.isActive) return;
+      if (success === false) return;
+      clearTimeout(this._navDebounce);
+      // Calcul du délai : distance parcourue / vitesse + exposition
+      const state = window.EnderTrack?.State?.get?.();
+      const pos = state?.pos || { x: 0, y: 0, z: 0 };
+      const prev = this._lastNavPos || pos;
+      const dist = Math.sqrt((pos.x - prev.x) ** 2 + (pos.y - prev.y) ** 2 + (pos.z - prev.z) ** 2);
+      const feedrate = state?.feedrate || 3000;
+      const moveMs = (dist / (feedrate / 60)) * 1000;
+      const expMs = (this.picamConfig.exposure || 100000) / 1000;
+      const waitMs = Math.max(300, moveMs + expMs + 300);
+      this._lastNavPos = { ...pos };
+      this._navDebounce = setTimeout(() => this._grabNavigatorTile(), waitMs);
     });
   }
 
   async _grabNavigatorTile() {
     if (this._navGrabbing || !this.driver) return;
     this._navGrabbing = true;
-    console.log('[Mosaic] grabbing tile...');
     try {
       const frame = await this.getFrame();
-      console.log('[Mosaic] frame:', frame ? `${frame.width}x${frame.height}` : 'null');
       if (frame?.frame) this._addTile(frame);
-      else console.warn('[Mosaic] no frame data');
     } finally {
       this._navGrabbing = false;
     }
@@ -900,7 +900,7 @@ class CameraModule {
     for (let i = 0; i < 8; i++) sp.remove('camera_' + i);
     if (!cameras.length) return;
     cameras.forEach((cam, i) => {
-      const connected = this.live && this.driverName === (cam.type === 'picamera2' ? 'picamera2' : cam.type);
+      const connected = this.live && this.driverName === (cam.type === 'picamera2' ? 'mjpeg' : cam.type);
       sp.set('camera_' + i, {
         name: cam.label || cam.type,
         state: connected ? 'connected' : 'disconnected',
@@ -980,7 +980,7 @@ class CameraModule {
     const cam = (window._cameras || [])[idx];
     if (!cam) return;
     const isPicam = cam.type === 'picamera2';
-    const connected = this.live && this.driverName === cam.type;
+    const connected = this.live && (cam.type === 'picamera2' ? this.driverName === 'mjpeg' : this.driverName === cam.type);
     const ps = cam.pixel_size || 1.0;
     const rot = cam.rotation || 0;
     const infoLine = isPicam
@@ -1003,6 +1003,7 @@ class CameraModule {
             onchange="window._cameras[${idx}].pixel_size=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({pixel_size:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
             style="width:45px;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
           <span style="font-size:11px;color:var(--text-general);">µm/px</span>
+          <button onclick="EnderTrack.Camera._openCalibModal(${idx})" style="padding:2px 7px;border:1px solid #444;border-radius:var(--radius-small);background:var(--app-bg);color:var(--text-general);font-size:11px;cursor:pointer;">Cal</button>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <label style="width:40px;color:var(--text-general);">Rotation</label>
@@ -1016,6 +1017,113 @@ class CameraModule {
         </div>
       </div>
     `;
+  }
+
+  _openCalibModal(idx) {
+    document.getElementById('calib-modal')?.remove();
+    const cam = (window._cameras || [])[idx];
+    const isPicam = cam?.type === 'picamera2';
+
+    const modal = document.createElement('div');
+    modal.id = 'calib-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:10000;';
+
+    modal.innerHTML = `
+      <div style="background:var(--container-bg);border-radius:8px;padding:16px;width:520px;max-width:95vw;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;font-weight:600;color:var(--text-selected);">Calibrate pixel size</span>
+          <button onclick="document.getElementById('calib-modal').remove()" style="background:none;border:none;color:#888;font-size:16px;cursor:pointer;">✕</button>
+        </div>
+        <div style="font-size:10px;color:#888;">Draw a line on a known structure, then enter its real length.</div>
+        <canvas id="calib-canvas" style="width:100%;border:1px solid #444;border-radius:4px;cursor:crosshair;touch-action:none;"></canvas>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:11px;color:var(--text-general);white-space:nowrap;">Line length:</span>
+          <input id="calib-length-px" readonly value="—" style="width:60px;padding:3px 5px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
+          <span style="font-size:11px;color:#666;">px =</span>
+          <input id="calib-length-um" type="number" value="10" min="0.01" step="0.1" style="width:70px;padding:3px 5px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
+          <span style="font-size:11px;color:var(--text-general);">µm</span>
+          <button id="calib-apply-btn" disabled onclick="EnderTrack.Camera._applyCalib(${idx})" style="margin-left:auto;padding:4px 14px;border:none;border-radius:4px;background:var(--active-element);color:var(--text-selected);font-size:11px;cursor:pointer;opacity:0.4;">Apply</button>
+        </div>
+        <div id="calib-result" style="font-size:10px;color:#10b981;min-height:14px;"></div>
+      </div>`;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('mousedown', e => { if (e.target === modal) modal.remove(); });
+
+    // Load current frame into canvas
+    const canvas = document.getElementById('calib-canvas');
+    const ctx = canvas.getContext('2d');
+    let lineStart = null, lineEnd = null;
+
+    const drawFrame = (img) => {
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      canvas.style.maxHeight = '320px';
+      ctx.drawImage(img, 0, 0);
+    };
+
+    const drawLine = () => {
+      if (!lineStart || !lineEnd) return;
+      const img = this._calibImg;
+      if (img) { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); }
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(lineStart.x, lineStart.y);
+      ctx.lineTo(lineEnd.x, lineEnd.y);
+      ctx.stroke();
+      // endpoints
+      [lineStart, lineEnd].forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#f59e0b'; ctx.fill();
+      });
+      const dx = lineEnd.x - lineStart.x, dy = lineEnd.y - lineStart.y;
+      const lenPx = Math.sqrt(dx*dx + dy*dy);
+      this._calibLenPx = lenPx;
+      document.getElementById('calib-length-px').value = Math.round(lenPx);
+      const btn = document.getElementById('calib-apply-btn');
+      btn.disabled = lenPx < 2;
+      btn.style.opacity = lenPx < 2 ? '0.4' : '1';
+      const um = parseFloat(document.getElementById('calib-length-um').value);
+      if (um > 0 && lenPx > 2) {
+        document.getElementById('calib-result').textContent = `→ pixel size = ${(um / lenPx).toFixed(4)} µm/px`;
+      }
+    };
+
+    document.getElementById('calib-length-um').addEventListener('input', drawLine);
+
+    // Mouse events — scale to canvas coords
+    const getPos = e => {
+      const r = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / r.width, scaleY = canvas.height / r.height;
+      return { x: (e.clientX - r.left) * scaleX, y: (e.clientY - r.top) * scaleY };
+    };
+    canvas.addEventListener('mousedown', e => { lineStart = getPos(e); lineEnd = null; });
+    canvas.addEventListener('mousemove', e => { if (!lineStart || e.buttons !== 1) return; lineEnd = getPos(e); drawLine(); });
+    canvas.addEventListener('mouseup', e => { lineEnd = getPos(e); drawLine(); });
+
+    // Grab frame
+    this.getFrame().then(f => {
+      if (!f?.frame) return;
+      const img = new Image();
+      img.onload = () => { this._calibImg = img; drawFrame(img); };
+      img.src = 'data:image/jpeg;base64,' + f.frame;
+    });
+  }
+
+  _applyCalib(idx) {
+    const lenPx = this._calibLenPx;
+    const um = parseFloat(document.getElementById('calib-length-um').value);
+    if (!lenPx || lenPx < 2 || !um) return;
+    const ps = parseFloat((um / lenPx).toFixed(4));
+    const curRes = this.picamConfig.resolution || [1280, 720];
+    const cam = (window._cameras || [])[idx];
+    if (cam) { cam.pixel_size = ps; window._savePeripherals?.(); }
+    const isPicam = cam?.type === 'picamera2';
+    if (isPicam) this.setPicamConfig({ pixel_size: ps, pixel_size_ref_res: curRes });
+    else { this.picamConfig.pixel_size_ref_res = curRes; this._applyWebcamMeta(idx); }
+    this._renderCamCard(idx);
+    document.getElementById('calib-modal')?.remove();
   }
 
   _recalcTiles() {
@@ -1041,7 +1149,7 @@ class CameraModule {
     if (resolution || format) {
       await this.setPicamConfig({ ...(resolution ? {resolution} : {}), ...(format ? {format} : {}) });
     }
-    const ok = await this.setDriver('picamera2', { deviceId });
+    const ok = await this.setDriver('mjpeg', { url: (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/camera/picam/stream' });
     const idx = (window._cameras || []).findIndex(c => c.type === 'picamera2');
     if (idx < 0) return;
     if (!ok) {

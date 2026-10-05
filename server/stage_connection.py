@@ -4,6 +4,9 @@ Gère la connexion, le G-code, les mouvements, le homing, l'arrêt d'urgence.
 """
 
 import time
+import threading
+
+_serial_lock = threading.Lock()
 
 # ─── Import pyserial (optionnel) ─────────────────────────────────────────────
 
@@ -84,28 +87,29 @@ class Stage:
             pass
 
     def send_gcode(self, command, wait_ok=False, timeout=10, _log=True):
-        if not self.ser.is_open:
-            raise Exception("Port série fermé")
-        if not command.endswith("\n"):
-            command += "\n"
-        if _log:
-            cmd = command.strip()
-            if cmd and cmd not in ('M114', 'M400', 'M115', 'G21', 'G90', 'G91'):
-                print(f"  > {cmd}")
-        self.ser.write(command.encode('utf-8'))
-        if wait_ok:
-            lines = []
-            deadline = time.time() + timeout
-            while time.time() < deadline:
-                line = self.ser.readline().decode('utf-8', errors='ignore').strip()
-                if not line:
-                    continue
-                lines.append(line)
-                if line.startswith('ok'):
-                    return lines
-            lines.append("timeout")
-            return lines
-        return ["sent"]
+        with _serial_lock:
+            if not self.ser.is_open:
+                raise Exception("Port série fermé")
+            if not command.endswith("\n"):
+                command += "\n"
+            if _log:
+                cmd = command.strip()
+                if cmd and cmd not in ('M115', 'G21', 'G90', 'G91'):
+                    print(f"  > {cmd}")
+            self.ser.write(command.encode('utf-8'))
+            if wait_ok:
+                lines = []
+                deadline = time.time() + timeout
+                while time.time() < deadline:
+                    line = self.ser.readline().decode('utf-8', errors='ignore').strip()
+                    if not line:
+                        continue
+                    lines.append(line)
+                    if line.startswith('ok'):
+                        return lines
+                lines.append("timeout")
+                return lines
+            return ["sent"]
 
     def move_absolute(self, x, y, z, feedrate=3000):
         print(f"  > [ABS] G1 X{x} Y{y} Z{z} F{feedrate}")
@@ -115,15 +119,20 @@ class Stage:
 
     def move_relative(self, dx, dy, dz, feedrate=3000):
         print(f"  > [REL] G1 X{dx} Y{dy} Z{dz} F{feedrate}")
-        self.send_gcode("G91", wait_ok=True, _log=False)
-        try:
-            lines = self.send_gcode(f"G1 X{dx} Y{dy} Z{dz} F{feedrate}", wait_ok=True, _log=False)
-            if 'timeout' in lines: self.firmware_name = None; return
-            self.position['X'] += float(dx)
-            self.position['Y'] += float(dy)
-            self.position['Z'] += float(dz)
-        finally:
-            self.send_gcode("G90", wait_ok=True, _log=False)
+        # G91→G1→G90 doit être atomique — on tient le lock pour toute la séquence
+        with _serial_lock:
+            if not self.ser.is_open:
+                raise Exception("Port série fermé")
+            for cmd in ("G91\n", f"G1 X{dx} Y{dy} Z{dz} F{feedrate}\n", "G90\n"):
+                self.ser.write(cmd.encode('utf-8'))
+                deadline = time.time() + 10
+                while time.time() < deadline:
+                    line = self.ser.readline().decode('utf-8', errors='ignore').strip()
+                    if line.startswith('ok'):
+                        break
+        self.position['X'] += float(dx)
+        self.position['Y'] += float(dy)
+        self.position['Z'] += float(dz)
 
     def finish_moves(self):
         time.sleep(0.05)
@@ -352,15 +361,18 @@ def register_routes(app):
         if command.split()[0].upper() in blocked:
             return jsonify({'success': False, 'error': f'Commande bloquée: {command.split()[0]}'})
         if stage:
+            print(f"  [GCODE] {command}")
             lines = stage.send_gcode(command, wait_ok=True)
-            # Si G28 ou G92, resync la position réelle
+            print(f"  [RESP]  {lines}")
             cmd_upper = command.strip().upper()
             if cmd_upper.startswith('G28') or cmd_upper.startswith('G92'):
+                stage.send_gcode('M400', wait_ok=True)
                 stage.get_position()
                 p = stage.position
+                print(f"  [POS]   X:{p['X']} Y:{p['Y']} Z:{p['Z']} -> position:gcode")
                 try:
                     from server.event_stream import bus
-                    bus.publish('position:arrived', {'x': p['X'], 'y': p['Y'], 'z': p['Z']})
+                    bus.publish('position:gcode', {'x': p['X'], 'y': p['Y'], 'z': p['Z']})
                 except: pass
             return jsonify({'success': True, 'response': lines})
         return jsonify({'success': True, 'response': [f'[SIM] {command}', 'ok']})

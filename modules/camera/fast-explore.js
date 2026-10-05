@@ -372,7 +372,7 @@ class EnderpicamFastExplore {
     const expUs = EnderTrack.Camera?.picamConfig?.exposure || 100000;
     const expDelay = Math.ceil(expUs / 1000) * 2;
     const afDelay = this.afEnabled ? 20000 : 0;
-    const waitSec = parseFloat(((Math.max(2000, expDelay + 1500 + afDelay)) / 1000).toFixed(1));
+    const waitSec = parseFloat(((Math.max(2000, expDelay + 2000 + afDelay)) / 1000).toFixed(1));
 
     const loopChildren = [
       { type: 'action', actionId: 'move', params: { moveType: 'list', listId, listIndex: '$i' } },

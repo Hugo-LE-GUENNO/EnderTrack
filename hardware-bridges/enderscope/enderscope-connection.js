@@ -471,13 +471,14 @@ class EnderscopeConnection {
 
   async checkConnectionHealth() {
     try {
-      const response = await fetch(`${this.serverUrl}/api/status`, { signal: AbortSignal.timeout(3000) });
+      const response = await fetch(`${this.serverUrl}/api/status`, { signal: AbortSignal.timeout(6000) });
       if (!response.ok) throw new Error('Server unavailable');
       const status = await response.json();
+      this._healthFailCount = 0;
       if (!status.connected) {
+        this._healthFailCount = 0;
         this.handleConnectionLost('Serial port disconnected');
       } else if (status.firmware && !this.isConnected) {
-        // Recovered
         this.isConnected = true;
         this.firmwareName = status.firmware;
         this.connectionError = null;
@@ -485,7 +486,11 @@ class EnderscopeConnection {
         await this.syncPosition();
       }
     } catch {
-      if (this.isConnected) this.handleConnectionLost('Server unavailable');
+      this._healthFailCount = (this._healthFailCount || 0) + 1;
+      if (this._healthFailCount >= 3) {
+        this._healthFailCount = 0;
+        if (this.isConnected) this.handleConnectionLost('Server unavailable');
+      }
     }
   }
 

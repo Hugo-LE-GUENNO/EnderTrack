@@ -309,8 +309,8 @@
                                       <div style="display:flex;gap:8px;align-items:center;">
                                         <label style="width:80px;font-size:10px;color:var(--text-general);">Type</label>
                                         <select id="acType" onchange="window._onAddCamTypeChange()" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
-                                          <option value="webcam">USB / Webcam</option>
                                           <option value="picamera2">Raspberry Pi Camera</option>
+                                          <option value="webcam">USB / Webcam</option>
                                         </select>
                                       </div>
                                       <div id="acWebcamFields" style="display:flex;flex-direction:column;gap:8px;">
@@ -321,7 +321,7 @@
                                           </select>
                                         </div>
                                       </div>
-                                      <div id="acPicamFields" style="display:none;flex-direction:column;gap:8px;">
+                                      <div id="acPicamFields" style="display:flex;flex-direction:column;gap:8px;">
                                         <div style="display:flex;gap:8px;align-items:center;">
                                           <label style="width:80px;font-size:10px;color:var(--text-general);">Device</label>
                                           <select id="acDevice" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
@@ -337,25 +337,6 @@
                                             <option value="640,480">640×480 (Preview)</option>
                                           </select>
                                         </div>
-                                        <div style="display:flex;gap:8px;align-items:center;">
-                                          <label style="width:80px;font-size:10px;color:var(--text-general);">Format</label>
-                                          <select id="acFormat" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
-                                            <option value="RGB888">RGB888</option>
-                                            <option value="XRGB8888">XRGB8888</option>
-                                            <option value="YUV420">YUV420</option>
-                                          </select>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-                                      <div style="display:flex;gap:8px;align-items:center;">
-                                        <label style="width:80px;font-size:10px;color:var(--text-general);">Pixel size</label>
-                                        <input id="acPixelSize" type="number" value="1.0" min="0.01" step="0.01" style="width:60px;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:10px;text-align:center;">
-                                        <span style="font-size:9px;color:#555;">µm/px</span>
-                                      </div>
-                                      <div style="display:flex;gap:8px;align-items:center;">
-                                        <label style="width:80px;font-size:10px;color:var(--text-general);">Rotation</label>
-                                        <input id="acRotation" type="number" value="0" min="0" max="360" step="0.5" style="width:60px;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:10px;text-align:center;">°
                                       </div>
                                     </div>
                                     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
@@ -375,20 +356,19 @@
                                 if (fp) fp.style.display = t === 'picamera2' ? 'flex' : 'none';
                                 if (fw) fw.style.display = t === 'webcam' ? 'flex' : 'none';
                               };
+                              // Init: show picam fields by default
+                              setTimeout(() => window._onAddCamTypeChange(), 0);
 
                               window._confirmAddCamera = async () => {
                                 const type = document.getElementById('acType')?.value;
                                 const label = document.getElementById('acName')?.value || type;
-                                const pixel_size = parseFloat(document.getElementById('acPixelSize')?.value) || 1.0;
-                                const rotation = parseFloat(document.getElementById('acRotation')?.value) || 0;
                                 document.getElementById('addCameraModal')?.remove();
                                 if (type === 'picamera2') {
                                   const deviceId = document.getElementById('acDevice')?.value || '0';
                                   const res = (document.getElementById('acRes')?.value || '1280,720').split(',').map(Number);
-                                  const fmt = document.getElementById('acFormat')?.value || 'RGB888';
-                                  window._cameras.push({ type, label, id: Date.now(), deviceId, resolution: res, format: fmt, pixel_size, rotation });
+                                  window._cameras.push({ type, label, id: Date.now(), deviceId, resolution: res, pixel_size: 1.0, rotation: 0 });
                                   window._renderCameras(); window._savePeripherals();
-                                  await EnderTrack.Camera._connectPicam(deviceId, res, fmt);
+                                  await EnderTrack.Camera._connectPicam(deviceId, res);
                                 } else {
                                   const deviceId = document.getElementById('acWebcamDevice')?.value || '';
                                   window._cameras.push({ type, label, id: Date.now(), deviceId, pixel_size, rotation });
