@@ -375,11 +375,11 @@ class NotificationSystem {
   // System notifications for EnderTrack
   showMovementError(error) {
     return this.error(`Erreur de mouvement: ${error}`, {
-      title: 'Movement Failed',
+      title: 'Mouvement Échoué',
       actions: [
         {
           id: 'retry',
-          label: 'Retry',
+          label: 'Réessayer',
           handler: () => {
             // This would trigger a retry of the last movement
             EnderTrack.Events?.emit?.('movement:retry');
@@ -391,22 +391,22 @@ class NotificationSystem {
 
   showConnectionStatus(isConnected, service) {
     const message = isConnected 
-      ? `Connected to ${service}`
-      : `Disconnected from ${service}`;
+      ? `Connecté à ${service}`
+      : `Déconnecté de ${service}`;
     
     const type = isConnected ? 'success' : 'warning';
     
     return this.show(message, type, {
-      title: 'Connection Status',
+      title: 'État de Connexion',
       duration: 3000
     });
   }
 
   showPluginStatus(pluginName, status) {
     const messages = {
-      loaded: `Plugin ${pluginName} loaded`,
-      activated: `Plugin ${pluginName} activated`,
-      deactivated: `Plugin ${pluginName} deactivated`,
+      loaded: `Plugin ${pluginName} chargé`,
+      activated: `Plugin ${pluginName} activé`,
+      deactivated: `Plugin ${pluginName} désactivé`,
       error: `Erreur avec le plugin ${pluginName}`
     };
     
@@ -422,7 +422,7 @@ class NotificationSystem {
 
   // Debug and testing
   test() {
-    this.success('Test notification success!');
+    this.success('Test de notification réussie !');
     
     setTimeout(() => {
       this.warning('Attention: ceci est un test');

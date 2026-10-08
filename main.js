@@ -131,7 +131,7 @@ class EnderTrackBootstrap {
       const initTime = Math.round(endTime - startTime);
       
 
-      EnderTrack.UI.showNotification(`EnderTrack v2.0 ready! (${initTime}ms)`, 'success');
+      EnderTrack.UI.showNotification(`EnderTrack v2.0 prêt ! (${initTime}ms)`, 'success');
       
     } catch (error) {
 
@@ -172,10 +172,7 @@ class EnderTrackBootstrap {
   static async initializeUI() {
     // UI system
     await EnderTrack.UI.init();
-
-    // Plugin system
-    if (EnderTrack.PluginManager) EnderTrack.PluginManager.init();
-
+    
     // Canvas interactions
     const canvas = document.getElementById('mapCanvas');
     if (canvas && EnderTrack.CanvasInteractions) {
@@ -292,8 +289,8 @@ class EnderTrackBootstrap {
     
     // Synchroniser les limites de sécurité avec priorités
     // Priorité 1: localStorage (state.safetyLimits)
-    // Priorité 2: Fonction resetLimitsToBedSize (copie des coordinateBounds)
-    // Priorité 3: Values par défaut HTML
+    // Priorité 2: Fonction resetLimitsToPlateauSize (copie des coordinateBounds)
+    // Priorité 3: Valeurs par défaut HTML
     
     if (state.safetyLimits) {
       // Priorité 1: Restaurer depuis localStorage
@@ -324,8 +321,8 @@ class EnderTrackBootstrap {
     } else if (state.coordinateBounds) {
       // Priorité 2: Initialiser avec les plages de coordonnées
       setTimeout(() => {
-        if (window.resetLimitsToBedSize) {
-          window.resetLimitsToBedSize();
+        if (window.resetLimitsToPlateauSize) {
+          window.resetLimitsToPlateauSize();
         }
       }, 200);
     }
@@ -401,14 +398,14 @@ class EnderTrackBootstrap {
   }
   
   static handleInitError(error) {
-    const errorMsg = error.message || 'Error d\'initialisation inconnue';
+    const errorMsg = error.message || 'Erreur d\'initialisation inconnue';
     
     // Try to show error in UI if available
     if (EnderTrack.UI?.showError) {
-      EnderTrack.UI.showError(`Startup failed: ${errorMsg}`);
+      EnderTrack.UI.showError(`Échec du démarrage: ${errorMsg}`);
     } else {
       // Fallback to alert if UI not available
-      alert(`EnderTrack could not start: ${errorMsg}`);
+      alert(`EnderTrack n'a pas pu démarrer: ${errorMsg}`);
     }
     
     // Show recovery options
@@ -423,10 +420,10 @@ class EnderTrackBootstrap {
       border: 2px solid #ef4444; z-index: 10000; text-align: center;
     `;
     recovery.innerHTML = `
-      <h3>🚨 Startup Error</h3>
-      <p>EnderTrack could not start correctly.</p>
+      <h3>🚨 Erreur de Démarrage</h3>
+      <p>EnderTrack n'a pas pu démarrer correctement.</p>
       <button onclick="location.reload()" style="margin: 5px; padding: 8px 16px;">🔄 Recharger</button>
-      <button onclick="this.parentElement.remove()" style="margin: 5px; padding: 8px 16px;">❌ Close</button>
+      <button onclick="this.parentElement.remove()" style="margin: 5px; padding: 8px 16px;">❌ Fermer</button>
     `;
     document.body.appendChild(recovery);
   }
@@ -459,8 +456,8 @@ window.addEventListener('pagehide', () => {
 window.addEventListener('error', (event) => {
   console.error('Global error:', event.error || event.message || 'Unknown error');
   if (window.EnderTrack && window.EnderTrack.UI) {
-    const errorMsg = event.error?.message || event.message || 'Unknown system error';
-    EnderTrack.UI.showNotification('System error: ' + errorMsg, 'error');
+    const errorMsg = event.error?.message || event.message || 'Erreur système inconnue';
+    EnderTrack.UI.showNotification('Erreur système: ' + errorMsg, 'error');
   }
 });
 
@@ -468,7 +465,7 @@ window.addEventListener('error', (event) => {
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
   if (window.EnderTrack && window.EnderTrack.UI) {
-    EnderTrack.UI.showNotification('Error asynchrone: ' + (event.reason?.message || 'Error inconnue'), 'error');
+    EnderTrack.UI.showNotification('Erreur asynchrone: ' + (event.reason?.message || 'Erreur inconnue'), 'error');
   }
   event.preventDefault();
 });
@@ -487,9 +484,6 @@ window.switchTab = (tabId) => {
   if (window.EnderTrack?.Scenario?.isActive && !window.EnderTrack.Scenario.isExecuting) {
     window.EnderTrack.Scenario.deactivate();
   }
-  // Hide plugin right panels when leaving
-  EnderTrack.PluginManager?.plugins?.forEach(p => p.isActive && p.ui?.onTabLeave?.());
-
   
   // Reset canvas
   const canvas = window.EnderTrack?.Canvas?.getCanvas();
@@ -537,11 +531,13 @@ window.switchTab = (tabId) => {
   } else if (tabId === 'overlays' && window.EnderTrack?.Overlays) {
     window.EnderTrack.Overlays.activate();
   } else if (tabId === 'settings') {
+    // Calques are now in Configs tab
     window.EnderTrack?.Overlays?.activate?.();
+    // Sync navigation config
     if (typeof updateConfigLocks === 'function') updateConfigLocks();
+    // Update storage size
     const sizeLabel = document.getElementById('storageSizeLabel');
     if (sizeLabel && window.EnderTrack?.StorageManager) sizeLabel.textContent = window.EnderTrack.StorageManager.getStorageSize() + ' KB';
-    EnderTrack.PluginManager?.renderPluginList?.();
   } else if (tabId === 'lists' && window.EnderTrack?.Lists) {
     window.EnderTrack.Lists.activate();
     // Scenario is embedded in Positions tab
@@ -551,9 +547,6 @@ window.switchTab = (tabId) => {
   } else if (tabId === 'acquisition' && window.EnderTrack?.Scenario) {
     canvas.classList.add('scenario-mode');
     window.EnderTrack.Scenario.activate();
-  } else {
-    // Generic plugin tab — delegate to plugin UI
-    EnderTrack.PluginManager?.plugins?.get(tabId)?.ui?.onTabEnter?.();
   }
   
   // === STEP 5: INIT OVERLAYS/TRACKS ===
@@ -591,7 +584,7 @@ window.updateConfigLocks = function() {
   if (coupleBtn) {
     coupleBtn.style.background = coupled ? 'var(--active-element)' : 'var(--app-bg)';
     coupleBtn.style.color = coupled ? 'var(--text-selected)' : 'var(--text-general)';
-    coupleBtn.textContent = coupled ? '\u{1F517} XY coupled' : '\u{1F517} Couple XY';
+    coupleBtn.textContent = coupled ? '\u{1F517} XY coupl\u00e9s' : '\u{1F517} Coupler XY';
   }
 };
 
@@ -669,43 +662,43 @@ window.emergencyStop = () => EnderTrack.App.emergencyStop();
       .then(status => {
         // Server is always OK here
         if (light) { light.style.background = 'var(--success)'; light.style.boxShadow = '0 0 6px var(--success)'; }
-        if (label) label.textContent = 'Server ' + urlShort;
+        if (label) label.textContent = 'Serveur ' + urlShort;
 
-        if (status.connected && status.firmware) {
-            coordColor('var(--text-selected)');
-            previousStageConnected = true;
-            wasEverConnected = true;
+        if (status.connected) {
+          // Stage connected
+          if (light) { light.style.background = 'var(--success)'; light.style.boxShadow = '0 0 6px var(--success)'; }
+          if (label) label.textContent = 'Serveur ' + urlShort;
+          coordColor('var(--text-selected)');
+          previousStageConnected = true;
+          wasEverConnected = true;
+          // Show device row only when M115 info is ready
+          if (enderscope?.deviceInfoReady !== false) {
             if (stageLight) { stageLight.style.background = 'var(--success)'; stageLight.style.boxShadow = '0 0 4px var(--success)'; stageLight.style.animation = ''; }
             if (deviceRow) deviceRow.style.display = 'flex';
             if (deviceInfo) {
-              const name = enderscope?.deviceName || status.firmware || 'XYZ Stage';
-              deviceInfo.textContent = name + ' — ' + (status.port || 'USB');
+              const name = enderscope?.deviceName || status.printer_name || 'Platine XYZ';
+              deviceInfo.textContent = name + ' \u2014 ' + (status.port || 'USB');
             }
-        } else if (enderscope?.autoConnectEnabled === false) {
-          // Simulator mode volontaire → orange
-          if (stageLight) { stageLight.style.background = 'var(--coordinates-color)'; stageLight.style.boxShadow = '0 0 4px var(--coordinates-color)'; stageLight.style.animation = ''; }
-          if (deviceRow) deviceRow.style.display = 'flex';
-          if (deviceInfo) deviceInfo.textContent = 'Simulator mode';
-          coordColor('var(--coordinates-color)');
+          }
         } else if (wasEverConnected) {
           // Was connected before, now lost → red blink stays
           if (stageLight) { stageLight.style.background = 'var(--danger)'; stageLight.style.boxShadow = '0 0 6px var(--danger)'; stageLight.style.animation = 'statusBlink 1s ease-in-out infinite'; }
           if (deviceRow) deviceRow.style.display = 'flex';
-          if (deviceInfo) deviceInfo.textContent = 'XYZ Stage disconnected';
+          if (deviceInfo) deviceInfo.textContent = 'Platine XYZ d\u00e9connect\u00e9';
           coordColor('var(--coordinates-color)');
           previousStageConnected = false;
         } else {
-          // Server up, never had stage → red
-          if (stageLight) { stageLight.style.background = 'var(--danger)'; stageLight.style.boxShadow = '0 0 4px var(--danger)'; stageLight.style.animation = ''; }
+          // Server up, never had stage → orange
+          if (stageLight) { stageLight.style.background = 'var(--coordinates-color)'; stageLight.style.boxShadow = '0 0 4px var(--coordinates-color)'; stageLight.style.animation = ''; }
           if (deviceRow) deviceRow.style.display = 'flex';
-          if (deviceInfo) deviceInfo.textContent = 'XYZ Stage not connected';
+          if (deviceInfo) deviceInfo.textContent = 'Platine XYZ non connect\u00e9';
           coordColor('var(--coordinates-color)');
         }
       })
       .catch(() => {
         // No server = simulator
         if (light) { light.style.background = 'var(--coordinates-color)'; light.style.boxShadow = '0 0 6px var(--coordinates-color)'; }
-        if (label) label.textContent = 'Simulator';
+        if (label) label.textContent = 'Simulateur';
         if (deviceRow) deviceRow.style.display = 'none';
         coordColor('var(--coordinates-color)');
         previousStageConnected = false;
@@ -837,17 +830,17 @@ window.showAboutModal = async function() {
         onmouseleave="this.style.background='var(--active-element)'; this.style.color='var(--text-selected)'"
       >GitHub</a>
       <div style="font-size:11px; color:var(--text-general); margin-bottom:14px; line-height:1.6; text-align:left;">
-        Web interface + Python Flask server to control or simulate an XYZ stage.
-        Camera control, image acquisition, lighting, histogram, scenario builder and Fast Explore.
+        Interface web + serveur Python Flask pour piloter ou simuler un plateau XYZ.
+        Positions, listes, automatisations et extensions.
       </div>
       <div style="font-size:11px; color:var(--text-general); margin-bottom:14px; line-height:1.6; text-align:left;">
-        USB connection (PC or RPi) via <a href="https://github.com/mutterer/enderscopy" target="_blank" style="color:var(--coordinates-color);">enderscope.py</a> (<a href="https://dx.doi.org/10.1016/j.softx.2025.102210" target="_blank" style="color:var(--coordinates-color);">publi</a>)
-        sending G-code to any compatible 3D printer or motorized stage.
-        From the <a href="https://github.com/Pickering-Lab/EnderScope" target="_blank" style="color:var(--coordinates-color);">EnderScope</a> (<a href="http://doi.org/10.1098/rsta.2023.0214" target="_blank" style="color:var(--coordinates-color);">publi</a>).
-        More editions with specialized modules on <a href="https://diy.microscopie.org/explore.html" target="_blank" style="color:var(--coordinates-color);">diy.microscopie.org</a>.
+        Connexion USB (PC ou RPi) via <a href="https://github.com/mutterer/enderscopy" target="_blank" style="color:var(--coordinates-color);">enderscope.py</a> (<a href="https://dx.doi.org/10.1016/j.softx.2025.102210" target="_blank" style="color:var(--coordinates-color);">publi</a>)
+        qui envoie du G-code \u00e0 toute imprimante 3D ou stage motoris\u00e9 compatible.
+        Issu du projet <a href="https://github.com/Pickering-Lab/EnderScope" target="_blank" style="color:var(--coordinates-color);">EnderScope</a> (<a href="http://doi.org/10.1098/rsta.2023.0214" target="_blank" style="color:var(--coordinates-color);">publi</a>).
+        D\u2019autres versions avec des modules sp\u00e9cialis\u00e9s sur <a href="https://diy.microscopie.org/explore.html" target="_blank" style="color:var(--coordinates-color);">diy.microscopie.org</a>.
       </div>
       <div style="font-size:10px; color:var(--text-general); margin-bottom:16px; line-height:1.5; text-align:left; font-style:italic; opacity:0.7;">
-        EnderTrack emerged at CNRS following the MIFOBIO 2025 microscopy school, driven by the EnderTeam — thanks to them!
+        L\u2019id\u00e9e d\u2019EnderTrack a \u00e9merg\u00e9 au CNRS suite \u00e0 l\u2019\u00e9cole th\u00e9matique de microscopie MIFOBIO 2025, port\u00e9e par l\u2019EnderTeam \u2014 merci \u00e0 eux !
       </div>
       </div>
     </div>
@@ -867,12 +860,12 @@ window.showKeyboardShortcuts = function() {
   overlay.innerHTML = `
     <div style="background:var(--container-bg); border:1px solid #555; border-radius:12px; padding:24px 28px; max-width:340px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <div style="font-size:14px; font-weight:600; color:var(--text-selected);">Keyboard shortcuts</div>
+        <div style="font-size:14px; font-weight:600; color:var(--text-selected);">Raccourcis clavier</div>
         <button onclick="this.closest('.shortcuts-modal-overlay').remove()" style="background:none; border:none; color:var(--text-general); cursor:pointer; font-size:18px; opacity:0.6; padding:0; line-height:1;">✕</button>
       </div>
-      ${[['\u2191','Forward (Y+)'],['\u2193','Backward (Y\u2212)'],['\u2190','Left (X\u2212)'],['\u2192','Right (X+)'],['Page\u2191','Up (Z+)'],['Page\u2193','Down (Z\u2212)'],['P','Add current position to list']]
+      ${[['\u2191','Avancer (Y+)'],['\u2193','Reculer (Y\u2212)'],['\u2190','Gauche (X\u2212)'],['\u2192','Droite (X+)'],['Page\u2191','Monter (Z+)'],['Page\u2193','Descendre (Z\u2212)'],['P','Ajouter la position actuelle \u00e0 la liste']]
         .map(([k,d]) => `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><span style="font-size:11px; color:var(--text-general);">${d}</span><span style="font-family:monospace; font-size:10px; background:var(--app-bg); border:1px solid #555; border-radius:3px; padding:1px 6px; color:var(--text-selected); white-space:nowrap; margin-left:12px;">${k}</span></div>`).join('')}
-      <div style="margin-top:10px; font-size:10px; color:var(--text-general); opacity:0.45; line-height:1.5;">Move on Z slider hover + mouse wheel</div>
+      <div style="margin-top:10px; font-size:10px; color:var(--text-general); opacity:0.45; line-height:1.5;">Déplacement au survol du slider Z + molette souris</div>
     </div>`;
   document.body.appendChild(overlay);
 };
@@ -939,7 +932,7 @@ window.openEnderman = () => {};
       .catch(() => {});
   }, 2000);
 
-  // Listn for config changes
+  // Listen for config changes
   EnderTrack.Events?.on?.('state:changed', (newState, oldState) => {
     if (newState.plateauDimensions !== oldState.plateauDimensions ||
         newState.coordinateBounds !== oldState.coordinateBounds ||
@@ -972,7 +965,7 @@ window._openPluginCatalog = async function() {
   if (!el) return;
   if (el.style.display !== 'none') { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">\u23f3 Loading...</div>';
+  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">\u23f3 Chargement...</div>';
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
   let catalog = null, offline = false;
   try {
@@ -985,7 +978,7 @@ window._openPluginCatalog = async function() {
   } catch {
     try { catalog = JSON.parse(localStorage.getItem('endertrack_catalog_cache')); offline = true; } catch {}
   }
-  if (!catalog || !catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">None plugin disponible</div>'; return; }
+  if (!catalog || !catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">Aucun plugin disponible</div>'; return; }
   const header = offline ? '<div style="padding:4px 8px; font-size:10px; color:var(--coordinates-color); margin-bottom:4px;">\ud83d\udce1 Hors-ligne — cache local</div>' : '';
   el.innerHTML = header +
     '<div id="catalogLog" style="display:none; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px; font-size:10px; font-family:monospace; color:var(--coordinates-color); max-height:80px; overflow-y:auto;"></div>' +
@@ -996,7 +989,7 @@ window._openPluginCatalog = async function() {
     const desc = p.description || '';
     const statusDot = installed ? '\ud83d\udfe2' : '\u26ab';
     const btn = installed
-      ? '<button id="catBtn_' + p._folder + '" onclick="window._uninstallPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Delete</button>'
+      ? '<button id="catBtn_' + p._folder + '" onclick="window._uninstallPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Supprimer</button>'
       : '<button id="catBtn_' + p._folder + '" onclick="window._installPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Installer</button>';
     return '<div id="catRow_' + p._folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
       '<div style="display:flex; align-items:center; gap:6px;"><span style="font-size:8px;">' + statusDot + '</span><div><span style="font-size:12px;">' + icon + ' ' + name + '</span>' +
@@ -1026,17 +1019,17 @@ window._installPlugin = async function(folder) {
     });
     const data = await resp.json();
     if (data.success) {
-      window._catalogLog('✅ ' + folder + ' installed (' + data.files.length + ' files: ' + data.files.join(', ') + ')', 'success');
+      window._catalogLog('✅ ' + folder + ' installé (' + data.files.length + ' fichiers: ' + data.files.join(', ') + ')', 'success');
       // Update row visually
       const row = document.getElementById('catRow_' + folder);
       if (row) {
         row.querySelector('span[style*="font-size:8px"]').textContent = '🟢';
       }
-      if (btn) { btn.textContent = 'Delete'; btn.style.background = '#ef4444'; btn.style.color = '#fff'; btn.disabled = false; btn.onclick = function() { window._uninstallPlugin(folder); }; }
+      if (btn) { btn.textContent = 'Supprimer'; btn.style.background = '#ef4444'; btn.style.color = '#fff'; btn.disabled = false; btn.onclick = function() { window._uninstallPlugin(folder); }; }
       // Refresh local plugin list
       if (EnderTrack.PluginManager?.renderPluginList) await EnderTrack.PluginManager.renderPluginList();
     } else {
-      window._catalogLog('❌ Error: ' + data.error, 'error');
+      window._catalogLog('❌ Erreur: ' + data.error, 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Installer'; }
     }
   } catch(e) {
@@ -1046,7 +1039,7 @@ window._installPlugin = async function(folder) {
 };
 
 window._uninstallPlugin = async function(folder) {
-  if (!confirm('Delete le plugin ' + folder + ' ?')) return;
+  if (!confirm('Supprimer le plugin ' + folder + ' ?')) return;
   const btn = document.getElementById('catBtn_' + folder);
   if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
   window._catalogLog('🗑️ Suppression de ' + folder + '...');
@@ -1058,7 +1051,7 @@ window._uninstallPlugin = async function(folder) {
     });
     const data = await resp.json();
     if (data.success) {
-      window._catalogLog('✅ ' + folder + ' deleted', 'success');
+      window._catalogLog('✅ ' + folder + ' supprimé', 'success');
       const row = document.getElementById('catRow_' + folder);
       if (row) {
         row.querySelector('span[style*="font-size:8px"]').textContent = '⚫';
@@ -1069,7 +1062,7 @@ window._uninstallPlugin = async function(folder) {
     }
   } catch(e) {
     window._catalogLog('❌ ' + e.message, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Supprimer'; }
   }
 };
 
@@ -1097,14 +1090,14 @@ window._serverLog = function(action, details) {
     lists.addPosition = function(x, y, z, name) {
       orig(x, y, z, name);
       const g = lists.groups.find(g => g.id === lists.activeGroupId);
-      window._serverLog('Position added', `${g?.name || '?'} — X${x?.toFixed(1)} Y${y?.toFixed(1)} Z${z?.toFixed(1)}`);
+      window._serverLog('Position ajoutée', `${g?.name || '?'} — X${x?.toFixed(1)} Y${y?.toFixed(1)} Z${z?.toFixed(1)}`);
     };
   }
 
   // Movement completed
   E.on('movement:completed', () => {
     const pos = EnderTrack.State.get().pos;
-    window._serverLog('Movement done', `X${pos.x.toFixed(1)} Y${pos.y.toFixed(1)} Z${pos.z.toFixed(1)}`);
+    window._serverLog('Mouvement terminé', `X${pos.x.toFixed(1)} Y${pos.y.toFixed(1)} Z${pos.z.toFixed(1)}`);
   });
 
   // Emergency stop

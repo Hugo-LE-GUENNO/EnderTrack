@@ -18,6 +18,4 @@ data/
 captures/
 .stack_settings.json
 .gallery_settings.json
-testooo/
-*.AppImage
 .live_settings.json

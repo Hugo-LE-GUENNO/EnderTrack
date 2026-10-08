@@ -72,10 +72,7 @@ class XYCanvasManager {
       if (this.shouldUpdateCoordinates(newState, oldState)) {
         this.updateCoordinateSystem();
       }
-      // Skip render if movement engine is animating (it calls render() directly)
-      if (!window.EnderTrack?.Movement?.isMoving) {
-        this.requestRender();
-      }
+      this.requestRender();
     });
     
     window.addEventListener('resize', () => this.handleResize());
@@ -114,7 +111,7 @@ class XYCanvasManager {
         }
       });
       
-      // Listn for coordinate config changes
+      // Listen for coordinate config changes
       document.addEventListener('click', (e) => {
         if (e.target.classList.contains('preset-btn') || e.target.classList.contains('axis-btn')) {
           setTimeout(() => {
@@ -269,7 +266,7 @@ class XYCanvasManager {
 
 // Global instance - maintain compatibility
 window.EnderTrack = window.EnderTrack || {};
-// Save les overlays avant d'écraser Canvas
+// Sauvegarder les overlays avant d'écraser Canvas
 const compassOverlay = window.EnderTrack.Canvas?.CompassOverlay;
 const compassZOverlay = window.EnderTrack.Canvas?.CompassZOverlay;
 window.EnderTrack.Canvas = new XYCanvasManager();

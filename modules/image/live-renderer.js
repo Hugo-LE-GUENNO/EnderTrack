@@ -5,15 +5,16 @@ class LiveRenderer {
     this._canvas = null;
     this._ctx = null;
     this._video = null;
-    this._img = null;
     this._running = false;
     this._animId = null;
     this.min = 0;
     this.max = 255;
+    this._maxVal = 255;
+    this._dataMin = 0;
+    this._dataMax = 255;
     this.lutId = 'gray';
     this._lutTable = null;
-    this.enabled = false;
-    this._nativeRenderFrame = this._renderFrame.bind(this);
+    this.enabled = false; // only process when enabled (not passthrough)
   }
 
   setCanvas(canvas) {
@@ -21,10 +22,18 @@ class LiveRenderer {
     this._ctx = canvas?.getContext('2d') || null;
   }
 
-  setVideo(video) { this._video = video; this._img = null; }
-  setImage(img)   { this._img = img;    this._video = null; }
+  setVideo(video) {
+    this._video = video;
+  }
 
-  setContrast(min, max) { this.min = min; this.max = max; }
+  setImage(img) {
+    this._img = img;
+  }
+
+  setContrast(min, max) {
+    this.min = min;
+    this.max = max;
+  }
 
   setLut(lutId) {
     this.lutId = lutId;
@@ -50,51 +59,60 @@ class LiveRenderer {
   }
 
   _renderFrame() {
+    // Determine source: video or img (MJPEG)
     const src = this._video || this._img;
     if (!src || !this._canvas || !this._ctx) return;
-
     const isVideo = !!this._video;
     if (isVideo && (this._video.readyState < 2 || !this._video.videoWidth)) return;
     if (!isVideo && !this._img.naturalWidth) return;
 
-    const srcW = isVideo ? this._video.videoWidth  : this._img.naturalWidth;
-    const srcH = isVideo ? this._video.videoHeight : this._img.naturalHeight;
-    if (!srcW || !srcH) return;
+    const w = isVideo ? this._video.videoWidth : this._img.naturalWidth;
+    const h = isVideo ? this._video.videoHeight : this._img.naturalHeight;
+    if (this._canvas.width !== w) this._canvas.width = w;
+    if (this._canvas.height !== h) this._canvas.height = h;
 
-    if (this._canvas.width !== srcW)  this._canvas.width  = srcW;
-    if (this._canvas.height !== srcH) this._canvas.height = srcH;
+    // If no processing needed, just draw directly
+    if (!this.enabled || (!this._lutTable && this.min === 0 && this.max === 255)) {
+      this._ctx.drawImage(src, 0, 0);
+      return;
+    }
 
-    this._ctx.drawImage(src, 0, 0, srcW, srcH);
-    const imgData = this._ctx.getImageData(0, 0, srcW, srcH);
+    // Draw to canvas, get pixels, apply contrast/LUT
+    this._ctx.drawImage(src, 0, 0);
+    const imgData = this._ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
-    const min = this.min, max = this.max, range = Math.max(1, max - min);
+    const min = this.min, max = this.max;
+    const range = Math.max(1, max - min);
     const lut = this._lutTable;
+
     for (let i = 0; i < data.length; i += 4) {
+      const lum = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+      const stretched = Math.max(0, Math.min(255, Math.round(((lum - min) / range) * 255)));
       if (lut) {
-        const lum = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
-        const v = Math.max(0, Math.min(255, Math.round(((lum - min) / range) * 255)));
-        const c = lut[v]; data[i]=c[0]; data[i+1]=c[1]; data[i+2]=c[2];
+        const c = lut[stretched];
+        data[i] = c[0]; data[i+1] = c[1]; data[i+2] = c[2];
       } else {
-        data[i]   = Math.max(0, Math.min(255, Math.round(((data[i]   - min) / range) * 255)));
-        data[i+1] = Math.max(0, Math.min(255, Math.round(((data[i+1] - min) / range) * 255)));
-        data[i+2] = Math.max(0, Math.min(255, Math.round(((data[i+2] - min) / range) * 255)));
+        data[i] = stretched; data[i+1] = stretched; data[i+2] = stretched;
       }
     }
     this._ctx.putImageData(imgData, 0, 0);
   }
 
+  // Get current frame data for histogram
   getFrameData() {
     const src = this._video || this._img;
     if (!src) return null;
     if (this._video && this._video.readyState < 2) return null;
     if (this._img && !this._img.naturalWidth) return null;
-    const sw = this._video ? this._video.videoWidth  : this._img.naturalWidth;
+    const sw = this._video ? this._video.videoWidth : this._img.naturalWidth;
     const sh = this._video ? this._video.videoHeight : this._img.naturalHeight;
-    const w = Math.min(sw, 320), h = Math.min(sh, 240);
+    const w = Math.min(sw, 320);
+    const h = Math.min(sh, 240);
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
-    c.getContext('2d').drawImage(src, 0, 0, w, h);
-    return c.getContext('2d').getImageData(0, 0, w, h).data;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(src, 0, 0, w, h);
+    return ctx.getImageData(0, 0, w, h).data;
   }
 }
 

@@ -298,6 +298,38 @@ class EnderscopeConnection {
     if (window._updateStatusNow) window._updateStatusNow();
   }
 
+  async querySpeedLimits() {
+    if (!this.isConnected) return;
+    try {
+      const response = await fetch(`${this.serverUrl}/api/gcode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'M503' }),
+        signal: AbortSignal.timeout(5000)
+      });
+      const result = await response.json();
+      if (!result.success) return;
+      const line = result.response?.find(l => /\bM203\b/.test(l) && l.includes('X') && l.includes('Z'));
+      if (!line) return;
+      const z = line.match(/Z([\d\.]+)/);
+      const x = line.match(/X([\d\.]+)/);
+      const y = line.match(/Y([\d\.]+)/);
+      if (z) {
+        const zVal = Math.round(parseFloat(z[1]));
+        const zInput = document.getElementById('zSpeedInput');
+        if (zInput) zInput.value = zVal;
+        fetch(`${this.serverUrl}/api/sync/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zSpeed: zVal }) }).catch(() => {});
+      }
+      if (x && y) {
+        const xyVal = Math.min(Math.round(Math.min(parseFloat(x[1]), parseFloat(y[1])) * 60), 18000);
+        const frInput = document.getElementById('feedrateInput');
+        if (frInput) frInput.value = xyVal;
+        if (window.EnderTrack?.State) window.EnderTrack.State.update({ feedrate: xyVal });
+        fetch(`${this.serverUrl}/api/sync/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feedrate: xyVal }) }).catch(() => {});
+      }
+    } catch {}
+  }
+
   async syncPosition() {
     if (!this.isConnected) return;
     try {
@@ -850,15 +882,29 @@ async function syncEnderscopePosition() {
 }
 
 function updateFeedrate(value) {
-  const feedrate = Math.max(100, Math.min(10000, parseInt(value) || 3000));
-  const slider = document.getElementById('feedrateSlider');
+  const maxFr = parseInt(document.getElementById('feedrateInput')?.max) || 18000;
+  const feedrate = Math.max(100, Math.min(maxFr, parseInt(value) || 3000));
   const input = document.getElementById('feedrateInput');
-  if (slider) slider.value = feedrate;
   if (input) input.value = feedrate;
-  if (window.EnderTrack?.State) {
-    window.EnderTrack.State.update({ feedrate });
+  if (window.EnderTrack?.State) window.EnderTrack.State.update({ feedrate });
+  const serverUrl = window.EnderTrack?.Enderscope?.serverUrl || 'http://localhost:5000';
+  fetch(`${serverUrl}/api/sync/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feedrate }) }).catch(() => {});
+}
+
+function updateZSpeed(value) {
+  const maxZ = parseFloat(document.getElementById('zSpeedInput')?.max) || 20;
+  const speed = Math.max(1, Math.min(maxZ, parseInt(value) || 5));
+  const input = document.getElementById('zSpeedInput');
+  if (input) input.value = speed;
+  const serverUrl = window.EnderTrack?.Enderscope?.serverUrl || 'http://localhost:5000';
+  fetch(`${serverUrl}/api/sync/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zSpeed: speed }) }).catch(() => {});
+  if (window.EnderTrack?.Enderscope?.isConnected) {
+    fetch(`${serverUrl}/api/gcode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: `M203 Z${speed}` })
+    });
   }
-  localStorage.setItem('endertrack_feedrate', feedrate);
 }
 
 // Global instance

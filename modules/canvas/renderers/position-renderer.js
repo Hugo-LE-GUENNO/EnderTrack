@@ -10,7 +10,6 @@ class PositionRenderer {
     
     this.renderMovementVector(ctx, state, posX, posY);
     this.renderOverlays(ctx, state, coords);
-    this.renderHistoryPositions(ctx, state, coords);
     this.renderCurrentPosition(ctx, state, posX, posY);
   }
 
@@ -61,7 +60,7 @@ class PositionRenderer {
     if (!state.historyMode) {
       // Render Scenario track
       const scenarioActive = window.EnderTrack?.Scenario?.isActive;
-      if (scenarioActive && window.EnderTrack?.Scenario?.scenarioTrack?.enabled) {
+      if (scenarioActive && window.EnderTrack?.Scenario?.scenarioTrack?.enabled && state.activeTab === 'acquisition') {
         this.renderScenarioTrack(ctx, coords);
       }
     }
@@ -127,7 +126,7 @@ class PositionRenderer {
     // During execution: visited (green) + remaining (gray dashed)
     if (executing) {
       // Visited — solid green
-      if (track.visited?.length > 1) {
+      if (track.visited?.length > 0) {
         ctx.save();
         ctx.strokeStyle = '#10b981';
         ctx.lineWidth = 2;
@@ -138,6 +137,12 @@ class PositionRenderer {
         for (let i = 1; i < track.visited.length; i++) {
           const p = coords.mapToCanvas(track.visited[i].x, track.visited[i].y);
           ctx.lineTo(p.cx, p.cy);
+        }
+        // Connect to current live position
+        const state = window.EnderTrack?.State?.get?.();
+        if (state?.pos) {
+          const cur = coords.mapToCanvas(state.pos.x, state.pos.y);
+          ctx.lineTo(cur.cx, cur.cy);
         }
         ctx.stroke();
         ctx.restore();
@@ -245,77 +250,6 @@ class PositionRenderer {
     }
   }
 
-  static renderHistoryPositions(ctx, state, coords) {
-    // Don't show history in Scenario mode
-    if (window.EnderTrack?.Scenario?.isActive) return;
-    if (!window._trackingEnabled) return;
-    
-    const showPositionXYHistory = document.getElementById('showPositionXYHistory');
-    const showHistoryXYEnabled = !showPositionXYHistory || showPositionXYHistory.checked;
-    
-    if (state.positionHistory && showHistoryXYEnabled) {
-      const currentHistory = state.historyViewMode === 'XY' ? 
-                           state.positionHistoryXY.filter(p => p.isFinalPosition) :
-                           state.positionHistory.filter(p => p.isFinalPosition);
-      
-      const allVisited = state.positionHistory.filter(pos => pos.isFinalPosition);
-      const xyGroups = new Map();
-      
-      allVisited.forEach((pos, allIndex) => {
-        const xyKey = `${pos.x.toFixed(2)},${pos.y.toFixed(2)}`;
-        if (!xyGroups.has(xyKey)) {
-          xyGroups.set(xyKey, []);
-        }
-        xyGroups.get(xyKey).push({ pos, allIndex });
-      });
-      
-      let displayIndex = 1;
-      xyGroups.forEach((group) => {
-        const latestItem = group[group.length - 1];
-        const { pos } = latestItem;
-        const canvasPos = coords.mapToCanvas(pos.x, pos.y);
-        const visitedX = canvasPos.cx;
-        const visitedY = canvasPos.cy;
-        
-        if (showHistoryXYEnabled) {
-          const historyColor = getComputedStyle(document.documentElement).getPropertyValue('--pos-history').trim();
-          group.forEach(item => {
-            const groupCanvasPos = coords.mapToCanvas(item.pos.x, item.pos.y);
-            const groupPosX = groupCanvasPos.cx;
-            const groupPosY = groupCanvasPos.cy;
-            ctx.fillStyle = historyColor;
-            ctx.beginPath();
-            ctx.arc(groupPosX, groupPosY, 1, 0, Math.PI * 2);
-            ctx.fill();
-          });
-        }
-        
-        if (state.historyMode) {
-          const historyIndex = currentHistory.findIndex(h => 
-            Math.abs(h.x - pos.x) < 0.01 && Math.abs(h.y - pos.y) < 0.01
-          );
-          
-          if (historyIndex >= 0) {
-            const isCurrentHistory = state.historyIndex === historyIndex;
-            ctx.fillStyle = isCurrentHistory ? '#4f9eff' : '#ffffff';
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 1;
-            ctx.font = 'bold 12px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            const number = state.historyViewMode === 'XY' ? 
-              displayIndex.toString() : 
-              (group.length > 1 ? `${displayIndex}-${group.length}` : displayIndex.toString());
-            
-            ctx.strokeText(number, visitedX, visitedY - 12);
-            ctx.fillText(number, visitedX, visitedY - 12);
-          }
-        }
-        displayIndex++;
-      });
-    }
-  }
 
   static renderCurrentPosition(ctx, state, posX, posY) {
     // Vérifier si la position est sur le plateau

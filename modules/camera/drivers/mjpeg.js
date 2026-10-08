@@ -8,9 +8,8 @@ class MjpegCameraDriver {
     this._ctx = null;
     this._live = false;
     this._timer = null;
-    this._failCount = 0;
-    this.streamUrl = '';
-    this._frameUrl = '';
+    this.streamUrl = ''; // base URL, e.g. http://host:5000/api/camera/picam
+    this._frameUrl = ''; // single frame endpoint
   }
 
   async init(config) {
@@ -62,26 +61,20 @@ class MjpegCameraDriver {
         const url = URL.createObjectURL(blob);
         const prev = this._img.src;
         this._img.onload = () => {
-          this._frameTs = Date.now();
           if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
-          this._failCount = 0;
-          this.camera._emitFrame({ width: this._img.naturalWidth, height: this._img.naturalHeight, timestamp: this._frameTs });
+          this.camera._emitFrame({ width: this._img.naturalWidth, height: this._img.naturalHeight, timestamp: Date.now() });
+          // Schedule next poll (~5 fps target, minus fetch time)
           const elapsed = Date.now() - t0;
           const delay = Math.max(30, 200 - elapsed);
           this._timer = setTimeout(() => this._poll(), delay);
         };
         this._img.onerror = () => {
-          this._failCount++;
-          if (this._failCount >= 10) { this.camera._onDriverError(); return; }
           this._timer = setTimeout(() => this._poll(), 500);
         };
         this._img.src = url;
       })
       .catch(() => {
-        if (!this._live) return;
-        this._failCount++;
-        if (this._failCount >= 10) { this.camera._onDriverError(); return; }
-        this._timer = setTimeout(() => this._poll(), 1000);
+        if (this._live) this._timer = setTimeout(() => this._poll(), 1000);
       });
   }
 
@@ -102,7 +95,7 @@ class MjpegCameraDriver {
     try {
       this._ctx.drawImage(this._img, 0, 0);
       const b64 = this._canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-      return { frame: b64, width: w, height: h, timestamp: this._frameTs || 0 };
+      return { frame: b64, width: w, height: h, timestamp: Date.now() };
     } catch (e) { return null; }
   }
 }

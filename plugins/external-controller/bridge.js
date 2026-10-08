@@ -385,8 +385,8 @@ class ExternalControllerBridge {
     if (widget) widget.classList.toggle('estimating', on);
     if (light) light.classList.toggle('estimating-light', on);
     if (label) label.textContent = on
-      ? '📍 Estimated position'
-      : '📍 Current State' + (window.EnderTrack?.Enderscope?.isConnected ? '' : ' - SIMULATEUR');
+      ? '📍 Position estimée'
+      : '📍 État Actuel' + (window.EnderTrack?.Enderscope?.isConnected ? '' : ' - SIMULATEUR');
     window.continuousEstimating = on;
     window.EnderTrack?.Canvas?.requestRender?.();
   }

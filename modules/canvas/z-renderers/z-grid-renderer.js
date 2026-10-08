@@ -40,7 +40,7 @@ class ZGridRenderer {
     }
     
     // Draw plateau bounds (white lines)
-    this.drawBedBounds(ctx, canvas, zMin, zMax, zPan, halfRange, zInverted);
+    this.drawPlateauBounds(ctx, canvas, zMin, zMax, zPan, halfRange, zInverted);
     
     // Draw Z=0 line (blue)
     this.drawZeroLine(ctx, canvas, zPan, halfRange, zInverted);
@@ -140,7 +140,7 @@ class ZGridRenderer {
   static drawMajorGraduations(ctx, canvas, zPan, halfRange, zMin, zMax, zInverted) {
     const visibleMin01 = zPan - halfRange;
     const visibleMax01 = zPan + halfRange;
-    // Limitr aux bornes du plateau
+    // Limiter aux bornes du plateau
     const min01 = Math.max(zMin, Math.floor(visibleMin01 / 0.1) * 0.1);
     const max01 = Math.min(zMax, Math.ceil(visibleMax01 / 0.1) * 0.1);
     
@@ -159,7 +159,7 @@ class ZGridRenderer {
     }
   }
   
-  static drawBedBounds(ctx, canvas, zMin, zMax, zPan, halfRange, zInverted) {
+  static drawPlateauBounds(ctx, canvas, zMin, zMax, zPan, halfRange, zInverted) {
     const minColor = getComputedStyle(document.documentElement).getPropertyValue('--pos-min').trim();
     const maxColor = getComputedStyle(document.documentElement).getPropertyValue('--pos-max').trim();
     

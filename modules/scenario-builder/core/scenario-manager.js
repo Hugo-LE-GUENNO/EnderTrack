@@ -6,7 +6,7 @@ class ScenarioManager {
     this.loadFromStorage();
   }
 
-  createScenario(name = 'New scenario') {
+  createScenario(name = 'Nouveau scénario') {
     const id = 'scenario_' + Date.now();
     const scenario = {
       id,
@@ -106,7 +106,7 @@ class ScenarioManager {
       const data = JSON.parse(jsonStr);
       if (!data.tree) throw new Error('Invalid scenario format');
       data.id = 'scenario_' + Date.now();
-      data.name = data.name || 'Imported scenario';
+      data.name = data.name || 'Scénario importé';
       data.createdAt = new Date().toISOString();
       this.scenarios.set(data.id, data);
       this.currentScenarioId = data.id;
@@ -155,15 +155,12 @@ class ScenarioManager {
 
   save() {
     try {
-      if (!this.scenarios.has(this.currentScenarioId)) {
-        this.currentScenarioId = this.scenarios.keys().next().value || null;
-      }
       const data = {
         scenarios: Array.from(this.scenarios.entries()),
-        currentScenarioId: this.currentScenarioId,
-        savedAt: Date.now()
+        currentScenarioId: this.currentScenarioId
       };
       localStorage.setItem('endertrack_scenarios', JSON.stringify(data));
+      // Sync to server
       const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
       fetch(url + '/api/sync/scenarios', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -175,21 +172,17 @@ class ScenarioManager {
   }
 
   loadFromStorage() {
+    // Load from localStorage FIRST (synchronous, immediate)
     this._loadLocal();
-    const localSavedAt = this._localSavedAt;
+    // Then try server (async update)
     const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     fetch(url + '/api/sync/scenarios', { signal: AbortSignal.timeout(2000) })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => {
-        if (!data.scenarios?.length) return;
-        // Ignore server if local is more recent
-        if (localSavedAt && data.savedAt && localSavedAt >= data.savedAt) return;
-        // Ignore server if local has fewer scenarios (means user deleted some)
-        if (data.scenarios.length > this.scenarios.size) {
+        if (data.scenarios?.length) {
           this.scenarios = new Map(data.scenarios);
           this.currentScenarioId = data.currentScenarioId;
-          if (!this.scenarios.has(this.currentScenarioId))
-            this.currentScenarioId = this.scenarios.keys().next().value || null;
+          // Re-render UI if scenario module is active
           window.EnderTrack?.Scenario?.createUI?.();
         }
       })
@@ -203,7 +196,6 @@ class ScenarioManager {
         const data = JSON.parse(stored);
         this.scenarios = new Map(data.scenarios);
         this.currentScenarioId = data.currentScenarioId;
-        this._localSavedAt = data.savedAt || 0;
       }
       if (this.scenarios.size === 0) this.createScenario('Scenario 1');
     } catch (error) {

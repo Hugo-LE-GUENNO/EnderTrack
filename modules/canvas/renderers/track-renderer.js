@@ -1,16 +1,16 @@
 // modules/canvas/renderers/track-renderer.js - Track and path rendering
 class TrackRenderer {
   static render(ctx, canvas, state) {
-    // Don't render tracks in Scenario mode
-    if (window.EnderTrack?.Scenario?.isActive) return;
-    
     const coords = window.EnderTrack?.Coordinates;
     if (!coords) return;
-    
-    this.renderContinuousTrack(ctx, state, coords);
-    // this.renderDiscreteTrack(ctx, state, coords); // Disabled pour éviter le double tracé
-    this.renderTrackPoints(ctx, state, coords);
+
+    // Always render pinned lists regardless of active tab
     this.renderListTracks(ctx, state, coords);
+
+    // Don't render free tracks in Scenario mode
+    if (window.EnderTrack?.Scenario?.isActive) return;
+
+    this.renderContinuousTrack(ctx, state, coords);
   }
 
   static renderContinuousTrack(ctx, state, coords) {

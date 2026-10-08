@@ -135,7 +135,18 @@ class TreeUtils {
 
     if (node.type === 'action' && node.actionId === 'move') {
       const p = node.params || {};
-      if (p.moveType === 'absolute') {
+      if (p.moveType === 'list' && p.listId) {
+        const list = window.EnderTrack?.Lists?.manager?.getList?.(p.listId);
+        const idxExpr = p.listIndex || '$i';
+        let idx = 0;
+        const num = Number(idxExpr);
+        if (!isNaN(num)) { idx = num; }
+        else if (vars[idxExpr] !== undefined) { idx = vars[idxExpr]; }
+        const pt = list?.positions?.[Math.floor(idx)];
+        if (pt) pos = { x: pt.x, y: pt.y, z: pt.z };
+        positions.push({ ...pos });
+        return positions;
+      } else if (p.moveType === 'absolute') {
         const src = p.absSource || 'manual';
         if (src === 'list' && p.listId) {
           const list = window.EnderTrack?.Lists?.manager?.getList?.(p.listId);

@@ -292,7 +292,7 @@ class ZInteractions {
     if (state.historyMode || state.lockZ) return;
 
     if (!this._isMouseZValid()) {
-      window.EnderTrack?.UI?.showNotification?.('Z position not allowed', 'warning');
+      window.EnderTrack?.UI?.showNotification?.('Position Z non autorisée', 'warning');
       return;
     }
 

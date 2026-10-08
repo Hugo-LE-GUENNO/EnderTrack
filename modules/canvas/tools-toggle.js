@@ -12,7 +12,7 @@ function toggleCanvasTools() {
   
   // Re-render minimaps after transition (300ms)
   if (!isCollapsed) {
-    // Reset le cache de largeur
+    // Réinitialiser le cache de largeur
     if (window.EnderTrack?.MiniPreview) {
       window.EnderTrack.MiniPreview.cachedWidth = null;
     }

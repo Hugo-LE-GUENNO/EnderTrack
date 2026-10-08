@@ -20,7 +20,7 @@ class MiniZPreview {
     const parentContainer = container.parentElement;
     if (!parentContainer || parentContainer.classList.contains('collapsed')) return;
 
-    // Create ou récupérer le canvas
+    // Créer ou récupérer le canvas
     let canvas = container.querySelector('canvas');
     if (canvas) {
       canvas.remove();
@@ -40,7 +40,7 @@ class MiniZPreview {
     canvas.style.height = '100%';
     canvas.style.cursor = 'pointer';
     
-    // Add les event listeners pour les clics
+    // Ajouter les event listeners pour les clics
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
       const x = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -56,7 +56,7 @@ class MiniZPreview {
 
     // Calculer la hauteur du plateau XY pour correspondance
     const xyContainer = document.getElementById('miniPreviewXY');
-    let plateauHeight = height * 0.6; // Default
+    let plateauHeight = height * 0.6; // Défaut
     
     if (xyContainer) {
       const xyCanvas = xyContainer.querySelector('canvas');
@@ -65,12 +65,12 @@ class MiniZPreview {
         const plateauWidthMm = coordinateBounds.x.max - coordinateBounds.x.min;
         const plateauHeightMm = coordinateBounds.y.max - coordinateBounds.y.min;
         const maxDim = Math.max(plateauWidthMm, plateauHeightMm);
-        const maxBedSize = Math.min(xyCanvas.width, xyCanvas.height) * 0.6;
-        plateauHeight = (plateauHeightMm / maxDim) * maxBedSize;
+        const maxPlateauSize = Math.min(xyCanvas.width, xyCanvas.height) * 0.6;
+        plateauHeight = (plateauHeightMm / maxDim) * maxPlateauSize;
       }
     }
 
-    // Range Z (gris) - même hauteur que le plateau XY, centré verticalement
+    // Plage Z (gris) - même hauteur que le plateau XY, centré verticalement
     const zRangeHeight = plateauHeight;
     const zRangeX = 1;
     const zRangeY = (height - zRangeHeight) / 2;
@@ -132,7 +132,7 @@ class MiniZPreview {
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, this.width, this.height);
 
-    // Range Z complète (gris)
+    // Plage Z complète (gris)
     const zRangeHeight = this.height - 10;
     const zRangeX = x + 2;
     const zRangeY = y + 5;
@@ -325,8 +325,8 @@ class MiniZPreview {
         const plateauWidthMm = coordinateBounds.x.max - coordinateBounds.x.min;
         const plateauHeightMm = coordinateBounds.y.max - coordinateBounds.y.min;
         const maxDim = Math.max(plateauWidthMm, plateauHeightMm);
-        const maxBedSize = Math.min(xyCanvas.width, xyCanvas.height) * 0.6;
-        plateauHeight = (plateauHeightMm / maxDim) * maxBedSize;
+        const maxPlateauSize = Math.min(xyCanvas.width, xyCanvas.height) * 0.6;
+        plateauHeight = (plateauHeightMm / maxDim) * maxPlateauSize;
       }
     }
 

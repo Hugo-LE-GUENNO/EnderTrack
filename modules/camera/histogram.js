@@ -174,11 +174,7 @@ class CameraHistogram {
   }
 
   _redraw() {
-    const empty = new Uint32Array(256);
-    this._draw(
-      this._histR || empty, this._histG || empty,
-      this._histB || empty, this._histL || empty
-    );
+    if (this._histR) this._draw(this._histR, this._histG, this._histB, this._histL);
   }
 
   // Right-click menu: LUT + Log toggle
@@ -232,11 +228,9 @@ class CameraHistogram {
       row.addEventListener('mouseenter', () => { if (id !== currentLut) row.style.background = 'var(--app-bg)'; });
       row.addEventListener('mouseleave', () => { if (id !== currentLut) row.style.background = ''; });
       row.addEventListener('click', () => {
-        const cam = window.EnderTrack?.Camera;
-        const renderer = window.EnderTrack?.LiveRenderer;
-        if (cam) cam._liveLutId = id;
-        if (renderer) { renderer.setLut(id); renderer.enabled = true; }
-        this._redraw();
+        window.EnderpicamPlugin?.ui?.setLut(id);
+        const sel = document.getElementById('enderpicam-lut');
+        if (sel) sel.value = id;
         menu.remove();
       });
       menu.appendChild(row);
@@ -433,9 +427,7 @@ class CameraHistogram {
     }
 
     // LUT gradient bar at bottom — stretched to min/max range
-    const lutId = this._getCurrentLut();
-    const lutDef = (lutId && lutId !== 'gray') ? window.CameraLUTs?.[lutId] : null;
-    const lut = lutDef ? lutDef.generate() : null;
+    const lut = this._getCurrentLut();
     const rMin = range.min, rMax = range.max, rSpan = Math.max(1, rMax - rMin);
     if (lut) {
       for (let i = 0; i < 256; i++) {
@@ -487,7 +479,10 @@ class CameraHistogram {
   }
 
   _getCurrentLut() {
-    return window.EnderTrack?.Camera?._liveLutId || 'gray';
+    const lutId = window.EnderpicamPlugin?.ui?.lutId;
+    if (!lutId || lutId === 'gray' || lutId === 'none') return null;
+    const def = window.CameraLUTs?.[lutId];
+    return def ? def.generate() : null;
   }
 
   _drawChannel(ctx, hist, maxVal, W, H, barW, color) {

@@ -2,7 +2,7 @@
 class ContinuousMovement {
   static handleWheelMovement(delta) {
     const direction = delta > 0 ? 'zUp' : 'zDown';
-    const action = delta > 0 ? '▲ Z Control Up' : '▼ Z Control Down';
+    const action = delta > 0 ? '▲ Contrôle Z Haut' : '▼ Contrôle Z Bas';
     
     if (window.controllerMode === 'continuous') {
       window.startContinuousMovement(direction);

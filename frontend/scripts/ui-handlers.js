@@ -292,6 +292,8 @@ window.switchTab = function(tabId) {
     const targetBtn = document.getElementById(tabId + 'Tab');
     if (targetBtn) targetBtn.classList.add('active');
     
+    if (window.EnderTrack?.State) window.EnderTrack.State.update({ activeTab: tabId });
+    
     // Gérer l'affichage du panneau droit
     const rightPanel = document.querySelector('.right-panel');
     if (rightPanel) {
@@ -369,7 +371,6 @@ window.showGcodeHelp = function() {
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
     const cmds = [
         ['M115', 'Firmware info (version, capabilities)'],
-        ['M300 S440 P200', 'Beep'],
         ['G28 X Y', 'Home X and Y — avoids moving Z'],
         ['G28', 'Home all axes (X Y Z)'],
         ['G92 X0 Y0', 'Set current position as XY origin'],
@@ -384,6 +385,10 @@ window.showGcodeHelp = function() {
         ['M400', 'Wait for all moves to finish'],
         ['M17', 'Enable motors'],
         ['M18 / M84', 'Disable motors'],
+        ['M201 X A Y A Z A', 'Max acceleration per axis (mm/s2)'],
+        ['M203 Z V', 'Max Z speed (mm/s) — increase to move Z faster'],
+        ['M906 Z mA', 'Z motor current (mA) — higher = more torque'],
+        ['M204 P T', 'Print (P) / travel (T) acceleration'],
         ['M211 S0 / S1', 'Disable / enable software endstops'],
         ['M500', 'Save config to EEPROM'],
         ['M503', 'Show current config'],
@@ -391,7 +396,7 @@ window.showGcodeHelp = function() {
         ['G20', 'Units in inches'],
     ];
     const danger = [
-        ['M112', '⚠️ Immediate emergency stop'],
+        ['M112', 'Immediate emergency stop'],
         ['M999', 'Reset after emergency stop'],
     ];
     const row = ([cmd, desc]) => `<tr style="border-bottom:1px solid #333;">
@@ -401,8 +406,8 @@ window.showGcodeHelp = function() {
     const sep = '<tr><td colspan="2" style="padding:4px 0;"><hr style="border:none;border-top:1px solid #444;margin:0;"></td></tr>';
     modal.innerHTML = `<div style="background:var(--container-bg,#2c2c2c);border-radius:8px;padding:20px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;color:#ccc;font-size:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:8px;"><h3 style="margin:0;color:#fff;font-size:15px;">📖 G-code commands</h3><a href="https://marlinfw.org/meta/gcode/" target="_blank" style="color:#aaa;font-size:11px;text-decoration:none;" title="Marlin G-code reference">📖 marlinfw.org ↗</a></div>
-            <button onclick="closeGcodeHelp()" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer;">✕</button>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="color:#fff;font-size:13px;font-weight:600;">G-code reference</span><a href="https://marlinfw.org/meta/gcode/" target="_blank" style="color:#666;font-size:11px;text-decoration:none;">marlinfw.org ↗</a></div>
+            <button onclick="closeGcodeHelp()" style="background:none;border:none;color:#888;font-size:14px;cursor:pointer;">x</button>
         </div>
         <table style="width:100%;border-collapse:collapse;">
             ${cmds.map(row).join('')}

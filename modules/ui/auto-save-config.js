@@ -5,13 +5,13 @@
   
   // Attendre que le DOM soit prêt
   function initAutoSave() {
-    // List des IDs des inputs de configuration à surveiller
+    // Liste des IDs des inputs de configuration à surveiller
     const configInputs = [
       // Dimensions plateau
       'plateauX', 'plateauY', 'plateauZ',
-      // Ranges coordonnées
+      // Plages coordonnées
       'xMin', 'xMax', 'yMin', 'yMax', 'zMin', 'zMax',
-      // Limits sécurité
+      // Limites sécurité
       'xLimitMin', 'xLimitMax', 'yLimitMin', 'yLimitMax', 'zLimitMin', 'zLimitMax',
       // Facteurs sensibilité
       'xFineFactor', 'xCoarseFactor', 'yFineFactor', 'yCoarseFactor', 'zFineFactor', 'zCoarseFactor',
@@ -23,7 +23,7 @@
       'feedrateSlider', 'feedrateInput'
     ];
     
-    // Add les listeners sur tous les inputs
+    // Ajouter les listeners sur tous les inputs
     configInputs.forEach(id => {
       const input = document.getElementById(id);
       if (input) {
@@ -120,31 +120,31 @@
     const state = window.EnderTrack?.State?.get?.();
     if (!state) return;
     
-    // Save dimensions plateau
+    // Sauvegarder dimensions plateau
     if (state.plateauDimensions) {
       localStorage.setItem('endertrack_plateau_dimensions_enabled', 'true');
       localStorage.setItem('endertrack_plateau_dimensions', JSON.stringify(state.plateauDimensions));
     }
     
-    // Save coordonnées
+    // Sauvegarder coordonnées
     if (state.coordinateBounds) {
       localStorage.setItem('endertrack_coordinate_bounds_enabled', 'true');
       localStorage.setItem('endertrack_coordinate_bounds', JSON.stringify(state.coordinateBounds));
     }
     
-    // Save orientation axes
+    // Sauvegarder orientation axes
     if (state.axisOrientation) {
       localStorage.setItem('endertrack_axis_orientation_enabled', 'true');
       localStorage.setItem('endertrack_axis_orientation', JSON.stringify(state.axisOrientation));
     }
     
-    // Save limites sécurité
+    // Sauvegarder limites sécurité
     if (state.safetyLimits) {
       localStorage.setItem('endertrack_safety_limits_enabled', 'true');
       localStorage.setItem('endertrack_safety_limits', JSON.stringify(state.safetyLimits));
     }
     
-    // Save feedrate
+    // Sauvegarder feedrate
     if (state.feedrate) {
       localStorage.setItem('endertrack_feedrate', String(state.feedrate));
     }

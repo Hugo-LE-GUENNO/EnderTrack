@@ -30,10 +30,6 @@ class DisplayModule {
       e.preventDefault();
       this._showSourceMenu(e.clientX, e.clientY, 0);
     });
-    this._stageWrap.addEventListener('dblclick', () => {
-      if (document.fullscreenElement) document.exitFullscreen();
-      else this._stageWrap.requestFullscreen?.();
-    });
   }
 
   // === LAYOUT ===
@@ -130,10 +126,6 @@ class DisplayModule {
       e.preventDefault();
       e.stopPropagation();
       this._showSourceMenu(e.clientX, e.clientY, id);
-    });
-    cell.addEventListener('dblclick', () => {
-      if (document.fullscreenElement) document.exitFullscreen();
-      else cell.requestFullscreen?.();
     });
 
     this._container.appendChild(cell);
@@ -253,11 +245,13 @@ class DisplayModule {
             liveRenderer.setCanvas(canvas);
             liveRenderer._liveImg = liveImg; // ref for toggling
             liveRenderer.start();
+            // Override _renderFrame to toggle img/canvas visibility
+            const origRender = liveRenderer._renderFrame.bind(liveRenderer);
             liveRenderer._renderFrame = () => {
               if (liveRenderer.enabled) {
                 liveImg.style.display = 'none';
                 canvas.style.display = '';
-                liveRenderer._nativeRenderFrame();
+                origRender();
               } else {
                 canvas.style.display = 'none';
                 liveImg.style.display = '';
@@ -265,43 +259,28 @@ class DisplayModule {
             };
           }
         } else {
-          // Webcam: video element + canvas overlay for LUT/contrast
+          // Webcam: hidden video + canvas via LiveRenderer
+          const canvas = document.createElement('canvas');
+          canvas.id = 'liveDisplayCanvas';
+          canvas.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000; image-rendering:pixelated;';
+          cell.appendChild(canvas);
+          canvas.ondblclick = () => {
+            if (document.fullscreenElement) document.exitFullscreen();
+            else canvas.requestFullscreen?.();
+          };
           const video = document.createElement('video');
           video.autoplay = true; video.muted = true; video.playsInline = true;
-          video.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000;';
+          video.style.cssText = 'position:absolute; opacity:0; pointer-events:none; width:0; height:0;';
           video.srcObject = camera.driver._stream;
           cell.appendChild(video);
           video.play().catch(() => {});
-          video.ondblclick = () => {
-            if (document.fullscreenElement) document.exitFullscreen();
-            else cell.requestFullscreen?.();
-          };
-          if (camera.driver) camera.driver._grabVideo = video;
           this._videos.set(viewportId, video);
-
-          const canvas = document.createElement('canvas');
-          canvas.id = 'liveDisplayCanvas';
-          canvas.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; display:none;';
-          cell.appendChild(canvas);
-
           const liveRenderer = window.EnderTrack?.LiveRenderer;
           if (liveRenderer) {
             liveRenderer.setImage(null);
             liveRenderer.setVideo(video);
             liveRenderer.setCanvas(canvas);
-            liveRenderer._videoEl = video;
-            liveRenderer._canvasEl = canvas;
             liveRenderer.start();
-            liveRenderer._renderFrame = () => {
-              if (liveRenderer.enabled) {
-                video.style.display = 'none';
-                canvas.style.display = 'block';
-                liveRenderer._nativeRenderFrame();
-              } else {
-                canvas.style.display = 'none';
-                video.style.display = '';
-              }
-            };
           }
         }
       };

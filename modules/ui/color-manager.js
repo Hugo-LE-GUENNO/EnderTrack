@@ -167,7 +167,7 @@ class ColorManager {
   }
 
   applyDisplaySettings() {
-    // Save l'état des checkboxes dans localStorage
+    // Sauvegarder l'état des checkboxes dans localStorage
     const checkboxes = [
       'showZPanel', 'showStatusSection', 'showOthersTab', 'showControllerLog', 'showFuturePositionsXY', 'showFuturePositionsZ',
       'showHistoryPanel', 'showGraphs'
@@ -182,7 +182,7 @@ class ColorManager {
       }
     });
     
-    // Save aussi enableSnakeMode
+    // Sauvegarder aussi enableSnakeMode
     const snakeMode = document.getElementById('enableSnakeMode');
     if (snakeMode) {
       localStorage.setItem('endertrack_ui_enableSnakeMode', snakeMode.checked.toString());
@@ -215,7 +215,7 @@ class ColorManager {
       return savedState === 'true';
     }
     
-    // Values par défaut - toutes cochées
+    // Valeurs par défaut - toutes cochées
     return true;
   }
 

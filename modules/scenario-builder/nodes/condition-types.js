@@ -15,19 +15,19 @@ class ConditionTypesRegistry {
       create: () => ({
         type: 'condition',
         conditionType: 'default',
-        params: { label: 'Condition', showInLog: false },
+        params: { label: 'Condition' },
         branches: [
-          { condition: '$x > 0', actions: [] }
+          { condition: '$x > 0', actions: [] }  // Juste SI au départ
         ]
       }),
       addSinon: (node) => {
         if (!node.branches) node.branches = [];
-        // Add ELSE at end
+        // Ajouter SINON à la fin
         node.branches.push({ condition: null, actions: [] });
       },
       addOuSi: (node) => {
         if (!node.branches) node.branches = [];
-        // Insert ELSE IF before ELSE (s'il existe)
+        // Insérer OU SI avant le SINON (s'il existe)
         const hasSinon = node.branches[node.branches.length - 1]?.condition === null;
         const insertIndex = hasSinon ? node.branches.length - 1 : node.branches.length;
         node.branches.splice(insertIndex, 0, { condition: '$x > 0', actions: [] });

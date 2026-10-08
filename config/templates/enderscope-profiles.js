@@ -1,5 +1,5 @@
-// config/templates/enderscope-profiles.js - Profiles de plateau
-window.EnderscopeProfilees = {
+// config/templates/enderscope-profiles.js - Profils de plateau
+window.EnderscopeProfiles = {
   "printerStages": [
     {
       "id": "ender2",
@@ -42,7 +42,7 @@ window.EnderscopeProfilees = {
         "z": { "min": 0, "max": 250 }
       },
       "axisOrientation": { "x": "right", "y": "down", "z": "up" },
-      "description": "Version improved Ender-3",
+      "description": "Version améliorée de l'Ender-3",
       "category": "Popular",
       "gcode": true
     },
@@ -57,7 +57,7 @@ window.EnderscopeProfilees = {
         "z": { "min": 0, "max": 250 }
       },
       "axisOrientation": { "x": "right", "y": "down", "z": "up" },
-      "description": "Ender-3 avec color screen and improvements",
+      "description": "Ender-3 avec écran couleur et améliorations",
       "category": "Popular",
       "gcode": true
     },
@@ -102,7 +102,7 @@ window.EnderscopeProfilees = {
         "z": { "min": 0, "max": 180 }
       },
       "axisOrientation": { "x": "right", "y": "down", "z": "up" },
-      "description": "Imprimante compacte de premium quality",
+      "description": "Imprimante compacte de qualité premium",
       "category": "Premium",
       "gcode": true
     },
@@ -117,7 +117,7 @@ window.EnderscopeProfilees = {
         "z": { "min": 0, "max": 210 }
       },
       "axisOrientation": { "x": "right", "y": "down", "z": "up" },
-      "description": "Reference en print quality",
+      "description": "Référence en qualité d'impression",
       "category": "Premium",
       "gcode": true
     },
@@ -132,7 +132,7 @@ window.EnderscopeProfilees = {
         "z": { "min": 0, "max": 180 }
       },
       "axisOrientation": { "x": "right", "y": "down", "z": "up" },
-      "description": "Compact automated printer",
+      "description": "Imprimante automatisée compacte",
       "category": "Premium",
       "gcode": false
     },
@@ -162,7 +162,7 @@ window.EnderscopeProfilees = {
         "z": { "min": -25, "max": 25 }
       },
       "axisOrientation": { "x": "right", "y": "up", "z": "up" },
-      "description": "Motorized stage for lab microscope",
+      "description": "Stage motorisé pour microscope de laboratoire",
       "category": "Laboratory",
       "gcode": true
     },
@@ -192,7 +192,7 @@ window.EnderscopeProfilees = {
         "z": { "min": 0, "max": 200 }
       },
       "axisOrientation": { "x": "right", "y": "up", "z": "up" },
-      "description": "Extended Enderscope configuration",
+      "description": "Configuration étendue Enderscope",
       "category": "Enderscope",
       "gcode": true
     }

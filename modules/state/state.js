@@ -254,20 +254,25 @@ class StateManager {
       localStorage.removeItem('endertrack_safety_limits');
     }
     
-    // Load feedrate
-    const savedFeedrate = localStorage.getItem('endertrack_feedrate');
-    if (savedFeedrate) {
-      const fr = parseInt(savedFeedrate);
-      if (fr >= 100 && fr <= 10000) {
-        this.state.feedrate = fr;
-        setTimeout(() => {
-          const slider = document.getElementById('feedrateSlider');
-          const input = document.getElementById('feedrateInput');
-          if (slider) slider.value = fr;
-          if (input) input.value = fr;
-        }, 500);
-      }
-    }
+    // Load feedrate and z_speed from server config (async, non-blocking)
+    fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/sync/config', { signal: AbortSignal.timeout(2000) })
+      .then(r => r.json()).then(cfg => {
+        if (cfg.feedrate) {
+          const fr = parseInt(cfg.feedrate);
+          if (fr >= 100 && fr <= 18000) {
+            this.state.feedrate = fr;
+            const input = document.getElementById('feedrateInput');
+            if (input) input.value = fr;
+          }
+        }
+        if (cfg.zSpeed) {
+          const zs = parseFloat(cfg.zSpeed);
+          if (zs >= 1 && zs <= 20) {
+            const input = document.getElementById('zSpeedInput');
+            if (input) input.value = zs;
+          }
+        }
+      }).catch(() => {});
     
     // Load history from localStorage ONLY if enabled
     if (localStorage.getItem('endertrack_history_enabled') === 'true') {
@@ -413,22 +418,16 @@ class StateManager {
       }
     }
     
-    // Add to track immediately for final positions
+    // Add to continuous track for final positions (used for line rendering)
     if (isFinalPosition && window._trackingEnabled) {
-      const lastTrackPoint = this.state.track[this.state.track.length - 1];
-      if (!lastTrackPoint || 
-          Math.abs(lastTrackPoint.x - pos.x) > 0.01 || 
-          Math.abs(lastTrackPoint.y - pos.y) > 0.01 || 
-          Math.abs(lastTrackPoint.z - pos.z) > 0.01) {
-        
-        this.state.track.push({ x: pos.x, y: pos.y, z: pos.z });
-        
-        // Limit track points
-        if (this.state.track.length > 1000) {
-          this.state.track.shift();
-        }
-        
-        // Force immediate render for track update
+      const last = this.state.continuousTrack[this.state.continuousTrack.length - 1];
+      if (!last ||
+          Math.abs(last.x - pos.x) > 0.01 ||
+          Math.abs(last.y - pos.y) > 0.01 ||
+          Math.abs(last.z - pos.z) > 0.01) {
+        this.state.continuousTrack.push({ x: pos.x, y: pos.y, z: pos.z });
+        const maxPoints = this.state.maxContinuousTrackPoints || 2000;
+        while (this.state.continuousTrack.length > maxPoints) this.state.continuousTrack.shift();
         this.requestCanvasRender();
       }
     }

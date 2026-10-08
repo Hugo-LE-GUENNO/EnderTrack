@@ -43,6 +43,16 @@ class MovementEngine {
             this.isMoving = false;
             this._isLocalMove = false;
             this._remoteArrive(evt.data);
+          } else if (evt.type === 'plugin:ui') {
+            window.EnderTrack?.Events?.notifyListeners?.('pyplugin:ui', evt.data);
+          } else if (evt.type === 'plugin:removed') {
+            window.EnderTrack?.Events?.notifyListeners?.('pyplugin:removed', evt.data);
+          } else if (evt.type === 'plugin:output') {
+            window.EnderTrack?.Events?.notifyListeners?.('pyplugin:output', evt.data);
+          } else if (evt.type === 'plugin:log') {
+            window.EnderTrack?.Events?.notifyListeners?.('pyplugin:log', evt.data);
+          } else if (evt.type === 'plugin:scenario_actions') {
+            window.EnderTrack?.Events?.notifyListeners?.('pyplugin:scenario_actions', evt.data);
           } else if (evt.type === 'sync:overlays') {
             if (window.EnderTrack?.Overlays) {
               window.EnderTrack.Overlays._loadFromData(evt.data);
@@ -58,14 +68,49 @@ class MovementEngine {
               EnderTrack.Canvas?.requestRender?.();
             }
           } else if (evt.type === 'sync:config') {
-            if (evt.data?.plateauDimensions) {
+            if (evt.data?.plateauDimensions || evt.data?.feedrate || evt.data?.zSpeed || evt.data?.maxFeedrate || evt.data?.maxZSpeed) {
+              if (evt.data.plateauDimensions) {
               EnderTrack.State?.update?.({
                 plateauDimensions: evt.data.plateauDimensions,
                 coordinateBounds: evt.data.coordinateBounds,
                 safetyLimits: evt.data.safetyLimits,
                 axisOrientation: evt.data.axisOrientation,
-                feedrate: evt.data.feedrate
               });
+              }
+              if (evt.data.maxFeedrate) {
+                const frInput = document.getElementById('feedrateInput');
+                if (frInput) frInput.max = evt.data.maxFeedrate;
+                // Clamp current feedrate if it exceeds firmware max
+                const curFr = EnderTrack.State?.get()?.feedrate || 0;
+                if (curFr > evt.data.maxFeedrate) {
+                  EnderTrack.State?.update?.({ feedrate: evt.data.maxFeedrate });
+                  if (frInput) frInput.value = evt.data.maxFeedrate;
+                }
+              }
+              if (evt.data.maxZSpeed) {
+                const zInput = document.getElementById('zSpeedInput');
+                if (zInput) zInput.max = evt.data.maxZSpeed;
+                const curZ = parseFloat(document.getElementById('zSpeedInput')?.value) || 0;
+                if (curZ > evt.data.maxZSpeed && zInput) zInput.value = evt.data.maxZSpeed;
+              }
+              if (evt.data.feedrate) {
+                const fr = parseInt(evt.data.feedrate);
+                const maxFr = evt.data.maxFeedrate || Infinity;
+                if (fr >= 100) {
+                  const clamped = Math.min(fr, maxFr);
+                  EnderTrack.State?.update?.({ feedrate: clamped });
+                  const input = document.getElementById('feedrateInput');
+                  if (input) input.value = clamped;
+                }
+              }
+              if (evt.data.zSpeed) {
+                const zs = parseFloat(evt.data.zSpeed);
+                const maxZ = evt.data.maxZSpeed || Infinity;
+                if (zs >= 1) {
+                  const input = document.getElementById('zSpeedInput');
+                  if (input) input.value = Math.min(zs, maxZ);
+                }
+              }
               // Persister pour que le refresh conserve les vraies limites
               if (evt.data.coordinateBounds) {
                 localStorage.setItem('endertrack_coordinate_bounds_enabled', 'true');
@@ -102,8 +147,8 @@ class MovementEngine {
     EnderTrack.State.update({ pos: start, isMoving: true });
     const animate = () => {
       const progress = Math.min((Date.now() - startTime) / duration, 1);
-      const tXY = EnderTrack.Math.easeTrapezoidalXY(progress);
-      const tZ = EnderTrack.Math.easeTrapezoidalZ(progress);
+      const tXY = progress;
+      const tZ = progress;
       const pos = {
         x: start.x + (target.x - start.x) * tXY,
         y: start.y + (target.y - start.y) * tXY,
@@ -175,31 +220,26 @@ class MovementEngine {
       this._isLocalMove = true;
       EnderTrack.State.update({ isMoving: true });
 
-      // Animate locally
+      // Animation runs freely, hardware runs in parallel
       movement.startTime = Date.now();
-      let animDuration = movement.duration;
+      const animDuration = movement.duration;
       const animateHw = () => {
-        if (!this.isMoving) return;
         const progress = Math.min((Date.now() - movement.startTime) / animDuration, 1);
-        const tXY = EnderTrack.Math.easeTrapezoidalXY(progress);
-        const tZ = EnderTrack.Math.easeTrapezoidalZ(progress);
         this._updatePos({
-          x: EnderTrack.Math.lerp(movement.start.x, movement.target.x, tXY),
-          y: EnderTrack.Math.lerp(movement.start.y, movement.target.y, tXY),
-          z: EnderTrack.Math.lerp(movement.start.z, movement.target.z, tZ)
+          x: EnderTrack.Math.lerp(movement.start.x, target.x, progress),
+          y: EnderTrack.Math.lerp(movement.start.y, target.y, progress),
+          z: EnderTrack.Math.lerp(movement.start.z, target.z, progress)
         });
         if (progress < 1) this.currentAnimation = requestAnimationFrame(animateHw);
+        else { this.currentAnimation = null; this._updatePos(target); }
       };
       this.currentAnimation = requestAnimationFrame(animateHw);
 
       try {
         const ok = await window.EnderTrack.EnderscopeMovement.moveRelative(Number(dx), Number(dy), Number(dz), feedrate);
-        if (ok?.duration) animDuration = ok.duration * 1000;
-        this._cancelAnim();
-        if (ok) { this.completeMovement(target, true); return true; }
-        else { this.completeMovement(state.pos, false); return false; }
+        this.completeMovement(ok ? target : state.pos, !!ok);
+        return !!ok;
       } catch (e) {
-        this._cancelAnim();
         this.completeMovement(state.pos, false);
         return false;
       }
@@ -271,10 +311,10 @@ class MovementEngine {
     const distZ = Math.abs(target.z - start.z);
     const fr = feedrate || EnderTrack.State.get().feedrate || 3000;
     const speedXY = fr / 60;
-    const speedZ = Math.min(fr / 60, 5);
+    const speedZ = parseFloat(document.getElementById('zSpeedInput')?.value) || 5;
     const timeXY = distXY > 0 ? distXY / speedXY : 0;
     const timeZ = distZ > 0 ? distZ / speedZ : 0;
-    const duration = Math.max(timeXY, timeZ) * 1000; // longest axis dictates duration
+    const duration = Math.max(timeXY, timeZ) * 1000;
     return {
       start: { ...start },
       target: { ...target },
@@ -308,32 +348,27 @@ class MovementEngine {
       const enderscope = window.EnderTrack?.Enderscope;
       if (enderscope?.isConnected) {
         // Start animation immediately, duration will be recalibrated from server response
+        // Animation runs freely, hardware runs in parallel
         movement.startTime = Date.now();
-        let animDuration = movement.duration;
+        const animDuration = movement.duration;
         const animateHw = () => {
-          if (this.emergencyStop || !this.isMoving) return;
+          if (this.emergencyStop) return;
           const progress = Math.min((Date.now() - movement.startTime) / animDuration, 1);
-          const tXY = EnderTrack.Math.easeTrapezoidalXY(progress);
-          const tZ = EnderTrack.Math.easeTrapezoidalZ(progress);
-          const pos = {
-            x: EnderTrack.Math.lerp(movement.start.x, movement.target.x, tXY),
-            y: EnderTrack.Math.lerp(movement.start.y, movement.target.y, tXY),
-            z: EnderTrack.Math.lerp(movement.start.z, movement.target.z, tZ)
-          };
-          this._updatePos(pos);
+          this._updatePos({
+            x: EnderTrack.Math.lerp(movement.start.x, movement.target.x, progress),
+            y: EnderTrack.Math.lerp(movement.start.y, movement.target.y, progress),
+            z: EnderTrack.Math.lerp(movement.start.z, movement.target.z, progress)
+          });
           if (progress < 1) this.currentAnimation = requestAnimationFrame(animateHw);
+          else { this.currentAnimation = null; this._updatePos(movement.target); }
         };
         this.currentAnimation = requestAnimationFrame(animateHw);
 
         try {
           const ok = await window.EnderTrack.EnderscopeMovement.moveAbsolute(movement.target.x, movement.target.y, movement.target.z, feedrate);
-          // Recalibrate animation duration from actual move time
-          if (ok?.duration) animDuration = ok.duration * 1000;
-          this._cancelAnim();
-          if (ok) { this.completeMovement(movement.target, true); resolve(true); }
-          else { this.completeMovement(EnderTrack.State.get().pos, false); reject(new Error('Hardware movement failed')); }
+          this.completeMovement(ok ? movement.target : EnderTrack.State.get().pos, !!ok);
+          if (ok) resolve(true); else reject(new Error('Hardware movement failed'));
         } catch (error) {
-          this._cancelAnim();
           this.completeMovement(EnderTrack.State.get().pos, false);
           reject(error);
         }
@@ -349,8 +384,8 @@ class MovementEngine {
           return;
         }
         const progress = Math.min((Date.now() - movement.startTime) / movement.duration, 1);
-        const tXY = EnderTrack.Math.easeTrapezoidalXY(progress);
-        const tZ = EnderTrack.Math.easeTrapezoidalZ(progress);
+        const tXY = progress;
+        const tZ = progress;
         const pos = {
           x: EnderTrack.Math.lerp(movement.start.x, movement.target.x, tXY),
           y: EnderTrack.Math.lerp(movement.start.y, movement.target.y, tXY),
@@ -380,14 +415,29 @@ class MovementEngine {
   }
 
   _updatePos(pos) {
-    if (window._trackingEnabled) {
-      const ct = EnderTrack.State.get().continuousTrack || [];
-      ct.push({ x: pos.x, y: pos.y, z: pos.z, timestamp: Date.now() });
-      EnderTrack.State.update({ pos, continuousTrack: ct });
-    } else {
-      EnderTrack.State.update({ pos });
+    EnderTrack.State.update({ pos });
+    // Live trail: push to continuousTrack every ~50ms
+    const now = Date.now();
+    if (window._trackingEnabled && (!this._lastTrailTime || now - this._lastTrailTime > 50)) {
+      this._lastTrailTime = now;
+      const track = EnderTrack.State.state.continuousTrack;
+      const last = track[track.length - 1];
+      if (!last || Math.abs(last.x - pos.x) > 0.05 || Math.abs(last.y - pos.y) > 0.05) {
+        track.push({ x: pos.x, y: pos.y, z: pos.z });
+        const max = EnderTrack.State.state.maxContinuousTrackPoints || 2000;
+        if (track.length > max) track.shift();
+      }
     }
-    // Render directly during animation — bypass state:changed event chain
+    // Live scenario trail: push to visited every ~50ms during execution
+    const scenario = window.EnderTrack?.Scenario;
+    if (scenario?.isExecuting && scenario.scenarioTrack && (!this._lastScenarioTrailTime || now - this._lastScenarioTrailTime > 50)) {
+      this._lastScenarioTrailTime = now;
+      const visited = scenario.scenarioTrack.visited;
+      const last = visited[visited.length - 1];
+      if (!last || Math.abs(last.x - pos.x) > 0.05 || Math.abs(last.y - pos.y) > 0.05) {
+        visited.push({ x: pos.x, y: pos.y, z: pos.z });
+      }
+    }
     EnderTrack.Canvas?.render?.();
   }
 
@@ -399,12 +449,10 @@ class MovementEngine {
   }
 
   completeMovement(finalPos, success = true) {
-    this._cancelAnim();
+    this.isMoving = false;
     const roundedPos = EnderTrack.Math.roundPoint(finalPos);
     EnderTrack.State.update({ pos: roundedPos, isMoving: false });
-    this.isMoving = false;
-    // Keep _isLocalMove true briefly to ignore late SSE events
-    setTimeout(() => { this._isLocalMove = false; }, 500);    // Sync absolute inputs to final position (clears yellow cross)
+    setTimeout(() => { this._isLocalMove = false; }, 500);
     const ix = document.getElementById('inputX');
     const iy = document.getElementById('inputY');
     const iz = document.getElementById('inputZ');

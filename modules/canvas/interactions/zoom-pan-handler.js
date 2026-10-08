@@ -64,7 +64,7 @@ class ZoomPanHandler {
     // Position monde avant zoom
     const oldWorldPos = coords.canvasToMap(canvasX, canvasY);
     
-    // Apply le nouveau zoom
+    // Appliquer le nouveau zoom
     EnderTrack.State.update({ zoom: newZoom });
     window.EnderTrack.Canvas.updateCoordinateSystem();
     

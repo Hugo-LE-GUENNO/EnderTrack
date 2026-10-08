@@ -113,14 +113,7 @@ class ListManager {
   addCurrentPosition() {
     const pos = EnderTrack.State?.get()?.pos;
     if (!pos) return;
-    const xEl = document.getElementById('listAddX');
-    if (xEl) {
-      xEl.value = Math.round(pos.x * 100) / 100;
-      document.getElementById('listAddY').value = Math.round(pos.y * 100) / 100;
-      document.getElementById('listAddZ').value = Math.round(pos.z * 100) / 100;
-    } else {
-      this.addPosition(pos.x, pos.y, pos.z);
-    }
+    this.addPosition(pos.x, pos.y, pos.z);
   }
 
   duplicatePosition(idx) {
@@ -325,6 +318,8 @@ class ListManager {
       if (!this.isActive || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (this.selectedIdx !== null) this.removePosition(this.selectedIdx);
+      } else if (e.key === 'p' || e.key === 'P') {
+        this.addCurrentPosition();
       } else if (e.key === 'Escape') {
         this.selectedIdx = null;
         this._clickMode = false;
@@ -356,54 +351,16 @@ class ListManager {
         showPoints = isActiveGroup;
         showTrack = isActiveGroup;
       } else if (tab === 'acquisition') {
-        showPoints = isScenarioList;
-        showTrack = isScenarioList;
+        showPoints = g.pinned || isScenarioList;
+        showTrack = g.pinned || isScenarioList;
       } else {
         showPoints = g.pinned;
-        showTrack = false;
+        showTrack = g.pinned;
       }
 
       if (!showPoints) return;
 
-      // Track line
-      if (showTrack && g.positions.length > 1) {
-        const executing = tab === 'acquisition' && window.EnderTrack?.Scenario?.isExecuting;
-        const color = g.color || '#4a90e2';
-        ctx.strokeStyle = executing ? '#555' : color;
-        ctx.lineWidth = executing ? 1 : (tab === 'acquisition' ? 2 : 1);
-        ctx.globalAlpha = executing ? 0.4 : (tab === 'acquisition' ? 0.5 : 0.3);
-        if (executing) ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        const f = coords.mapToCanvas(g.positions[0].x, g.positions[0].y);
-        ctx.moveTo(f.cx, f.cy);
-        for (let i = 1; i < g.positions.length; i++) {
-          const p = coords.mapToCanvas(g.positions[i].x, g.positions[i].y);
-          ctx.lineTo(p.cx, p.cy);
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
 
-        // Direction arrows only in selection mode
-        if (tab === 'acquisition' && !executing) {
-          ctx.fillStyle = color;
-          for (let i = 1; i < g.positions.length; i++) {
-            const from = coords.mapToCanvas(g.positions[i-1].x, g.positions[i-1].y);
-            const to = coords.mapToCanvas(g.positions[i].x, g.positions[i].y);
-            const dx = to.cx - from.cx, dy = to.cy - from.cy;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < 20) continue;
-            const mx = (from.cx + to.cx) / 2, my = (from.cy + to.cy) / 2;
-            const a = Math.atan2(dy, dx);
-            ctx.beginPath();
-            ctx.moveTo(mx + 5*Math.cos(a), my + 5*Math.sin(a));
-            ctx.lineTo(mx - 5*Math.cos(a-0.5), my - 5*Math.sin(a-0.5));
-            ctx.lineTo(mx - 5*Math.cos(a+0.5), my - 5*Math.sin(a+0.5));
-            ctx.closePath();
-            ctx.fill();
-          }
-        }
-        ctx.globalAlpha = 1;
-      }
 
       // Scenario progress overlay
       const executing = isScenarioList && window.EnderTrack?.Scenario?.isExecuting;
@@ -467,6 +424,7 @@ class ListManager {
       _nextGroupId: this._nextGroupId
     };
     localStorage.setItem('endertrack_lists', JSON.stringify(data));
+    window.dispatchEvent(new Event('lists:changed'));
     // Sync to server
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000');
     fetch(url + '/api/sync/lists', {
@@ -502,9 +460,7 @@ class ListManager {
     this.groups = raw.groups;
     this.activeGroupId = raw.activeGroupId || this.groups[0]?.id;
     this._nextGroupId = raw._nextGroupId || 1;
-    if (this.groups.length > 0 && !this.groups.some(g => g.pinned)) {
-      this.groups[0].pinned = true;
-    }
+
     this.renderUI?.();
     window.EnderTrack?.Canvas?.requestRender?.();
     window.EnderTrack?.ZVisualization?.render?.();
@@ -635,7 +591,7 @@ class ListManager {
             color:${active ? 'var(--text-selected)' : 'var(--text-general)'};
             opacity:${g.visible ? '1' : '0.35'};
             border-left:3px solid ${g.color};
-          ">${g.pinned ? '📌 ' : ''}${g.name} (${g.positions.length})</button>`;
+          ">${g.pinned ? '* ' : ''}${g.name} (${g.positions.length})</button>`;
         }).join('')}
         <button onclick="EnderTrack.Lists.addGroup()" style="padding:3px 8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);">+</button>
       </div>
@@ -644,7 +600,7 @@ class ListManager {
         <span></span><span>Name</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span style="text-align:center">Z</span>
       </div>
       <div style="display:grid; grid-template-columns:20px 1fr 46px 46px 46px; gap:2px; align-items:center; padding:3px 4px 6px; border-bottom:1px solid #333; margin-bottom:4px;">
-        <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:none; border:none; color:var(--coordinates-color); cursor:pointer; font-size:12px; padding:0; text-align:center; line-height:1;" title="Remplir avec la position actuelle">📍</button>
+        <button onclick="EnderTrack.Lists.addCurrentPosition()" style="background:none; border:none; color:var(--coordinates-color); cursor:pointer; font-size:11px; padding:0; text-align:center; line-height:1;" title="Add current position (P)"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="2.5"/><line x1="6" y1="0" x2="6" y2="3" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="9" x2="6" y2="12" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="6" x2="3" y2="6" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="6" x2="12" y2="6" stroke="currentColor" stroke-width="1.5"/></svg></button>
         <input type="text" id="listAddName" placeholder="—" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--text-general); font-size:11px; outline:none; padding:1px;">
         <input type="number" id="listAddX" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
         <input type="number" id="listAddY" placeholder="—" step="0.1" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--pos-potential); text-align:center; font-size:10px; font-family:monospace; outline:none; padding:1px;">
@@ -751,11 +707,11 @@ class ListManager {
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
     menu.innerHTML = `
-      <button onmousedown="EnderTrack.Lists.goToPosition(${idx}); this.parentElement.remove()">🎯 Go to</button>
-      <button onmousedown="EnderTrack.Lists.duplicatePosition(${idx}); this.parentElement.remove()">⧉ Duplicate</button>
-      <button onmousedown="EnderTrack.Lists.movePosition(${idx},-1); this.parentElement.remove()" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''}>▲ Move up</button>
-      <button onmousedown="EnderTrack.Lists.movePosition(${idx},1); this.parentElement.remove()" ${idx === total - 1 ? 'disabled style="opacity:0.3"' : ''}>▼ Move down</button>
-      <button onmousedown="EnderTrack.Lists.removePosition(${idx}); this.parentElement.remove()" style="color:#e25555;">✕ Delete</button>
+      <button onmousedown="EnderTrack.Lists.goToPosition(${idx}); this.parentElement.remove()">Go to</button>
+      <button onmousedown="EnderTrack.Lists.duplicatePosition(${idx}); this.parentElement.remove()">Duplicate</button>
+      <button onmousedown="EnderTrack.Lists.movePosition(${idx},-1); this.parentElement.remove()" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''}>Up</button>
+      <button onmousedown="EnderTrack.Lists.movePosition(${idx},1); this.parentElement.remove()" ${idx === total - 1 ? 'disabled style="opacity:0.3"' : ''}>Down</button>
+      <button onmousedown="EnderTrack.Lists.removePosition(${idx}); this.parentElement.remove()" style="color:#e25555;">Delete</button>
     `;
     document.body.appendChild(menu);
     const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
@@ -772,7 +728,7 @@ class ListManager {
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
     menu.innerHTML = `
-      <button onmousedown="EnderTrack.Lists.toggleGroupPinned(${gid}); this.parentElement.remove()">${g.pinned ? '📌 Unpin' : 'Pin'}</button>
+      <button onmousedown="EnderTrack.Lists.toggleGroupPinned(${gid}); this.parentElement.remove()">${g.pinned ? 'Unpin' : 'Pin'}</button>
       <button onmousedown="const n=prompt('Name:','${g.name.replace(/'/g, "\\'")}'); if(n) { EnderTrack.Lists.renameGroup(${gid},n); } this.parentElement.remove()">Rename</button>
       <button onmousedown="EnderTrack.Lists.exportGroup(${gid}); this.parentElement.remove()">Save</button>
       <button onmousedown="EnderTrack.Lists.importFromFile(); this.parentElement.remove()">Import</button>

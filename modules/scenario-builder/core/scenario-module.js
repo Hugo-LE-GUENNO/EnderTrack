@@ -23,13 +23,17 @@ class ScenarioModule {
     this.isActive = false;
     this.updateCanvasOverlay();
     this.createUI();
+    // Rebuild preview when any list changes
+    window.addEventListener('lists:changed', () => {
+      if (!this.isExecuting) this.updateCanvasOverlay();
+    });
     return true;
   }
 
   activate() {
     this.isActive = true;
-    this.createUI();
     this.updateCanvasOverlay();
+    this.createUI();
     EnderTrack.Canvas?.requestRender?.();
   }
 
@@ -126,7 +130,7 @@ class ScenarioModule {
         if (iter) iter.textContent = '';
         const label = document.getElementById('sbRightLabel');
         const scenario = this.manager?.getCurrentScenario();
-        if (label) label.textContent = `▶ ${scenario?.name || 'Sc\u00e9nario'}`;
+        if (label) label.textContent = `${scenario?.name || 'Scenario'}`;
         ['green', 'orange', 'red'].forEach(c => {
           const led = document.getElementById('status-light-' + c);
           if (led) { led.style.opacity = '0.2'; led.style.boxShadow = 'none'; }
@@ -216,22 +220,29 @@ class ScenarioModule {
     if (this.isExecuting) {
       const btn = document.getElementById('sbPlayPauseBtn');
       if (btn) {
-        btn.textContent = '\u23f8';
-        btn.style.background = '#92400e';
-        btn.style.color = '#fcd34d';
-        btn.style.boxShadow = this._paused ? 'inset 0 2px 4px rgba(0,0,0,0.4)' : '';
+        if (this._paused) {
+          btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><polygon points="2,1 11,6 2,11"/></svg>';
+          btn.style.background = '#14532d';
+          btn.style.color = '#86efac';
+        } else {
+          btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="4" height="10"/><rect x="7" y="1" width="4" height="10"/></svg>';
+          btn.style.background = '#92400e';
+          btn.style.color = '#fcd34d';
+        }
+        btn.style.boxShadow = '';
       }
-      // Inject stop button if not present
       if (!document.getElementById('sbStopBtn')) {
         const stopBtn = document.createElement('button');
         stopBtn.id = 'sbStopBtn';
-        stopBtn.textContent = '\u25a0';
+        stopBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10"/></svg>';
         stopBtn.onclick = () => EnderTrack.Scenario._confirmStop();
-        stopBtn.style.cssText = 'padding:10px 14px; border:none; border-radius:4px; cursor:pointer; font-size:14px; background:#7f1d1d; color:#fca5a5; font-weight:600;';
+        stopBtn.style.cssText = 'padding:10px 14px; border:none; border-radius:4px; cursor:pointer; background:#7f1d1d; color:#fca5a5; display:flex; align-items:center; justify-content:center;';
         btn?.parentElement?.appendChild(stopBtn);
       }
       return;
     }
+    // Not executing: remove stop button if present
+    document.getElementById('sbStopBtn')?.remove();
     const scenarios = this.manager?.getAllScenarios() || [];
     const current = this.manager?.getCurrentScenario();
     const actionCount = current ? EnderTrack.TreeUtils.countActions(current.tree) : 0;
@@ -244,24 +255,15 @@ class ScenarioModule {
         <!-- 1. Dropdown + builder button -->
         <div style="display:flex; gap:6px; align-items:center;">
           <select id="sbScenarioSelect" style="flex:1; padding:8px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
-            ${hasScenarios ? scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.icon || '\ud83c\udfac'} ${s.name}</option>`).join('') : '<option value="_new">+ New scenario</option>'}
+            ${hasScenarios ? scenarios.map(s => `<option value="${s.id}" ${s.id === current?.id ? 'selected' : ''}>${s.name}</option>`).join('') : '<option value="_new">+ New scenario</option>'}
           </select>
           <button onclick="EnderTrack.Scenario._openBuilder()" title="Open builder" style="padding:6px 8px; border:1px solid #444; border-radius:4px; background:var(--app-bg); color:var(--text-general); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;" onmouseenter="this.style.background='var(--container-bg)'" onmouseleave="this.style.background='var(--app-bg)'">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-              <circle cx="10" cy="3" r="1.5"/>
-              <line x1="10" y1="4.5" x2="10" y2="8"/>
-              <line x1="10" y1="8" x2="5" y2="11"/>
-              <line x1="10" y1="8" x2="15" y2="11"/>
-              <circle cx="5" cy="12.5" r="1.5"/>
-              <circle cx="15" cy="12.5" r="1.5"/>
-              <line x1="5" y1="14" x2="3" y2="17"/>
-              <line x1="5" y1="14" x2="7" y2="17"/>
-              <line x1="15" y1="14" x2="13" y2="17"/>
-              <line x1="15" y1="14" x2="17" y2="17"/>
-              <circle cx="3" cy="17.5" r="1"/>
-              <circle cx="7" cy="17.5" r="1"/>
-              <circle cx="13" cy="17.5" r="1"/>
-              <circle cx="17" cy="17.5" r="1"/>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <rect x="1" y="1" width="4" height="3" rx="1"/>
+              <rect x="5" y="10" width="4" height="3" rx="1"/>
+              <rect x="9" y="5" width="4" height="3" rx="1"/>
+              <line x1="3" y1="4" x2="7" y2="10"/>
+              <line x1="11" y1="8" x2="7" y2="10"/>
             </svg>
           </button>
         </div>
@@ -269,8 +271,8 @@ class ScenarioModule {
         <!-- 2. Play / Pause / Stop -->
         <div style="display:flex; gap:6px;">
           <button id="sbPlayPauseBtn" onclick="EnderTrack.Scenario.isExecuting ? EnderTrack.Scenario._togglePause() : EnderTrack.Scenario.executeScenario()"
-            style="flex:1; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:14px; font-weight:600; background:#14532d; color:#86efac;"
-            ${actionCount > 0 || isNaN(actionCount) ? '' : 'disabled'}>&#x25b6;</button>
+            style="flex:1; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:13px; font-weight:600; background:#14532d; color:#86efac;"
+            ${actionCount > 0 || isNaN(actionCount) ? '' : 'disabled'}><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><polygon points="2,1 11,6 2,11"/></svg></button>
         </div>
 
         <!-- 3. Separator -->
@@ -444,7 +446,7 @@ ${p.label}:`, p.default ?? '');
     }
 
     const duration = ((Date.now() - this._runStartTime) / 1000).toFixed(1);
-    this.addLog(this._stopped ? '⏹ Stopped' : `✅ Done (${duration}s)`, this._stopped ? 'warning' : 'info');
+    this.addLog(this._stopped ? 'Stopped' : `Done (${duration}s)`, this._stopped ? 'warning' : 'info');
     this.isExecuting = false;
     this._stopped = false;
     this._paused = false;
@@ -461,7 +463,7 @@ ${p.label}:`, p.default ?? '');
     this._updateLoopBars(this._executor._loopStack || []);
     this._updateGlobalBar(this._executor._doneActions || 0, this._executor._totalActions || 0);
     const elapsed = ((Date.now() - this._runStartTime) / 1000).toFixed(0);
-    this.addLog(this._paused ? `\u23f8 Paused at ${elapsed}s` : `\u25b6 Resumed at ${elapsed}s`, 'info');
+    this.addLog(this._paused ? `Paused at ${elapsed}s` : `Resumed at ${elapsed}s`, 'info');
   }
 
   _confirmStop() {
@@ -495,7 +497,7 @@ ${p.label}:`, p.default ?? '');
   }
 
   _showRunUI(list) {
-    const zone = document.getElementById('rightPluginZone');
+    const zone = document.getElementById('rightPluginZone-acquisition');
     if (!zone) return;
     let el = document.getElementById('scenarioRunPanel');
     if (!el) { el = document.createElement('div'); el.id = 'scenarioRunPanel'; zone.prepend(el); }
