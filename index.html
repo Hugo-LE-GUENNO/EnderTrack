@@ -20,6 +20,7 @@
     </script>
     <link rel="stylesheet" href="frontend/assets/styles/utilities.css">
     <link rel="stylesheet" href="frontend/assets/endertrack.css">
+    <link rel="stylesheet" href="modules/scenario-builder/scenario-builder.css">
     <link rel="stylesheet" href="frontend/assets/styles/global-header.css">
     <link rel="stylesheet" href="frontend/assets/styles/canvas-overlays.css">
     <link rel="stylesheet" href="frontend/assets/styles/viewport-empty.css">
@@ -32,6 +33,11 @@
     <link rel="stylesheet" href="frontend/assets/styles/template-modal.css">
     <link rel="stylesheet" href="frontend/assets/styles/strategic-positions.css">
     <link rel="stylesheet" href="frontend/assets/styles/responsive.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/theme/dracula.min.css">
+  <style>
+    #pythonEditorTabContent.active { display:flex !important; }
+  </style>
 </head>
 <body>
     <!-- Loading Screen -->
@@ -49,19 +55,29 @@
         <div class="global-header">
             <div class="tab-system">
                 <button class="tab-btn" id="settingsTab" onclick="switchTab('settings')" style="opacity:0.5;">
-                    Réglages
+                    Settings
                 </button>
                 <div style="width:1px; height:20px; background:var(--border); margin:0 4px; align-self:center;"></div>
                 <button class="tab-btn active" id="navigationTab" onclick="switchTab('navigation')">
                     Navigation
                 </button>
                 <button class="tab-btn" id="listsTab" onclick="switchTab('lists')">
-                    Positions
+                    Waypoints
                 </button>
+                <button class="tab-btn" id="acquisitionTab" onclick="switchTab('acquisition')">
+                    Automation
+                </button>
+                <button class="tab-btn" id="smartVisionTab" onclick="switchTab('smartVision')" style="display:none">
+                    Smart Vision
+                </button>
+                <button class="tab-btn" id="pythonEditorTab" onclick="switchTab('pythonEditor')" style="display:none">
+                    Enderscopy
+                </button>
+
             </div>
             <div style="flex:1"></div>
-            <button onclick="showKeyboardShortcuts()" style="background:none; border:none; cursor:pointer; font-size:16px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Raccourcis clavier" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">⌨</button>
-            <button onclick="toggleFullscreen()" style="background:none; border:none; cursor:pointer; font-size:18px; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Plein écran">&#x26F6;</button>
+            <button id="layoutBtn" onclick="EnderTrack.Display._showLayoutMenuFromBtn(this)" style="background:none; border:none; cursor:pointer; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Layout" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6"/><rect x="9" y="1" width="6" height="6"/><rect x="1" y="9" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/></svg></button>
+            <button onclick="toggleFullscreen()" style="background:none; border:none; cursor:pointer; opacity:0.85; padding:4px; transition:opacity 0.2s; color:var(--text-selected);" title="Fullscreen" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="1,5 1,1 5,1"/><polyline points="11,1 15,1 15,5"/><polyline points="15,11 15,15 11,15"/><polyline points="5,15 1,15 1,11"/></svg></button>
             <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" onclick="showAboutModal()" style="height: 28px; cursor: pointer; opacity: 0.85; transition: opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.85">
         </div>
         
@@ -100,22 +116,22 @@
                         <div class="step-controls" id="stepControls">
                             <div class="axis-control xy-coupled" id="xyControl">
                                 <label class="axis-label" id="xyCoupling">XY</label>
-                                <input type="range" id="sensitivityXY" min="0.01" max="50" value="10" step="0.01">
+                                <input type="range" id="sensitivityXY" class="et-slider" min="0.01" max="50" value="10" step="0.01">
                                 <input type="number" id="sensitivityXYInput" value="10" step="0.01" min="0.01">
                             </div>
                             <div class="axis-control individual-axis" id="xControl" style="display: none;">
                                 <label class="axis-label">X</label>
-                                <input type="range" id="sensitivityX" min="0.01" max="50" value="10" step="0.01">
+                                <input type="range" id="sensitivityX" class="et-slider" min="0.01" max="50" value="10" step="0.01">
                                 <input type="number" id="sensitivityXInput" value="10" step="0.01" min="0.01">
                             </div>
                             <div class="axis-control individual-axis" id="yControl" style="display: none;">
                                 <label class="axis-label">Y</label>
-                                <input type="range" id="sensitivityY" min="0.01" max="50" value="10" step="0.01">
+                                <input type="range" id="sensitivityY" class="et-slider" min="0.01" max="50" value="10" step="0.01">
                                 <input type="number" id="sensitivityYInput" value="10" step="0.01" min="0.01">
                             </div>
                             <div class="axis-control individual-axis" id="zControl">
                                 <label class="axis-label">Z</label>
-                                <input type="range" id="sensitivityZ" min="0.01" max="50" value="1" step="0.01">
+                                <input type="range" id="sensitivityZ" class="et-slider" min="0.01" max="50" value="1" step="0.01">
                                 <input type="number" id="sensitivityZInput" value="1" step="0.01" min="0.01">
                             </div>
                         </div>
@@ -139,7 +155,7 @@
                             <button class="action-btn" id="goToPoint" onclick="goToAbsolute()">Go</button>
                         </div>
                         <div class="home-row">
-                            <button class="action-btn" id="homeXYBtn" onclick="goHome('xy')" oncontextmenu="event.preventDefault(); showHomeContextMenu(event)">🏠 Home</button>
+                            <button class="action-btn" id="homeXYBtn" onclick="goHome('xy')" oncontextmenu="event.preventDefault(); showHomeContextMenu(event)">Home</button>
                         </div>
                     </div>
 
@@ -150,20 +166,21 @@
                 <!-- Settings Panel -->
                 <div class="tab-panel" id="settingsTabContent">
 
+                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Devices</div>
                     <!-- Platine XYZ - Connexion -->
                     <details open>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 Platine XYZ — Connexion</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">XYZ Stage — Connection</summary>
                         <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
                             
                             <!-- Status + Connect -->
                             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                 <div class="status-indicator" id="connectionStatus"></div>
-                                <span id="connectionText" style="font-size:11px; color:var(--text-general); flex:1;">Déconnecté</span>
-                                <button id="connectBtn" onclick="toggleConnection()" style="padding:4px 12px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected);">Connecter</button>
+                                <span id="connectionText" style="font-size:11px; color:var(--text-general); flex:1;">Disconnected</span>
+                                <button id="connectBtn" onclick="toggleConnection()" style="padding:4px 12px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected);">Connect</button>
                             </div>
                             <div id="connectionProgress" class="progress-bar" style="display:none;">
                                 <div class="progress-fill"></div>
-                                <span class="progress-text">Connexion...</span>
+                                <span class="progress-text">Connecting...</span>
                             </div>
 
                             <!-- Port -->
@@ -172,35 +189,42 @@
                                 <select id="serialPort" style="flex:1; padding:4px 8px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--text-selected); font-size:11px;">
                                     <option value="/dev/ttyUSB0" selected>/dev/ttyUSB0</option>
                                 </select>
-                                <button onclick="resetSerialPort()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);" title="Actualiser">↻</button>
+                                <button onclick="resetSerialPort()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:11px; background:var(--app-bg); color:var(--text-general);" title="Refresh">↻</button>
                             </div>
                             <select id="baudRate" style="display:none;"><option value="115200" selected>115200</option></select>
 
                             <!-- Vitesse -->
-                            <div class="config-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                <label style="font-size:11px; color:var(--text-general); min-width:40px;">Vitesse</label>
-                                <input type="range" id="feedrateSlider" min="100" max="10000" value="3000" step="100"
-                                    oninput="updateFeedrate(this.value)"
-                                    style="flex:1; min-width:60px; height:4px; -webkit-appearance:none; background:#404040; border-radius:2px;">
-                                <input type="number" id="feedrateInput" value="3000" min="100" max="10000" step="100"
-                                    onchange="updateFeedrate(this.value)"
-                                    style="width:55px; padding:3px 4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); font-size:11px; text-align:center; font-family:monospace;">
+                            <div class="config-row" style="display:flex; align-items:center; gap:8px;">
+                                <label style="font-size:11px; color:var(--text-general); min-width:50px;">Speed XY</label>
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <button onclick="updateFeedrate(parseInt(document.getElementById('feedrateInput').value)-500)" style="width:22px; height:22px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:14px; line-height:1;">-</button>
+                                    <input type="number" id="feedrateInput" value="3000" min="100" max="18000" step="500"
+                                        onchange="updateFeedrate(this.value)"
+                                        style="width:58px; padding:3px 4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); font-size:11px; text-align:center; font-family:monospace;">
+                                    <button onclick="updateFeedrate(parseInt(document.getElementById('feedrateInput').value)+500)" style="width:22px; height:22px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:14px; line-height:1;">+</button>
+                                    <span style="font-size:10px; color:var(--text-general); opacity:0.5;">mm/min</span>
+                                </div>
+                            </div>
+                            <div class="config-row" style="display:flex; align-items:center; gap:8px;">
+                                <label style="font-size:11px; color:var(--text-general); min-width:50px;">Speed Z</label>
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <button onclick="updateZSpeed(parseInt(document.getElementById('zSpeedInput').value)-1)" style="width:22px; height:22px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:14px; line-height:1;">-</button>
+                                    <input type="number" id="zSpeedInput" value="5" min="1" max="20" step="1"
+                                        onchange="updateZSpeed(this.value)"
+                                        style="width:58px; padding:3px 4px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--coordinates-color); font-size:11px; text-align:center; font-family:monospace;">
+                                    <button onclick="updateZSpeed(parseInt(document.getElementById('zSpeedInput').value)+1)" style="width:22px; height:22px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-general); cursor:pointer; font-size:14px; line-height:1;">+</button>
+                                    <span style="font-size:10px; color:var(--text-general); opacity:0.5;">mm/s</span>
+                                </div>
                             </div>
 
                             <!-- G-code (visible si connecté) -->
                             <div id="enderscopeControls" style="display:none;">
                                 <div style="border-top:1px solid #333; padding-top:8px; margin-top:4px; display:flex; flex-direction:column; gap:6px;">
-                                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                                        <button onclick="sendBeep()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔊 Bip</button>
-                                        <button onclick="homeEnderscope()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🏠 Home</button>
-                                        <button onclick="getEnderscopeInfo()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">📝 Info</button>
-                                        <button onclick="resetEnderscope()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔄 Reset</button>
-                                    </div>
                                     <div style="display:flex; gap:4px;">
-                                        <input type="text" id="gcodeInput" placeholder="G-code..." onkeypress="handleGcodeEnter(event)"
+                                        <input type="text" id="gcodeInput" placeholder="G-code..." onkeydown="handleGcodeEnter(event)"
                                             style="flex:1; padding:4px 8px; background:var(--app-bg); border:1px solid #444; border-radius:var(--radius-small); color:var(--text-selected); font-size:11px; font-family:monospace;">
-                                        <button onclick="sendGcode()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--active-element); color:var(--text-selected);">Envoyer</button>
-                                        <button onclick="showGcodeHelp()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="Aide G-code">?</button>
+                                        <button onclick="sendGcode()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--active-element); color:var(--text-selected);">Send</button>
+                                        <button onclick="showGcodeHelp()" style="padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="G-code help">?</button>
                                     </div>
                                     <textarea id="gcodeOutput" readonly rows="3"
                                         style="width:100%; resize:vertical; background:var(--app-bg); color:var(--text-general); border:1px solid #333; border-radius:var(--radius-small); padding:6px 8px; font-family:monospace; font-size:10px; line-height:1.4;"></textarea>
@@ -209,9 +233,339 @@
                         </div>
                     </details>
 
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">Cameras</summary>
+                        <div style="padding:8px;" id="cameraSettingsContent">
+                            <!-- Mosaic tiles toggle -->
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; flex:1; font-size:11px; color:var(--text-general);">
+                                    <input type="checkbox" id="tilesEnabledChk" onchange="window._setTilesEnabled(this.checked)" style="width:13px;height:13px;accent-color:var(--active-element);cursor:pointer;">
+                                    Record mosaic tiles
+                                </label>
+                                <button onclick="EnderTrack.Camera.clearTiles()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:#ef4444;">Reset</button>
+                            </div>
+                            <script>
+                              window._tilesEnabled = localStorage.getItem('endertrack_tiles') === 'true';
+                              window._setTilesEnabled = (v) => {
+                                window._tilesEnabled = v;
+                                localStorage.setItem('endertrack_tiles', v);
+                                document.getElementById('tilesEnabledChk').checked = v;
+                                if (EnderTrack.Camera) EnderTrack.Camera.navigatorMode = v;
+                              };
+                              document.addEventListener('DOMContentLoaded', () => {
+                                const chk = document.getElementById('tilesEnabledChk');
+                                if (chk) chk.checked = window._tilesEnabled;
+                              });
+                            </script>
+                            <div id="cameraList"></div>
+                            <button onclick="window._openAddCameraModal()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Add camera</button>
+                            <script>
+                              window._cameras = [];
+                              window._savePeripherals = () => {
+                                const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                fetch(url + '/api/sync/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cameras: window._cameras, lights: window._lights || [] }) }).catch(() => {});
+                              };
+                              window._loadPeripherals = async () => {
+                                try {
+                                  const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                  const res = await fetch(url + '/api/sync/config');
+                                  const data = await res.json();
+                                  if (data.cameras?.length) {
+                                    window._cameras = data.cameras;
+                                    window._renderCameras?.();
+                                    await EnderTrack.Camera._loadPicamConfig();
+                                    // Reconnect each camera
+                                    for (let i = 0; i < window._cameras.length; i++) {
+                                      const cam = window._cameras[i];
+                                      if (cam.type === 'picamera2') {
+                                        await EnderTrack.Camera._connectPicam(cam.deviceId, cam.preview_resolution || cam.resolution, cam.format);
+                                      } else {
+                                        await EnderTrack.Camera.setDriver('webcam');
+                                        if (cam.deviceId) await EnderTrack.Camera.configure({ deviceId: cam.deviceId });
+                                        await EnderTrack.Camera.startLive();
+                                        EnderTrack.Camera._applyWebcamMeta(i);
+                                      }
+                                    }
+                                    window._updateCameraLayout?.();
+                                  }
+                                  if (data.lights?.length) { window._lights = data.lights; window._renderLights?.(); }
+                                  if (data.tiles?.length) EnderTrack.Camera.loadTiles(data.tiles);
+                                } catch(e) { console.error('[loadPeripherals]', e); }
+                              };
+                              setTimeout(async () => {
+                                let tries = 0;
+                                while (!window.EnderTrack?.Camera?._renderCamCard && tries++ < 20) await new Promise(r => setTimeout(r, 200));
+                                window._loadPeripherals();
+                              }, 500);
+                              // Auto-save config every 5s if changed
+                              let _lastSave = '';
+                              setInterval(() => { const s = JSON.stringify({c:window._cameras,l:window._lights||[]}); if (s !== _lastSave) { _lastSave = s; window._savePeripherals(); } }, 5000);
+
+                              window._openAddCameraModal = async () => {
+                                document.getElementById('addCameraModal')?.remove();
+                                window._picamDevices = [];
+                                window._webcamDevices = [];
+                                try {
+                                  const r = await fetch((window.ENDERTRACK_SERVER||'http://localhost:5000') + '/api/camera/picam/devices');
+                                  window._picamDevices = (await r.json()).devices || [];
+                                  const usedIds = (window._cameras||[]).filter(c=>c.type==='picamera2').map(c=>String(c.deviceId));
+                                  window._picamDevices = window._picamDevices.filter(d=>!usedIds.includes(String(d.id)));
+                                } catch {}
+                                try {
+                                  window._webcamDevices = await (EnderTrack.CameraDrivers.webcam?.listDevices?.() || Promise.resolve([]));
+                                  const usedWebcamIds = (window._cameras||[]).filter(c=>c.type==='webcam').map(c=>String(c.deviceId));
+                                  window._webcamDevices = window._webcamDevices.filter(d=>!usedWebcamIds.includes(String(d.id)));
+                                } catch {}
+                                const modal = document.createElement('div');
+                                modal.id = 'addCameraModal';
+                                modal.style.cssText = 'position:fixed;inset:0;z-index:10100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);';
+                                modal.innerHTML = `
+                                  <div style="background:var(--container-bg);border:1px solid #555;border-radius:8px;padding:20px;min-width:300px;display:flex;flex-direction:column;gap:12px;">
+                                    <div style="font-size:12px;font-weight:600;color:var(--text-selected);">Add camera</div>
+                                    <div style="display:flex;flex-direction:column;gap:8px;">
+                                      <div style="display:flex;gap:8px;align-items:center;">
+                                        <label style="width:80px;font-size:10px;color:var(--text-general);">Name</label>
+                                        <input id="acName" type="text" value="Camera" style="flex:1;padding:4px 6px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                      </div>
+                                      <div style="display:flex;gap:8px;align-items:center;">
+                                        <label style="width:80px;font-size:10px;color:var(--text-general);">Type</label>
+                                        <select id="acType" onchange="window._onAddCamTypeChange()" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                          <option value="picamera2">Raspberry Pi Camera</option>
+                                          <option value="webcam">USB / Webcam</option>
+                                        </select>
+                                      </div>
+                                      <div id="acWebcamFields" style="display:none;flex-direction:column;gap:8px;">
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                          <label style="width:80px;font-size:10px;color:var(--text-general);">Device</label>
+                                          <select id="acWebcamDevice" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                            ${window._webcamDevices.length ? window._webcamDevices.map(d=>`<option value="${d.id}">${d.label}</option>`).join('') : '<option value="">No device found</option>'}
+                                          </select>
+                                        </div>
+                                      </div>
+                                      <div id="acPicamFields" style="display:flex;flex-direction:column;gap:8px;">
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                          <label style="width:80px;font-size:10px;color:var(--text-general);">Device</label>
+                                          <select id="acDevice" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                            ${window._picamDevices.length ? window._picamDevices.map(d=>`<option value="${d.id}">${d.name}</option>`).join('') : '<option value="">No device found</option>'}
+                                          </select>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+                                      <button onclick="document.getElementById('addCameraModal').remove()" style="padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:10px;background:var(--app-bg);color:var(--text-general);">Cancel</button>
+                                      <button onclick="window._confirmAddCamera()" style="padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:10px;background:var(--active-element);color:var(--text-selected);" id="acConfirmBtn">Create</button>
+                                    </div>
+                                  </div>
+                                `;
+                                document.body.appendChild(modal);
+                                modal.addEventListener('mousedown', e => { if (e.target === modal) modal.remove(); });
+                              };
+
+                              window._onAddCamTypeChange = () => {
+                                const t = document.getElementById('acType')?.value;
+                                const fp = document.getElementById('acPicamFields');
+                                const fw = document.getElementById('acWebcamFields');
+                                if (fp) fp.style.display = t === 'picamera2' ? 'flex' : 'none';
+                                if (fw) fw.style.display = t === 'webcam' ? 'flex' : 'none';
+                                const noDev = t === 'picamera2' ? !window._picamDevices.length : !window._webcamDevices.length;
+                                const btn = document.getElementById('acConfirmBtn');
+                                if (btn) { btn.disabled = noDev; btn.style.opacity = noDev ? '0.4' : '1'; }
+                              };
+                              // Init: show picam fields by default
+                              setTimeout(() => document.getElementById('acType') && window._onAddCamTypeChange(), 0);
+
+                              window._confirmAddCamera = async () => {
+                                const type = document.getElementById('acType')?.value;
+                                const label = document.getElementById('acName')?.value || type;
+                                if (type === 'picamera2') {
+                                  const deviceId = document.getElementById('acDevice')?.value || '0';
+                                  const sensor = window._picamDevices.find(d=>String(d.id)===String(deviceId))?.name || '';
+                                  document.getElementById('addCameraModal')?.remove();
+                                  window._cameras.push({ type, label, sensor, id: Date.now(), deviceId, resolution: [640,480], preview_resolution: [640,480], pixel_size: 1.0, rotation: 0 });
+                                  window._renderCameras(); window._savePeripherals();
+                                  await EnderTrack.Camera._connectPicam(deviceId, [640,480]);
+                                } else {
+                                  const deviceId = document.getElementById('acWebcamDevice')?.value || '';
+                                  document.getElementById('addCameraModal')?.remove();
+                                  window._cameras.push({ type, label, id: Date.now(), deviceId, pixel_size: 1.0, rotation: 0 });
+                                  window._renderCameras(); window._savePeripherals();
+                                  await EnderTrack.Camera.setDriver('webcam');
+                                  if (deviceId) await EnderTrack.Camera.configure({ deviceId });
+                                  await EnderTrack.Camera.startLive();
+                                  EnderTrack.Camera._applyWebcamMeta(window._cameras.length - 1);
+                                  window._updateCameraLayout();
+                                }
+                              };
+
+                              window._removeCamera = async (idx) => {
+                                window._cameras.splice(idx, 1);
+                                window._renderCameras(); window._savePeripherals();
+                                EnderTrack.Display.setLayout(window._cameras.length + 1);
+                              };
+
+                              window._renderCameras = () => {
+                                const el = document.getElementById('cameraList');
+                                if (!el) return;
+                                el.innerHTML = window._cameras.map((c, i) => `
+                                  <div style="padding:8px;margin-bottom:6px;background:var(--app-bg);border-radius:var(--radius-small);">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                                      <input type="text" value="${c.label}" onchange="window._cameras[${i}].label=this.value;window._savePeripherals();EnderTrack.Camera._renderNav?.();EnderTrack.Camera._updateStatus?.();"
+                                        style="flex:1;padding:3px 6px;background:var(--container-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--text-selected);font-size:11px;">
+                                      <span style="font-size:10px;color:#666;">${c.sensor || ''}</span>
+                                      <button onclick="window._removeCamera(${i})" style="padding:2px 6px;border:none;border-radius:var(--radius-small);cursor:pointer;font-size:11px;background:none;color:#ef4444;">✕</button>
+                                    </div>
+                                    <div id="camConfig_${i}"></div>
+                                  </div>
+                                `).join('');
+                                window._cameras.forEach((c, i) => {
+                                  EnderTrack.Camera._renderCamCard(i);
+                                });
+                              };
+
+                              window._updateCameraLayout = () => {
+                                const n = window._cameras.length;
+                                EnderTrack.Display.setLayout(n + 1);
+                                setTimeout(() => {
+                                  for (let i = 0; i < n; i++) EnderTrack.Display.assignSource(i + 1, 'camera:' + i);
+                                }, 100);
+                              };
+                            </script>
+                        </div>
+                    </details>
+
+                    <!-- Light -->
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">Lighting</summary>
+                        <div style="padding:8px;" id="lightSettingsContent">
+                            <div id="lightList"></div>
+                            <button onclick="window._showLightTypeMenu()" style="width:100%; padding:6px; border:1px dashed #555; border-radius:4px; cursor:pointer; font-size:10px; background:transparent; color:var(--text-general);">+ Add light</button>
+                            <div id="lightTypeMenu" style="display:none; margin-top:4px; padding:6px; background:var(--app-bg); border-radius:4px;">
+                                <div style="display:flex; flex-direction:column; gap:3px;">
+                                    <button onclick="window._addLight('gpio')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">🥧 GPIO (Raspberry Pi)</button>
+                                    <button onclick="window._addLight('arduino')" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--container-bg); color:var(--text-selected); text-align:left;">⚡ Arduino (Serial)</button>
+                                </div>
+                            </div>
+                            <script>
+                              window._lights = [];
+                              window._showLightTypeMenu = () => {
+                                const m = document.getElementById('lightTypeMenu');
+                                m.style.display = m.style.display === 'none' ? '' : 'none';
+                              };
+                              window._addLight = (type) => {
+                                document.getElementById('lightTypeMenu').style.display = 'none';
+                                const id = 'light_' + Date.now();
+                                const name = type === 'gpio' ? 'Neopixel' : 'LED';
+                                const pin = type === 'gpio' ? 'D18' : '/dev/ttyUSB0'; window._lights.push({ id, name, type, pin, totalPixels: 1, start: 0, end: 1, r: 255, g: 255, b: 255, intensity: 1.0, on: false });
+                                if (EnderTrack.Light?.driver?._channels) {
+                                  EnderTrack.Light.driver._channels.push({ id, name, type, intensity: 0, on: false });
+                                  EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
+                                }
+                                window._renderLights(); window._savePeripherals();
+                                EnderTrack.Light._renderNav?.();
+                                EnderTrack.Light._updateStatus?.();
+                              };
+                              window._removeLight = (idx) => {
+                                const light = window._lights[idx];
+                                if (light && EnderTrack.Light?.driver?._channels) {
+                                  const ci = EnderTrack.Light.driver._channels.findIndex(c => c.id === light.id);
+                                  if (ci >= 0) EnderTrack.Light.driver._channels.splice(ci, 1);
+                                  EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
+                                }
+                                window._lights.splice(idx, 1);
+                                window._renderLights(); window._savePeripherals();
+                                EnderTrack.Light._renderNav?.();
+                                EnderTrack.Light._updateStatus?.();
+                              };
+                              window._setLightRGB = (idx, channel, value) => {
+                                const light = window._lights[idx];
+                                if (!light) return;
+                                light[channel] = parseInt(value);
+                              };
+                              window._updateLightPreview = (idx) => {
+                                const l = window._lights[idx];
+                                if (!l) return;
+                                const container = document.getElementById('lightList');
+                                if (!container) return;
+                                const cards = container.children;
+                                if (!cards[idx]) return;
+                                const dot = cards[idx].querySelector('div[style*="border-radius:50%"]');
+                                if (dot) { dot.style.background = `rgb(${l.r},${l.g},${l.b})`; }
+                                const bar = cards[idx].querySelector('div[style*="height:8px"]');
+                                if (bar) { bar.style.background = `rgb(${l.r},${l.g},${l.b})`; }
+                              };
+                              window._renderLights = () => {
+                                window._savePeripherals();
+                                const el = document.getElementById('lightList');
+                                if (!el) return;
+                                el.innerHTML = window._lights.map((l, i) => `
+                                  <div style="padding:8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px;">
+                                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                                      <div style="width:12px; height:12px; border-radius:50%; background:rgb(${l.r},${l.g},${l.b}); box-shadow:${l.on ? '0 0 6px rgb('+l.r+','+l.g+','+l.b+')' : 'none'}; flex-shrink:0;"></div>
+                                      <input type="text" value="${l.name}" onchange="window._lights[${i}].name=this.value; EnderTrack.Light._renderNav?.(); EnderTrack.Light._updateStatus?.()"
+                                        style="flex:1; padding:2px 6px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
+                                      <button onclick="window._removeLight(${i})" style="padding:2px 5px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:none; color:#ef4444;">✕</button>
+                                    </div>
+                                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+                                      <label style="font-size:9px; color:var(--text-general); width:25px;">${l.type === "gpio" ? "Pin" : "Port"}</label>
+                                      ${l.type === "gpio" ? `
+                                        <select onchange="window._lights[${i}].pin=this.value" style="padding:2px 4px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:9px;">
+                                          <option value="D18" ${l.pin==="D18"?"selected":""}>D18</option>
+                                          <option value="D12" ${l.pin==="D12"?"selected":""}>D12</option>
+                                          <option value="D21" ${l.pin==="D21"?"selected":""}>D21</option>
+                                          <option value="D10" ${l.pin==="D10"?"selected":""}>D10</option>
+                                        </select>
+                                      ` : `
+                                        <input type="text" value="${l.pin}" onchange="window._lights[${i}].pin=this.value"
+                                          style="width:100px; padding:2px 4px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:9px;" placeholder="/dev/ttyUSB0">
+                                      `}
+                                      <label style="font-size:9px; color:var(--text-general);">px</label>
+                                      <input type="number" value="${l.start}" min="0" onchange="window._lights[${i}].start=parseInt(this.value)"
+                                        style="width:30px; padding:2px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:9px; text-align:center;">
+                                      <span style="font-size:9px; color:var(--text-general);">→</span>
+                                      <input type="number" value="${l.end}" min="1" onchange="window._lights[${i}].end=parseInt(this.value)"
+                                        style="width:30px; padding:2px; background:var(--container-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:9px; text-align:center;">
+                                    </div>
+                                    <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
+                                      <span style="font-size:9px; color:#f66; width:10px;">R</span>
+                                      <input type="range" min="0" max="255" value="${l.r}" oninput="window._setLightRGB(${i},'r',this.value); this.nextElementSibling.textContent=this.value; window._updateLightPreview(${i})" class="et-slider et-slider-r">
+                                      <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.r}</span>
+                                    </div>
+                                    <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
+                                      <span style="font-size:9px; color:#6f6; width:10px;">G</span>
+                                      <input type="range" min="0" max="255" value="${l.g}" oninput="window._setLightRGB(${i},'g',this.value); this.nextElementSibling.textContent=this.value; window._updateLightPreview(${i})" class="et-slider et-slider-g">
+                                      <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.g}</span>
+                                    </div>
+                                    <div style="display:flex; gap:4px; align-items:center; margin-bottom:3px;">
+                                      <span style="font-size:9px; color:#66f; width:10px;">B</span>
+                                      <input type="range" min="0" max="255" value="${l.b}" oninput="window._setLightRGB(${i},'b',this.value); this.nextElementSibling.textContent=this.value; window._updateLightPreview(${i})" class="et-slider et-slider-b">
+                                      <span style="font-size:9px; color:var(--text-general); width:20px; text-align:right;">${l.b}</span>
+                                    </div>
+                                    <div style="height:8px; border-radius:3px; background:rgb(${l.r},${l.g},${l.b}); opacity:${l.intensity};"></div>
+                                  </div>
+                                `).join('');
+                              };
+                              window._toggleLight = (idx) => {
+                                const l = window._lights[idx];
+                                if (!l) return;
+                                l.on = !l.on;
+                                const intensity = l.on ? Math.max(l.r, l.g, l.b) / 255 : 0;
+                                EnderTrack.Light?.setChannel?.(l.id, intensity);
+                                EnderTrack.Light?._renderNav?.();
+                              };
+                              window._setLightIntensity = (idx, pct) => {
+                                const l = window._lights[idx];
+                                if (!l) return;
+                                l.intensity = parseInt(pct) / 100;
+                                if (l.on) EnderTrack.Light?.setChannel?.(l.id, l.intensity);
+                              };
+                            </script>
+                        </div>
+                    </details>
+
+                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">General</div>
                     <!-- Platine XYZ - Zone de travail -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">📐 Platine XYZ — Zone de travail</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">XYZ Stage — Work area</summary>
                         <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
 
                             <!-- Hidden profile elements for compatibility -->
@@ -221,7 +575,7 @@
                             <table style="width:100%; border-collapse:collapse; font-size:11px;">
                                 <thead>
                                     <tr style="color:var(--text-general); font-size:10px;">
-                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
+                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axis</th>
                                         <th style="text-align:center; padding:2px 4px;">Dimension</th>
                                         <th style="text-align:center; padding:2px 4px;">Min</th>
                                         <th style="text-align:center; padding:2px 4px;">Max</th>
@@ -267,24 +621,39 @@
                         </div>
                     </details>
 
-                    <!-- Calques -->
-                    <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🗂 Calques</summary>
-                        <div id="overlaysTabContent" style="padding:8px;">
-                            <!-- Overlays interface will be loaded here -->
-                        </div>
-                    </details>
-
                     <!-- Navigation -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🧭 Navigation</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">Navigation</summary>
                         <div style="padding:8px; display:flex; flex-direction:column; gap:8px;">
+
+                            <!-- Track recording toggle -->
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; flex:1; font-size:11px; color:var(--text-general);">
+                                    <input type="checkbox" id="trackingEnabledChk" onchange="window._setTrackingEnabled(this.checked)" style="width:13px;height:13px;accent-color:var(--active-element);cursor:pointer;">
+                                    Record track
+                                </label>
+                                <button onclick="clearHistory()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:#ef4444;">Reset</button>
+                            </div>
+                            <script>
+                              window._trackingEnabled = localStorage.getItem('endertrack_tracking') === 'true';
+                              window._setTrackingEnabled = (v) => {
+                                window._trackingEnabled = v;
+                                localStorage.setItem('endertrack_tracking', v);
+                                document.getElementById('trackingEnabledChk').checked = v;
+                                EnderTrack.Canvas?.requestRender?.();
+                                EnderTrack.ZVisualization?.render?.();
+                              };
+                              document.addEventListener('DOMContentLoaded', () => {
+                                const chk = document.getElementById('trackingEnabledChk');
+                                if (chk) chk.checked = window._trackingEnabled;
+                              });
+                            </script>
 
                             <!-- Tableau Axe / Lock / Home XY / Home XYZ -->
                             <table style="width:100%; border-collapse:collapse; font-size:11px;">
                                 <thead>
                                     <tr style="color:var(--text-general); font-size:10px;">
-                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axe</th>
+                                        <th style="text-align:left; padding:2px 4px; width:28px;">Axis</th>
                                         <th style="text-align:center; padding:2px 4px; width:36px;">Lock</th>
                                         <th style="text-align:center; padding:2px 4px;">Home XY</th>
                                         <th style="text-align:center; padding:2px 4px;">Home XYZ</th>
@@ -314,24 +683,33 @@
 
                             <!-- Couplage XY -->
                             <div style="display:flex; align-items:center; gap:6px;">
-                                <button id="configCoupleXY" onclick="toggleCoupling(); updateConfigLocks()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔗 Coupler XY</button>
+                                <button id="configCoupleXY" onclick="toggleCoupling(); updateConfigLocks()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">🔗 Couple XY</button>
                             </div>
                         </div>
                     </details>
 
                     <!-- Stockage -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">💾 Stockage</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">Layers / Overlays</summary>
+                        <div id="overlaysTabContent" style="padding:8px;">
+                            <label style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-general); padding:4px 0; border-bottom:1px solid #333; margin-bottom:6px;">
+                            </label>
+                            <!-- Overlays interface renders here -->
+                        </div>
+                    </details>
+
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">Storage</summary>
                         <div style="padding:8px; display:flex; flex-direction:column; gap:6px;">
                             <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-general);">
                                 <div style="width:6px; height:6px; border-radius:50%; background:var(--success); flex-shrink:0;"></div>
-                                localStorage actif
+                                localStorage active
                                 <span id="storageSizeLabel" style="margin-left:auto; opacity:0.5; font-family:monospace;"></span>
                             </div>
                             <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                                <button onclick="saveAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Exporter</button>
-                                <button onclick="loadStorageFromFile()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Importer</button>
-                                <button onclick="resetAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Réinitialiser</button>
+                                <button onclick="saveAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Export</button>
+                                <button onclick="loadStorageFromFile()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Import</button>
+                                <button onclick="resetAllStorage()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Reset</button>
                             </div>
                             <div style="display:flex; gap:4px; margin-top:4px;">
                                 <button onclick="clearHistory()" style="flex:1; padding:4px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Reset tracks</button>
@@ -350,13 +728,15 @@
                     <!-- Séparateur avant extensions -->
                     <div style="border-top:1px solid var(--border); margin:8px 0;"></div>
 
+                    <!-- Camera -->
+                    <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Extensions</div>
                     <!-- Extensions (toujours en dernier) -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">🔌 Extensions</summary>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">Extensions</summary>
                         <div style="padding:8px;">
-                            <input type="text" id="pluginSearchAll" placeholder="🔍 Rechercher..." oninput="window._filterAllPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
+                            <input type="text" id="pluginSearchAll" placeholder="🔍 Search..." oninput="window._filterAllPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
                             <div id="pluginsList"></div>
-                            <button id="catalogToggleBtn" onclick="window._openPluginCatalog()" style="width:100%; margin-top:8px; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">📦 Catalogue en ligne</button>
+                            <button id="catalogToggleBtn" onclick="window._openPluginCatalog()" style="width:100%; margin-top:8px; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">📦 Online catalog</button>
                             <div id="pluginCatalog" style="display:none; margin-top:8px;"></div>
                         </div>
                     </details>
@@ -373,10 +753,23 @@
                 <div class="tab-panel" id="listsTabContent">
                     <div id="listsContent"><!-- Lists renders here --></div>
                     <div id="listsPluginZone" style="display:flex; gap:4px; margin-bottom:4px;"></div>
-                    <div id="acquisitionTabContent" style="margin-top:8px; border-top:1px solid #333; padding-top:8px;">
-                        <!-- Scenario interface will be loaded here -->
-                    </div>
                 </div>
+
+                <!-- Automatisation Panel -->
+                <div class="tab-panel" id="acquisitionTabContent">
+                    <div id="automationPluginZone"></div>
+                </div>
+
+                <!-- Smart Vision Panel -->
+                <div class="tab-panel" id="smartVisionTabContent">
+                    <div id="svScriptPanel"></div>
+                </div>
+
+                <!-- Python Editor Panel -->
+                <div class="tab-panel" id="pythonEditorTabContent"></div>
+
+
+
                 
 
 
@@ -392,8 +785,8 @@
                 <!-- Empty State (shown when no widgets active) -->
                 <div class="viewport-empty-state" id="viewportEmptyState">
                     <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" class="empty-state-logo">
-                    <div class="empty-state-text">Aucun widget actif</div>
-                    <div class="empty-state-hint">Activez un widget depuis Configs → Visualisation</div>
+                    <div class="empty-state-text">No active widget</div>
+                    <div class="empty-state-hint">Enable a widget from Settings → Visualization</div>
                 </div>
                 
                 <!-- Stage Widget (XY + Z) - Hidden by default, shown when activated -->
@@ -410,21 +803,32 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Smart Vision Widget -->
+                <div class="widget-container" id="widget-smartvision" style="display:none; position:relative; width:100%; height:100%;">
+                    <img id="svFeedImg" style="width:100%; height:100%; object-fit:contain; display:block;" src="" onerror="this.style.opacity=0.2">
+                    <canvas id="svOverlay" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
+                    <div id="svNoFeed" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#555; font-size:13px;">📷 No camera feed</div>
+                </div>
             </div>
         </div>
 
         <!-- Right Panel -->
         <div class="right-panel" style="display:flex; flex-direction:column;">
 
-            <!-- Plugin zone (right panel) - top -->
-            <div id="rightPluginZone"></div>
+            <!-- Plugin zones (right panel) - one per tab -->
+            <div id="imageMetadataPanel" style="padding:8px; display:none;"></div>
+            <div id="rightPluginZone-navigation" class="right-plugin-zone"></div>
+            <div id="rightPluginZone-settings"   class="right-plugin-zone" style="display:none;"></div>
+            <div id="rightPluginZone-lists"       class="right-plugin-zone" style="display:none;"></div>
+            <div id="rightPluginZone-acquisition" class="right-plugin-zone" style="display:none;"></div>
 
             <!-- Widget Status - always at bottom -->
             <div class="status-widget" style="margin-top:auto;">
                 <!-- Server status (parent) -->
                 <div id="statusHeader" style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
                     <div id="statusMainLight" style="width:10px; height:10px; border-radius:50%; background:var(--coordinates-color); flex-shrink:0;"></div>
-                    <span id="statusMainLabel" style="font-size:12px; font-weight:500; color:var(--text-general);">Simulateur</span>
+                    <span id="statusMainLabel" style="font-size:12px; font-weight:500; color:var(--text-general);">Simulator</span>
                 </div>
 
                 <!-- Children (indented under server) -->
@@ -455,6 +859,7 @@
                     </div>
 
                     <!-- Plugin peripherals zone -->
+                    <div id="statusPeripherals" style="display:flex; flex-direction:column; gap:3px;"></div>
                     <div id="statusPluginZone" style="display:none;"></div>
                 </div>
 
@@ -539,10 +944,49 @@
     <!-- Hardware Bridges -->
     <script src="hardware-bridges/enderscope/enderscope-connection.js"></script>
 
+    <!-- Status Peripherals -->
+    <script src="modules/status-peripherals.js"></script>
+
     <!-- Overlays -->
     <script src="modules/overlays.js"></script>
     <script src="modules/lists.js"></script>
-    <script src="modules/scenario.js"></script>
+    <!-- Scenario Builder -->
+    <script src="modules/scenario-builder/utils/tree-utils.js"></script>
+    <script src="modules/scenario-builder/utils/condition-evaluator.js"></script>
+    <script src="modules/scenario-builder/nodes/loop-types.js"></script>
+    <script src="modules/scenario-builder/nodes/condition-types.js"></script>
+    <script src="modules/scenario-builder/nodes/action-registry.js"></script>
+    <script src="modules/plugins/py-plugin-ui.js"></script>
+    <script src="modules/scenario-builder/core/macro-registry.js"></script>
+    <script src="modules/scenario-builder/core/scenario-manager.js"></script>
+    <script src="modules/scenario-builder/core/scenario-executor.js"></script>
+    <script src="modules/scenario-builder/ui/variable-manager.js"></script>
+    <script src="modules/scenario-builder/ui/code-generator.js"></script>
+    <script src="modules/scenario-builder/ui/scenario-builder.js"></script>
+    <script src="modules/scenario-builder/core/scenario-module.js"></script>
+
+    <!-- Camera -->
+    <script src="modules/camera/luts.js"></script>
+    <script src="modules/camera/histogram.js"></script>
+    <script src="modules/image/live-renderer.js"></script>
+    <script src="modules/camera/fast-explore.js"></script>
+    <script src="modules/camera/drivers/webcam.js"></script>
+    <script src="modules/camera/drivers/mjpeg.js"></script>
+    <script src="modules/camera/camera.js"></script>
+
+    <!-- Light -->
+    <script src="modules/light/drivers/simulation.js"></script>
+    <script src="modules/light/light.js"></script>
+
+    <!-- Acquisition wizards -->
+    <script src="modules/acquisition/acquisition.js"></script>
+    <script src="modules/acquisition/acquisition-modal.js"></script>
+
+    <!-- Compute Link -->
+    <script src="modules/compute-link/compute-link.js"></script>
+
+    <!-- Display (viewport split) -->
+    <script src="modules/display/display.js"></script>
 
     <!-- Plugin Registry -->
     <script src="plugins/registry.js"></script>
@@ -688,7 +1132,7 @@
       
       // Validation: min ne peut jamais être supérieur à max ET max ne peut jamais être inférieur à min
     if (!isNaN(min) && !isNaN(max) && min > max) {
-      alert(`Erreur: ${axis.toUpperCase()}min (${min}) ne peut pas être supérieur à ${axis.toUpperCase()}max (${max})`);
+      alert(`Error: ${axis.toUpperCase()}min (${min}) cannot be greater than ${axis.toUpperCase()}max (${max})`);
       // Restaurer la valeur précédente ou ajuster
       if (event.target === minInput) {
         minInput.value = max;
@@ -702,20 +1146,20 @@
     // Si min change, ajuster max pour maintenir |min| + max = dimension
       if (event.target === minInput) {
         if (min < -dimension) {
-          alert(`Erreur: Min ne peut pas être inférieur à -${dimension}mm`);
+          alert(`Error: Min cannot be less than -${dimension}mm`);
           minInput.value = -dimension;
           window.validatingCoordinates = false;
           return;
         }
         if (min > 0 && axis !== 'z') {
-          alert(`Erreur: Min ne peut pas être supérieur à 0 pour l'axe ${axis.toUpperCase()}`);
+          alert(`Error: Min cannot be greater than 0 for axis ${axis.toUpperCase()}`);
           minInput.value = 0;
           window.validatingCoordinates = false;
           return;
         }
-        // Condition spéciale pour Z: Zmin ne peut pas être supérieur à 0
+        // Condition spéciale pour Z: Zmin cannot be greater than 0
         if (axis === 'z' && min > 0) {
-          alert('Erreur: Zmin ne peut pas être supérieur à 0');
+          alert('Error: Zmin cannot be greater than 0');
           minInput.value = 0;
           window.validatingCoordinates = false;
           return;
@@ -728,20 +1172,20 @@
       // Si max change, ajuster min pour maintenir |min| + max = dimension
       if (event.target === maxInput) {
         if (max > dimension) {
-          alert(`Erreur: Max ne peut pas être supérieur à ${dimension}mm`);
+          alert(`Error: Max cannot be greater than ${dimension}mm`);
           maxInput.value = dimension;
           window.validatingCoordinates = false;
           return;
         }
         if (max < 0 && axis !== 'z') {
-          alert(`Erreur: Max ne peut pas être inférieur à 0 pour l'axe ${axis.toUpperCase()}`);
+          alert(`Error: Max cannot be less than 0 for axis ${axis.toUpperCase()}`);
           maxInput.value = 0;
           window.validatingCoordinates = false;
           return;
         }
-        // Condition spéciale pour Z: Zmax ne peut pas descendre en dessous de 0
+        // Condition spéciale pour Z: Zmax cannot go below 0
         if (axis === 'z' && max < 0) {
-          alert('Erreur: Zmax ne peut pas descendre en dessous de 0');
+          alert('Error: Zmax cannot go below 0');
           maxInput.value = 0;
           window.validatingCoordinates = false;
           return;
@@ -793,5 +1237,8 @@
     <script src="main.js"></script>
     <script src="frontend/scripts/init-display.js"></script>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/python/python.min.js"></script>
+  <script src="plugins/python-editor/ui.js"></script>
 </body>
 </html>

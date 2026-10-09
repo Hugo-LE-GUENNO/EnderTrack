@@ -34,6 +34,27 @@ class CameraModule {
     this.tiles = [];
     // Register scenario action early (even without driver)
     setTimeout(() => this._registerScenarioAction(), 100);
+    // Detect new device plugged in
+    navigator.mediaDevices?.addEventListener('devicechange', async () => {
+      if (!this.live && this.driverName) {
+        // Try to reconnect with same driver
+        const cams = window._cameras || [];
+        const cam = cams.find(c => c.type === this.driverName);
+        if (cam) {
+          const ok = await this.setDriver(this.driverName, { deviceId: cam.deviceId, url: cam.url });
+          if (ok) {
+            await this.startLive();
+            // Refresh viewport with new stream
+            const display = window.EnderTrack?.Display;
+            if (display) {
+              const vpIdx = display.viewports.length > 1 ? 1 : 0;
+              display.assignSource(vpIdx, null);
+              setTimeout(() => display.assignSource(vpIdx, 'camera:0'), 100);
+            }
+          }
+        }
+      }
+    });
   }
 
   // === DRIVER MANAGEMENT ===
@@ -62,18 +83,17 @@ class CameraModule {
         const origRedraw = this.histogram._redraw.bind(this.histogram);
         this.histogram._redraw = () => {
           origRedraw();
-          const tab = window.EnderTrack?.State?.get?.()?.activeTab;
-          if (tab === 'navigation' || !tab) {
-            const r = this.histogram.getContrastRange();
-            const renderer = window.EnderTrack?.LiveRenderer;
-            if (renderer) { renderer.setContrast(r.min, r.max); renderer.enabled = (r.min > 0 || r.max < 255 || (this._liveLutId && this._liveLutId !== 'gray')); }
-            this._saveLiveSettings();
+          const r = this.histogram.getContrastRange();
+          const renderer = window.EnderTrack?.LiveRenderer;
+          if (renderer) {
+            renderer.setContrast(r.min, r.max);
+            renderer.setLut(this._liveLutId || 'gray');
+            renderer.enabled = (r.min > 0 || r.max < 255 || (this._liveLutId && this._liveLutId !== 'gray'));
           }
+          this._saveLiveSettings();
         };
         this.histogram._getCurrentLut = () => {
-          if (!this._liveLutId || this._liveLutId === 'gray') return null;
-          const def = window.CameraLUTs?.[this._liveLutId];
-          return def ? def.generate() : null;
+          return (!this._liveLutId || this._liveLutId === 'gray') ? null : this._liveLutId;
         };
         this.histogram._showOptionsMenu = (x, y) => {
           this._showLiveLutMenu(x, y);
@@ -82,12 +102,14 @@ class CameraModule {
       if (!this.fastExplore && window.EnderTrack?.FastExplore) {
         this.fastExplore = new window.EnderTrack.FastExplore(this);
       }
-      // Auto-start live if real camera
-      if (name !== 'simulation' && !this.live) {
+      // Auto-start live for all drivers
+      if (!this.live) {
         await this.startLive();
         this._startLiveHistogram();
         this._hookMosaic();
+        this._loadLiveSettings();
       }
+      this._renderCameraConfig();
     }
     return ok;
   }
@@ -134,7 +156,7 @@ class CameraModule {
   async startLive() {
     if (!this.driver) return false;
     const ok = await this.driver.startLive();
-    if (ok) { this.live = true; this._renderNav(); }
+    if (ok) { this.live = true; this._renderNav(); this._updateStatus(); }
     return ok;
   }
 
@@ -143,6 +165,7 @@ class CameraModule {
     await this.driver.stopLive();
     this.live = false;
     this._renderNav();
+    this._updateStatus();
     return true;
   }
 
@@ -185,7 +208,7 @@ class CameraModule {
     rgbRow.innerHTML = `<span style="width:14px; display:inline-block;">${!renderer?.enabled ? '\u2713' : ''}</span>RGB (no LUT)`;
     rgbRow.onmouseenter = () => rgbRow.style.background = 'var(--app-bg)';
     rgbRow.onmouseleave = () => rgbRow.style.background = '';
-    rgbRow.onclick = () => { if (renderer) { renderer.enabled = false; renderer.lutId = 'gray'; renderer._lutTable = null; } this._liveLutId = 'gray'; this._saveLiveSettings(); menu.remove(); };
+    rgbRow.onclick = () => { if (renderer) { renderer.enabled = false; renderer.lutId = 'gray'; renderer._lutTable = null; } this._liveLutId = 'gray'; this._saveLiveSettings(); this.tiles.forEach(t => { t._processed = null; }); EnderTrack.Canvas?.requestRender?.(); menu.remove(); };
     menu.appendChild(rgbRow);
     const sep = document.createElement('div');
     sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
@@ -198,7 +221,7 @@ class CameraModule {
       row.textContent = def.name;
       row.onmouseenter = () => { if (!active) row.style.background = 'var(--app-bg)'; };
       row.onmouseleave = () => { if (!active) row.style.background = ''; };
-      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.LiveRenderer; if (renderer) { renderer.setLut(id); renderer.enabled = true; }; this.histogram?._redraw?.(); this._saveLiveSettings(); menu.remove(); };
+      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.LiveRenderer; if (renderer) { renderer.setLut(id); renderer.enabled = true; }; this.histogram?._redraw?.(); this._saveLiveSettings(); this.tiles.forEach(t => { t._processed = null; }); EnderTrack.Canvas?.requestRender?.(); menu.remove(); };
       menu.appendChild(row);
     }
     document.body.appendChild(menu);
@@ -209,7 +232,7 @@ class CameraModule {
     const zone = document.getElementById('navPluginZone');
     if (!zone) return;
     const cameras = window._cameras || [];
-    if (!cameras.length || this.driverName === 'simulation') {
+    if (!cameras.length) {
       if (this._navEl) { this._navEl.remove(); this._navEl = null; }
       return;
     }
@@ -218,40 +241,50 @@ class CameraModule {
       this._navEl.id = 'camera-nav';
       zone.appendChild(this._navEl);
     }
-    const isPicam = cameras.some(c => c.type === 'picamera2');
     const exp = this.picamConfig.exposure || 100000;
     const gain = this.picamConfig.gain || 1.0;
     this._navEl.innerHTML = `
       <style>
-        #camera-nav .cam-btn { padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-size:11px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; font-weight:500; }
-        #camera-nav .cam-btn:hover { background:var(--active-element); color:var(--text-selected); }
+        #camera-nav .cam-btn { padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:11px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; font-weight:500; }
+        #camera-nav .cam-btn:hover:not(:disabled) { background:var(--active-element); color:var(--text-selected); }
         #camera-nav .cam-btn.active { background:var(--active-element); color:var(--text-selected); }
+        #camera-nav .cam-btn:disabled { opacity:0.3; cursor:not-allowed; }
       </style>
-      <div style="display:flex; gap:4px; margin-bottom:6px;">
-        <button class="cam-btn" onclick="EnderTrack.Camera.saveLive()">\ud83d\udcf7 Photo</button>
-        ${isPicam ? `<button class="cam-btn" onclick="EnderTrack.Camera.runAutofocus('full')" oncontextmenu="event.preventDefault(); EnderTrack.Camera._afContextMenu(event)">\ud83d\udd2c AF</button>` : ''}
-        <button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" onclick="EnderTrack.Camera.toggleFastExplore()">\ud83d\udd32 Explore</button>
-      </div>
-      ${isPicam ? `
-      <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px; padding-top:8px; border-top:1px solid #333;">
-        <div style="display:flex; align-items:center; gap:4px;">
-          <span style="font-size:9px; color:var(--text-general); width:32px;">Expo</span>
-          <input type="range" min="1000" max="1000000" value="${exp}" step="1000"
-            oninput="document.getElementById('nav-exp-val').textContent=Math.round(this.value/1000)+'ms'"
-            onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)}).then(()=>EnderTrack.Camera._renderNav())"
-            style="flex:1; height:3px;">
-          <span id="nav-exp-val" style="font-size:9px; color:var(--coordinates-color); width:36px; text-align:right;">${Math.round(exp/1000)}ms</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:4px;">
-          <span style="font-size:9px; color:var(--text-general); width:32px;">Gain</span>
-          <input type="range" min="1" max="16" value="${gain}" step="0.5"
-            oninput="document.getElementById('nav-gain-val').textContent=parseFloat(this.value).toFixed(1)"
-            onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)}).then(()=>EnderTrack.Camera._renderNav())"
-            style="flex:1; height:3px;">
-          <span id="nav-gain-val" style="font-size:9px; color:var(--coordinates-color); width:24px; text-align:right;">${gain.toFixed(1)}</span>
-        </div>
-      </div>
-      ` : ''}
+      ${cameras.map((cam, i) => {
+        const isPicam = cam.type === 'picamera2';
+        const connected = this.live && (isPicam ? this.driverName === 'mjpeg' : this.driverName === cam.type);
+        const dis = connected ? '' : 'disabled';
+        const ps = cam.pixel_size || this.picamConfig.pixel_size || 1.0;
+        const rot = cam.rotation || this.picamConfig.rotation || 0;
+        return `
+        <div style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #2a2a2a;">
+          <div style="font-size:9px; color:#666; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.5px;">${cam.label}</div>
+          <div style="display:flex; gap:4px; margin-bottom:${isPicam || cam.type==='webcam' ? '6' : '0'}px;">
+            <button class="cam-btn" ${dis} onclick="EnderTrack.Camera.saveLive()" oncontextmenu="event.preventDefault(); EnderTrack.Camera._savePathMenu(event)">Capture</button>
+            ${isPicam ? `<button class="cam-btn" ${dis} onclick="EnderTrack.Camera.runAutofocus('full')" oncontextmenu="event.preventDefault(); EnderTrack.Camera._afContextMenu(event)">AF</button>` : ''}
+            <button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" ${dis} onclick="EnderTrack.Camera.toggleFastExplore()">Explore</button>
+          </div>
+          ${isPicam ? `
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span style="font-size:9px; color:var(--text-general); width:32px;">Expo</span>
+              <input type="range" min="1000" max="1000000" value="${exp}" step="1000" ${dis}
+                oninput="document.getElementById('nav-exp-val-${i}').textContent=Math.round(this.value/1000)+'ms'"
+                onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)}).then(()=>EnderTrack.Camera._renderNav())"
+                style="flex:1; height:3px;">
+              <span id="nav-exp-val-${i}" style="font-size:9px; color:var(--coordinates-color); width:36px; text-align:right;">${Math.round(exp/1000)}ms</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span style="font-size:9px; color:var(--text-general); width:32px;">Gain</span>
+              <input type="range" min="1" max="16" value="${gain}" step="0.5" ${dis}
+                oninput="document.getElementById('nav-gain-val-${i}').textContent=parseFloat(this.value).toFixed(1)"
+                onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)}).then(()=>EnderTrack.Camera._renderNav())"
+                style="flex:1; height:3px;">
+              <span id="nav-gain-val-${i}" style="font-size:9px; color:var(--coordinates-color); width:24px; text-align:right;">${gain.toFixed(1)}</span>
+            </div>
+          </div>` : ''}
+        </div>`;
+      }).join('')}
     `;
   }
 
@@ -260,7 +293,7 @@ class CameraModule {
     const menu = document.createElement('div');
     menu.id = 'af-ctx-menu';
     menu.style.cssText = 'position:fixed; left:'+e.clientX+'px; top:'+e.clientY+'px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:120px;';
-    [{label:'\u26a1 Rapide (P2+P3)',mode:'quick'},{label:'\ud83d\udd2c Complet (P1+P2+P3)',mode:'full'}].forEach(item => {
+    [{label:'\u26a1 Quick (P2+P3)',mode:'quick'},{label:'\ud83d\udd2c Full (P1+P2+P3)',mode:'full'}].forEach(item => {
       const row = document.createElement('div');
       row.style.cssText = 'padding:5px 12px; font-size:10px; cursor:pointer; color:var(--text-general);';
       row.textContent = item.label;
@@ -305,19 +338,77 @@ class CameraModule {
     if (!frame?.frame) return;
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const pos = window.EnderTrack?.State?.get?.()?.pos || {x:0,y:0,z:0};
-    const path = './captures/snap_' + ts + '_X' + pos.x.toFixed(2) + '_Y' + pos.y.toFixed(2) + '_Z' + pos.z.toFixed(2) + '.png';
-    // Save to server (for gallery)
-    try {
-      const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-      await fetch(url + '/api/capture/save', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ frame: frame.frame, path })
-      });
-    } catch(e) {}
-    // Copy live settings for this image in gallery
-    this._saveLiveSettingsForImage(path);
-    // Refresh gallery
-    window.EnderTrack?.ImageManager?.loadGallery?.();
+    const tpl = this._saveName || 'snap_$date_X$x_Y$y_Z$z';
+    const filename = tpl
+      .replace('$date', ts)
+      .replace('$x', pos.x.toFixed(2))
+      .replace('$y', pos.y.toFixed(2))
+      .replace('$z', pos.z.toFixed(2)) + '.png';
+    const btn = this._navEl?.querySelector('[onclick*="saveLive"]');
+    const flash = () => { if (btn) { const orig = btn.textContent; btn.textContent = 'OK'; setTimeout(() => btn.textContent = orig, 1000); } };
+    if (this._savePath) {
+      const serverPath = this._savePath.replace(/\/$/, '') + '/' + filename;
+      try {
+        const url = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+        const res = await fetch(url + '/api/capture/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ frame: frame.frame, path: serverPath }) });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Save failed');
+        this._saveLiveSettingsForImage(serverPath);
+        window.EnderTrack?.ImageManager?.loadGallery?.();
+        flash();
+      } catch(e) {
+        if (btn) { const orig = btn.textContent; btn.textContent = 'ERR'; btn.title = e.message; setTimeout(() => { btn.textContent = orig; btn.title = ''; }, 3000); }
+        const a = document.createElement('a'); a.href = 'data:image/jpeg;base64,' + frame.frame; a.download = filename; a.click();
+      }
+    } else {
+      const a = document.createElement('a');
+      a.href = 'data:image/jpeg;base64,' + frame.frame;
+      a.download = filename;
+      a.click();
+      flash();
+    }
+  }
+
+  _savePathMenu(e) {
+    document.getElementById('save-path-menu')?.remove();
+    const menu = document.createElement('div');
+    menu.id = 'save-path-menu';
+    menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:10px; display:flex; flex-direction:column; gap:8px; min-width:260px;`;
+    const name = this._saveName || '';
+    const path = this._savePath || '';
+    menu.innerHTML = `
+      <div style="font-size:10px;font-weight:600;color:var(--text-selected);">Capture settings</div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <div style="font-size:9px;color:#666;">Filename <span style="color:#444;">($date $x $y $z)</span></div>
+        <input id="save-name-input" value="${name}" placeholder="snap_$date_X$x_Y$y_Z$z" style="padding:3px 5px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;font-family:var(--font-mono);width:100%;box-sizing:border-box;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <div style="font-size:9px;color:#666;">Folder on server <span style="color:#444;">(empty = browser download)</span></div>
+        <div style="display:flex;gap:4px;">
+          <input id="save-path-input" value="${path}" placeholder="./captures" style="flex:1;padding:3px 5px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;font-family:var(--font-mono);">
+          <button onclick="(async()=>{const r=await fetch((window.ENDERTRACK_SERVER||'http://localhost:5000')+'/api/fs/dialog/directory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Save folder'})});const d=await r.json();if(d.path)document.getElementById('save-path-input').value=d.path;})()" style="padding:3px 8px;border:1px solid #444;border-radius:3px;background:var(--app-bg);color:var(--text-general);font-size:10px;cursor:pointer;">...</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;justify-content:flex-end;">
+        <button onclick="EnderTrack.Camera._resetSavePath()" style="padding:3px 8px;border:none;border-radius:3px;background:var(--app-bg);color:#888;font-size:10px;cursor:pointer;">Reset</button>
+        <button onclick="EnderTrack.Camera._applySavePath()" style="padding:3px 8px;border:none;border-radius:3px;background:var(--active-element);color:var(--text-selected);font-size:10px;cursor:pointer;">OK</button>
+      </div>`;
+    document.body.appendChild(menu);
+    document.getElementById('save-name-input').focus();
+    menu.addEventListener('keydown', e => { if (e.key === 'Enter') this._applySavePath(); if (e.key === 'Escape') menu.remove(); });
+    setTimeout(() => { const close = ev => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } }; document.addEventListener('mousedown', close); }, 0);
+  }
+
+  _applySavePath() {
+    this._saveName = document.getElementById('save-name-input')?.value?.trim() || '';
+    this._savePath = document.getElementById('save-path-input')?.value?.trim() || '';
+    document.getElementById('save-path-menu')?.remove();
+  }
+
+  _resetSavePath() {
+    this._saveName = '';
+    this._savePath = '';
+    document.getElementById('save-path-menu')?.remove();
   }
 
   _saveLiveSettingsForImage(path) {
@@ -400,32 +491,32 @@ class CameraModule {
     // Tiles are now rendered directly by xy-canvas.js (before cursor)
     // Render gallery panel
     this._renderTilesPanel();
-    // Grab tile after movement
-    window.EnderTrack?.Events?.on?.('movement:completed', () => {
-      console.log('[Mosaic] movement:completed, navigatorMode:', this.navigatorMode, 'live:', this.live);
-      if (this.navigatorMode && this.live) {
-        clearTimeout(this._navDebounce);
-        this._navDebounce = setTimeout(() => this._grabNavigatorTile(), 500);
-      }
-    });
-    // Grab tile during scenario
-    window.EnderTrack?.Events?.on?.('scenario:position_reached', () => {
-      if (this.live) {
-        const expMs = (this.picamConfig.exposure || 100000) / 1000;
-        setTimeout(() => this._grabNavigatorTile(), Math.max(500, expMs * 2));
-      }
+    // Grab tile après mouvement — navigation manuelle uniquement (pas pendant un scenario)
+    window.EnderTrack?.Events?.on?.('movement:completed', ({ position, success } = {}) => {
+      if (!this.navigatorMode || !this.live || !window._tilesEnabled) return;
+      if (window.EnderTrack?.Scenario?.isActive) return;
+      if (success === false) return;
+      clearTimeout(this._navDebounce);
+      // Calcul du délai : distance parcourue / vitesse + exposition
+      const state = window.EnderTrack?.State?.get?.();
+      const pos = state?.pos || { x: 0, y: 0, z: 0 };
+      const prev = this._lastNavPos || pos;
+      const dist = Math.sqrt((pos.x - prev.x) ** 2 + (pos.y - prev.y) ** 2 + (pos.z - prev.z) ** 2);
+      const feedrate = state?.feedrate || 3000;
+      const moveMs = (dist / (feedrate / 60)) * 1000;
+      const expMs = (this.picamConfig.exposure || 100000) / 1000;
+      const waitMs = Math.max(300, moveMs + expMs + 300);
+      this._lastNavPos = { ...pos };
+      this._navDebounce = setTimeout(() => this._grabNavigatorTile(), waitMs);
     });
   }
 
   async _grabNavigatorTile() {
     if (this._navGrabbing || !this.driver) return;
     this._navGrabbing = true;
-    console.log('[Mosaic] grabbing tile...');
     try {
       const frame = await this.getFrame();
-      console.log('[Mosaic] frame:', frame ? `${frame.width}x${frame.height}` : 'null');
       if (frame?.frame) this._addTile(frame);
-      else console.warn('[Mosaic] no frame data');
     } finally {
       this._navGrabbing = false;
     }
@@ -444,13 +535,18 @@ class CameraModule {
     const heightMm = (h_px * ps) / 1000;
 
     const tileImg = new Image();
+    tileImg.onload = () => {
+      // Replace existing tile at same position
+      const existing = this.tiles.findIndex(t => Math.abs(t.x - x) < 0.01 && Math.abs(t.y - y) < 0.01);
+      if (existing >= 0) this.tiles[existing] = tile;
+      else this.tiles.push(tile);
+      this._renderTilesPanel();
+      this._renderNav();
+      window.EnderTrack?.Canvas?.requestRender?.();
+      this._saveTiles();
+    };
     tileImg.src = 'data:image/jpeg;base64,' + frameData.frame;
-    const tile = { img: tileImg, x, y, widthMm, heightMm, timestamp: Date.now(), visible: true };
-
-    // Replace existing tile at same position
-    const existing = this.tiles.findIndex(t => Math.abs(t.x - x) < 0.01 && Math.abs(t.y - y) < 0.01);
-    if (existing >= 0) this.tiles[existing] = tile;
-    else this.tiles.push(tile);
+    const tile = { img: tileImg, x, y, w_px, h_px, widthMm, heightMm, timestamp: Date.now(), visible: true };
 
     // Save to server gallery
     const path = './captures/mosaic_X' + x.toFixed(2) + '_Y' + y.toFixed(2) + '.png';
@@ -461,7 +557,25 @@ class CameraModule {
     }).catch(() => {});
     // Copy live contrast/LUT settings to gallery for this image
     this._saveLiveSettingsForImage(path);
+  }
 
+  _saveTiles() {
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    const meta = this.tiles.map(({ x, y, w_px, h_px, widthMm, heightMm, timestamp, visible }) =>
+      ({ x, y, w_px, h_px, widthMm, heightMm, timestamp, visible }));
+    fetch(base + '/api/sync/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tiles: meta })
+    }).catch(() => {});
+  }
+
+  loadTiles(meta) {
+    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    this.tiles = meta.map(t => {
+      const img = new Image();
+      img.src = base + '/captures/mosaic_X' + t.x.toFixed(2) + '_Y' + t.y.toFixed(2) + '.png';
+      return { ...t, img };
+    });
     this._renderTilesPanel();
     this._renderNav();
     window.EnderTrack?.Canvas?.requestRender?.();
@@ -521,6 +635,7 @@ class CameraModule {
 
   clearTiles() {
     this.tiles = [];
+    this._saveTiles();
     this._renderTilesPanel();
     window.EnderTrack?.Canvas?.requestRender?.();
   }
@@ -561,10 +676,10 @@ class CameraModule {
         `).join('')}
       </div>
       <div style="display:flex; gap:4px;">
-        <button onclick="EnderTrack.Camera.saveTilesZip()" style="flex:1; padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">\ud83d\udcbe Sauver tout (.zip)</button>
+        <button onclick="EnderTrack.Camera.saveTilesZip()" style="flex:1; padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:var(--text-general);">\ud83d\udcbe Save all (.zip)</button>
         <button onclick="EnderTrack.Camera.clearTiles()" style="padding:5px 8px; border:none; border-radius:3px; cursor:pointer; font-size:9px; background:var(--app-bg); color:#ef4444;">\ud83d\uddd1</button>
       </div>
-      ` : '<div style="font-size:9px; color:#666; text-align:center; padding:8px;">Activer "Auto" puis d\u00e9placer la platine</div>'}
+      ` : '<div style="font-size:9px; color:#666; text-align:center; padding:8px;">Enable "Auto" then move the stage</div>'}
     `;
   }
 
@@ -598,8 +713,8 @@ class CameraModule {
     menu.id = 'tile-ctx-menu';
     menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY}px; z-index:10000; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4); padding:4px 0; min-width:120px;`;
     const items = [
-      { label: '\ud83d\udcbe Sauver cette image', fn: () => this._saveSingleTile(idx) },
-      { label: '\ud83d\uddd1 Supprimer', fn: () => { this.tiles.splice(idx, 1); this._renderTilesPanel(); this._renderNav(); EnderTrack.Canvas?.requestRender?.(); } }
+      { label: '\ud83d\udcbe Save image', fn: () => this._saveSingleTile(idx) },
+      { label: '🗑 Delete', fn: () => { this.tiles.splice(idx, 1); this._saveTiles(); this._renderTilesPanel(); this._renderNav(); EnderTrack.Canvas?.requestRender?.(); } }
     ];
     for (const item of items) {
       const row = document.createElement('div');
@@ -688,12 +803,19 @@ class CameraModule {
     if (this._liveHistTimer) return;
     this._liveHistTimer = setInterval(() => {
       if (!this.live || !this.histogram) return;
-      const tab = window.EnderTrack?.State?.get?.()?.activeTab;
-      if (tab !== 'navigation') return;
-      this.getFrame().then(f => {
-        if (f?.frame) this.histogram.updateFromBase64(f.frame);
-      }).catch(() => {});
-    }, 1000);
+      // Read pixels directly from video via LiveRenderer canvas (fastest path)
+      const renderer = window.EnderTrack?.LiveRenderer;
+      const data = renderer?.getFrameData?.();
+      if (data) {
+        const isRgb = !renderer.enabled || !renderer._lutTable;
+        this.histogram.updateFromImageData(data, !isRgb);
+      } else {
+        // Fallback: grab frame
+        this.getFrame().then(f => {
+          if (f?.frame) this.histogram.updateFromBase64(f.frame);
+        }).catch(() => {});
+      }
+    }, 200);
   }
 
   _stopLiveHistogram() {
@@ -709,8 +831,7 @@ class CameraModule {
   switchViewportForTab(tabId) {
     const display = window.EnderTrack?.Display;
     const cameras = window._cameras || [];
-    const hasCamera = cameras.length && this.driverName !== 'simulation';
-    if (!display) return;
+    const hasCamera = cameras.length > 0;    if (!display) return;
 
     const liveRenderer = window.EnderTrack?.LiveRenderer;
     const multiVp = display.viewports.length > 1;
@@ -778,19 +899,37 @@ class CameraModule {
 
   // === STATUS WIDGET ===
 
+  _onDriverError() {
+    if (!this.live) return;
+    this.live = false;
+    this._updateStatus();
+    this._renderCameraConfig();
+    // Auto-reconnect for picam
+    const cam = (window._cameras || []).find(c => c.type === 'picamera2');
+    if (cam && this.driverName === 'mjpeg') {
+      if (!this._reconnectAttempts) this._reconnectAttempts = 0;
+      if (this._reconnectAttempts < 5) {
+        this._reconnectAttempts++;
+        const delay = this._reconnectAttempts * 2000;
+        setTimeout(() => this._connectPicam(cam.deviceId, cam.preview_resolution || cam.resolution), delay);
+      } else {
+        this._reconnectAttempts = 0;
+      }
+    }
+  }
+
   _updateStatus() {
     const sp = window.EnderTrack?.StatusPeripherals;
     if (!sp) return;
     const cameras = window._cameras || [];
-    // Remove old entries
     for (let i = 0; i < 8; i++) sp.remove('camera_' + i);
-    if (this.driverName === 'simulation' || !cameras.length) return;
+    if (!cameras.length) return;
     cameras.forEach((cam, i) => {
+      const connected = this.live && this.driverName === (cam.type === 'picamera2' ? 'mjpeg' : cam.type);
       sp.set('camera_' + i, {
-        name: cam.label,
-        icon: '📷',
-        state: 'connected',
-        detail: cam.type
+        name: cam.label || cam.type,
+        state: connected ? 'connected' : 'disconnected',
+        detail: connected && cam.sensor ? cam.sensor : null
       });
     });
   }
@@ -803,6 +942,8 @@ class CameraModule {
   }
 
   async _loadPicamConfig() {
+    const hasPicam = (window._cameras || []).some(c => c.type === 'picamera2');
+    if (!hasPicam) return;
     try {
       const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
       const res = await fetch(base + '/api/camera/picam/config');
@@ -821,6 +962,11 @@ class CameraModule {
   }
 
   async setPicamConfig(params) {
+    if (this.driverName === 'simulation') {
+      Object.assign(this.picamConfig, params);
+      this._renderNav();
+      return;
+    }
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     try {
       const res = await fetch(base + '/api/camera/picam/config', {
@@ -836,6 +982,7 @@ class CameraModule {
         this.config.resolution = data.config.resolution || [1280, 720];
         this.config.exposure = data.config.exposure || 100000;
         this.config.gain = data.config.gain || 1.0;
+        if (params.pixel_size !== undefined) this._recalcTiles();
       }
     } catch {}
   }
@@ -848,52 +995,208 @@ class CameraModule {
   }
 
   _renderCameraConfig() {
-    const zone = document.getElementById('picamConfigZone');
+    // Config is now rendered inline in each camera card via _renderPicamCard
+    window._renderCameras?.();
+  }
+
+  _renderCamCard(idx) {
+    const zone = document.getElementById('camConfig_' + idx);
     if (!zone) return;
-    const cameras = window._cameras || [];
-    const hasPicam = cameras.some(c => c.type === 'picamera2') ||
-      (this.driverName === 'mjpeg' && this.driver?.streamUrl?.includes('/api/camera/picam/'));
-    if (!hasPicam) { zone.innerHTML = ''; return; }
-    const c = this.picamConfig;
+    const cam = (window._cameras || [])[idx];
+    if (!cam) return;
+    const isPicam = cam.type === 'picamera2';
+    const connected = this.live && (cam.type === 'picamera2' ? this.driverName === 'mjpeg' : this.driverName === cam.type);
+    const ps = cam.pixel_size || 1.0;
+    const rot = cam.rotation || 0;
+    const prevRes = cam.preview_resolution || cam.resolution || [1280, 720];
+    const RESOLUTIONS = [[4056,3040],[2028,1520],[1280,720],[640,480]];
+    const resOptions = RESOLUTIONS.map(r => `<option value="${r}" ${r[0]===prevRes[0]&&r[1]===prevRes[1]?'selected':''}>${r[0]}×${r[1]}</option>`).join('');
+    const infoLine = isPicam
+      ? `<span style="color:var(--text-selected);">${cam.label}</span>`
+      : `<span>${cam.label || cam.deviceId?.slice(0,16) || cam.type}</span>`;
     zone.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:6px; padding:8px 0 0;">
-        <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.5px; color:#666; margin-bottom:2px;">Configuration RPi Camera</div>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="width:70px; font-size:10px;">R\u00e9solution</label>
-          <select onchange="EnderTrack.Camera.setPicamConfig({resolution: this.value.split(',').map(Number)})" style="flex:1; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--text-selected); font-size:10px;">
-            <option value="4056,3040" ${c.resolution?.[0]===4056?'selected':''}>4056\u00d73040 (Full)</option>
-            <option value="2028,1520" ${c.resolution?.[0]===2028?'selected':''}>2028\u00d71520 (Half)</option>
-            <option value="1332,990" ${c.resolution?.[0]===1332?'selected':''}>1332\u00d7990</option>
-            <option value="1280,720" ${c.resolution?.[0]===1280?'selected':''}>1280\u00d7720 (HD)</option>
-            <option value="640,480" ${c.resolution?.[0]===640?'selected':''}>640\u00d7480 (Preview)</option>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:11px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="status-indicator ${connected ? 'connected' : ''}"></div>
+          <span style="font-size:11px;color:${connected ? '#10b981' : '#ef4444'}">${connected ? 'Connected' : 'Not connected'}${connected && cam.sensor ? ' · ' + cam.sensor : ''}</span>
+        </div>
+        ${isPicam ? `
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="width:60px;flex-shrink:0;color:var(--text-general);">Preview res.</label>
+          <select onchange="(function(sel){var cam=window._cameras[${idx}];var oldW=(cam.preview_resolution||cam.resolution||[640,480])[0];var newRes=sel.value.split(',').map(Number);cam.pixel_size=parseFloat((cam.pixel_size*(oldW/newRes[0])).toFixed(4));cam.preview_resolution=newRes;window._savePeripherals();EnderTrack.Camera.setPicamConfig({resolution:newRes});EnderTrack.Camera._renderCamCard(${idx});})(this)"
+            style="flex:1;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;">
+            ${resOptions}
           </select>
+        </div>` : ''}
+        <div style="display:flex;gap:6px;align-items:center;">
+          <label style="width:60px;flex-shrink:0;color:var(--text-general);">Pixel size</label>
+          <button onclick="(function(){var inp=document.getElementById('ps_${idx}');var v=parseFloat(inp.value)||1;var s=v>=1?0.1:0.01;inp.value=Math.max(0.001,parseFloat((v-s).toFixed(4)));inp.dispatchEvent(new Event('change'));})()" style="padding:1px 6px;border:1px solid #444;border-radius:var(--radius-small);background:var(--app-bg);color:var(--text-general);font-size:13px;cursor:pointer;line-height:1;">−</button>
+          <input id="ps_${idx}" type="number" value="${ps}" min="0.001" step="0.001"
+            onchange="window._cameras[${idx}].pixel_size=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({pixel_size:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
+            style="width:52px;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
+          <button onclick="(function(){var inp=document.getElementById('ps_${idx}');var v=parseFloat(inp.value)||1;var s=v>=1?0.1:0.01;inp.value=parseFloat((v+s).toFixed(4));inp.dispatchEvent(new Event('change'));})()" style="padding:1px 6px;border:1px solid #444;border-radius:var(--radius-small);background:var(--app-bg);color:var(--text-general);font-size:13px;cursor:pointer;line-height:1;">+</button>
+          <span style="font-size:11px;color:var(--text-general);">µm/px</span>
+          <button onclick="EnderTrack.Camera._openCalibModal(${idx})" style="flex-shrink:0;margin-left:auto;padding:2px 7px;border:1px solid #444;border-radius:var(--radius-small);background:var(--app-bg);color:var(--text-general);font-size:11px;cursor:pointer;">Cal</button>
         </div>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="width:70px; font-size:10px;">Pixel size</label>
-          <input type="number" value="${c.pixel_size||1.0}" min="0.01" step="0.01" onchange="EnderTrack.Camera.setPicamConfig({pixel_size:parseFloat(this.value)})" style="width:60px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">\u00b5m/px</span>
-        </div>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="width:70px; font-size:10px;">Rotation</label>
-          <input type="range" min="0" max="360" value="${c.rotation||0}" step="0.5" oninput="document.getElementById('picam-rot-val').value=this.value" onchange="EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})" style="flex:1; height:3px;">
-          <input id="picam-rot-val" type="number" value="${c.rotation||0}" min="0" max="360" step="0.5" onchange="EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})" style="width:40px; padding:2px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">\u00b0
-        </div>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="width:70px; font-size:10px;">Flip</label>
-          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:2px;"><input type="checkbox" ${c.flip_h?'checked':''} onchange="EnderTrack.Camera.setPicamConfig({flip_h:this.checked})"><span style="color:var(--text-general);">H</span></label>
-          <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:2px;"><input type="checkbox" ${c.flip_v?'checked':''} onchange="EnderTrack.Camera.setPicamConfig({flip_v:this.checked})"><span style="color:var(--text-general);">V</span></label>
-        </div>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="width:70px; font-size:10px;">Exposition</label>
-          <input type="number" value="${c.exposure||100000}" min="100" step="1000" onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)}).then(()=>EnderTrack.Camera._renderNav())" style="width:70px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
-          <span style="font-size:9px; color:var(--text-general);">\u00b5s</span>
-        </div>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <label style="width:70px; font-size:10px;">Gain</label>
-          <input type="number" value="${c.gain||1.0}" min="1" max="16" step="0.1" onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)}).then(()=>EnderTrack.Camera._renderNav())" style="width:50px; padding:3px; background:var(--app-bg); border:1px solid #444; border-radius:3px; color:var(--coordinates-color); font-size:10px; text-align:center;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="width:40px;color:var(--text-general);">Rotation</label>
+          <input type="range" min="0" max="360" value="${rot}" step="0.5"
+            oninput="this.nextElementSibling.value=this.value"
+            onchange="window._cameras[${idx}].rotation=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
+            style="flex:1;height:4px;">
+          <input type="number" value="${rot}" min="0" max="360" step="0.5"
+            onchange="window._cameras[${idx}].rotation=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
+            style="width:45px;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
         </div>
       </div>
     `;
+  }
+
+  _openCalibModal(idx) {
+    document.getElementById('calib-modal')?.remove();
+    const cam = (window._cameras || [])[idx];
+    const isPicam = cam?.type === 'picamera2';
+
+    const modal = document.createElement('div');
+    modal.id = 'calib-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:10000;';
+
+    modal.innerHTML = `
+      <div style="background:var(--container-bg);border-radius:8px;padding:16px;width:520px;max-width:95vw;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;font-weight:600;color:var(--text-selected);">Calibrate pixel size</span>
+          <button onclick="document.getElementById('calib-modal').remove()" style="background:none;border:none;color:#888;font-size:16px;cursor:pointer;">✕</button>
+        </div>
+        <div style="font-size:10px;color:#888;">Draw a line on a known structure, then enter its real length.</div>
+        <canvas id="calib-canvas" style="width:100%;border:1px solid #444;border-radius:4px;cursor:crosshair;touch-action:none;"></canvas>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:11px;color:var(--text-general);white-space:nowrap;">Line length:</span>
+          <input id="calib-length-px" readonly value="—" style="width:60px;padding:3px 5px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
+          <span style="font-size:11px;color:#666;">px =</span>
+          <input id="calib-length-um" type="number" value="10" min="0.01" step="0.1" style="width:70px;padding:3px 5px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
+          <span style="font-size:11px;color:var(--text-general);">µm</span>
+          <button id="calib-apply-btn" disabled onclick="EnderTrack.Camera._applyCalib(${idx})" style="margin-left:auto;padding:4px 14px;border:none;border-radius:4px;background:var(--active-element);color:var(--text-selected);font-size:11px;cursor:pointer;opacity:0.4;">Apply</button>
+        </div>
+        <div id="calib-result" style="font-size:10px;color:#10b981;min-height:14px;"></div>
+      </div>`;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('mousedown', e => { if (e.target === modal) modal.remove(); });
+
+    // Load current frame into canvas
+    const canvas = document.getElementById('calib-canvas');
+    const ctx = canvas.getContext('2d');
+    let lineStart = null, lineEnd = null;
+
+    const drawFrame = (img) => {
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      canvas.style.maxHeight = '320px';
+      ctx.drawImage(img, 0, 0);
+    };
+
+    const drawLine = () => {
+      if (!lineStart || !lineEnd) return;
+      const img = this._calibImg;
+      if (img) { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); }
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(lineStart.x, lineStart.y);
+      ctx.lineTo(lineEnd.x, lineEnd.y);
+      ctx.stroke();
+      // endpoints
+      [lineStart, lineEnd].forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#f59e0b'; ctx.fill();
+      });
+      const dx = lineEnd.x - lineStart.x, dy = lineEnd.y - lineStart.y;
+      const lenPx = Math.sqrt(dx*dx + dy*dy);
+      this._calibLenPx = lenPx;
+      document.getElementById('calib-length-px').value = Math.round(lenPx);
+      const btn = document.getElementById('calib-apply-btn');
+      btn.disabled = lenPx < 2;
+      btn.style.opacity = lenPx < 2 ? '0.4' : '1';
+      const um = parseFloat(document.getElementById('calib-length-um').value);
+      if (um > 0 && lenPx > 2) {
+        document.getElementById('calib-result').textContent = `→ pixel size = ${(um / lenPx).toFixed(4)} µm/px`;
+      }
+    };
+
+    document.getElementById('calib-length-um').addEventListener('input', drawLine);
+
+    // Mouse events — scale to canvas coords
+    const getPos = e => {
+      const r = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / r.width, scaleY = canvas.height / r.height;
+      return { x: (e.clientX - r.left) * scaleX, y: (e.clientY - r.top) * scaleY };
+    };
+    canvas.addEventListener('mousedown', e => { lineStart = getPos(e); lineEnd = null; });
+    canvas.addEventListener('mousemove', e => { if (!lineStart || e.buttons !== 1) return; lineEnd = getPos(e); drawLine(); });
+    canvas.addEventListener('mouseup', e => { lineEnd = getPos(e); drawLine(); });
+
+    // Grab frame
+    this.getFrame().then(f => {
+      if (!f?.frame) return;
+      const img = new Image();
+      img.onload = () => { this._calibImg = img; drawFrame(img); };
+      img.src = 'data:image/jpeg;base64,' + f.frame;
+    });
+  }
+
+  _applyCalib(idx) {
+    const lenPx = this._calibLenPx;
+    const um = parseFloat(document.getElementById('calib-length-um').value);
+    if (!lenPx || lenPx < 2 || !um) return;
+    const ps = parseFloat((um / lenPx).toFixed(4));
+    const curRes = this.picamConfig.resolution || [1280, 720];
+    const cam = (window._cameras || [])[idx];
+    if (cam) { cam.pixel_size = ps; window._savePeripherals?.(); }
+    const isPicam = cam?.type === 'picamera2';
+    if (isPicam) this.setPicamConfig({ pixel_size: ps, pixel_size_ref_res: curRes });
+    else { this.picamConfig.pixel_size_ref_res = curRes; this._applyWebcamMeta(idx); }
+    this._renderCamCard(idx);
+    document.getElementById('calib-modal')?.remove();
+  }
+
+  _recalcTiles() {
+    const ps = this.getEffectivePixelSize();
+    this.tiles.forEach(t => {
+      if (t.w_px) { t.widthMm = (t.w_px * ps) / 1000; t.heightMm = (t.h_px * ps) / 1000; }
+    });
+    window.EnderTrack?.Canvas?.requestRender?.();
+  }
+
+  _applyWebcamMeta(idx) {
+    const cam = (window._cameras || [])[idx];
+    if (!cam) return;
+    this.camRotation = cam.rotation || 0;
+    this.picamConfig.pixel_size = cam.pixel_size || 1.0;
+    this._recalcTiles();
+  }
+
+  async _connectPicam(deviceId, resolution, format) {
+    if (deviceId === undefined) return;
+    this._picamDeviceId = deviceId;
+    if (resolution || format) {
+      await this.setPicamConfig({ ...(resolution ? {resolution} : {}), ...(format ? {format} : {}) });
+    }
+    const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/camera/picam/stream';
+    let ok = await this.setDriver('mjpeg', { url });
+    if (!ok) {
+      await new Promise(r => setTimeout(r, 1500));
+      ok = await this.setDriver('mjpeg', { url });
+    }
+    const idx = (window._cameras || []).findIndex(c => c.type === 'picamera2');
+    if (idx < 0) return;
+    if (!ok) {
+      const msg = document.getElementById('picamStatusMsg_' + idx);
+      if (msg) { msg.textContent = 'Connection failed — camera not responding'; msg.style.display = ''; }
+    } else {
+      this._reconnectAttempts = 0;
+      this._renderCamCard(idx);
+      window._updateCameraLayout?.();
+    }
   }
 
   async _loadLiveSettings() {
@@ -904,6 +1207,17 @@ class CameraModule {
       if (data && data.lutId) {
         this._liveSettings = data;
         this._liveLutId = data.lutId;
+        const renderer = window.EnderTrack?.LiveRenderer;
+        if (renderer) {
+          renderer.setContrast(data.min ?? 0, data.max ?? 255);
+          renderer.setLut(data.lutId);
+          renderer.enabled = (data.min > 0 || data.max < 255 || (data.lutId && data.lutId !== 'gray'));
+        }
+        if (this.histogram) {
+          if (data.autoContrast) this.histogram.mode = 'auto';
+          else { this.histogram.mode = 'manual'; this.histogram.manualMin = data.min ?? 0; this.histogram.manualMax = data.max ?? 255; }
+          this.histogram._redraw?.();
+        }
       }
     } catch {}
   }
