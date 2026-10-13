@@ -163,9 +163,9 @@ class NavigationControls {
         <div class="ctx-separator"></div>
       `;
     }
-    html += `<button onmousedown="toggleLock('${lockAxis}'); this.parentElement.remove()">${isLocked ? '🔓 Déverrouiller' : '🔒 Verrouiller'} ${lockAxis}</button>`;
+    html += `<button onmousedown="toggleLock('${lockAxis}'); this.parentElement.remove()">${isLocked ? '🔓 Unlock' : '🔒 Lock'} ${lockAxis}</button>`;
     if (isXY) {
-      html += `<button onmousedown="toggleCoupling(); this.parentElement.remove()">${isCoupled ? 'Découpler XY' : 'Coupler XY'}</button>`;
+      html += `<button onmousedown="toggleCoupling(); this.parentElement.remove()">${isCoupled ? 'Decouple XY' : 'Couple XY'}</button>`;
     }
     menu.innerHTML = html;
     document.body.appendChild(menu);

@@ -12,7 +12,7 @@ class CompassOverlay {
       return false;
     }
 
-    // Créer le SVG directement
+    // Create le SVG directement
     this.container.innerHTML = `<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
       <circle cx="40" cy="40" r="22" fill="rgba(0,0,0,0.7)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
       <line x1="40" y1="40" x2="62" y2="40" stroke="#888888" stroke-width="2"/>

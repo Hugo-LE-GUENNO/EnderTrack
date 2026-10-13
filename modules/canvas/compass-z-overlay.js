@@ -12,7 +12,7 @@ class CompassZOverlay {
       return false;
     }
 
-    // Créer le SVG vertical pour Z (basé sur l'ancienne boussole Z)
+    // Create le SVG vertical pour Z (basé sur l'ancienne boussole Z)
     this.container.innerHTML = `<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
       <circle cx="40" cy="40" r="22" fill="rgba(0,0,0,0.7)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
       <line id="z-line" x1="40" y1="40" x2="40" y2="18" stroke="#888888" stroke-width="2"/>

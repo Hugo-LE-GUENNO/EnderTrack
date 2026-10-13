@@ -7,7 +7,6 @@ class ZPositionRenderer {
     this.drawCurrentPosition(ctx, canvas, state, zPan, zRange, zInverted);
     this.drawPotentialPositions(ctx, canvas, state, zPan, zRange, zInverted);
     this.drawListPositions(ctx, canvas, state, zPan, zRange, zInverted);
-    this.drawVisitedPositions(ctx, canvas, state, zPan, zRange, zInverted);
   }
 
   static drawCurrentPosition(ctx, canvas, state, zPan, zRange, zInverted) {
@@ -244,47 +243,6 @@ class ZPositionRenderer {
     });
   }
 
-  static drawVisitedPositions(ctx, canvas, state, zPan, zRange, zInverted) {
-    const showPositionZHistory = document.getElementById('showPositionZHistory');
-    if (showPositionZHistory && !showPositionZHistory.checked) return;
-    
-    const halfRange = zRange / 2;
-    
-    if (state.positionHistory && state.positionHistory.length > 1) {
-      const visited = state.positionHistory.filter(pos => pos.isFinalPosition);
-      const historyColor = getComputedStyle(document.documentElement).getPropertyValue('--pos-history').trim() || '#888888';
-      
-      visited.forEach((pos, index) => {
-        const visitedY = canvas.height/2 - (zInverted * (pos.z - zPan) / halfRange) * (canvas.height/2);
-        if (visitedY >= 0 && visitedY <= canvas.height) {
-          if (Math.abs(pos.z - state.pos.z) > 0.01) {
-            ctx.strokeStyle = historyColor;
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.2;
-            ctx.beginPath();
-            ctx.moveTo(0, visitedY);
-            ctx.lineTo(canvas.width, visitedY);
-            ctx.stroke();
-            ctx.globalAlpha = 1;
-          }
-          
-          if (state.historyMode) {
-            const isCurrentHistory = state.historyIndex === index;
-            ctx.fillStyle = isCurrentHistory ? '#4f9eff' : '#ffffff';
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 1;
-            ctx.font = 'bold 10px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            const number = (index + 1).toString();
-            ctx.strokeText(number, canvas.width - 15, visitedY);
-            ctx.fillText(number, canvas.width - 15, visitedY);
-          }
-        }
-      });
-    }
-  }
 }
 
 window.EnderTrack = window.EnderTrack || {};

@@ -1,0 +1,25 @@
+{
+  "title": "Camera basics",
+  "cells": [
+    {
+      "comment": "Connect to camera — in EnderTrack, cam is already available:",
+      "code": "# from EnderPiCam import EnderPiCam  (standalone script)\n# cam = EnderPiCam(resolution=(1280, 720), exposure=50000, gain=2.0)"
+    },
+    {
+      "comment": "Adjust exposure and gain",
+      "code": "cam.set_controls(exposure=50000, gain=2.0)"
+    },
+    {
+      "comment": "Capture an image and display it",
+      "code": "import matplotlib.pyplot as plt\nimg = cam.capture()\nplt.imshow(img, cmap='gray')\nplt.axis('off')\nplt.show()"
+    },
+    {
+      "comment": "Save a capture to a file (PNG or TIFF)",
+      "code": "cam.capture(path='~/captures/my_image.png')"
+    },
+    {
+      "comment": "Capture only the green channel (useful for fluorescence)",
+      "code": "import matplotlib.pyplot as plt\nimg_green = cam.capture(green=True)\nplt.imshow(img_green, cmap='gray')\nplt.title('Green channel')\nplt.show()"
+    }
+  ]
+}

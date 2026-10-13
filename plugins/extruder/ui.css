@@ -1,0 +1,70 @@
+/* plugins/extruder/ui.css */
+
+.extruder-panel {
+  background: var(--container-bg);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-top: 8px;
+}
+.extruder-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-selected);
+  margin-bottom: 8px;
+}
+.extruder-controls {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.extruder-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: var(--app-bg);
+  color: var(--text-general);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.extruder-btn:hover {
+  background: var(--active-element);
+  color: var(--text-selected);
+}
+.extruder-btn:active {
+  background: var(--coordinates-color);
+  color: #000;
+}
+.extruder-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--text-general);
+}
+.extruder-row label {
+  min-width: 50px;
+  font-size: 11px;
+}
+.extruder-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+}
+.extruder-input {
+  width: 50px;
+  padding: 2px 4px;
+  border: 1px solid #444;
+  background: var(--app-bg);
+  color: var(--coordinates-color);
+  border-radius: 3px;
+  font-size: 11px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+.extruder-row span {
+  font-size: 10px;
+  min-width: 30px;
+}

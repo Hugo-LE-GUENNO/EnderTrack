@@ -249,6 +249,7 @@ class ScenarioModule {
     const hasScenarios = scenarios.length > 0;
 
     const vars = current?.customVariables || [];
+    const _apz = document.getElementById('automationPluginZone');
     container.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:8px; padding:8px;">
 
@@ -300,6 +301,8 @@ class ScenarioModule {
         </div>` : ''}
 
       </div>`;
+
+    if (_apz) container.appendChild(_apz);
 
     const sel = document.getElementById('sbScenarioSelect');
     sel?.addEventListener('change', e => {

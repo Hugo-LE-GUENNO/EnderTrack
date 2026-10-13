@@ -134,9 +134,7 @@ class EventHandlers {
   setupWheelEvents(canvas) {
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (e.ctrlKey || e.metaKey) {
-        this.interactions.handleWheel(e);
-      } else if (e.deltaMode === 1) {
+      if (e.ctrlKey || e.metaKey || e.deltaMode === 1 || (e.deltaMode === 0 && e.deltaX === 0)) {
         this.interactions.handleWheel(e);
       } else {
         this.interactions.zoomPanHandler.handlePan(-e.deltaX, -e.deltaY);

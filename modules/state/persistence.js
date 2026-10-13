@@ -174,6 +174,7 @@ class PersistenceManager {
     delete stateToSave.isDragging;
     delete stateToSave.lastMouseX;
     delete stateToSave.lastMouseY;
+    delete stateToSave.emergencyStopActive;
     
     // Limit history size for storage
     if (stateToSave.positionHistory && stateToSave.positionHistory.length > 500) {

@@ -1,0 +1,21 @@
+{
+  "title": "Scan patterns",
+  "cells": [
+    {
+      "comment": "Connect to stage — in EnderTrack, stage is already available:",
+      "code": "# from enderscope import Stage  (standalone script)\n# stage = Stage('/dev/ttyUSB0', 115200)"
+    },
+    {
+      "comment": "Raster scan: visit positions row by row (left→right, then next row)",
+      "code": "import numpy as np\n\norigin = [25, 100]\nsteps  = [38, -25]\ncols, rows = 4, 3\n\n# raster: row by row, always left to right\npositions = np.array([(x, y)\n                      for y in range(rows)\n                      for x in range(cols)]) * steps + origin\n\nfor p in positions:\n    stage.move_absolute(p[0], p[1], 10)\n    print('At:', stage.get_position())"
+    },
+    {
+      "comment": "Snake scan: alternating direction each row (more efficient path)",
+      "code": "import numpy as np\n\norigin = [50, 100]\nsteps  = [33, -25]\ncols, rows = 4, 4\n\n# snake: reverse direction on odd rows\npositions = []\nfor y in range(rows):\n    row = [(x, y) for x in range(cols)]\n    if y % 2 == 1:\n        row = row[::-1]\n    positions.extend(row)\n\npositions = np.array(positions) * steps + origin\n\nfor p in positions:\n    stage.move_absolute(p[0], p[1], 10)\n    print('At:', stage.get_position())"
+    },
+    {
+      "comment": "Import XYZ coordinates from a URL and push them as a path",
+      "code": "from urllib.request import urlopen\nimport numpy as np\n\ndef get_xyz_points(url='https://people.math.sc.edu/Burkardt/data/xyz/helix_201.xyz'):\n    points = []\n    with urlopen(url) as r:\n        for raw in r.readlines():\n            line = raw.decode('utf-8').strip()\n            if not line:\n                continue\n            parts = line.split()\n            if len(parts) < 3:\n                continue\n            try:\n                x, y, z = map(float, parts[:3])\n                points.append((x, y, z))\n            except ValueError:\n                continue\n    return points\n\npoints = get_xyz_points()\narr = np.array(points, dtype=float)\nscaled = arr * 20.0 + np.array([150, 150.0, 80])\n\nfor p in scaled[:20]:   # visit first 20 points\n    stage.move_absolute(p[0], p[1], p[2])\n    print('At:', stage.get_position())"
+    }
+  ]
+}

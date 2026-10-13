@@ -25,12 +25,12 @@ class CoordinateConfig {
   }
 
   setupEventListeners() {
-    // Plateau dimension changes
+    // Bed dimension changes
     ['plateauX', 'plateauY', 'plateauZ'].forEach(id => {
       const input = document.getElementById(id);
       if (input) {
-        input.addEventListener('change', () => this.handlePlateauDimensionChange());
-        input.addEventListener('input', () => this.handlePlateauDimensionChange());
+        input.addEventListener('change', () => this.handleBedDimensionChange());
+        input.addEventListener('input', () => this.handleBedDimensionChange());
       }
     });
 
@@ -74,7 +74,7 @@ class CoordinateConfig {
 
   updateUI() {
     // Update plateau dimensions
-    const plateauDims = this.getPlateauDimensions();
+    const plateauDims = this.getBedDimensions();
     const plateauXInput = document.getElementById('plateauX');
     const plateauYInput = document.getElementById('plateauY');
     const plateauZInput = document.getElementById('plateauZ');
@@ -164,7 +164,7 @@ class CoordinateConfig {
     });
   }
 
-  handlePlateauDimensionChange() {
+  handleBedDimensionChange() {
     const plateauX = parseFloat(document.getElementById('plateauX')?.value) || 200;
     const plateauY = parseFloat(document.getElementById('plateauY')?.value) || 200;
     const plateauZ = parseFloat(document.getElementById('plateauZ')?.value) || 100;
@@ -408,7 +408,7 @@ class CoordinateConfig {
     this.requestRender();
   }
 
-  setPlateauDimensions(x, y, z) {
+  setBedDimensions(x, y, z) {
     // Update coordinate bounds based on new dimensions
     this.coordinateBounds.x.min = -x / 2;
     this.coordinateBounds.x.max = x / 2;
@@ -422,7 +422,7 @@ class CoordinateConfig {
     this.requestRender();
   }
   
-  getPlateauDimensions() {
+  getBedDimensions() {
     return {
       x: Math.abs(this.coordinateBounds.x.max - this.coordinateBounds.x.min),
       y: Math.abs(this.coordinateBounds.y.max - this.coordinateBounds.y.min),
@@ -567,46 +567,46 @@ window.setRangePreset = function(axis, preset) {
 };
 
 // Save manual profile function
-window.saveManualProfile = function() {
+window.saveManualProfilee = function() {
   if (!window.EnderTrack?.CoordinateConfig) return;
   
   const coordConfig = window.EnderTrack.CoordinateConfig;
   
   // Create manual profile from current settings
-  const manualProfile = {
+  const manualProfilee = {
     id: 'manual_profile',
-    name: 'Profil Manuel',
+    name: 'Profile Manuel',
     brand: 'Custom',
-    dimensions: coordConfig.getPlateauDimensions(),
+    dimensions: coordConfig.getBedDimensions(),
     coordinateBounds: coordConfig.getCoordinateBounds(),
     axisOrientation: coordConfig.getAxisOrientation(),
-    description: 'Configuration manuelle personnalisée',
+    description: 'Custom manual configuration',
     category: 'Manual',
     gcode: true,
     timestamp: new Date().toISOString()
   };
   
   // Save to localStorage
-  localStorage.setItem('endertrack_manual_profile', JSON.stringify(manualProfile));
+  localStorage.setItem('endertrack_manual_profile', JSON.stringify(manualProfilee));
   
   // Add to templates list if not already present
-  if (window.PlateauTemplates) {
-    const existingIndex = window.PlateauTemplates.templates.findIndex(t => t.id === 'manual_profile');
+  if (window.BedTemplates) {
+    const existingIndex = window.BedTemplates.templates.findIndex(t => t.id === 'manual_profile');
     if (existingIndex >= 0) {
-      window.PlateauTemplates.templates[existingIndex] = manualProfile;
+      window.BedTemplates.templates[existingIndex] = manualProfilee;
     } else {
-      window.PlateauTemplates.templates.unshift(manualProfile); // Add at beginning
+      window.BedTemplates.templates.unshift(manualProfilee); // Add at beginning
     }
   }
   
   if (window.EnderTrack?.Notifications) {
-    window.EnderTrack.Notifications.show('Profil manuel sauvegardé', 'success');
+    window.EnderTrack.Notifications.show('Manual profile saved', 'success');
   }
 };
 
 // Reset manual profile function
-window.resetManualProfile = function() {
-  if (!confirm('Réinitialiser le profil manuel aux valeurs par défaut ?')) return;
+window.resetManualProfilee = function() {
+  if (!confirm('Reset manual profile to default values?')) return;
   
   // Reset to default values
   document.getElementById('plateauX').value = 200;
@@ -627,12 +627,12 @@ window.resetManualProfile = function() {
   
   // Trigger updates
   if (window.EnderTrack?.CoordinateConfig) {
-    window.EnderTrack.CoordinateConfig.handlePlateauDimensionChange();
+    window.EnderTrack.CoordinateConfig.handleBedDimensionChange();
     window.EnderTrack.CoordinateConfig.setAxisOrientation('right', 'up');
   }
   
   if (window.EnderTrack?.Notifications) {
-    window.EnderTrack.Notifications.show('Profil manuel réinitialisé', 'info');
+    window.EnderTrack.Notifications.show('Manual profile reset', 'info');
   }
 };
 

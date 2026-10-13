@@ -2,16 +2,16 @@ class RandomButtonBridge {
   constructor() {
     this.icons = ['🎲', '🤪', '🤖', '🎯', '💥', '🔮', '🎉', '🤯', '🚀', '🧨'];
     this.messages = [
-      "Pourquoi as-tu cliqué ?",
-      "C'est complètement inutile !",
-      "Le bouton a gagné... ou pas.",
+      "Why did you click?",
+      "This is completely useless !",
+      "The button won... or not.",
       "Tu devrais faire autre chose.",
-      "Ce bouton ne sert à rien.",
+      "This button does nothing.",
       "42",
-      "La réponse est non.",
+      "The answer is no.",
       "Essaie encore !",
       "C'est magique ! (ou pas)",
-      "Le développeur s'excuse pour ce bouton."
+      "The developer apologizes for this button."
     ];
     this.colors = [
       '#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3',
@@ -20,11 +20,11 @@ class RandomButtonBridge {
   }
 
   activate() {
-    console.log("RandomButton activé (mais toujours inutile)");
+    console.log("RandomButton activated (mais toujours inutile)");
   }
 
   deactivate() {
-    console.log("RandomButton désactivé (dommage)");
+    console.log("RandomButton deactivated (too bad)");
   }
 
   getStatus() {

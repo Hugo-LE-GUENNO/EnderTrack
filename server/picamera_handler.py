@@ -88,7 +88,7 @@ def _get_picam():
             'FrameDurationLimits': (100, max(100000, int(_config['exposure']) + 100000))
         }
         _picam.set_controls(controls)
-        print(f"  📷 Picamera2: {res[0]}×{res[1]} exp={_config['exposure']} gain={_config['gain']}")
+        print(f"   Picamera2: {res[0]}×{res[1]} exp={_config['exposure']} gain={_config['gain']}")
     return _picam, _stream_output
 
 
@@ -106,16 +106,54 @@ def _restart_camera(new_res):
     _get_picam()
 
 
+def capture(path, fmt=None):
+    """Capture une image et la sauvegarde. Retourne {'success': True, 'path': path} ou {'success': False, 'error': ...}."""
+    if not HAS_PICAMERA2:
+        return {'success': False, 'error': 'picamera2 not available'}
+    picam, _ = _get_picam()
+    if not picam:
+        return {'success': False, 'error': 'Camera not initialized'}
+    try:
+        from PIL import Image
+        fmt = fmt or _config.get('format', 'tiff')
+        arr = picam.capture_array("main")
+        img = Image.fromarray(arr)
+        rot = _config.get('rotation', 0)
+        if rot:
+            img = img.rotate(-rot, expand=True)
+        if _config.get('flip_h'):
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        if _config.get('flip_v'):
+            img = img.transpose(Image.FLIP_TOP_BOTTOM)
+        if fmt in ('tiff', 'tif'):
+            img = img.convert('L')
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        img.save(path, compression='tiff_deflate' if fmt in ('tiff', 'tif') else None)
+        return {'success': True, 'path': path}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
 def register_routes(app):
     """Register picamera2 routes if available."""
-    if not HAS_PICAMERA2:
-        print("  ⚠️  picamera2 not available — camera routes disabled")
-        return
-
     from flask import Response, request, jsonify
 
-    _load_config()
+    @app.route('/api/camera/picam/devices')
+    def _picam_devices():
+        if not HAS_PICAMERA2:
+            return jsonify({'devices': []})
+        try:
+            from picamera2 import Picamera2
+            infos = Picamera2.global_camera_info()
+            devices = [{'id': str(i), 'name': info.get('Model', f'Camera {i}')} for i, info in enumerate(infos)]
+        except Exception as e:
+            devices = []
+        return jsonify({'devices': devices})
 
+    if not HAS_PICAMERA2:
+        return
+
+    _load_config()
     @app.route('/api/camera/picam/stream')
     def _picam_stream():
         """MJPEG stream from picamera2."""
@@ -178,7 +216,7 @@ def register_routes(app):
 
             os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
             img.save(path, compression='tiff_deflate' if fmt in ('tiff', 'tif') else None)
-            print(f"  📷 Capture: {path} ({img.size[0]}×{img.size[1]})")
+            print(f"   Capture: {path} ({img.size[0]}×{img.size[1]})")
             return jsonify({'success': True, 'path': path, 'width': img.size[0], 'height': img.size[1]})
 
         # Return as base64 JPEG for live preview
@@ -231,7 +269,7 @@ def register_routes(app):
             try:
                 picam.set_controls(controls)
             except Exception as e:
-                print(f"  ⚠️ set_controls: {e}")
+                print(f"  ️ set_controls: {e}")
 
         _save_config()
         return jsonify({'success': True, 'config': _config})
@@ -276,7 +314,7 @@ def register_routes(app):
                     json={'dx': 0, 'dy': 0, 'dz': round(dz_mm, 4), 'feedrate': 3000},
                     timeout=30)
             except Exception as e:
-                print(f"  ⚠️ AF move_z error: {e}")
+                print(f"  ️ AF move_z error: {e}")
 
         mode = data.get('mode', 'full')
         print(f"  AF start z={current_z:.3f} range=[{z_min},{z_max}] mode={mode}")
@@ -308,5 +346,3 @@ def register_routes(app):
 
         print(f"  AF done ok={ok} z={best_z:.4f} score={score:.2f}")
         return jsonify({'success': ok, 'best_z': best_z, 'score': score})
-
-    print("  ✅ Picamera2 routes registered")

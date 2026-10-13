@@ -92,7 +92,7 @@ class UIManager {
       event.preventDefault();
       if (window.EnderTrack.State) {
         window.EnderTrack.State.save();
-        this.showNotification('État sauvegardé', 'success');
+        this.showNotification('State saved', 'success');
       }
       return;
     }

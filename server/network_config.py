@@ -59,11 +59,4 @@ def get_local_ip():
 
 
 def print_startup_info():
-    """Affiche les infos de démarrage du serveur."""
-    local_ip = get_local_ip()
-    print(f"  🌐 Écoute sur http://{HOST}:{PORT}")
-    if HOST == '0.0.0.0':
-        print(f"  🌐 Accès LAN: http://{local_ip}:{PORT}")
-    elif HOST == '127.0.0.1':
-        print(f"  🌐 Accès local uniquement")
-        print(f"  💡 Réseau local ? → python3 endertrack-server.py --lan")
+    pass

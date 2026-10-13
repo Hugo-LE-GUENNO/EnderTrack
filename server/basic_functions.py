@@ -27,7 +27,7 @@ def resolve_path(path):
 # ─── Browse directories (Jupyter-style) ─────────────────────────────────────
 
 def browse_directory(path=None):
-    """Liste les sous-dossiers d'un chemin. Retourne chemin absolu + parent + liste."""
+    """List les sous-dossiers d'un chemin. Retourne chemin absolu + parent + liste."""
     path = path or os.path.expanduser('~')
     path = os.path.abspath(path)
 
@@ -56,7 +56,7 @@ def browse_directory(path=None):
 # ─── List files ──────────────────────────────────────────────────────────────
 
 def list_files(path=None, extensions=None):
-    """Liste les fichiers d'un dossier, optionnellement filtrés par extension."""
+    """List les files d'un dossier, optionnellement filtrés par extension."""
     path = resolve_path(path or '.')
     if not os.path.isdir(path):
         return {'success': False, 'error': f'Dossier introuvable: {path}'}
@@ -80,7 +80,7 @@ def list_files(path=None, extensions=None):
             })
         return {'success': True, 'path': path, 'files': files}
     except PermissionError:
-        return {'success': False, 'error': f'Permission refusée: {path}'}
+        return {'success': False, 'error': f'Permission denied: {path}'}
 
 
 # ─── Ensure directory exists ─────────────────────────────────────────────────
@@ -110,7 +110,7 @@ def get_system_info():
 # ─── Open in file manager (optionnel, desktop) ──────────────────────────────
 
 def open_in_file_manager(path):
-    """Ouvre un dossier dans le gestionnaire de fichiers natif."""
+    """Ouvre un dossier dans le gestionnaire de files natif."""
     path = resolve_path(path)
     if not os.path.exists(path):
         return {'success': False, 'error': f'Chemin introuvable: {path}'}
@@ -145,7 +145,7 @@ def open_directory_dialog(title='Choisir un dossier', initial_dir=None):
             result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, timeout=300)
             if result.returncode == 0 and result.stdout.strip():
                 return {'success': True, 'path': result.stdout.strip().rstrip('/')}
-            return {'success': False, 'error': 'Annulé'}
+            return {'success': False, 'error': 'Cancelled'}
         except Exception:
             pass
 
@@ -159,7 +159,7 @@ def open_directory_dialog(title='Choisir un dossier', initial_dir=None):
             if result.returncode == 0 and result.stdout.strip():
                 return {'success': True, 'path': result.stdout.strip()}
             if result.returncode == 1:
-                return {'success': False, 'error': 'Annulé'}
+                return {'success': False, 'error': 'Cancelled'}
         except FileNotFoundError:
             pass
 
@@ -173,7 +173,7 @@ def open_directory_dialog(title='Choisir un dossier', initial_dir=None):
             if result.returncode == 0 and result.stdout.strip():
                 return {'success': True, 'path': result.stdout.strip()}
             if result.returncode == 1:
-                return {'success': False, 'error': 'Annulé'}
+                return {'success': False, 'error': 'Cancelled'}
         except FileNotFoundError:
             pass
 
@@ -188,7 +188,7 @@ def open_directory_dialog(title='Choisir un dossier', initial_dir=None):
         root.destroy()
         if path:
             return {'success': True, 'path': os.path.abspath(path)}
-        return {'success': False, 'error': 'Annulé'}
+        return {'success': False, 'error': 'Cancelled'}
     except Exception as e:
         return {'success': False, 'error': f'Aucun dialog disponible: {e}'}
 
@@ -209,7 +209,7 @@ def open_file_dialog(title='Choisir un fichier', initial_dir=None, filetypes=Non
             result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, timeout=300)
             if result.returncode == 0 and result.stdout.strip():
                 return {'success': True, 'path': result.stdout.strip()}
-            return {'success': False, 'error': 'Annulé'}
+            return {'success': False, 'error': 'Cancelled'}
         except Exception:
             pass
 
@@ -224,7 +224,7 @@ def open_file_dialog(title='Choisir un fichier', initial_dir=None, filetypes=Non
             if result.returncode == 0 and result.stdout.strip():
                 return {'success': True, 'path': result.stdout.strip()}
             if result.returncode == 1:
-                return {'success': False, 'error': 'Annulé'}
+                return {'success': False, 'error': 'Cancelled'}
         except FileNotFoundError:
             pass
 
@@ -238,7 +238,7 @@ def open_file_dialog(title='Choisir un fichier', initial_dir=None, filetypes=Non
             if result.returncode == 0 and result.stdout.strip():
                 return {'success': True, 'path': result.stdout.strip()}
             if result.returncode == 1:
-                return {'success': False, 'error': 'Annulé'}
+                return {'success': False, 'error': 'Cancelled'}
         except FileNotFoundError:
             pass
 
@@ -253,12 +253,12 @@ def open_file_dialog(title='Choisir un fichier', initial_dir=None, filetypes=Non
         if filetypes:
             for item in filetypes:
                 ft.append((item[0], item[1]))
-        ft.append(('Tous les fichiers', '*.*'))
+        ft.append(('Tous les files', '*.*'))
         path = filedialog.askopenfilename(title=title, initialdir=initial_dir, filetypes=ft)
         root.destroy()
         if path:
             return {'success': True, 'path': os.path.abspath(path)}
-        return {'success': False, 'error': 'Annulé'}
+        return {'success': False, 'error': 'Cancelled'}
     except Exception as e:
         return {'success': False, 'error': f'Aucun dialog disponible: {e}'}
 

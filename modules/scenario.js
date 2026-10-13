@@ -19,12 +19,13 @@ class ScenarioRunner {
     this.scenarioTrack = { enabled: true, visited: [], current: null, remaining: [] };
     // Re-render when active list changes
     window.EnderTrack?.Events?.on?.('lists:rendered', () => {
-      if (!this.isExecuting) this.renderUI();
+      if (!this.isExecuting) { this._updatePreview(); this.renderUI(); }
     });
   }
 
   activate() {
     this.isActive = true;
+    this._updatePreview();
     this.renderUI();
     EnderTrack.Canvas?.requestRender?.();
   }
@@ -89,6 +90,11 @@ class ScenarioRunner {
     const list = this._getList();
     const perLoop = list?.positions?.length || 0;
     return this._currentLoop * perLoop + this._currentIdx;
+  }
+
+  _updatePreview() {
+    const list = this._getList() || EnderTrack.Lists?.manager?.getAllLists?.()?.[0];
+    this.scenarioTrack.preview = list?.positions?.length > 1 ? list.positions : [];
   }
 
   _getList() {
@@ -253,7 +259,7 @@ class ScenarioRunner {
 
     // Auto-select active list
     const activeList = EnderTrack.Lists?._activeGroup?.();
-    if (activeList) this.selectedListId = String(activeList.id);
+    if (activeList) { this.selectedListId = String(activeList.id); this._updatePreview(); }
     const listName = activeList?.name || '—';
     const posCount = activeList?.positions?.length || 0;
 

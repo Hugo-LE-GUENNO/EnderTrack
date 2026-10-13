@@ -142,7 +142,7 @@ class LightModule {
           { value: 'on', label: 'ON' },
           { value: 'off', label: 'OFF' }
         ], default: 'on' },
-        { id: 'intensity', label: 'Intensité (%)', type: 'number', default: 100, min: 0, max: 100 },
+        { id: 'intensity', label: 'Intensity (%)', type: 'number', default: 100, min: 0, max: 100 },
         { id: 'r', label: 'R', type: 'number', default: 255, min: 0, max: 255 },
         { id: 'g', label: 'G', type: 'number', default: 255, min: 0, max: 255 },
         { id: 'b', label: 'B', type: 'number', default: 255, min: 0, max: 255 },

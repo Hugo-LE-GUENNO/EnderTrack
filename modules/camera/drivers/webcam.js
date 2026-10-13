@@ -30,6 +30,14 @@ class WebcamCameraDriver {
           : { width: 1280, height: 720 }
       };
       this._stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Read real hardware label
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const track = this._stream.getVideoTracks()[0];
+      const dev = devices.find(d => d.kind === 'videoinput' && d.label === track?.label);
+      this.camera.deviceLabel = dev?.label || track?.label || null;
+      this._stream.getTracks().forEach(t => {
+        t.onended = () => this.camera._onDriverError();
+      });
       this._live = true;
       return true;
     } catch (e) {

@@ -212,5 +212,3 @@ def register_routes(app):
         'r': 255, 'g': 255, 'b': 255, 'intensity': 1.0, 'is_on': False
     }
     _next_id += 1
-
-    print(f"  {'✅' if HAS_NEOPIXEL else '🎮'} PiLight routes registered ({('neopixel' if HAS_NEOPIXEL else 'simulation')})")

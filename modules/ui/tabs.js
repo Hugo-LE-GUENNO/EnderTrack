@@ -59,7 +59,7 @@ class TabManager {
     
     this.activeTabs.set('acquisition', {
       id: 'acquisition',
-      name: 'Scénario',
+      name: 'Automatisation',
       icon: '🎬',
       type: 'core',
       element: document.getElementById('acquisitionTab'),
@@ -91,19 +91,8 @@ class TabManager {
       module: 'Lists'
     });
 
-    this.activeTabs.set('image', {
-      id: 'image',
-      name: 'Image',
-      icon: '🖼',
-      type: 'core',
-      element: document.getElementById('imageTab'),
-      content: document.getElementById('imageTabContent'),
-      isActive: false,
-      module: 'ImageManager'
-    });
-    
     // Register default plugin tabs (will be managed by plugin system)
-    const defaultPlugins = ['sequences', 'drivers', 'enderman'];
+    const defaultPlugins = ['sequences', 'drivers', 'enderman', 'smartVision', 'pythonEditor'];
     
     defaultPlugins.forEach(pluginId => {
       const tabElement = document.getElementById(`${pluginId}Tab`);
@@ -218,16 +207,6 @@ class TabManager {
     }
     
 
-    // Activate/deactivate ImageManager
-    if (window.EnderTrack?.ImageManager) {
-      if (tabId === 'image') {
-        window.EnderTrack.ImageManager.activate();
-        // Disable keyboard navigation for stage
-        if (window.EnderTrack?.KeyboardManager) window.EnderTrack.KeyboardManager.isActive = false;
-      } else {
-        window.EnderTrack.ImageManager.deactivate();
-      }
-    }
     // Force canvas re-render
     if (window.EnderTrack?.Canvas?.requestRender) {
       window.EnderTrack.Canvas.requestRender();
@@ -240,22 +219,27 @@ class TabManager {
     const graphsSection = rightPanel.querySelector('.graphs-section');
     const historySection = rightPanel.querySelector('.history-section');
     const scenarioOutput = document.getElementById('scenarioOutputSection');
-    const imageMetadata = document.getElementById('imageMetadataPanel');
+
+    // Show/hide right plugin zones per tab
+    const zoneMap = {
+      navigation: 'rightPluginZone-navigation',
+      settings:   'rightPluginZone-settings',
+      lists:      'rightPluginZone-lists',
+      acquisition:'rightPluginZone-acquisition',
+    };
+    Object.entries(zoneMap).forEach(([tab, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = tab === tabId ? '' : 'none';
+    });
+
     if (tabId === 'acquisition') {
       if (graphsSection) graphsSection.style.display = 'none';
       if (historySection) historySection.style.display = 'none';
-      if (imageMetadata) imageMetadata.style.display = 'none';
       if (window.ScenarioModule) window.ScenarioModule.showScenarioOutput();
-    } else if (tabId === 'image') {
-      if (graphsSection) graphsSection.style.display = 'none';
-      if (historySection) historySection.style.display = 'none';
-      if (scenarioOutput) scenarioOutput.style.display = 'none';
-      if (imageMetadata) imageMetadata.style.display = 'block';
     } else {
       if (graphsSection) graphsSection.style.display = 'block';
       if (historySection) historySection.style.display = 'block';
       if (scenarioOutput) scenarioOutput.style.display = 'none';
-      if (imageMetadata) imageMetadata.style.display = 'none';
     }
   }
 
@@ -452,24 +436,25 @@ class TabManager {
   }
 
   onPluginActivated(pluginData) {
-    // Plugin is now available for use
-    const tab = this.pluginTabs.get(pluginData.id);
+    const id = pluginData.id;
+    // Direct DOM lookup as fallback
+    const el = document.getElementById(`${id}Tab`);
+    if (el) el.style.display = '';
+    const tab = this.pluginTabs.get(id);
     if (tab) {
-      tab.element.style.display = 'block';
+      tab.element.style.display = '';
       tab.isLoaded = true;
     }
   }
 
   onPluginDeactivated(pluginData) {
-    // Hide plugin tab but don't remove it
-    const tab = this.pluginTabs.get(pluginData.id);
+    const id = pluginData.id;
+    const el = document.getElementById(`${id}Tab`);
+    if (el) el.style.display = 'none';
+    const tab = this.pluginTabs.get(id);
     if (tab) {
       tab.element.style.display = 'none';
-      
-      // Switch away if currently active
-      if (this.currentTab === pluginData.id) {
-        this.switchTab('navigation');
-      }
+      if (this.currentTab === id) this.switchTab('navigation');
     }
   }
 

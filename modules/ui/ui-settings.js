@@ -2,7 +2,7 @@
 
 // === PARAMÈTRES D'AFFICHAGE ===
 
-// Onglets visibles
+// Tabs visibles
 function toggleNavigationTab() {
   const show = document.getElementById('showNavigationTab').checked;
   const tab = document.getElementById('navigationTab');
@@ -52,7 +52,7 @@ function toggleControllerMode() {
   if (toggle) toggle.style.display = show ? 'block' : 'none';
 }
 
-// Panneaux
+// Panelx
 function toggleStatusPanel() {
   const show = document.getElementById('showStatusPanel').checked;
   const panel = document.querySelector('.status-section');
@@ -325,7 +325,7 @@ function setupModalDrag() {
 }
 
 function applyDisplaySettings() {
-  // Appliquer tous les paramètres
+  // Apply tous les paramètres
   toggleNavigationTab();
   toggleOthersTab();
   toggleRelativeMode();
@@ -347,12 +347,12 @@ function applyDisplaySettings() {
   toggleMiniPreviewZ();
   toggleMiniPreviewTrack();
   
-  // Sauvegarder dans l'état
+  // Save dans l'état
   if (window.EnderTrack?.State) {
     EnderTrack.State.saveState();
   }
   
-  // Fermer la modale
+  // Close la modale
   closeDisplayModal();
 }
 
@@ -369,7 +369,7 @@ function initDisplaySettings() {
   
   const state = EnderTrack.State.get();
   
-  // Charger les préférences d'historique depuis localStorage
+  // Load les préférences d'historique depuis localStorage
   const historyPrefs = [
     ['showPositionXYHistory', 'mainShowPositionXYHistory'],
     ['showPositionZHistory', 'mainShowPositionZHistory'],
@@ -425,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(initAllSettings, 200);
 });
 
-// Fermer la modale en cliquant à l'extérieur
+// Close la modale en cliquant à l'extérieur
 document.addEventListener('click', (event) => {
   const modal = document.getElementById('displayModal');
   if (event.target === modal) {

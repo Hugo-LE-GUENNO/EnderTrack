@@ -1,0 +1,25 @@
+{
+  "title": "Light control",
+  "cells": [
+    {
+      "comment": "Connect to light — in EnderTrack, light is already available:",
+      "code": "# from EnderPiLight import EnderPiLight  (standalone script)\n# light = EnderPiLight(total_pixels=8)"
+    },
+    {
+      "comment": "Toggle light on / off",
+      "code": "light.toggle()"
+    },
+    {
+      "comment": "Set intensity (0.0 to 1.0)",
+      "code": "light.set_intensity(0.5)"
+    },
+    {
+      "comment": "Set RGB color",
+      "code": "light.set_rgb_color(255, 255, 255)  # white\nlight.set_rgb_color(0, 255, 0)      # green (fluorescence)"
+    },
+    {
+      "comment": "Typical acquisition sequence: light on → capture → light off",
+      "code": "light.set_rgb_color(255, 255, 255)\nlight.set_intensity(0.8)\nlight.toggle()          # on\n\nimport matplotlib.pyplot as plt\nimg = cam.capture()\nplt.imshow(img, cmap='gray')\nplt.show()\n\nlight.toggle()          # off"
+    }
+  ]
+}

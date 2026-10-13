@@ -39,10 +39,10 @@ def _connect():
         time.sleep(2)  # Arduino resets on serial open
         _ser.reset_input_buffer()
         _connected = True
-        print(f"  💡 Arduino light connected on {_port}", flush=True)
+        print(f"   Camera: Arduino light connected on {_port}", flush=True)
         return True
     except Exception as e:
-        print(f"  💡 Arduino light failed: {e}", flush=True)
+        print(f"   Camera: Arduino light failed: {e}", flush=True)
         _connected = False
         return False
 
@@ -73,18 +73,18 @@ def register_routes(app):
     from flask import request, jsonify
     global _port, _baud
 
-    # Read port from config
+    # Only connect if explicitly configured
     try:
         import json, os
         cfg_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'config.json')
         with open(cfg_path) as f:
             cfg = json.load(f)
-        _port = cfg.get('arduino_light_port', _port)
-        _baud = cfg.get('arduino_light_baud', _baud)
+        if cfg.get('arduino_light_port'):
+            _port = cfg['arduino_light_port']
+            _baud = cfg.get('arduino_light_baud', _baud)
+            _connect()
     except:
         pass
-
-    _connect()
 
     @app.route('/api/arduino-light/status')
     def _al_status():
@@ -183,5 +183,3 @@ def register_routes(app):
             _parameter = int(data['parameter'])
             _send(f"P{_parameter}")
         return jsonify({'success': True, 'mode': _mode, 'parameter': _parameter})
-
-    print(f"  {'✅' if _connected else '🎮'} Arduino light routes registered ({_port})")

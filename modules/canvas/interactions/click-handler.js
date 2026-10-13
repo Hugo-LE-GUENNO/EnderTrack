@@ -62,7 +62,7 @@ class ClickHandler {
     const mapPos = this.calculateMapPosition(canvasPos);
     
     // Check if on plateau
-    if (!this.isOnPlateau(mapPos)) return;
+    if (!this.isOnBed(mapPos)) return;
     
     // Handle different click modes
     if (this.handleSpecialModes(mapPos, canvasPos, screenX, screenY)) return;
@@ -145,7 +145,7 @@ class ClickHandler {
     return coords.canvasToMap(canvasPos.cx, canvasPos.cy);
   }
 
-  isOnPlateau(mapPos) {
+  isOnBed(mapPos) {
     const coords = window.EnderTrack?.Coordinates;
     if (!coords) return false;
     
@@ -382,7 +382,7 @@ class ClickHandler {
     if (state.lockX && state.lockY) return;
     
     if (!isPositionWithinSafetyLimits(mapPos.x, mapPos.y, state.pos.z)) {
-      EnderTrack.UI?.showNotification?.('Position en dehors des limites de sécurité', 'error');
+      EnderTrack.UI?.showNotification?.('Position en dehors des limites de safety', 'error');
       return;
     }
     

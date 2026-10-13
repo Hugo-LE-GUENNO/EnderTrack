@@ -1,0 +1,39 @@
+/* smart-vision/ui.css */
+
+.sv-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+.sv-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.sv-select {
+  flex: 1;
+  padding: 4px 6px;
+  background: var(--app-bg);
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: var(--text-selected);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* CodeMirror fills the modal wrapper */
+#svCMWrap { position: relative; }
+#svCMWrap .CodeMirror {
+  height: 100%;
+  font-size: 12px;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  line-height: 1.65;
+}
+#svCMWrap .CodeMirror-scroll { height: 100%; }

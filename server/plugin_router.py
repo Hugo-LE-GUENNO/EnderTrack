@@ -61,10 +61,10 @@ def load_module(plugin_id, tool_id, force_reload=False):
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         loaded_modules[key] = mod
-        print(f"  🔌 Plugin module chargé: {key}")
+        print(f"  [PLUGIN] Plugin module loaded: {key}")
         return mod
     except Exception as e:
-        print(f"  ❌ Échec chargement {key}: {e}")
+        print(f"  [ERR] Load failed {key}: {e}")
         return None
 
 
@@ -89,12 +89,12 @@ def register_routes(app):
                 for fname in os.listdir(scripts_dir):
                     if fname.endswith('.py'):
                         load_module(plugin_id, fname[:-3], force_reload=True)
-            print(f"  🔌 Plugin activé: {plugin_id}")
+            print(f"  [PLUGIN] Plugin activated: {plugin_id}")
         else:
             to_remove = [k for k in loaded_modules if k.startswith(f"{plugin_id}/")]
             for k in to_remove:
                 del loaded_modules[k]
-            print(f"  ⏸️ Plugin désactivé: {plugin_id}")
+            print(f"  [OFF] Plugin deactivated: {plugin_id}")
 
         return jsonify({'success': True, 'pluginId': plugin_id, 'active': active})
 
@@ -125,14 +125,14 @@ def register_routes(app):
                             manifest['folder'] = name
                         manifests.append(manifest)
                     except Exception as e:
-                        print(f"  \u26a0\ufe0f Erreur lecture {pj}: {e}")
+                        print(f"  \u26a0\ufe0f Read error {pj}: {e}")
         return jsonify(manifests)
 
     @app.route('/api/plugins/<plugin_id>/<tool_id>/<path:action>', methods=['GET', 'POST'])
     def _action(plugin_id, tool_id, action):
         mod = load_module(plugin_id, tool_id)
         if not mod:
-            return jsonify({'success': False, 'error': f'Module introuvable: {plugin_id}/{tool_id}'}), 404
+            return jsonify({'success': False, 'error': f'Module not found: {plugin_id}/{tool_id}'}), 404
 
         endpoint = f'/{action}'
 
@@ -143,7 +143,7 @@ def register_routes(app):
         actions = getattr(mod, 'ACTIONS', {})
         handler = actions.get(endpoint)
         if not handler:
-            return jsonify({'success': False, 'error': f'Action inconnue: {endpoint}'}), 404
+            return jsonify({'success': False, 'error': f'Unknown action: {endpoint}'}), 404
 
         params = request.get_json(silent=True) or {}
         try:
@@ -209,7 +209,7 @@ def register_routes(app):
                 with open(file_path, 'wb') as f:
                     f.write(file_resp.read())
                 installed.append(item['name'])
-            print(f"  📦 Plugin installé: {folder} ({len(installed)} fichiers)")
+            print(f"  [PKG] Plugin installed: {folder} ({len(installed)} files)")
             return jsonify({'success': True, 'folder': folder, 'files': installed})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)})
@@ -224,8 +224,8 @@ def register_routes(app):
             return jsonify({'success': False, 'error': 'folder required'})
         dest = os.path.join(get_plugins_dir(), folder)
         if not os.path.isdir(dest):
-            return jsonify({'success': False, 'error': 'Plugin non trouvé'})
+            return jsonify({'success': False, 'error': 'Plugin not found'})
         shutil.rmtree(dest)
-        print(f"  🗑️ Plugin supprimé: {folder}")
+        print(f"  [DEL] Plugin deleted: {folder}")
         return jsonify({'success': True})
 

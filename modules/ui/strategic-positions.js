@@ -190,9 +190,9 @@ class StrategicPositions {
       const minVal = parseFloat(minInput.value);
       const maxVal = parseFloat(maxInput.value);
       
-      // Validation: min ne peut pas être supérieur à max ET max ne peut pas être inférieur à min
+      // Validation: min cannot be greater than max AND max cannot be less than min
       if (!isNaN(minVal) && !isNaN(maxVal) && minVal > maxVal) {
-        alert(`Erreur: ${axis.toUpperCase()}min (${minVal}) ne peut pas être supérieur à ${axis.toUpperCase()}max (${maxVal})`);
+        alert(`Error: ${axis.toUpperCase()}min (${minVal}) cannot be greater than ${axis.toUpperCase()}max (${maxVal})`);
         // Restaurer la valeur précédente ou ajuster
         if (event.target === minInput) {
           minInput.value = maxVal;
@@ -257,7 +257,7 @@ class StrategicPositions {
     this.renderPositionsList();
     this.saveSettings();
     this.requestCanvasRender();
-    EnderTrack.UI?.showSuccess?.('Position supprimée');
+    EnderTrack.UI?.showSuccess?.('Position deleted');
   }
 
   addCustomPosition(includeZ = true) {
@@ -328,7 +328,7 @@ class StrategicPositions {
     this.saveSettings();
     this.requestCanvasRender();
     
-    EnderTrack.UI?.showSuccess?.(`Position "${this.customPositions[index].label}" définie: X=${pos.x.toFixed(1)}, Y=${pos.y.toFixed(1)}, Z=${pos.z.toFixed(1)}`);
+    EnderTrack.UI?.showSuccess?.(`Position "${this.customPositions[index].label}" set: X=${pos.x.toFixed(1)}, Y=${pos.y.toFixed(1)}, Z=${pos.z.toFixed(1)}`);
   }
 
   addCustomPositionButton(index, label, x, y, z) {
@@ -351,7 +351,7 @@ class StrategicPositions {
     const icon = useEmoji ? (pos?.emoji || '🏁') : '🚩';
     
     button.innerHTML = `${icon} ${label}`;
-    button.title = includeZ ? `Aller à X=${x.toFixed(1)}, Y=${y.toFixed(1)}, Z=${z.toFixed(1)}` : `Aller à X=${x.toFixed(1)}, Y=${y.toFixed(1)}`;
+    button.title = includeZ ? `Go to X=${x.toFixed(1)}, Y=${y.toFixed(1)}, Z=${z.toFixed(1)}` : `Go to X=${x.toFixed(1)}, Y=${y.toFixed(1)}`;
     button.onclick = () => this.goToCustomPosition(x, y, z, includeZ);
     
     if (!useEmoji && pos?.color) {
@@ -417,7 +417,7 @@ class StrategicPositions {
     }
     
     this.updateHomePosition();
-    EnderTrack.UI?.showNotification?.(`Position HOME ${type.toUpperCase()} définie`, 'success');
+    EnderTrack.UI?.showNotification?.(`HOME position ${type.toUpperCase()} set`, 'success');
   }
 
   setCurrentAsCustom(index) {
@@ -436,7 +436,7 @@ class StrategicPositions {
     this.saveSettings();
     this.requestCanvasRender();
     
-    EnderTrack.UI?.showNotification?.(`Position personnalisée ${index} définie`, 'success');
+    EnderTrack.UI?.showNotification?.(`Custom position ${index} set`, 'success');
   }
 
   // Rendu sur canvas

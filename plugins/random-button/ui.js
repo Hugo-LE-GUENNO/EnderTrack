@@ -33,7 +33,7 @@ class RandomButtonPluginUI {
     btn.id = 'random-button-nav-btn';
     btn.innerHTML = this.currentIcon;
     btn.style.color = this.currentColor;
-    btn.title = "Bouton complètement inutile";
+    btn.title = "Button completely useless";
 
     btn.onclick = () => {
       const result = this.bridge.doSomethingUseless();

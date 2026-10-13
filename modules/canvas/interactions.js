@@ -35,9 +35,13 @@ class CanvasInteractions {
   // Pointer event handlers (delegated to sub-modules)
   handlePointerStart(screenX, screenY, event) {
     const canvasPos = this.screenToCanvas(screenX, screenY);
-    
+    const isMiddleClick = event?.button === 1;
+    this.dragStartPos = { x: screenX, y: screenY };
+    this.lastMousePos = { x: screenX, y: screenY };
+    this._dragMoved = false;
+    if (event?.button === 0) { this.isDragging = false; return; }
     this.isDragging = true;
-    this.isPanning = !!this._dblClickPan;
+    this.isPanning = isMiddleClick || !!this._dblClickPan;
     this._dragMoved = false;
     this.lastMousePos = { x: screenX, y: screenY };
     this.dragStartPos = { x: screenX, y: screenY };

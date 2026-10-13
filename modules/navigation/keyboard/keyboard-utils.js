@@ -122,7 +122,7 @@ class KeyboardUtils {
     }
     
     if (updated.length > 0) {
-      this.updateLastCommand(`📍 Position ${updated.join('+')} récupérée`);
+      this.updateLastCommand(`📍 Position ${updated.join('+')} retrieved`);
     }
     
     this.updateGetButtonStates();
@@ -165,7 +165,7 @@ class KeyboardUtils {
         button.style.opacity = '0.7';
         button.style.cursor = 'not-allowed';
         button.disabled = true;
-        button.title = 'Déjà à la position actuelle';
+        button.title = 'Already at current position';
       } else {
         button.style.background = 'var(--button-bg)';
         button.style.opacity = '1';
@@ -173,13 +173,13 @@ class KeyboardUtils {
         button.disabled = false;
         
         if (onclick.includes("'x'")) {
-          button.title = 'Récupérer position X';
+          button.title = 'Get position X';
         } else if (onclick.includes("'y'")) {
-          button.title = 'Récupérer position Y';
+          button.title = 'Get position Y';
         } else if (onclick.includes("'z'")) {
-          button.title = 'Récupérer position Z';
+          button.title = 'Get position Z';
         } else if (onclick.includes("'all'")) {
-          button.title = 'Récupérer toutes les positions';
+          button.title = 'Get all positions';
         }
       }
     });

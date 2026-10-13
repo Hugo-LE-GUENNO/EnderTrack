@@ -42,7 +42,7 @@ window.EnderTrack.StatusPeripherals = {
       const blink = d.state === 'disconnected' ? 'animation:statusBlink 1s ease-in-out infinite;' : '';
       return `<div style="display:flex; align-items:center; gap:6px;">
         <div style="width:6px; height:6px; border-radius:50%; background:${color}; box-shadow:0 0 4px ${color}; flex-shrink:0; ${blink}"></div>
-        <span style="font-size:10px; color:var(--text-general);">${d.icon || ''} ${d.name}${d.detail ? ' — ' + d.detail : ''}</span>
+        <span style="font-size:10px; color:var(--text-general);">${d.name}${d.detail ? ' — ' + d.detail : ''}</span>
       </div>`;
     }).join('');
   }

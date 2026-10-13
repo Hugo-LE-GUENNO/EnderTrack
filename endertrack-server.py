@@ -1,36 +1,29 @@
 #!/usr/bin/env python3
 """
-endertrack-server.py — Point d'entrée du serveur EnderTrack.
-Assemble les modules : basic_functions, stage_connection, plugin_router, network_config.
+endertrack-server.py — EnderTrack server entry point.
 
 Usage:
     python3 endertrack-server.py
     python3 endertrack-server.py --port 8080
-    python3 endertrack-server.py --lan              # accès réseau local
+    python3 endertrack-server.py --lan
 """
 
 import sys
 import os
 
-# Ajouter le dossier parent au path pour les imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-# Aussi le dossier projet pour que les plugins trouvent leurs dépendances
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Support vendored dependencies (Flask inclus, zéro install)
 vendor_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vendor')
 if os.path.isdir(vendor_dir):
     sys.path.insert(0, os.path.abspath(vendor_dir))
 else:
-    # Fallback: hardware-bridges vendor
     vendor_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hardware-bridges', 'enderscope', 'vendor')
     if os.path.isdir(vendor_dir):
         sys.path.insert(0, os.path.abspath(vendor_dir))
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
-
-# ─── Création de l'app Flask ─────────────────────────────────────────────────
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=PROJECT_ROOT, static_url_path='')
@@ -53,8 +46,7 @@ def get_version():
 def get_clients():
     return {'clients': sorted(_known_clients), 'count': len(_known_clients)}
 
-# ─── Version ─────────────────────────────────────────────────────────────────
-
+# Version
 import json as _json
 _pkg = os.path.join(PROJECT_ROOT, 'package.json')
 try:
@@ -64,9 +56,6 @@ try:
         EDITION = _pkgdata.get('edition', '')
 except: VERSION = '?'; EDITION = ''
 
-# ─── Enregistrement des modules ──────────────────────────────────────────────
-
-# Track connected devices
 _known_clients = set()
 
 @app.before_request
@@ -75,83 +64,74 @@ def _track_clients():
     ip = request.remote_addr
     if ip and ip not in _known_clients and ip != '127.0.0.1':
         _known_clients.add(ip)
-        print(f'  \U0001f4f1 Nouvel appareil: {ip}')
-
-# 1. Fonctions de base (filesystem, browse, paths)
-from server import basic_functions
-basic_functions.register_routes(app)
-
-# 2. Connexion stage (série, G-code, mouvement)
-from server import stage_connection
-stage_connection.register_routes(app)
-
-# 3. Routeur de plugins (chargement dynamique Python)
-from server import plugin_router
-plugin_router.register_routes(app)
-
-# 4. State storage + activity log
-from server import state_store
-state_store.register_routes(app)
-
-# 5. Sync store (overlays, lists — shared between clients)
-from server import sync_store
-sync_store.register_routes(app)
-
-from server import stack_handler
-stack_handler.register_routes(app)
-
-from server import ome_metadata
-ome_metadata.register_routes(app)
-
-# Picamera2 (Raspberry Pi only)
-try:
-    from server import picamera_handler
-    picamera_handler.register_routes(app)
-except Exception as e:
-    print(f"  \u26a0\ufe0f  Picamera2: {e}")
-
-# PiLight (NeoPixel LEDs)
-try:
-    from server import pilight_handler
-    pilight_handler.register_routes(app)
-except Exception as e:
-    print(f"  \u26a0\ufe0f  PiLight: {e}")
-
-# Arduino Light (USB serial)
-try:
-    from server import arduino_light_handler
-    arduino_light_handler.register_routes(app)
-except Exception as e:
-    print(f"  \u26a0\ufe0f  Arduino Light: {e}")
-
-# 5. Real-time event stream (SSE)
-from server import event_stream
-event_stream.register_routes(app)
-
-# 6. Configuration réseau
-from server import network_config
-
-# ─── Démarrage ───────────────────────────────────────────────────────────────
+        print(f'  New device: {ip}')
 
 if __name__ == '__main__':
-    print()
+    from server import network_config
+
+    # Print header first
     edition_str = f" — {EDITION}" if EDITION else ""
-    print(f"  🔬 Bienvenue sur EnderTrack v{VERSION}{edition_str}")
-    print()
+    print(f"\n  EnderTrack v{VERSION}{edition_str}")
     local_url = f"http://127.0.0.1:{network_config.PORT}"
-    print(f"  🌐 Local: \033]8;;{local_url}\033\\{local_url}\033]8;;\033\\")
+    print(f"  {local_url}")
     if network_config.HOST == '0.0.0.0':
         lan_url = f"http://{network_config.get_local_ip()}:{network_config.PORT}"
-        print(f"  🌐 LAN:   \033]8;;{lan_url}\033\\{lan_url}\033]8;;\033\\")
-    elif network_config.HOST == '127.0.0.1':
-        print(f"  💡 Accès réseau ? → python3 endertrack-server.py --lan")
+        print(f"  {lan_url}")
+    else:
+        print(f"  LAN access? -> python3 endertrack-server.py --lan")
     print()
-    print(f"  📖 https://github.com/Hugo-LE-GUENNO/EnderTrack")
-    print()
+
+    # Register all modules
+    from server import basic_functions
+    basic_functions.register_routes(app)
+
+    from server import stage_connection
+    stage_connection.register_routes(app)
+
+    from server import plugin_router
+    plugin_router.register_routes(app)
+
+    from server import plugin_engine
+    plugin_engine.register_routes(app)
+
+    from server import state_store
+    state_store.register_routes(app)
+
+    from server import sync_store
+    sync_store.register_routes(app)
+
+    from server import stack_handler
+    stack_handler.register_routes(app)
+
+    from server import ome_metadata
+    ome_metadata.register_routes(app)
+
+    try:
+        from server import picamera_handler
+        picamera_handler.register_routes(app)
+    except Exception:
+        pass
+
+    try:
+        from server import pilight_handler
+        pilight_handler.register_routes(app)
+    except Exception:
+        pass
+
+    try:
+        from server import arduino_light_handler
+        arduino_light_handler.register_routes(app)
+    except Exception:
+        pass
+
+    from server import event_stream
+    event_stream.register_routes(app)
+
     import logging
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
     try:
         import flask.cli
         flask.cli.show_server_banner = lambda *a, **k: None
     except: pass
+
     app.run(host=network_config.HOST, port=network_config.PORT, debug=False, threaded=True)

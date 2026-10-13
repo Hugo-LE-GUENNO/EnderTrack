@@ -12,18 +12,18 @@ class TempoBedBridge {
   activate() {
     this._startPolling();
     this.scenarioVariables = [
-      { id: '$temp', name: 'Température bed', description: 'Température actuelle du plateau (°C)', getValue: () => this._current },
-      { id: '$bedTarget', name: 'Consigne bed', description: 'Température cible du plateau (°C)', getValue: () => this._target }
+      { id: '$temp', name: 'Bed temperature', description: 'Current bed temperature (°C)', getValue: () => this._current },
+      { id: '$bedTarget', name: 'Consigne bed', description: 'Target bed temperature (°C)', getValue: () => this._target }
     ];
     this.scenarioActions = [
       {
         id: 'tempobed_set',
-        label: 'Bed → Température',
+        label: 'Bed → Temperature',
         icon: '🌡️',
         category: 'plugin',
         pluginId: 'tempoBed',
         params: [
-          { id: 'temp', label: 'Température (°C)', type: 'number', default: 60, min: 0, max: 120, step: 1 }
+          { id: 'temp', label: 'Temperature (°C)', type: 'number', default: 60, min: 0, max: 120, step: 1 }
         ],
         execute: async (params) => {
           await this.start(params.temp || 60);
@@ -50,7 +50,7 @@ class TempoBedBridge {
         pluginId: 'tempoBed',
         params: [
           { id: 'target', label: 'Cible (°C)', type: 'number', default: 60, min: 0, max: 120, step: 1 },
-          { id: 'tolerance', label: 'Tolérance (°C)', type: 'number', default: 2, min: 0.5, max: 10, step: 0.5 }
+          { id: 'tolerance', label: 'Tolerance (°C)', type: 'number', default: 2, min: 0.5, max: 10, step: 0.5 }
         ],
         execute: async (params) => {
           const target = params.target || 60;

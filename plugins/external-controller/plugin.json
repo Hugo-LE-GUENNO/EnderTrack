@@ -4,7 +4,7 @@
   "folder": "external-controller",
   "version": "1.0.0",
   "description": "Mapping personnalisable clavier + gamepad — profils, actions remappables",
-  "icon": "🎮",
+  "icon": "",
   "tools": [],
   "widgets": [],
   "navButtons": []

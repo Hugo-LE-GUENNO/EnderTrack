@@ -4,7 +4,7 @@
   "folder": "tempo-bed",
   "version": "1.0.0",
   "description": "Contrôle température du plateau chauffant — on/off, consigne, monitoring",
-  "icon": "🌡️",
+  "icon": "",
   "tools": [],
   "widgets": [],
   "navButtons": []

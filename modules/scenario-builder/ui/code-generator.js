@@ -1,9 +1,9 @@
 // modules/scenario/code-generator.js - Generate JavaScript code from scenario
 class CodeGenerator {
   static generate(scenario) {
-    if (!scenario || !scenario.tree) return '// Aucun scénario';
+    if (!scenario || !scenario.tree) return '// No scenario';
     
-    let code = `// Scénario: ${scenario.name}\n`;
+    let code = `// Scenario: ${scenario.name}\n`;
     if (scenario.description) {
       code += `// ${scenario.description}\n`;
     }
@@ -13,7 +13,7 @@ class CodeGenerator {
     if (window.EnderTrack?.VariableManager) {
       const customVars = window.EnderTrack.VariableManager.getCustomVariables();
       if (customVars.length > 0) {
-        code += `// Variables personnalisées\n`;
+        code += `// Custom variables\n`;
         customVars.forEach(v => {
           const value = v.type === 'string' ? `"${v.value}"` : v.value;
           code += `let ${v.name} = ${value}; // ${v.type}\n`;
@@ -44,7 +44,7 @@ class CodeGenerator {
       });
     }
     
-    code += `// Exécution\nexecuteScenario();`;
+    code += `// Execution\nexecuteScenario();`;
     
     return code;
   }
@@ -101,7 +101,7 @@ class CodeGenerator {
     const actionDef = window.EnderTrack?.ActionRegistry?.get(action.actionId);
     
     if (action.disabled) {
-      return `${spaces}// Action désactivée: ${action.params?.label || actionDef?.label}\n`;
+      return `${spaces}// Disabled action: ${action.params?.label || actionDef?.label}\n`;
     }
     
     let code = '';
@@ -175,8 +175,8 @@ window.EnderTrack.CodeGenerator = CodeGenerator;
 // Python code generator
 class PythonCodeGenerator {
   static generate(scenario) {
-    if (!scenario || !scenario.tree) return '# Aucun scénario';
-    let code = `# Scénario: ${scenario.name}\n`;
+    if (!scenario || !scenario.tree) return '# No scenario';
+    let code = `# Scenario: ${scenario.name}\n`;
     if (scenario.description) code += `# ${scenario.description}\n`;
     code += '\nimport asyncio\nfrom endertrack import stage, camera, light\n\n';
     code += 'async def run():\n';
@@ -198,7 +198,7 @@ class PythonCodeGenerator {
         code += `${pad}# ${node.params?.label || 'Tant que'}\n`;
         code += `${pad}while ${node.params?.condition || 'True'}:\n`;
       } else {
-        code += `${pad}# ${node.params?.label || 'Répéter'}\n`;
+        code += `${pad}# ${node.params?.label || 'Repeat'}\n`;
         code += `${pad}for ${v} in range(${limit}):\n`;
       }
       node.children?.forEach(c => { code += this.generateNode(c, indent + 1); });

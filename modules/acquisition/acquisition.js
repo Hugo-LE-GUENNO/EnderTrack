@@ -12,12 +12,12 @@ class AcquisitionModule {
       id: 'timelapse',
       name: 'Time-lapse',
       icon: '⏱️',
-      description: 'Capture à intervalle régulier',
+      description: 'Capture at regular interval',
       params: [
         { id: 'interval', label: 'Intervalle (s)', type: 'number', default: 10, min: 0.1 },
         { id: 'count', label: 'Nombre d\'images', type: 'number', default: 10, min: 1 },
         { id: 'format', label: 'Format', type: 'select', options: ['tiff', 'png', 'jpeg'], default: 'tiff' },
-        { id: 'lightChannel', label: 'Éclairage', type: 'text', default: '', placeholder: 'vide = pas de light' }
+        { id: 'lightChannel', label: 'Lighting', type: 'text', default: '', placeholder: 'empty = no light' }
       ],
       generate: (params) => this._generateTimelapse(params)
     });
@@ -29,11 +29,11 @@ class AcquisitionModule {
       icon: '📚',
       description: 'Pile Z (balayage en profondeur)',
       params: [
-        { id: 'zStart', label: 'Z début (mm)', type: 'number', default: 0, step: 0.1 },
+        { id: 'zStart', label: 'Z start (mm)', type: 'number', default: 0, step: 0.1 },
         { id: 'zEnd', label: 'Z fin (mm)', type: 'number', default: 1, step: 0.1 },
         { id: 'zStep', label: 'Pas Z (mm)', type: 'number', default: 0.05, min: 0.001, step: 0.01 },
         { id: 'format', label: 'Format', type: 'select', options: ['tiff', 'png', 'jpeg'], default: 'tiff' },
-        { id: 'lightChannel', label: 'Éclairage', type: 'text', default: '', placeholder: 'vide = pas de light' }
+        { id: 'lightChannel', label: 'Lighting', type: 'text', default: '', placeholder: 'empty = no light' }
       ],
       generate: (params) => this._generateZStack(params)
     });
@@ -43,12 +43,12 @@ class AcquisitionModule {
       id: 'multipos',
       name: 'Multi-positions',
       icon: '📍',
-      description: 'Capture à chaque position d\'une liste',
+      description: 'Capture at each list position',
       params: [
-        { id: 'listId', label: 'Liste', type: 'list-select', default: '' },
-        { id: 'delay', label: 'Délai entre positions (s)', type: 'number', default: 0.5, min: 0 },
+        { id: 'listId', label: 'List', type: 'list-select', default: '' },
+        { id: 'delay', label: 'Delay between positions (s)', type: 'number', default: 0.5, min: 0 },
         { id: 'format', label: 'Format', type: 'select', options: ['tiff', 'png', 'jpeg'], default: 'tiff' },
-        { id: 'lightChannel', label: 'Éclairage', type: 'text', default: '', placeholder: 'vide = pas de light' }
+        { id: 'lightChannel', label: 'Lighting', type: 'text', default: '', placeholder: 'empty = no light' }
       ],
       generate: (params) => this._generateMultiPos(params)
     });
@@ -58,14 +58,14 @@ class AcquisitionModule {
       id: 'multipos_zstack',
       name: 'Multi-pos + Z-Stack',
       icon: '🔬',
-      description: 'Z-Stack à chaque position d\'une liste',
+      description: 'Z-Stack at each list position',
       params: [
-        { id: 'listId', label: 'Liste', type: 'list-select', default: '' },
-        { id: 'zStart', label: 'Z début (mm)', type: 'number', default: 0, step: 0.1 },
+        { id: 'listId', label: 'List', type: 'list-select', default: '' },
+        { id: 'zStart', label: 'Z start (mm)', type: 'number', default: 0, step: 0.1 },
         { id: 'zEnd', label: 'Z fin (mm)', type: 'number', default: 1, step: 0.1 },
         { id: 'zStep', label: 'Pas Z (mm)', type: 'number', default: 0.05, min: 0.001, step: 0.01 },
         { id: 'format', label: 'Format', type: 'select', options: ['tiff', 'png', 'jpeg'], default: 'tiff' },
-        { id: 'lightChannel', label: 'Éclairage', type: 'text', default: '', placeholder: 'vide = pas de light' }
+        { id: 'lightChannel', label: 'Lighting', type: 'text', default: '', placeholder: 'empty = no light' }
       ],
       generate: (params) => this._generateMultiPosZStack(params)
     });

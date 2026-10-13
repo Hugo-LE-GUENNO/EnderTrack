@@ -477,11 +477,14 @@ class ListManager {
       es.onmessage = (e) => {
         try {
           const evt = JSON.parse(e.data);
-          if (evt.type === 'lists:updated' && evt.data?._from !== this._clientId) {
-            // Another client changed the lists — reload from server
-            fetch(url + '/api/state', { signal: AbortSignal.timeout(2000) })
+          if (evt.type === 'sync:lists' && evt.data?.groups) {
+            // Direct push from server (plugin, atomic op)
+            this._applyData(evt.data);
+          } else if (evt.type === 'lists:updated' && evt.data?._from !== this._clientId) {
+            // Another browser client changed the lists
+            fetch(url + '/api/sync/lists', { signal: AbortSignal.timeout(2000) })
               .then(r => r.json())
-              .then(state => { if (state?.lists?.groups) this._applyData(state.lists); })
+              .then(data => { if (data?.groups) this._applyData(data); })
               .catch(() => {});
           }
         } catch {}
@@ -580,6 +583,8 @@ class ListManager {
     const container = document.getElementById('listsContent') || document.getElementById('listsTabContent');
     if (!container) return;
     const pts = this.positions;
+    const _lpz = document.getElementById('listsPluginZone');
+    const _lpzChildren = _lpz ? Array.from(_lpz.childNodes).map(n => n.cloneNode(true)) : [];
 
     container.innerHTML = `
       <div style="display:flex; gap:2px; margin-bottom:6px; flex-wrap:wrap; align-items:center;">
@@ -611,6 +616,9 @@ class ListManager {
       ${!pts.length ? '<div style="text-align:center; color:var(--text-general); font-size:11px; padding:8px; opacity:0.5;">Click on the canvas to add waypoints</div>' : ''}
       ${pts.map((p, i) => this._renderRow(p, i)).join('')}
     `;
+
+    const _newLpz = document.getElementById('listsPluginZone');
+    if (_newLpz) _lpzChildren.forEach(n => _newLpz.appendChild(n));
 
     // Plugin injection zone
     window.EnderTrack?.Events?.notifyListeners?.('lists:rendered', container);
