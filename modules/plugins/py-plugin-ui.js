@@ -28,13 +28,23 @@ class PyPluginUI {
   // ── Mount ──────────────────────────────────────────────────────────────────
 
   _mount(ui) {
-    const { plugin_id, name, sections, scenario_actions } = ui;
+    const { plugin_id, name, sections, scenario_actions, extra_js } = ui;
     console.log('[PyPluginUI] _mount', plugin_id, Object.keys(sections || {}));
     this._unmount(plugin_id);
     const elements = [];
 
     if (scenario_actions?.length) {
       this._registerScenarioActions({ plugin_id, actions: scenario_actions });
+    }
+
+    // Charger les JS additionnels du plugin
+    for (const src of (extra_js || [])) {
+      if (!document.querySelector(`script[data-pyplugin-js="${src}"]`)) {
+        const s = document.createElement('script');
+        s.src = src;
+        s.dataset.pypluginJs = src;
+        document.head.appendChild(s);
+      }
     }
 
     const leftMap = {
@@ -143,7 +153,7 @@ class PyPluginUI {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(params),
-            signal: AbortSignal.timeout(30000)
+            signal: AbortSignal.timeout(action.timeout_ms || 60000)
           });
           return await resp.json();
         }

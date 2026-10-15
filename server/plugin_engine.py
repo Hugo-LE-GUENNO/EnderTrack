@@ -59,15 +59,52 @@ class PluginContext:
 
     @property
     def light(self):
-        try:
-            from server import pilight_handler
-            return pilight_handler
-        except:
-            try:
-                from server import arduino_light_handler
-                return arduino_light_handler
-            except:
-                return None
+        import urllib.request, json
+
+        class _Light:
+            def _post(self, endpoint, body={}):
+                try:
+                    req = urllib.request.Request(
+                        'http://localhost:5000' + endpoint,
+                        data=json.dumps(body).encode(),
+                        headers={'Content-Type': 'application/json'},
+                        method='POST'
+                    )
+                    with urllib.request.urlopen(req, timeout=5) as r:
+                        return json.loads(r.read())
+                except Exception as e:
+                    return {'error': str(e)}
+
+            def _get(self, endpoint):
+                try:
+                    with urllib.request.urlopen('http://localhost:5000' + endpoint, timeout=5) as r:
+                        return json.loads(r.read())
+                except Exception as e:
+                    return {'error': str(e)}
+
+            def status(self):
+                return self._get('/api/light/status')
+
+            def on(self, r=255, g=255, b=255, intensity=1.0, id=None):
+                body = {'r': r, 'g': g, 'b': b, 'intensity': intensity}
+                if id is not None: body['id'] = id
+                return self._post('/api/light/on', body)
+
+            def off(self, id=None):
+                body = {'id': id} if id is not None else {}
+                return self._post('/api/light/off', body)
+
+            def color(self, r, g, b, id=None):
+                body = {'r': r, 'g': g, 'b': b}
+                if id is not None: body['id'] = id
+                return self._post('/api/light/color', body)
+
+            def intensity(self, value, id=None):
+                body = {'intensity': value}
+                if id is not None: body['id'] = id
+                return self._post('/api/light/intensity', body)
+
+        return _Light()
 
     @property
     def bus(self):
@@ -300,6 +337,7 @@ def _build_ui(plugin_id, mod):
         'version':          getattr(mod, 'VERSION',          '1.0.0'),
         'sections':         sections,
         'scenario_actions': getattr(mod, 'SCENARIO_ACTIONS', []),
+        'extra_js':         getattr(mod, 'EXTRA_JS',         []),
     }
 
 

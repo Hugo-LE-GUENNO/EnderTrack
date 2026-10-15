@@ -43,7 +43,7 @@ class CameraHistogram {
             style="font-family:var(--font-mono); font-size:9px; color:var(--text-general); cursor:pointer; padding:1px 4px; border-radius:3px;"
             title="Click to edit values">—</span>
           <button id="enderpicam-hist-auto" onclick="EnderTrack.Camera.histogram.toggleAuto()"
-            style="font-size:9px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">Auto</button>
+            style="font-size:9px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">Auto ●</button>
         </div>
       </div>
       <canvas id="enderpicam-hist-canvas" width="220" height="80"
@@ -323,16 +323,14 @@ class CameraHistogram {
 
   setMode(mode) {
     this.mode = mode;
-    const autoBtn = document.getElementById('enderpicam-hist-auto');
-    if (autoBtn) {
-      autoBtn.style.background = mode === 'auto' ? 'var(--active-element)' : 'var(--app-bg)';
-      autoBtn.style.color = mode === 'auto' ? 'var(--text-selected)' : 'var(--text-general)';
-    }
-    // Also update gallery auto button if present
-    const galBtn = document.getElementById('gallery-hist-auto');
-    if (galBtn) {
-      galBtn.style.background = mode === 'auto' ? 'var(--active-element)' : 'var(--app-bg)';
-      galBtn.style.color = mode === 'auto' ? 'var(--text-selected)' : 'var(--text-general)';
+    const isAuto = mode === 'auto';
+    const style = isAuto
+      ? 'background:var(--active-element); color:var(--text-selected); outline: 1px solid var(--text-selected);'
+      : 'background:var(--app-bg); color:var(--text-general); outline:none;';
+    const label = isAuto ? 'Auto ●' : 'Auto ○';
+    for (const id of ['enderpicam-hist-auto', 'gallery-hist-auto']) {
+      const btn = document.getElementById(id);
+      if (btn) { btn.style.cssText = `font-size:9px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; ${style}`; btn.textContent = label; }
     }
     if (this.canvas) this.canvas.style.cursor = mode === 'manual' ? 'crosshair' : 'default';
     this._redraw();
@@ -391,7 +389,7 @@ class CameraHistogram {
     this._histG = histG;
     this._histB = histB;
     this._histL = histL;
-    this._draw(histR, histG, histB, histL);
+    this._redraw();  // passe par le hook camera.js pour appliquer contrast au renderer
 
     const info = document.getElementById('enderpicam-hist-info');
     const range = this.getContrastRange();

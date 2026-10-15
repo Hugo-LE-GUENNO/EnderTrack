@@ -80,7 +80,12 @@ def _serialize(l):
 
 def _find(lid):
     if lid is not None:
-        return _lights.get(int(lid))
+        try:
+            return _lights.get(int(lid))
+        except (ValueError, TypeError):
+            if len(_lights) == 1:
+                return list(_lights.values())[0]
+            return None
     if len(_lights) == 1:
         return list(_lights.values())[0]
     return None
@@ -203,12 +208,4 @@ def register_routes(app):
         _apply_all()
         return jsonify({'success': True, 'light': _serialize(l)})
 
-    # Create default light
-    global _next_id
-    _get_strip('D18', 1)
-    _lights[_next_id] = {
-        'id': _next_id, 'name': 'Light 1', 'pin': 'D18',
-        'total_pixels': 1, 'start': 0, 'end': 1,
-        'r': 255, 'g': 255, 'b': 255, 'intensity': 1.0, 'is_on': False
-    }
-    _next_id += 1
+    pass  # lights created on demand via /api/light/add

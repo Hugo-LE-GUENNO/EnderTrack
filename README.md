@@ -1,4 +1,4 @@
-# EnderTrack — imaging v1.3.2
+# EnderTrack — imaging v1.3.3
 
 <p align="center">
   <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" height="64">
@@ -46,6 +46,17 @@ python3 endertrack-server.py --lan
 
 ## Changelog
 
+### v1.3.3
+- **Python plugins** — full API: `ctx.stage`, `ctx.cam`, `ctx.light`, `ctx.lists`, `ctx.bus`
+- **Light GPIO** — NeoPixel control from navigation, scenario builder and Python plugins
+- **Scenario builder** — `capture` action restores exposure/gain after capture; `led` action fixed (serverId, zero-value RGB)
+- **Histogram** — Auto mode applies contrast stretch to live preview in real-time
+- **Plugin extra JS** — `EXTRA_JS` list in plugin loads browser-side JS on activation
+- **Web Audio** — SSE `plugin:sound` event plays synthesized melodies via Web Audio API (no file, no dependency)
+- **Disco plugin** — random moves + light choreography, available as scenario action
+- **Anniversary plugin** — 🎂 Happy Birthday EnderTrack! Light + movement + music synchronized
+- **Docs** — [Python plugin tutorial](docs/python-plugins.md)
+
 ### v1.3.2
 - Performance: removed M114 position polling after every move — dead-reckoning only, M114 only on initial connect
 - Performance: canvas render loop decoupled from state events during animation — direct `render()` call from movement RAF
@@ -74,6 +85,8 @@ python3 endertrack-server.py --lan
 ## More
 
 👉 [Full documentation, editions, plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack)
+
+👉 [Python plugin tutorial](docs/python-plugins.md)
 
 ## License
 

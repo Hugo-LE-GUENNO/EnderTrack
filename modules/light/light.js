@@ -127,9 +127,6 @@ class LightModule {
   _registerScenarioActions() {
     if (!window.EnderTrack?.ActionRegistry) return;
 
-    // Build channel options from current config
-    const channelOpts = this.channels.map(c => ({ value: c.id, label: `${c.name}` }));
-
     window.EnderTrack.ActionRegistry.register({
       id: 'light_set',
       label: '💡 Light',
@@ -137,7 +134,7 @@ class LightModule {
       category: 'light',
       params: [
         { id: 'label', label: 'Label', type: 'text', default: 'Light' },
-        { id: 'channel', label: 'Canal', type: 'select', options: channelOpts, default: channelOpts[0]?.value || '' },
+        { id: 'channel', label: 'Canal', type: 'select', options: () => (window._lights || []).map(l => ({ value: l.id, label: l.name })), default: '' },
         { id: 'action', label: 'Action', type: 'select', options: [
           { value: 'on', label: 'ON' },
           { value: 'off', label: 'OFF' }
@@ -152,19 +149,21 @@ class LightModule {
         const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
         const lights = window._lights || [];
         const light = lights.find(l => l.id === params.channel) || lights[0];
+        console.log('[light_set] params:', params, 'light:', light);
         if (light?.type === 'gpio') {
           const endpoint = '/api/light/' + (params.action === 'off' ? 'off' : 'on');
-          const body = { id: light.serverId || 1 };
+          const sid = Number.isInteger(light.serverId) ? light.serverId : (typeof light.serverId === 'number' ? light.serverId : null);
+          const body = sid != null ? { id: sid } : {};
           if (params.action !== 'off') {
             body.intensity = (parseInt(params.intensity) || 100) / 100;
-            body.r = parseInt(params.r) || 255; body.g = parseInt(params.g) || 255; body.b = parseInt(params.b) || 255;
+            body.r = (Number.isFinite(parseInt(params.r)) ? parseInt(params.r) : 255); body.g = (Number.isFinite(parseInt(params.g)) ? parseInt(params.g) : 255); body.b = (Number.isFinite(parseInt(params.b)) ? parseInt(params.b) : 255);
           }
           try { await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch {}
         } else if (light?.type === 'arduino') {
           if (params.action === 'off') {
             try { await fetch(base + '/api/arduino-light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ port: light.pin }) }); } catch {}
           } else {
-            const body = { port: light.pin, intensity: (parseInt(params.intensity) || 100) / 100, r: parseInt(params.r) || 255, g: parseInt(params.g) || 255, b: parseInt(params.b) || 255 };
+            const body = { port: light.pin, intensity: (parseInt(params.intensity) || 100) / 100, r: (Number.isFinite(parseInt(params.r)) ? parseInt(params.r) : 255), g: (Number.isFinite(parseInt(params.g)) ? parseInt(params.g) : 255), b: (Number.isFinite(parseInt(params.b)) ? parseInt(params.b) : 255) };
             try { await fetch(base + '/api/arduino-light/on', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch {}
           }
         } else {
@@ -190,7 +189,12 @@ class LightModule {
       ],
       execute: async (params) => {
         const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-        try { await fetch(base + '/api/light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: 1 }) }); } catch {}
+        for (const l of (window._lights || [])) {
+          if (l.type === 'gpio' && l.serverId != null) {
+            try { await fetch(base + '/api/light/off', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: l.serverId }) }); } catch {}
+          }
+        }
+        window.EnderTrack.Light?.allOff?.();
         if (params.showInLog && window.EnderTrack?.Scenario?.addLog) {
           window.EnderTrack.Scenario.addLog('🌑 All lights OFF', 'info');
         }

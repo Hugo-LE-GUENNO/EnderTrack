@@ -1,8 +1,18 @@
 # Changelog
 
-## imaging v1.2.4
+- **Python plugins** — `ctx.light` HTTP API (GPIO + Arduino), `ctx.bus.publish` for SSE events
+- **Plugin extra JS** — `EXTRA_JS` list loads browser-side JS on plugin activation
+- **Scenario builder** — `capture` restores exposure/gain; `led` fixed (serverId, zero RGB); dynamic light channel options
+- **Light GPIO** — persistence across reloads, toggle/intensity from nav, scenario and Python
+- **Histogram** — Auto mode stretches live preview in real-time (hook on `_redraw`)
+- **Web Audio** — `plugin:sound` SSE event → synthesized melody via Web Audio API
+- **Disco plugin** — random moves + light, scenario action
+- **Anniversary plugin** — 🎂 light + movement + Happy Birthday synchronized on 15s
+- **Docs** — [Python plugin tutorial](docs/python-plugins.md)
 
-- Keyboard shortcuts modal (⌨ button in header) — 7 shortcuts listed
+## imaging v1.3.3
+
+ shortcuts modal (⌨ button in header) — 7 shortcuts listed
 - `P` shortcut — add current position to list from any tab
 - Homing fix — `position:moving` broadcast before G28, `position:homed` event snaps UI to 0,0,0
 - Scroll wheel Z direction inverted — scroll up = Z+

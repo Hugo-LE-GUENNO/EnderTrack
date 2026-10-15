@@ -179,14 +179,21 @@ class ActionRegistry {
         const expo = parseInt(params.exposure) || 0;
         const gain = parseFloat(params.gain) || 1.0;
         const acqRes = params.resolution ? params.resolution.split(',').map(Number) : null;
-        const prevRes = acqRes ? (camera.picamConfig?.resolution || null) : null;
+        // Sauvegarder l'état actuel avant de modifier
+        const prevRes  = acqRes ? (camera.picamConfig?.resolution || null) : null;
+        const prevExpo = (expo > 0) ? (camera.picamConfig?.exposure || 0) : null;
+        const prevGain = (gain !== 1.0) ? (camera.picamConfig?.gain || 1.0) : null;
         if (acqRes) await camera.setPicamConfig?.({ resolution: acqRes });
-        if (expo > 0 || gain !== 1.0) await camera.setPicamConfig?.({ exposure: expo || undefined, gain });
+        if (expo > 0) await camera.setPicamConfig?.({ exposure: expo });
+        if (gain !== 1.0) await camera.setPicamConfig?.({ gain });
         const name = _evalStr(params.filename || 'img_$i', vars);
         const fullPath = `${params.path || './captures'}/${name}.${params.format || 'tiff'}`;
         const result = await camera.capture({ format: params.format || 'tiff', path: fullPath, cameraId: params.camera });
         if (params.showInLog) window.EnderTrack?.Scenario?.addLog?.(`📷 ${result.path || fullPath}`, 'info');
-        if (prevRes) await camera.setPicamConfig?.({ resolution: prevRes });
+        // Restaurer les paramètres précédents
+        if (prevRes)  await camera.setPicamConfig?.({ resolution: prevRes });
+        if (prevExpo !== null) await camera.setPicamConfig?.({ exposure: prevExpo });
+        if (prevGain !== null) await camera.setPicamConfig?.({ gain: prevGain });
         if (camera.navigatorMode && camera.live && window._tilesEnabled) {
           const f = await camera.getFrame();
           if (f?.frame) camera._addTile(f);
@@ -215,7 +222,9 @@ class ActionRegistry {
         const light = lights.find(l => String(l.id) === String(params.ledId)) || lights[0];
         if (!light) return { success: false, error: 'No light configured' };
         const on = params.on !== false;
-        const body = { id: light.id, on, r: parseInt(params.r) || 0, g: parseInt(params.g) || 0, b: parseInt(params.b) || 0 };
+        const sid = typeof light.serverId === 'number' ? light.serverId : null;
+        const body = sid != null ? { id: sid } : {};
+        if (on) { body.r = (Number.isFinite(parseInt(params.r)) ? parseInt(params.r) : 255); body.g = (Number.isFinite(parseInt(params.g)) ? parseInt(params.g) : 255); body.b = (Number.isFinite(parseInt(params.b)) ? parseInt(params.b) : 255); }
         try {
           await fetch(base + '/api/light/' + (on ? 'on' : 'off'), {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)

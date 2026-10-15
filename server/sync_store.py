@@ -180,7 +180,7 @@ def register_routes(app):
         pos = {'x': round(x, 3), 'y': round(y, 3), 'z': round(z, 3), 'name': name}
         g.setdefault('positions', []).append(pos)
         _write('lists', lists)
-        _broadcast('lists:updated', lists)
+        _broadcast('sync:lists', lists)
         print(f"  + List [{g['name']}] +1 pt ({len(g['positions'])})")
         return jsonify({'success': True, 'position': pos, 'list': g['name'], 'count': len(g['positions'])})
 
@@ -203,7 +203,7 @@ def register_routes(app):
             return jsonify({'success': False, 'error': f'Invalid index {idx}'}), 400
         removed = positions.pop(idx)
         _write('lists', lists)
-        _broadcast('lists:updated', lists)
+        _broadcast('sync:lists', lists)
         return jsonify({'success': True, 'removed': removed})
 
     @app.route('/api/lists/positions/clear', methods=['POST'])
@@ -222,7 +222,7 @@ def register_routes(app):
         count = len(g.get('positions', []))
         g['positions'] = []
         _write('lists', lists)
-        _broadcast('lists:updated', lists)
+        _broadcast('sync:lists', lists)
         print(f"  - List [{g['name']}] cleared ({count} pts)")
         return jsonify({'success': True, 'cleared': count})
 
@@ -238,7 +238,7 @@ def register_routes(app):
         lists['_nextGroupId'] = next_id + 1
         lists['activeGroupId'] = next_id
         _write('lists', lists)
-        _broadcast('lists:updated', lists)
+        _broadcast('sync:lists', lists)
         print(f"  + List [{name}] created")
         return jsonify({'success': True, 'id': next_id, 'name': name})
 
@@ -255,7 +255,7 @@ def register_routes(app):
             return jsonify({'success': False, 'error': f'List "{group_name}" not found'}), 404
         g['name'] = new_name
         _write('lists', lists)
-        _broadcast('lists:updated', lists)
+        _broadcast('sync:lists', lists)
         return jsonify({'success': True, 'old_name': group_name, 'new_name': new_name})
 
     @app.route('/api/lists/groups/delete', methods=['POST'])
@@ -272,7 +272,7 @@ def register_routes(app):
         if lists['groups']:
             lists['activeGroupId'] = lists['groups'][0]['id']
         _write('lists', lists)
-        _broadcast('lists:updated', lists)
+        _broadcast('sync:lists', lists)
         print(f"  - List [{group_name}] deleted")
         return jsonify({'success': True, 'deleted': True})
 

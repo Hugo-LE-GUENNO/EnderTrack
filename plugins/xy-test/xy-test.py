@@ -56,11 +56,15 @@ def run_test(ctx, params):
             stage.move_absolute(x, y, z, feedrate=3000)
             stage.finish_moves()
 
-            # Capture
             img_path = os.path.join(capture_dir, f"{timestamp}_{label.replace(' ', '_')}.tiff")
             if ctx.cam:
                 res = ctx.cam.capture(img_path)
-                cap_status = f"✓ {os.path.basename(img_path)}" if res.get('success') else f"✗ {res.get('error','?')}"
+                if res.get('success'):
+                    ctx.log(f"📷 {os.path.basename(img_path)}", level='ok')
+                    cap_status = f"✓ {os.path.basename(img_path)}"
+                else:
+                    ctx.log(f"capture failed: {res.get('error','?')}", level='error')
+                    cap_status = f"✗ {res.get('error','?')}"
             else:
                 cap_status = "(no cam)"
 

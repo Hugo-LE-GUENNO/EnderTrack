@@ -3401,7 +3401,7 @@ class ScenarioBuilder {
           ${this._escapeHtml(p.label)}</label>`;
       }
       if (p.type === 'select') {
-        const opts = (p.options || []).map(o =>
+        const opts = (typeof p.options === 'function' ? p.options() : p.options || []).map(o =>
           `<option value="${o.value}" ${String(val) === String(o.value) ? 'selected' : ''}>${o.label}</option>`
         ).join('');
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>

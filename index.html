@@ -288,7 +288,25 @@
                                     }
                                     window._updateCameraLayout?.();
                                   }
-                                  if (data.lights?.length) { window._lights = data.lights; window._renderLights?.(); }
+                                  if (data.lights?.length) {
+                                    window._lights = data.lights;
+                                    // Re-register GPIO lights on server (server restarted, IDs reset)
+                                    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                    for (let i = 0; i < window._lights.length; i++) {
+                                      const l = window._lights[i];
+                                      if (l.type === 'gpio') {
+                                        try {
+                                          const res = await fetch(base + '/api/light/add', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name: l.name, pin: l.pin, total_pixels: l.totalPixels || 1, start: l.start || 0, end: l.end || 1, r: l.r, g: l.g, b: l.b, intensity: l.intensity }) });
+                                          const d = await res.json();
+                                          if (d.light?.id) window._lights[i].serverId = d.light.id;
+                                        } catch {}
+                                      }
+                                    }
+                                    window._renderLights?.();
+                                    EnderTrack.Light?._renderNav?.();
+                                    EnderTrack.Light?._updateStatus?.();
+                                    EnderTrack.Light?._registerScenarioActions?.();
+                                  }
                                   if (data.tiles?.length) EnderTrack.Camera.loadTiles(data.tiles);
                                 } catch(e) { console.error('[loadPeripherals]', e); }
                               };
@@ -451,11 +469,21 @@
                                 const m = document.getElementById('lightTypeMenu');
                                 m.style.display = m.style.display === 'none' ? '' : 'none';
                               };
-                              window._addLight = (type) => {
+                              window._addLight = async (type) => {
                                 document.getElementById('lightTypeMenu').style.display = 'none';
                                 const id = 'light_' + Date.now();
-                                const name = type === 'gpio' ? 'Neopixel' : 'LED';
-                                const pin = type === 'gpio' ? 'D18' : '/dev/ttyUSB0'; window._lights.push({ id, name, type, pin, totalPixels: 1, start: 0, end: 1, r: 255, g: 255, b: 255, intensity: 1.0, on: false });
+                                const name = type === 'gpio' ? 'LED' : 'LED';
+                                const pin = type === 'gpio' ? 'D18' : '/dev/ttyUSB0';
+                                let serverId = null;
+                                if (type === 'gpio') {
+                                  try {
+                                    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                    const res = await fetch(base + '/api/light/add', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, pin, total_pixels: 1, start: 0, end: 1, r: 255, g: 255, b: 255, intensity: 1.0 }) });
+                                    const data = await res.json();
+                                    serverId = data.light?.id ?? null;
+                                  } catch {}
+                                }
+                                window._lights.push({ id, name, type, pin, totalPixels: 1, start: 0, end: 1, r: 255, g: 255, b: 255, intensity: 1.0, on: false, serverId });
                                 if (EnderTrack.Light?.driver?._channels) {
                                   EnderTrack.Light.driver._channels.push({ id, name, type, intensity: 0, on: false });
                                   EnderTrack.Light.channels = EnderTrack.Light.driver.getChannels();
@@ -464,8 +492,14 @@
                                 EnderTrack.Light._renderNav?.();
                                 EnderTrack.Light._updateStatus?.();
                               };
-                              window._removeLight = (idx) => {
+                              window._removeLight = async (idx) => {
                                 const light = window._lights[idx];
+                                if (light?.type === 'gpio' && light.serverId != null) {
+                                  try {
+                                    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                    await fetch(base + '/api/light/remove', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: light.serverId }) });
+                                  } catch {}
+                                }
                                 if (light && EnderTrack.Light?.driver?._channels) {
                                   const ci = EnderTrack.Light.driver._channels.findIndex(c => c.id === light.id);
                                   if (ci >= 0) EnderTrack.Light.driver._channels.splice(ci, 1);
@@ -544,19 +578,37 @@
                                   </div>
                                 `).join('');
                               };
-                              window._toggleLight = (idx) => {
+                              window._toggleLight = async (idx) => {
                                 const l = window._lights[idx];
                                 if (!l) return;
                                 l.on = !l.on;
-                                const intensity = l.on ? Math.max(l.r, l.g, l.b) / 255 : 0;
-                                EnderTrack.Light?.setChannel?.(l.id, intensity);
+                                const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                if (l.type === 'gpio') {
+                                  const endpoint = l.on ? '/api/light/on' : '/api/light/off';
+                                  const sid = typeof l.serverId === 'number' ? l.serverId : null;
+                                  const body = sid != null ? { id: sid } : {};
+                                  if (l.on) { body.intensity = l.intensity; body.r = l.r; body.g = l.g; body.b = l.b; }
+                                  try { await fetch(base + endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch {}
+                                } else {
+                                  const intensity = l.on ? Math.max(l.r, l.g, l.b) / 255 : 0;
+                                  EnderTrack.Light?.setChannel?.(l.id, intensity);
+                                }
                                 EnderTrack.Light?._renderNav?.();
                               };
-                              window._setLightIntensity = (idx, pct) => {
+                              window._setLightIntensity = async (idx, pct) => {
                                 const l = window._lights[idx];
                                 if (!l) return;
                                 l.intensity = parseInt(pct) / 100;
-                                if (l.on) EnderTrack.Light?.setChannel?.(l.id, l.intensity);
+                                if (!l.on) return;
+                                const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+                                if (l.type === 'gpio') {
+                                  const sid = typeof l.serverId === 'number' ? l.serverId : null;
+                                  const body = sid != null ? { id: sid } : {};
+                                  body.intensity = l.intensity;
+                                  try { await fetch(base + '/api/light/intensity', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch {}
+                                } else {
+                                  EnderTrack.Light?.setChannel?.(l.id, l.intensity);
+                                }
                               };
                             </script>
                         </div>
