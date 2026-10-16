@@ -353,8 +353,7 @@ class CameraModule {
         const res = await fetch(url + '/api/capture/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ frame: frame.frame, path: serverPath }) });
         const json = await res.json();
         if (!json.success) throw new Error(json.error || 'Save failed');
-        this._saveLiveSettingsForImage(serverPath);
-        window.EnderTrack?.ImageManager?.loadGallery?.();
+        flash();
         flash();
       } catch(e) {
         if (btn) { const orig = btn.textContent; btn.textContent = 'ERR'; btn.title = e.message; setTimeout(() => { btn.textContent = orig; btn.title = ''; }, 3000); }
@@ -409,26 +408,6 @@ class CameraModule {
     this._saveName = '';
     this._savePath = '';
     document.getElementById('save-path-menu')?.remove();
-  }
-
-  _saveLiveSettingsForImage(path) {
-    const renderer = window.EnderTrack?.LiveRenderer;
-    const imgMgr = window.EnderTrack?.ImageManager;
-    if (!renderer || !imgMgr) return;
-    const relativePath = path.replace('./', '');
-    imgMgr._imageSettings[relativePath] = {
-      min: renderer.min || 0,
-      max: renderer.max || 255,
-      lutId: this._liveLutId || 'gray',
-      rgbMode: !renderer.enabled,
-      histMode: 'manual'
-    };
-    // Persist to server
-    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    fetch(base + '/api/gallery/settings', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(imgMgr._imageSettings)
-    }).catch(() => {});
   }
 
   toggleRecord() {
@@ -548,15 +527,13 @@ class CameraModule {
     tileImg.src = 'data:image/jpeg;base64,' + frameData.frame;
     const tile = { img: tileImg, x, y, w_px, h_px, widthMm, heightMm, timestamp: Date.now(), visible: true };
 
-    // Save to server gallery
+    // Save to server
     const path = './captures/mosaic_X' + x.toFixed(2) + '_Y' + y.toFixed(2) + '.png';
     const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
     fetch(base + '/api/capture/save', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ frame: frameData.frame, path })
     }).catch(() => {});
-    // Copy live contrast/LUT settings to gallery for this image
-    this._saveLiveSettingsForImage(path);
   }
 
   _saveTiles() {
@@ -686,23 +663,6 @@ class CameraModule {
   _selectTile(idx) {
     const tile = this.tiles[idx];
     if (!tile?.img?.complete) return;
-    // Display tile in gallery viewport
-    const display = window.EnderTrack?.Display;
-    const renderer = window.EnderTrack?.GalleryRenderer;
-    if (renderer && display) {
-      // Draw tile into gallery canvas
-      const canvas = document.getElementById('galleryDisplayCanvas');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        canvas.width = tile.img.naturalWidth;
-        canvas.height = tile.img.naturalHeight;
-        ctx.drawImage(tile.img, 0, 0);
-      } else {
-        // Fallback: set renderer source directly
-        renderer._drawDirect?.(tile.img);
-      }
-    }
-    // Also center stage canvas on tile position
     window.EnderTrack?.Coordinates?.centerOn?.(tile.x, tile.y);
     window.EnderTrack?.Canvas?.requestRender?.();
   }
@@ -839,13 +799,8 @@ class CameraModule {
     const vp = display.viewports[targetVp];
     if (!vp) return;
 
-    // Save current renderer state before switching
-    if (liveRenderer) {
-      if (vp.source?.startsWith('camera')) {
-        this._liveSettings = { min: liveRenderer.min, max: liveRenderer.max, lutId: this._liveLutId || 'gray' };
-      } else if (vp.source === 'gallery') {
-        window.EnderTrack?.ImageManager?._saveCurrentSettings?.();
-      }
+    if (liveRenderer && vp.source?.startsWith('camera')) {
+      this._liveSettings = { min: liveRenderer.min, max: liveRenderer.max, lutId: this._liveLutId || 'gray' };
     }
 
     if (tabId === 'navigation') {
@@ -869,28 +824,6 @@ class CameraModule {
           this.histogram._redraw();
         }
       }
-    } else if (tabId === 'image') {
-      this.showHistogram(false);
-      // Restore gallery image settings into renderer before showing
-      const imgMgr = window.EnderTrack?.ImageManager;
-      const renderer = window.EnderTrack?.GalleryRenderer;
-      if (imgMgr && renderer) {
-        const img = imgMgr.getSelectedImage();
-        const s = img ? imgMgr._imageSettings[img.path] : null;
-        if (s) {
-          renderer.min = s.min;
-          renderer.max = s.max;
-          renderer.lutId = s.lutId;
-          renderer.rgbMode = s.rgbMode;
-          const def = window.CameraLUTs?.[s.lutId];
-          renderer._lutTable = def ? def.generate() : null;
-        } else {
-          renderer.min = 0; renderer.max = 255;
-          renderer.lutId = 'gray'; renderer.rgbMode = false;
-          renderer._lutTable = null;
-        }
-      }
-      if (vp.source !== 'gallery') display.assignSource(targetVp, 'gallery');
     } else {
       this.showHistogram(false);
       if (!multiVp && vp.source !== 'stage') display.assignSource(0, 'stage');
