@@ -244,6 +244,12 @@
                                 </label>
                                 <button onclick="EnderTrack.Camera.clearTiles()" style="padding:3px 8px; border:none; border-radius:var(--radius-small); cursor:pointer; font-size:10px; background:var(--app-bg); color:#ef4444;">Reset</button>
                             </div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; flex:1; font-size:11px; color:var(--text-general);">
+                                    <input type="checkbox" id="tilesSaveChk" onchange="window._setTilesSave(this.checked)" style="width:13px;height:13px;accent-color:var(--active-element);cursor:pointer;">
+                                    Save tiles to RPi
+                                </label>
+                            </div>
                             <script>
                               window._tilesEnabled = localStorage.getItem('endertrack_tiles') === 'true';
                               window._setTilesEnabled = (v) => {
@@ -252,9 +258,20 @@
                                 document.getElementById('tilesEnabledChk').checked = v;
                                 if (EnderTrack.Camera) EnderTrack.Camera.navigatorMode = v;
                               };
+                              window._setTilesSave = (v) => {
+                                localStorage.setItem('endertrack_tiles_save', v);
+                                if (EnderTrack.Camera) EnderTrack.Camera.saveTilesToDisk = v;
+                              };
                               document.addEventListener('DOMContentLoaded', () => {
                                 const chk = document.getElementById('tilesEnabledChk');
                                 if (chk) chk.checked = window._tilesEnabled;
+                                const chk2 = document.getElementById('tilesSaveChk');
+                                if (chk2) chk2.checked = localStorage.getItem('endertrack_tiles_save') === 'true';
+                                // Sync navigatorMode with persisted value
+                                if (EnderTrack.Camera) {
+                                  EnderTrack.Camera.navigatorMode = window._tilesEnabled;
+                                  if (window._tilesEnabled) EnderTrack.Camera._hookMosaic?.();
+                                }
                               });
                             </script>
                             <div id="cameraList"></div>
