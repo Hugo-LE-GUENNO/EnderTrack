@@ -8,10 +8,8 @@ class EnderpicamFastExplore {
     this.startPos = null;
     this.endPos = null;
     this.overlap = 0.1;
-    this.sweep = 'random';
-    this.afEnabled = false;
-    this.captureEnabled = true;
-    this.listOnly = false;
+    this.sweep = 'snake';
+    this.captureEnabled = false;
     this.positions = [];
     this._renderBound = this._renderOverlay.bind(this);
   }
@@ -236,63 +234,50 @@ class EnderpicamFastExplore {
     dialog.className = 'enderscope-modal-backdrop';
     dialog.onclick = (e) => { if (e.target === dialog) { dialog.remove(); this.deactivate(); } };
     dialog.innerHTML = `
-      <div class="enderscope-modal" style="max-width:320px;">
+      <div class="enderscope-modal" style="max-width:280px;">
         <div class="enderscope-modal-header">
-          <h3>🔲 Fast Exploration</h3>
+          <h3>Fast Exploration</h3>
           <button onclick="document.getElementById('enderpicam-explore-dialog').remove(); EnderTrack.Camera.fastExplore.deactivate()">✕</button>
         </div>
         <div class="enderscope-modal-body" style="font-size:11px;">
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <div style="color:var(--text-general);">
-              FOV X: ${fov.x.toFixed(3)} mm · Y: ${fov.y.toFixed(3)} mm
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <label style="width:60px; color:var(--text-general);">Pattern</label>
+              <select id="explore-sweep" onchange="EnderTrack.Camera.fastExplore._onSweepChange(this.value)"
+                style="flex:1; padding:3px 6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
+                <option value="snake" ${this.sweep === 'snake' ? 'selected' : ''}>Snake (row by row)</option>
+                <option value="normal" ${this.sweep === 'normal' ? 'selected' : ''}>Row by row</option>
+                <option value="snake-reverse" ${this.sweep === 'snake-reverse' ? 'selected' : ''}>Snake reverse</option>
+                <option value="spiral-in" ${this.sweep === 'spiral-in' ? 'selected' : ''}>Spiral in</option>
+                <option value="spiral-out" ${this.sweep === 'spiral-out' ? 'selected' : ''}>Spiral out</option>
+                <option value="random" ${this.sweep === 'random' ? 'selected' : ''}>Random</option>
+              </select>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
-              <label style="width:60px;">Overlap</label>
+              <label style="width:60px; color:var(--text-general);">Overlap</label>
               <input type="range" id="explore-overlap" min="0" max="50" value="${this.overlap * 100}" step="1"
                 oninput="EnderTrack.Camera.fastExplore._onOverlapChange(this.value)"
                 style="flex:1; height:4px; -webkit-appearance:none; background:#404040; border-radius:2px;">
               <span id="explore-overlap-val" style="font-family:var(--font-mono); font-size:10px; color:var(--coordinates-color); width:28px; text-align:right;">${Math.round(this.overlap * 100)}%</span>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
-              <label style="width:60px;">Pattern</label>
-              <select id="explore-sweep" onchange="EnderTrack.Camera.fastExplore._onSweepChange(this.value)"
-                style="flex:1; padding:3px 6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px;">
-                <option value="random" ${this.sweep === 'random' ? 'selected' : ''}>Random</option>
-                <option value="snake" ${this.sweep === 'snake' ? 'selected' : ''}>Snake</option>
-                <option value="normal" ${this.sweep === 'normal' ? 'selected' : ''}>Row by row</option>
-                <option value="reverse" ${this.sweep === 'reverse' ? 'selected' : ''}>Reverse</option>
-                <option value="snake-reverse" ${this.sweep === 'snake-reverse' ? 'selected' : ''}>Snake reverse</option>
-                <option value="spiral-out" ${this.sweep === 'spiral-out' ? 'selected' : ''}>Spiral out</option>
-                <option value="spiral-in" ${this.sweep === 'spiral-in' ? 'selected' : ''}>Spiral in</option>
-              </select>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <label style="width:60px;">Autofocus</label>
-              <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:4px;">
-                <input type="checkbox" id="explore-af" ${this.afEnabled ? 'checked' : ''}
-                  onchange="EnderTrack.Camera.fastExplore.afEnabled = this.checked">
-                <span style="color:var(--text-general);">AF at each position</span>
-              </label>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <label style="width:60px;">Capture</label>
-              <label style="font-size:10px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+              <label style="width:60px; color:var(--text-general);">Capture</label>
+              <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:11px;">
                 <input type="checkbox" id="explore-capture" ${this.captureEnabled ? 'checked' : ''}
-                  onchange="EnderTrack.Camera.fastExplore.captureEnabled = this.checked">
+                  onchange="EnderTrack.Camera.fastExplore.captureEnabled = this.checked"
+                  style="width:13px; height:13px; accent-color:var(--active-element); cursor:pointer;">
                 <span style="color:var(--text-general);">Capture at each position</span>
               </label>
             </div>
-            <div id="explore-info" style="color:var(--text-general);">
-              Step: ${step.x.toFixed(3)} × ${step.y.toFixed(3)} mm
-            </div>
-            <div id="explore-count" style="color:var(--coordinates-color); font-weight:500;">
-              ${n} positions (${cols} × ${rows}) · ~${estSec}s
+            <div id="explore-count" style="color:var(--coordinates-color); font-size:10px; font-family:var(--font-mono);">
+              ${n} positions (${cols} × ${rows})
             </div>
           </div>
         </div>
         <div class="enderscope-modal-footer">
           <button class="enderscope-btn-secondary" onclick="document.getElementById('enderpicam-explore-dialog').remove(); EnderTrack.Camera.fastExplore.deactivate()">Cancel</button>
-          <button class="enderscope-btn-primary" onclick="EnderTrack.Camera.fastExplore.startExploration()" ${tooMany ? 'disabled style="opacity:0.4"' : ''}>▶ Explorer</button>
+          <button class="enderscope-btn-secondary" onclick="EnderTrack.Camera.fastExplore.startExploration(true)" ${tooMany ? 'disabled style="opacity:0.4"' : ''}>Waypoints</button>
+          <button class="enderscope-btn-primary" onclick="EnderTrack.Camera.fastExplore.startExploration(false)" ${tooMany ? 'disabled style="opacity:0.4"' : ''}>Explore</button>
         </div>
       </div>
     `;
@@ -333,18 +318,16 @@ class EnderpicamFastExplore {
     if (count) count.textContent = `${n} positions (${cols} × ${rows})`;
   }
 
-  startExploration() {
+  startExploration(listOnly = false) {
     document.getElementById('enderpicam-explore-dialog')?.remove();
     if (this.positions.length === 0) return;
     document.body.style.cursor = 'wait';
-    const listOnly = this._listOnlyMode;
-    this._listOnlyMode = false;
 
     const lists = window.EnderTrack?.Lists;
     if (!lists) { console.warn('Lists module not available'); return; }
 
     EnderpicamFastExplore._exploreCount = (EnderpicamFastExplore._exploreCount || 0) + 1;
-    const exploreName = `🗺 Exploration ${EnderpicamFastExplore._exploreCount}`;
+    const exploreName = `Exploration ${EnderpicamFastExplore._exploreCount}`;
     lists.addGroup(exploreName);
     const z = window.EnderTrack?.State?.get?.()?.pos?.z || 0;
     for (const pos of this.positions) {
@@ -356,7 +339,7 @@ class EnderpicamFastExplore {
       document.body.style.cursor = '';
       this.deactivate();
       window.switchTab?.('lists');
-      window.EnderTrack?.UI?.showNotification?.(`🗺 ${this.positions.length} positions generated`, 'success');
+      window.EnderTrack?.UI?.showNotification?.(`${this.positions.length} positions generated`, 'success');
       return;
     }
 
@@ -371,8 +354,7 @@ class EnderpicamFastExplore {
     const listId = String(activeList.id);
     const expUs = EnderTrack.Camera?.picamConfig?.exposure || 100000;
     const expDelay = Math.ceil(expUs / 1000) * 2;
-    const afDelay = this.afEnabled ? 20000 : 0;
-    const waitSec = parseFloat(((Math.max(2000, expDelay + 2000 + afDelay)) / 1000).toFixed(1));
+    const waitSec = parseFloat(((Math.max(2000, expDelay + 2000)) / 1000).toFixed(1));
 
     const loopChildren = [
       { type: 'action', actionId: 'move', params: { moveType: 'list', listId, listIndex: '$i' } },
