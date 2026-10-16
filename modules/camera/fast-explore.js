@@ -357,13 +357,15 @@ class EnderpicamFastExplore {
     const expDelay = Math.ceil(expUs / 1000) * 2;
     const waitSec = parseFloat(((Math.max(2000, expDelay + 2000)) / 1000).toFixed(1));
 
+    const prevSaveToDisk = EnderTrack.Camera.saveTilesToDisk;
+    const prevTilesEnabled = window._tilesEnabled;
+    if (this.captureEnabled) EnderTrack.Camera.saveTilesToDisk = true;
+
     const loopChildren = [
       { type: 'action', actionId: 'move', params: { moveType: 'list', listId, listIndex: '$i' } },
       { type: 'action', actionId: 'wait', params: { duration: waitSec } },
     ];
-    const prevSaveToDisk = EnderTrack.Camera.saveTilesToDisk;
-    const prevTilesEnabled = window._tilesEnabled;
-    if (this.captureEnabled) EnderTrack.Camera.saveTilesToDisk = true;
+    if (this.captureEnabled) loopChildren.push({ type: 'action', actionId: 'capture', params: {} });
 
     const newScenario = scenarioModule.manager.createScenario(exploreName);
     newScenario.tree = {
