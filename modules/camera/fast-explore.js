@@ -9,7 +9,7 @@ class EnderpicamFastExplore {
     this.endPos = null;
     this.overlap = 0.1;
     this.sweep = 'snake';
-    this.captureEnabled = EnderTrack.Camera?.saveTilesToDisk || false;
+    this.captureEnabled = false;
     this.positions = [];
     this._renderBound = this._renderOverlay.bind(this);
   }
@@ -264,7 +264,7 @@ class EnderpicamFastExplore {
               <label style="width:60px; color:var(--text-general);">Capture</label>
               <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:11px;">
                 <input type="checkbox" id="explore-capture" ${this.captureEnabled ? 'checked' : ''}
-                  onchange="EnderTrack.Camera.fastExplore.captureEnabled = this.checked; EnderTrack.Camera.saveTilesToDisk = this.checked"
+                  onchange="EnderTrack.Camera.fastExplore.captureEnabled = this.checked"
                   style="width:13px; height:13px; accent-color:var(--active-element); cursor:pointer;">
                 <span style="color:var(--text-general);">Save tiles to RPi</span>
               </label>
@@ -360,6 +360,7 @@ class EnderpicamFastExplore {
       { type: 'action', actionId: 'move', params: { moveType: 'list', listId, listIndex: '$i' } },
       { type: 'action', actionId: 'wait', params: { duration: waitSec } },
     ];
+    const prevSaveToDisk = EnderTrack.Camera.saveTilesToDisk;
     if (this.captureEnabled) EnderTrack.Camera.saveTilesToDisk = true;
 
     const newScenario = scenarioModule.manager.createScenario(exploreName);
@@ -377,7 +378,9 @@ class EnderpicamFastExplore {
 
     document.body.style.cursor = '';
     this.deactivate();
-    scenarioModule.executeScenario();
+    scenarioModule.executeScenario().finally?.(() => {
+      EnderTrack.Camera.saveTilesToDisk = prevSaveToDisk;
+    });
   }
 
   // Draw selection rectangle + grid preview on canvas
