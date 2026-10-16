@@ -476,7 +476,6 @@ class CameraModule {
       if (window.EnderTrack?.Scenario?.isActive) return;
       if (success === false) return;
       clearTimeout(this._navDebounce);
-      // Calcul du délai : distance parcourue / vitesse + exposition
       const state = window.EnderTrack?.State?.get?.();
       const pos = state?.pos || { x: 0, y: 0, z: 0 };
       const prev = this._lastNavPos || pos;
@@ -487,6 +486,12 @@ class CameraModule {
       const waitMs = Math.max(300, moveMs + expMs + 300);
       this._lastNavPos = { ...pos };
       this._navDebounce = setTimeout(() => this._grabNavigatorTile(), waitMs);
+    });
+    // Grab tile pendant un scénario
+    window.EnderTrack?.Events?.on?.('scenario:position_reached', () => {
+      if (!this.navigatorMode || !this.live || !window._tilesEnabled) return;
+      const expMs = (this.picamConfig.exposure || 100000) / 1000;
+      setTimeout(() => this._grabNavigatorTile(), Math.max(500, expMs * 2));
     });
   }
 
