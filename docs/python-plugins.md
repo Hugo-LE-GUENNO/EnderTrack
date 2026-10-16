@@ -4,7 +4,7 @@ Create a Python plugin in 5 minutes — no framework, no boilerplate.
 
 ## Requirements (Raspberry Pi)
 
-Some plugin features require system-level libraries and **must be run with `sudo`**:
+Some features require system-level libraries and **must be run with `sudo`**:
 
 | Feature | Dependency | Install |
 |---|---|---|
@@ -23,8 +23,7 @@ sudo python3 endertrack-server.py
 ```
 plugins/
 └── my-plugin/
-    └── my-plugin.py       # required
-    └── sound.js           # optional — extra JS loaded in browser
+    └── my-plugin.py
 ```
 
 ## Minimal plugin
@@ -37,7 +36,7 @@ DESCRIPTION = "Does something cool"
 SECTIONS = {
     "navigation": {
         "inputs": [
-            {"type": "button", "label": "▶ Run", "action": "run", "style": "primary"},
+            {"type": "button", "label": "Run", "action": "run", "style": "primary"},
         ],
         "outputs": [
             {"type": "text", "id": "status", "label": "Status"},
@@ -46,11 +45,11 @@ SECTIONS = {
 }
 
 def run(ctx, params):
-    ctx.update_output('status', '✓ Done')
+    ctx.update_output('status', 'Done')
     return {'success': True}
 ```
 
-Activate it in **Settings → Plugins**, it appears in the Navigation panel.
+Activate it in **Settings -> Plugins**, it appears in the Navigation panel.
 
 ---
 
@@ -58,12 +57,12 @@ Activate it in **Settings → Plugins**, it appears in the Navigation panel.
 
 A plugin can inject UI into 4 sections:
 
-| Key          | Location                        |
-|--------------|---------------------------------|
-| `navigation` | Navigation panel (left)         |
-| `automation` | Automation/Scenario panel       |
-| `waypoints`  | Waypoints/Lists panel           |
-| `settings`   | Settings panel (accordion)      |
+| Key          | Location                   |
+|--------------|----------------------------|
+| `navigation` | Navigation panel (left)    |
+| `automation` | Automation/Scenario panel  |
+| `waypoints`  | Waypoints/Lists panel      |
+| `settings`   | Settings panel (accordion) |
 
 Each section has `inputs` (controls) and `outputs` (display).
 
@@ -72,7 +71,7 @@ Each section has `inputs` (controls) and `outputs` (display).
 ## Input types
 
 ```python
-{"type": "button", "label": "Run",      "action": "run",   "style": "primary"}
+{"type": "button", "label": "Run",   "action": "run",  "style": "primary"}
 {"type": "slider", "id": "speed", "label": "Speed", "min": 1, "max": 10, "default": 5, "step": 1}
 {"type": "text",   "id": "name",  "label": "Name",  "default": "img"}
 ```
@@ -90,15 +89,14 @@ def run(ctx, params):
 ## Output types
 
 ```python
-{"type": "text",  "id": "status", "label": "Status"}
-{"type": "table", "id": "results", "label": "Results",
- "columns": ["X", "Y", "Score"]}
+{"type": "text",  "id": "status",  "label": "Status"}
+{"type": "table", "id": "results", "label": "Results", "columns": ["X", "Y", "Score"]}
 ```
 
 Update from Python:
 
 ```python
-ctx.update_output('status', '✓ Done')
+ctx.update_output('status', 'Done')
 ctx.update_output('results', [[1.0, 2.0, 42.5], [3.0, 4.0, 38.1]])
 ```
 
@@ -120,8 +118,10 @@ if stage:
 ### Camera
 
 ```python
-cam = ctx.cam                     # picamera_handler module
-cam.capture('./captures/img.tiff')
+cam = ctx.cam
+if cam:
+    cam.capture('./captures/img.tiff')
+    cam.capture('./captures/img.png', fmt='png')
 ```
 
 ### Light
@@ -130,7 +130,8 @@ cam.capture('./captures/img.tiff')
 light = ctx.light
 light.on(r=255, g=200, b=0, intensity=0.8)
 light.off()
-light.status()                    # {'lights': [...], 'connected': True}
+st = light.status()               # {'lights': [...], 'connected': True}
+has_light = bool(st.get('lights'))
 ```
 
 ### Lists (waypoints)
@@ -148,24 +149,18 @@ ctx.log('Done', level='ok')
 ctx.log('Warning!', level='warn')
 ```
 
-### SSE events (browser)
-
-```python
-ctx.bus.publish('plugin:sound', {'melody': 'fanfare'})
-```
-
 ---
 
 ## Scenario action
 
-Expose your plugin as a scenario builder action:
+Expose your plugin as an action in the scenario builder.  
+`label` is the name that appears in the **Plugin** category of the palette.
 
 ```python
 SCENARIO_ACTIONS = [
     {
         'id': 'run',
-        'label': '🔬 My Action',
-        'icon': '🔬',
+        'label': 'My Action',      # name shown in scenario builder palette
         'timeout_ms': 30000,       # max execution time in ms
         'params': [
             {'id': 'speed', 'label': 'Speed', 'type': 'number', 'default': 5, 'min': 1, 'max': 10},
@@ -174,45 +169,26 @@ SCENARIO_ACTIONS = [
 ]
 ```
 
-The action appears in the scenario builder palette under **Plugin**.
+The `id` must match the function name in your plugin (`def run`, `def my_action`, etc.).
 
 ---
 
-## Extra JS (browser-side)
-
-Load a JS file alongside your plugin:
+## Full example — autofocus with stage, camera and light
 
 ```python
-EXTRA_JS = ['/plugins/my-plugin/my-plugin.js']
-```
+import time
+import numpy as np
 
-The JS file is served statically and injected into the page when the plugin activates.  
-Use it to play sounds, draw on canvas, listen to SSE events, etc.
-
-```javascript
-// plugins/my-plugin/my-plugin.js
-const es = new EventSource((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/events');
-es.onmessage = (e) => {
-  const evt = JSON.parse(e.data);
-  if (evt.type === 'plugin:sound') { /* play something */ }
-};
-```
-
----
-
-## Full example — autofocus + light
-
-```python
-import time, numpy as np
-
-NAME    = "Autofocus"
-VERSION = "1.0.0"
+NAME        = "Autofocus"
+VERSION     = "1.0.0"
+DESCRIPTION = "Linear Z scan, maximizes Laplacian sharpness"
 
 SECTIONS = {
     "navigation": {
         "inputs": [
             {"type": "slider", "id": "range", "label": "Range (mm)", "min": 0.5, "max": 5.0, "default": 2.0, "step": 0.5},
-            {"type": "button", "label": "🔍 Focus", "action": "run", "style": "primary"},
+            {"type": "slider", "id": "step",  "label": "Step (mm)",  "min": 0.05, "max": 0.5, "default": 0.1, "step": 0.05},
+            {"type": "button", "label": "Autofocus", "action": "run", "style": "primary"},
         ],
         "outputs": [
             {"type": "text", "id": "status", "label": "Status"},
@@ -220,27 +196,80 @@ SECTIONS = {
     }
 }
 
+SCENARIO_ACTIONS = [
+    {
+        'id': 'run',
+        'label': 'Autofocus',
+        'timeout_ms': 60000,
+        'params': [
+            {'id': 'range', 'label': 'Range (mm)', 'type': 'number', 'default': 2.0, 'min': 0.5, 'max': 5.0},
+            {'id': 'step',  'label': 'Step (mm)',  'type': 'number', 'default': 0.1,  'min': 0.05, 'max': 0.5},
+        ]
+    }
+]
+
+
+def _sharpness(cam):
+    picam, _ = cam._get_picam()
+    if not picam:
+        return 0.0
+    arr  = picam.capture_array("main")
+    gray = (0.299 * arr[:,:,0] + 0.587 * arr[:,:,1] + 0.114 * arr[:,:,2]).astype('float32')
+    lap  = (-4*gray[1:-1,1:-1] + gray[:-2,1:-1] + gray[2:,1:-1]
+            + gray[1:-1,:-2] + gray[1:-1,2:])
+    return float(lap.var())
+
+
 def run(ctx, params):
     stage = ctx.stage
+    cam   = ctx.cam
     light = ctx.light
-    rng   = float(params.get('range', 2.0))
 
-    light.on(r=255, g=255, b=255, intensity=1.0)
-    ctx.update_output('status', '⏳ Scanning...')
+    if not stage:
+        ctx.update_output('status', 'Stage not connected')
+        return {'success': False}
+    if not cam:
+        ctx.update_output('status', 'Camera not available')
+        return {'success': False}
 
-    z0 = stage.position['Z']
-    best_z, best_score = z0, 0.0
+    rng  = float(params.get('range', 2.0))
+    step = float(params.get('step',  0.1))
 
-    for i in range(20):
-        z = z0 - rng/2 + i * (rng/19)
-        stage.move_absolute(stage.position['X'], stage.position['Y'], z, feedrate=1000)
+    x0, y0, z0 = stage.position['X'], stage.position['Y'], stage.position['Z']
+    z_start = z0 - rng / 2
+    z_end   = z0 + rng / 2
+
+    # Light on for the scan
+    has_light = bool(light.status().get('lights'))
+    if has_light:
+        light.on(r=255, g=255, b=255, intensity=1.0)
+
+    ctx.update_output('status', 'Scanning...')
+    ctx.log(f'AF scan z=[{z_start:.2f}, {z_end:.2f}] step={step}')
+
+    stage.move_absolute(x0, y0, z_start, feedrate=1000)
+    stage.finish_moves()
+    time.sleep(0.1)
+
+    best_z, best_score = z_start, 0.0
+    z = z_start
+    while z <= z_end + 1e-6:
+        score = _sharpness(cam)
+        if score > best_score:
+            best_score, best_z = score, z
+        z = round(z + step, 4)
+        stage.move_absolute(x0, y0, z, feedrate=1000)
         stage.finish_moves()
         time.sleep(0.05)
-        # score = your sharpness metric here
 
-    stage.move_absolute(stage.position['X'], stage.position['Y'], best_z, feedrate=1000)
-    light.off()
-    ctx.update_output('status', f'✓ z={best_z:.3f}mm')
+    stage.move_absolute(x0, y0, best_z, feedrate=1000)
+    stage.finish_moves()
+
+    if has_light:
+        light.off()
+
+    ctx.log(f'AF done -> z={best_z:.3f} score={best_score:.1f}', level='ok')
+    ctx.update_output('status', f'z={best_z:.3f} mm')
     return {'success': True, 'best_z': best_z}
 ```
 
@@ -248,7 +277,7 @@ def run(ctx, params):
 
 ## Tips
 
-- Keep `run()` blocking — the scenario builder waits for it to return
+- `run()` is blocking — the scenario builder waits for it to return
 - Use `threading.Event` for a stop button pattern (see `disco` plugin)
 - `ctx.light`, `ctx.stage`, `ctx.cam` return `None` if not available — always check
 - Plugin files are hot-reloaded on each activation — no server restart needed
