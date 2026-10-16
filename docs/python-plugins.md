@@ -91,10 +91,16 @@ ctx.update_output('results', [[1.0, 2.0, 42.5], [3.0, 4.0, 38.1]])
 ```python
 stage = ctx.stage
 if stage:
-    pos = stage.position          # {'X': 10.0, 'Y': 20.0, 'Z': 5.0}
+    stage.position                             # {'X': 10.0, 'Y': 20.0, 'Z': 5.0}
+    stage.limits                               # {'x': (0, 220), 'y': (0, 220), 'z': (0, 250)} or None
+    stage.firmware_name                        # 'Marlin' or None
+
     stage.move_absolute(x, y, z, feedrate=3000)
-    stage.move_relative(dx=1.0, feedrate=1000)
-    stage.finish_moves()          # wait for move to complete
+    stage.move_relative(dx=0, dy=0, dz=1.0, feedrate=1000)
+    stage.finish_moves()                       # blocking wait (M400)
+    stage.home()                               # G28 + reads real position
+    stage.get_position()                       # query M114, returns (x, y, z)
+    stage.send_gcode('M300', wait_ok=True)     # raw G-code access
 ```
 
 ### Camera
@@ -122,6 +128,19 @@ has_light = bool(st.get('lights'))
 ctx.lists.add(x=10, y=20, z=5, name='Point A')
 ctx.lists.clear()
 ```
+
+### Config
+
+```python
+cfg = ctx.config
+cfg['position']            # {'x': 10.0, 'y': 20.0, 'z': 5.0}  (last saved state)
+cfg['coordinateBounds']    # {'x': {'min': 0, 'max': 220}, 'y': ..., 'z': ...}
+cfg['plateauDimensions']   # {'x': 220, 'y': 220, 'z': 250}
+cfg['feedrate']            # current XY feedrate (mm/min)
+cfg['zSpeed']              # current Z speed (mm/s)
+```
+
+For live position prefer `stage.position` — `ctx.config['position']` is the last saved state.
 
 ### Logging
 
@@ -283,14 +302,19 @@ def run(ctx, params):
 
 ## Context API (ctx)
 ### Stage
-stage = ctx.stage          # None if not connected
-stage.position             # {'X': float, 'Y': float, 'Z': float}
+stage = ctx.stage              # None if not connected
+stage.position                 # {'X': float, 'Y': float, 'Z': float}
+stage.limits                   # {'x': (min, max), 'y': ..., 'z': ...} or None
+stage.firmware_name            # 'Marlin' or None
 stage.move_absolute(x, y, z, feedrate=3000)
 stage.move_relative(dx=0, dy=0, dz=0, feedrate=1000)
-stage.finish_moves()       # blocking wait
+stage.finish_moves()           # blocking wait (M400)
+stage.home()                   # G28 + reads real position
+stage.get_position()           # query M114, returns (x, y, z)
+stage.send_gcode('M300', wait_ok=True)  # raw G-code access
 
 ### Camera
-cam = ctx.cam              # None if not available
+cam = ctx.cam                  # None if not available
 cam.capture('./captures/img.tiff')
 cam.capture('./captures/img.png', fmt='png')
 
@@ -298,11 +322,19 @@ cam.capture('./captures/img.png', fmt='png')
 light = ctx.light
 light.on(r=255, g=255, b=255, intensity=1.0)
 light.off()
-light.status()             # {'lights': [...], 'connected': bool}
+light.status()                 # {'lights': [...], 'connected': bool}
 
 ### Lists (waypoints)
 ctx.lists.add(x, y, z, name='Point A')
 ctx.lists.clear()
+
+### Config
+cfg = ctx.config
+cfg['position']                # {'x': float, 'y': float, 'z': float} (last saved state)
+cfg['coordinateBounds']        # {'x': {'min': 0, 'max': 220}, 'y': ..., 'z': ...}
+cfg['plateauDimensions']       # {'x': 220, 'y': 220, 'z': 250}
+cfg['feedrate']                # XY feedrate (mm/min)
+cfg['zSpeed']                  # Z speed (mm/s)
 
 ### Logging
 ctx.log('message')
