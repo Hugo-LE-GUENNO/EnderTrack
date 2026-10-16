@@ -13,11 +13,8 @@ Some plugin features require system-level libraries and **must be run with `sudo
 | Save to custom folder | — | run server with `sudo` |
 
 ```bash
-# Always use sudo on RPi if using camera, GPIO LEDs or custom save paths
 sudo python3 endertrack-server.py
 ```
-
-On a standard PC (simulation mode), `sudo` is not needed.
 
 ---
 
