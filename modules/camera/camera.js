@@ -265,27 +265,51 @@ class CameraModule {
             ${(!window.EnderTrack?.Scenario?._running || window._tilesEnabled) ? `<button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" ${dis} onclick="EnderTrack.Camera.toggleFastExplore()">Explore</button>` : ''}
           </div>
           ${isPicam ? `
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <div style="display:flex; align-items:center; gap:4px;">
-              <span style="font-size:9px; color:var(--text-general); width:32px;">Expo</span>
-              <input type="range" min="1000" max="1000000" value="${exp}" step="1000" ${dis}
-                oninput="document.getElementById('nav-exp-val-${i}').textContent=Math.round(this.value/1000)+'ms'"
-                onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)}).then(()=>EnderTrack.Camera._renderNav())"
-                style="flex:1; height:3px;">
-              <span id="nav-exp-val-${i}" style="font-size:9px; color:var(--coordinates-color); width:36px; text-align:right;">${Math.round(exp/1000)}ms</span>
+          <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
+            <div class="axis-control">
+              <label class="axis-label">Expo</label>
+              <input type="range" class="et-slider" id="nav-exp-${i}" min="1000" max="1000000" value="${exp}" step="1000" ${dis}
+                oninput="document.getElementById('nav-exp-val-${i}').value=Math.round(this.value/1000)"
+                onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)})">
+              <input type="number" id="nav-exp-val-${i}" value="${Math.round(exp/1000)}" min="1" max="1000" step="1" ${dis}
+                style="-moz-appearance:textfield;"
+                onchange="const v=Math.max(1,Math.min(1000,parseInt(this.value)||1));this.value=v;document.getElementById('nav-exp-${i}').value=v*1000;EnderTrack.Camera.setPicamConfig({exposure:v*1000})">
             </div>
-            <div style="display:flex; align-items:center; gap:4px;">
-              <span style="font-size:9px; color:var(--text-general); width:32px;">Gain</span>
-              <input type="range" min="1" max="16" value="${gain}" step="0.5" ${dis}
-                oninput="document.getElementById('nav-gain-val-${i}').textContent=parseFloat(this.value).toFixed(1)"
-                onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)}).then(()=>EnderTrack.Camera._renderNav())"
-                style="flex:1; height:3px;">
-              <span id="nav-gain-val-${i}" style="font-size:9px; color:var(--coordinates-color); width:24px; text-align:right;">${gain.toFixed(1)}</span>
+            <div class="axis-control">
+              <label class="axis-label">Gain</label>
+              <input type="range" class="et-slider" id="nav-gain-${i}" min="1" max="16" value="${gain}" step="0.5" ${dis}
+                oninput="document.getElementById('nav-gain-val-${i}').value=parseFloat(this.value).toFixed(1)"
+                onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)})">
+              <input type="number" id="nav-gain-val-${i}" value="${gain.toFixed(1)}" min="1" max="16" step="0.5" ${dis}
+                style="-moz-appearance:textfield;"
+                onchange="const v=Math.max(1,Math.min(16,parseFloat(this.value)||1));this.value=v.toFixed(1);document.getElementById('nav-gain-${i}').value=v;EnderTrack.Camera.setPicamConfig({gain:v})">
             </div>
           </div>` : ''}
         </div>`;
       }).join('')}
     `;
+    // Wheel on expo/gain sliders
+    (window._cameras || []).forEach((cam, i) => {
+      if (cam.type !== 'picamera2') return;
+      const expSlider = document.getElementById('nav-exp-' + i);
+      const expInput  = document.getElementById('nav-exp-val-' + i);
+      const gainSlider = document.getElementById('nav-gain-' + i);
+      const gainInput  = document.getElementById('nav-gain-val-' + i);
+      if (expSlider) expSlider.parentElement.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const step = e.shiftKey ? 100 : 10;
+        const v = Math.max(1, Math.min(1000, parseInt(expInput.value) + (e.deltaY < 0 ? step : -step)));
+        expInput.value = v; expSlider.value = v * 1000;
+        EnderTrack.Camera.setPicamConfig({ exposure: v * 1000 });
+      }, { passive: false });
+      if (gainSlider) gainSlider.parentElement.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const step = e.shiftKey ? 1 : 0.5;
+        const v = Math.max(1, Math.min(16, Math.round((parseFloat(gainInput.value) + (e.deltaY < 0 ? step : -step)) * 10) / 10));
+        gainInput.value = v.toFixed(1); gainSlider.value = v;
+        EnderTrack.Camera.setPicamConfig({ gain: v });
+      }, { passive: false });
+    });
   }
 
   _afContextMenu(e) {
