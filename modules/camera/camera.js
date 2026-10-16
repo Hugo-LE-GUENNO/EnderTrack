@@ -473,7 +473,6 @@ class CameraModule {
     // Grab tile après mouvement — navigation manuelle uniquement (pas pendant un scenario)
     window.EnderTrack?.Events?.on?.('movement:completed', ({ position, success } = {}) => {
       if (!this.navigatorMode || !this.live || !window._tilesEnabled) return;
-      if (window.EnderTrack?.Scenario?.isActive) return;
       if (success === false) return;
       clearTimeout(this._navDebounce);
       const state = window.EnderTrack?.State?.get?.();
@@ -486,12 +485,6 @@ class CameraModule {
       const waitMs = Math.max(300, moveMs + expMs + 300);
       this._lastNavPos = { ...pos };
       this._navDebounce = setTimeout(() => this._grabNavigatorTile(), waitMs);
-    });
-    // Grab tile pendant un scénario
-    window.EnderTrack?.Events?.on?.('scenario:position_reached', () => {
-      if (!this.navigatorMode || !this.live || !window._tilesEnabled) return;
-      const expMs = (this.picamConfig.exposure || 100000) / 1000;
-      setTimeout(() => this._grabNavigatorTile(), Math.max(500, expMs * 2));
     });
   }
 
