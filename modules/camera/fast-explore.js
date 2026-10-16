@@ -9,7 +9,7 @@ class EnderpicamFastExplore {
     this.endPos = null;
     this.overlap = 0.1;
     this.sweep = 'snake';
-    this.captureEnabled = false;
+    this.captureEnabled = EnderTrack.Camera?.saveTilesToDisk || false;
     this.positions = [];
     this._renderBound = this._renderOverlay.bind(this);
   }
@@ -264,9 +264,9 @@ class EnderpicamFastExplore {
               <label style="width:60px; color:var(--text-general);">Capture</label>
               <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:11px;">
                 <input type="checkbox" id="explore-capture" ${this.captureEnabled ? 'checked' : ''}
-                  onchange="EnderTrack.Camera.fastExplore.captureEnabled = this.checked"
+                  onchange="EnderTrack.Camera.fastExplore.captureEnabled = this.checked; EnderTrack.Camera.saveTilesToDisk = this.checked"
                   style="width:13px; height:13px; accent-color:var(--active-element); cursor:pointer;">
-                <span style="color:var(--text-general);">Capture at each position</span>
+                <span style="color:var(--text-general);">Save tiles to RPi</span>
               </label>
             </div>
             <div id="explore-count" style="color:var(--coordinates-color); font-size:10px; font-family:var(--font-mono);">
@@ -360,7 +360,7 @@ class EnderpicamFastExplore {
       { type: 'action', actionId: 'move', params: { moveType: 'list', listId, listIndex: '$i' } },
       { type: 'action', actionId: 'wait', params: { duration: waitSec } },
     ];
-    if (this.captureEnabled) loopChildren.push({ type: 'action', actionId: 'capture', params: {} });
+    if (this.captureEnabled) EnderTrack.Camera.saveTilesToDisk = true;
 
     const newScenario = scenarioModule.manager.createScenario(exploreName);
     newScenario.tree = {

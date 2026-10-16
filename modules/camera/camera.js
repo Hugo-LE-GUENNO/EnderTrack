@@ -262,7 +262,7 @@ class CameraModule {
           <div style="font-size:9px; color:#666; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.5px;">${cam.label}</div>
           <div style="display:flex; gap:4px; margin-bottom:${isPicam || cam.type==='webcam' ? '6' : '0'}px;">
             <button class="cam-btn" ${dis} onclick="EnderTrack.Camera.saveLive()" oncontextmenu="event.preventDefault(); EnderTrack.Camera._savePathMenu(event)">Capture</button>
-            ${!window.EnderTrack?.Scenario?._running ? `<button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" ${dis} onclick="EnderTrack.Camera.toggleFastExplore()">Explore</button>` : ''}
+            ${(!window.EnderTrack?.Scenario?._running || window._tilesEnabled) ? `<button class="cam-btn ${this.fastExplore?.active ? 'active' : ''}" ${dis} onclick="EnderTrack.Camera.toggleFastExplore()">Explore</button>` : ''}
           </div>
           ${isPicam ? `
           <div style="display:flex; flex-direction:column; gap:6px;">
