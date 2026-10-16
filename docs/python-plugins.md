@@ -1,23 +1,5 @@
 # Python Plugin Tutorial
 
-Create a Python plugin in 5 minutes — no framework, no boilerplate.
-
-## Requirements (Raspberry Pi)
-
-Some features require system-level libraries and **must be run with `sudo`**:
-
-| Feature | Dependency | Install |
-|---|---|---|
-| PiCamera capture | `picamera2` | `sudo apt install python3-picamera2` |
-| NeoPixel GPIO LEDs | `rpi_ws281x` + `neopixel` | `sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel` |
-| Save to custom folder | — | run server with `sudo` |
-
-```bash
-sudo python3 endertrack-server.py
-```
-
----
-
 ## Structure
 
 ```
@@ -55,16 +37,16 @@ Activate it in **Settings -> Plugins**, it appears in the Navigation panel.
 
 ## Sections
 
-A plugin can inject UI into 4 sections:
+A plugin can inject UI into 4 panels:
 
 | Key          | Location                   |
 |--------------|----------------------------|
-| `navigation` | Navigation panel (left)    |
+| `settings`   | Settings panel (accordion) |
+| `navigation` | Navigation panel           |
 | `automation` | Automation/Scenario panel  |
 | `waypoints`  | Waypoints/Lists panel      |
-| `settings`   | Settings panel (accordion) |
 
-Each section has `inputs` (controls) and `outputs` (display).
+Each section accepts `inputs` (controls) and `outputs` (display).
 
 ---
 
@@ -239,7 +221,6 @@ def run(ctx, params):
     z_start = z0 - rng / 2
     z_end   = z0 + rng / 2
 
-    # Light on for the scan
     has_light = bool(light.status().get('lights'))
     if has_light:
         light.on(r=255, g=255, b=255, intensity=1.0)
@@ -281,3 +262,93 @@ def run(ctx, params):
 - Use `threading.Event` for a stop button pattern (see `disco` plugin)
 - `ctx.light`, `ctx.stage`, `ctx.cam` return `None` if not available — always check
 - Plugin files are hot-reloaded on each activation — no server restart needed
+
+---
+
+## AI prompt — generate a plugin
+
+Copy-paste this prompt to any AI to generate a valid EnderTrack Python plugin:
+
+```
+You are writing a Python plugin for EnderTrack, a 3D stage controller with image acquisition.
+
+## File location
+plugins/<plugin-name>/<plugin-name>.py
+
+## Required top-level variables
+NAME        = "..."   # display name
+VERSION     = "1.0.0"
+DESCRIPTION = "..."
+
+## SECTIONS — inject UI into panels
+SECTIONS = {
+    "<section>": {          # one of: settings | navigation | automation | waypoints
+        "inputs":  [...],   # controls (see types below)
+        "outputs": [...]    # display elements (see types below)
+    }
+}
+
+## Input types
+{"type": "button", "label": "Run",   "action": "run",  "style": "primary"}
+{"type": "slider", "id": "speed", "label": "Speed", "min": 1, "max": 10, "default": 5, "step": 1}
+{"type": "text",   "id": "name",  "label": "Name",  "default": "img"}
+
+## Output types
+{"type": "text",  "id": "status",  "label": "Status"}
+{"type": "table", "id": "results", "label": "Results", "columns": ["X", "Y", "Score"]}
+
+## Functions
+Each button "action" maps to a top-level function:
+def run(ctx, params):
+    # params = dict of slider/text values by id
+    ctx.update_output('status', 'Done')
+    return {'success': True}
+
+## Context API (ctx)
+### Stage
+stage = ctx.stage          # None if not connected
+stage.position             # {'X': float, 'Y': float, 'Z': float}
+stage.move_absolute(x, y, z, feedrate=3000)
+stage.move_relative(dx=0, dy=0, dz=0, feedrate=1000)
+stage.finish_moves()       # blocking wait
+
+### Camera
+cam = ctx.cam              # None if not available
+cam.capture('./captures/img.tiff')
+cam.capture('./captures/img.png', fmt='png')
+
+### Light
+light = ctx.light
+light.on(r=255, g=255, b=255, intensity=1.0)
+light.off()
+light.status()             # {'lights': [...], 'connected': bool}
+
+### Lists (waypoints)
+ctx.lists.add(x, y, z, name='Point A')
+ctx.lists.clear()
+
+### Logging
+ctx.log('message')
+ctx.log('ok message', level='ok')
+ctx.log('warning',    level='warn')
+
+## SCENARIO_ACTIONS — expose as scenario builder action (optional)
+SCENARIO_ACTIONS = [
+    {
+        'id': 'run',              # must match function name
+        'label': 'My Action',    # name shown in scenario builder palette (Plugin category)
+        'timeout_ms': 30000,
+        'params': [
+            {'id': 'speed', 'label': 'Speed', 'type': 'number', 'default': 5, 'min': 1, 'max': 10},
+        ]
+    }
+]
+
+## Rules
+- Always check ctx.stage / ctx.cam / ctx.light for None before use
+- run() is blocking; use time.sleep() between moves
+- Do not use emoji in labels (rendering issues on RPi)
+- Return {'success': True} or {'success': False} from every function
+
+Now write a plugin that does: <DESCRIBE YOUR PLUGIN HERE>
+```
