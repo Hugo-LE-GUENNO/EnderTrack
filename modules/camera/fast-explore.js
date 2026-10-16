@@ -266,7 +266,7 @@ class EnderpicamFastExplore {
                 <input type="checkbox" id="explore-capture" ${this.captureEnabled ? 'checked' : ''}
                   onchange="EnderTrack.Camera.fastExplore.captureEnabled = this.checked"
                   style="width:13px; height:13px; accent-color:var(--active-element); cursor:pointer;">
-                <span style="color:var(--text-general);">Save tiles to RPi</span>
+                <span style="color:var(--text-general);">Save to disk</span>
               </label>
             </div>
             <div id="explore-count" style="color:var(--coordinates-color); font-size:10px; font-family:var(--font-mono);">
