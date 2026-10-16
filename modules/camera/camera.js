@@ -29,7 +29,7 @@ class CameraModule {
     this.camFlipV = false;
     this.navigatorMode = true;
     this.showMosaic = true;
-    this.saveTilesToDisk = false;
+    this.saveTilesToDisk = localStorage.getItem('endertrack_tiles_save') === 'true';
     this.fastExplore = null;
     this._loadPicamConfig();
     this.tiles = [];
@@ -640,10 +640,6 @@ class CameraModule {
         <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
           <input type="checkbox" ${this.showMosaic ? 'checked' : ''} onchange="EnderTrack.Camera.showMosaic=this.checked; EnderTrack.Canvas?.requestRender?.()">
           <span style="color:var(--text-general);">Overlay</span>
-        </label>
-        <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
-          <input type="checkbox" ${this.saveTilesToDisk ? 'checked' : ''} onchange="EnderTrack.Camera.saveTilesToDisk=this.checked">
-          <span style="color:var(--text-general);">Save</span>
         </label>
       </div>
       ${this.tiles.length ? `
