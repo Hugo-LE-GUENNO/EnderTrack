@@ -9,6 +9,7 @@ import os
 import json
 import importlib.util
 import traceback
+import threading
 
 from server import basic_functions
 
@@ -407,8 +408,9 @@ def register_routes(app):
     @bp.route('/api/pyplugins/<plugin_id>/action/<action_name>', methods=['POST'])
     def _pe_action(plugin_id, action_name):
         params = request.get_json(silent=True) or {}
-        result = run_action(plugin_id, action_name, params)
-        return jsonify(result)
+        t = threading.Thread(target=run_action, args=(plugin_id, action_name, params), daemon=True)
+        t.start()
+        return jsonify({'success': True, 'async': True})
 
     # Restaurer les plugins actifs au démarrage
     for pid in _load_active():

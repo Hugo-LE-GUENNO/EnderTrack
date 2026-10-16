@@ -215,7 +215,42 @@ class PyPluginUI {
         wrap.appendChild(row);
         break;
       }
-      case 'dropdown': {
+      case 'folder': {
+        const row = document.createElement('div');
+        row.className = 'input-group';
+        const lbl = document.createElement('label');
+        lbl.textContent = item.label;
+        const hidden = document.createElement('input');
+        hidden.type = 'text';
+        hidden.id = `pyplugin-in-${plugin_id}-${item.id}`;
+        hidden.value = item.default ?? '';
+        hidden.style.display = 'none';
+        const display = document.createElement('div');
+        display.style.cssText = 'font-size:10px; color:var(--coordinates-color); font-family:monospace; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+        display.textContent = hidden.value || '—';
+        const btn = document.createElement('button');
+        btn.textContent = '📂';
+        btn.className = 'action-btn';
+        btn.style.cssText = 'padding:2px 6px; font-size:11px; flex-shrink:0;';
+        btn.onclick = () => {
+          const inp = document.createElement('input');
+          inp.type = 'file';
+          if (item.directory) inp.setAttribute('webkitdirectory', '');
+          inp.onchange = () => {
+            const f = inp.files[0];
+            if (!f) return;
+            const path = item.directory
+              ? f.webkitRelativePath.split('/')[0]
+              : (f.webkitRelativePath || f.name);
+            hidden.value = path;
+            display.textContent = path;
+          };
+          inp.click();
+        };
+        row.append(lbl, display, btn, hidden);
+        wrap.appendChild(row);
+        break;
+      }
         const row = document.createElement('div');
         row.className = 'input-group';
         const lbl = document.createElement('label');
