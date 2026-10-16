@@ -345,6 +345,7 @@ class EnderpicamFastExplore {
 
     EnderTrack.Camera.navigatorMode = true;
     EnderTrack.Camera.showMosaic = true;
+    window._tilesEnabled = true;
     EnderTrack.Camera._hookMosaic?.();
 
     const scenarioModule = window.EnderTrack?.Scenario;
@@ -361,6 +362,7 @@ class EnderpicamFastExplore {
       { type: 'action', actionId: 'wait', params: { duration: waitSec } },
     ];
     const prevSaveToDisk = EnderTrack.Camera.saveTilesToDisk;
+    const prevTilesEnabled = window._tilesEnabled;
     if (this.captureEnabled) EnderTrack.Camera.saveTilesToDisk = true;
 
     const newScenario = scenarioModule.manager.createScenario(exploreName);
@@ -380,6 +382,7 @@ class EnderpicamFastExplore {
     this.deactivate();
     scenarioModule.executeScenario().finally?.(() => {
       EnderTrack.Camera.saveTilesToDisk = prevSaveToDisk;
+      window._tilesEnabled = prevTilesEnabled;
     });
   }
 
