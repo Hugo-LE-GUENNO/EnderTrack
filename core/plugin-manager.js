@@ -281,7 +281,6 @@ class PluginManager {
     this._pyPlugins = { available: pyAvailable, active: pyActive };
 
     container.innerHTML = `<div id="pluginsCards"></div>
-      <div id="pyPluginsCards"></div>
       <div style="display:flex; gap:4px; margin-top:6px;">
         <button onclick="EnderTrack.PluginManager.loadPluginFromFolder()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);">Import</button>
         <button onclick="EnderTrack.PluginManager.openCreateGuide()" style="padding:3px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px; background:var(--app-bg); color:var(--text-general);" title="Plugin creation guide">?</button>
@@ -291,21 +290,27 @@ class PluginManager {
     this._renderPyPlugins();
   }
 
-  static _renderPyPlugins() {
+  static _renderPyPlugins(query = '') {
     const container = document.getElementById('pyPluginsCards');
     if (!container || !this._pyPlugins) return;
     const { available, active } = this._pyPlugins;
-    if (!available.length) return;
-    container.innerHTML = available.map(id => {
+    const q = query.toLowerCase().trim();
+    const filtered = q ? available.filter(id => id.toLowerCase().includes(q)) : available;
+    if (!filtered.length) { container.innerHTML = ''; return; }
+    container.innerHTML = filtered.map(id => {
       const isActive = active.includes(id);
       return `<div style="display:flex; align-items:center; gap:6px; padding:4px 0; font-size:10px;">
         <span style="color:var(--text-general);">${id}</span>
         <span style="flex:1;"></span>
         <button style="padding:2px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;
           background:${isActive ? 'var(--active-element)' : 'var(--app-bg)'}; color:${isActive ? 'var(--text-selected)' : 'var(--text-general)'};"
-          onclick="EnderTrack.PluginManager.togglePyPlugin('${id}')">${isActive ? 'Actif' : 'Enable'}</button>
+          onclick="EnderTrack.PluginManager.togglePyPlugin('${id}')">${isActive ? 'Active' : 'Enable'}</button>
       </div>`;
     }).join('');
+  }
+
+  static _filterPyPlugins(query) {
+    this._renderPyPlugins(query);
   }
 
   static async togglePyPlugin(id) {
