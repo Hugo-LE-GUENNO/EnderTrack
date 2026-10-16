@@ -53,9 +53,18 @@ Each section accepts `inputs` (controls) and `outputs` (display).
 ## Input types
 
 ```python
-{"type": "button", "label": "Run",   "action": "run",  "style": "primary"}
-{"type": "slider", "id": "speed", "label": "Speed", "min": 1, "max": 10, "default": 5, "step": 1}
-{"type": "text",   "id": "name",  "label": "Name",  "default": "img"}
+{"type": "button",   "label": "Run",    "action": "run",  "style": "primary"}
+{"type": "slider",   "id": "speed",  "label": "Speed",  "min": 1, "max": 10, "default": 5, "step": 1}
+{"type": "input",    "id": "name",   "label": "Name",   "default": "img"}
+{"type": "folder",   "id": "outdir", "label": "Output folder", "directory": True}
+{"type": "dropdown", "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
+```
+
+For `folder`, the selected path is passed to your function via `params`:
+
+```python
+def run(ctx, params):
+    out = params.get('outdir', './captures')
 ```
 
 Slider and text values are passed to your function via `params`:
@@ -285,9 +294,11 @@ SECTIONS = {
 }
 
 ## Input types
-{"type": "button", "label": "Run",   "action": "run",  "style": "primary"}
-{"type": "slider", "id": "speed", "label": "Speed", "min": 1, "max": 10, "default": 5, "step": 1}
-{"type": "text",   "id": "name",  "label": "Name",  "default": "img"}
+{"type": "button",   "label": "Run",    "action": "run",  "style": "primary"}
+{"type": "slider",   "id": "speed",  "label": "Speed",  "min": 1, "max": 10, "default": 5, "step": 1}
+{"type": "input",    "id": "name",   "label": "Name",   "default": "img"}
+{"type": "folder",   "id": "outdir", "label": "Output folder", "directory": True}
+{"type": "dropdown", "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
 
 ## Output types
 {"type": "text",  "id": "status",  "label": "Status"}
