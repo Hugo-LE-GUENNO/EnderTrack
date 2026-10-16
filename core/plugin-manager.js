@@ -299,7 +299,7 @@ class PluginManager {
     container.innerHTML = available.map(id => {
       const isActive = active.includes(id);
       return `<div style="display:flex; align-items:center; gap:6px; padding:4px 0; font-size:10px;">
-        <span style="color:var(--text-general);">🐍 ${id}</span>
+        <span style="color:var(--text-general);">${id}</span>
         <span style="flex:1;"></span>
         <button style="padding:2px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;
           background:${isActive ? 'var(--active-element)' : 'var(--app-bg)'}; color:${isActive ? 'var(--text-selected)' : 'var(--text-general)'};"
