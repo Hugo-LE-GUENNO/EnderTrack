@@ -357,9 +357,7 @@ class EnderpicamFastExplore {
     const expDelay = Math.ceil(expUs / 1000) * 2;
     const waitSec = parseFloat(((Math.max(2000, expDelay + 2000)) / 1000).toFixed(1));
 
-    const prevSaveToDisk = EnderTrack.Camera.saveTilesToDisk;
     const prevTilesEnabled = window._tilesEnabled;
-    if (this.captureEnabled) EnderTrack.Camera.saveTilesToDisk = true;
 
     const loopChildren = [
       { type: 'action', actionId: 'move', params: { moveType: 'list', listId, listIndex: '$i' } },
@@ -383,7 +381,6 @@ class EnderpicamFastExplore {
     document.body.style.cursor = '';
     this.deactivate();
     scenarioModule.executeScenario().finally?.(() => {
-      EnderTrack.Camera.saveTilesToDisk = prevSaveToDisk;
       window._tilesEnabled = prevTilesEnabled;
     });
   }
