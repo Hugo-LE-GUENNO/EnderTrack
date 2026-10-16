@@ -2,6 +2,25 @@
 
 Create a Python plugin in 5 minutes — no framework, no boilerplate.
 
+## Requirements (Raspberry Pi)
+
+Some plugin features require system-level libraries and **must be run with `sudo`**:
+
+| Feature | Dependency | Install |
+|---|---|---|
+| PiCamera capture | `picamera2` | `sudo apt install python3-picamera2` |
+| NeoPixel GPIO LEDs | `rpi_ws281x` + `neopixel` | `sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel` |
+| Save to custom folder | — | run server with `sudo` |
+
+```bash
+# Always use sudo on RPi if using camera, GPIO LEDs or custom save paths
+sudo python3 endertrack-server.py
+```
+
+On a standard PC (simulation mode), `sudo` is not needed.
+
+---
+
 ## Structure
 
 ```

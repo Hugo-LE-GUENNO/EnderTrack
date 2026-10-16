@@ -23,6 +23,32 @@ Open http://localhost:5000 — zero setup, dependencies included in `vendor/`.
 
 Update: `git pull`
 
+## Raspberry Pi setup
+
+On a standard PC/Mac, no extra dependencies are needed.
+
+On a **Raspberry Pi with PiCamera**, install system dependencies once:
+
+```bash
+# Camera (Picamera2)
+sudo apt install -y python3-picamera2
+
+# NeoPixel LEDs on GPIO
+sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
+```
+
+> ⚠️ **Run with `sudo`** on Raspberry Pi if you use:
+> - **GPIO NeoPixel LEDs** — requires root for hardware PWM
+> - **Saving images to a specific folder** — may require root depending on permissions
+>
+> ```bash
+> sudo python3 endertrack-server.py
+> # or with LAN access:
+> sudo python3 endertrack-server.py --lan
+> ```
+
+> `picamera2` and NeoPixel libs are system-level — they cannot be bundled in `vendor/` and must be installed on the Pi directly.
+
 ## Features
 
 Everything in [`basic`](../../tree/basic), plus:
