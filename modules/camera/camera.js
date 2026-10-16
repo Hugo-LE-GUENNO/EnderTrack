@@ -29,6 +29,7 @@ class CameraModule {
     this.camFlipV = false;
     this.navigatorMode = true;
     this.showMosaic = true;
+    this.saveTilesToDisk = false;
     this.fastExplore = null;
     this._loadPicamConfig();
     this.tiles = [];
@@ -528,12 +529,14 @@ class CameraModule {
     const tile = { img: tileImg, x, y, w_px, h_px, widthMm, heightMm, timestamp: Date.now(), visible: true };
 
     // Save to server
-    const path = './captures/mosaic_X' + x.toFixed(2) + '_Y' + y.toFixed(2) + '.png';
-    const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-    fetch(base + '/api/capture/save', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ frame: frameData.frame, path })
-    }).catch(() => {});
+    if (this.saveTilesToDisk) {
+      const path = './captures/mosaic_X' + x.toFixed(2) + '_Y' + y.toFixed(2) + '.png';
+      const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+      fetch(base + '/api/capture/save', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ frame: frameData.frame, path })
+      }).catch(() => {});
+    }
   }
 
   _saveTiles() {
@@ -637,6 +640,10 @@ class CameraModule {
         <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
           <input type="checkbox" ${this.showMosaic ? 'checked' : ''} onchange="EnderTrack.Camera.showMosaic=this.checked; EnderTrack.Canvas?.requestRender?.()">
           <span style="color:var(--text-general);">Overlay</span>
+        </label>
+        <label style="font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
+          <input type="checkbox" ${this.saveTilesToDisk ? 'checked' : ''} onchange="EnderTrack.Camera.saveTilesToDisk=this.checked">
+          <span style="color:var(--text-general);">Save</span>
         </label>
       </div>
       ${this.tiles.length ? `
