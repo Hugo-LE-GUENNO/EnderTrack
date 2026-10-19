@@ -1220,56 +1220,14 @@
       return;
     }
     
-    // Si min change, ajuster max pour maintenir |min| + max = dimension
+    // Si min change
       if (event.target === minInput) {
-        if (min < -dimension) {
-          alert(`Error: Min cannot be less than -${dimension}mm`);
-          minInput.value = -dimension;
-          window.validatingCoordinates = false;
-          return;
-        }
-        if (min > 0 && axis !== 'z') {
-          alert(`Error: Min cannot be greater than 0 for axis ${axis.toUpperCase()}`);
-          minInput.value = 0;
-          window.validatingCoordinates = false;
-          return;
-        }
-        // Condition spéciale pour Z: Zmin cannot be greater than 0
-        if (axis === 'z' && min > 0) {
-          alert('Error: Zmin cannot be greater than 0');
-          minInput.value = 0;
-          window.validatingCoordinates = false;
-          return;
-        }
-        // Ajuster max: |min| + max = dimension
-        const newMax = dimension - Math.abs(parseFloat(minInput.value));
-        maxInput.value = newMax;
+        if (min >= max) { minInput.value = max - 1; }
       }
       
-      // Si max change, ajuster min pour maintenir |min| + max = dimension
+      // Si max change
       if (event.target === maxInput) {
-        if (max > dimension) {
-          alert(`Error: Max cannot be greater than ${dimension}mm`);
-          maxInput.value = dimension;
-          window.validatingCoordinates = false;
-          return;
-        }
-        if (max < 0 && axis !== 'z') {
-          alert(`Error: Max cannot be less than 0 for axis ${axis.toUpperCase()}`);
-          maxInput.value = 0;
-          window.validatingCoordinates = false;
-          return;
-        }
-        // Condition spéciale pour Z: Zmax cannot go below 0
-        if (axis === 'z' && max < 0) {
-          alert('Error: Zmax cannot go below 0');
-          maxInput.value = 0;
-          window.validatingCoordinates = false;
-          return;
-        }
-        // Ajuster min: |min| + max = dimension
-        const newMin = -(dimension - parseFloat(maxInput.value));
-        minInput.value = newMin;
+        if (max <= min) { maxInput.value = min + 1; }
       }
       
       // Sauvegarder les nouvelles valeurs dans l'état
