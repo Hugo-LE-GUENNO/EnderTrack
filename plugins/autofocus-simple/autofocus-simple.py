@@ -74,20 +74,6 @@ def run(ctx, params):
     ctx.update_output('status', f'Scanning {n_steps} steps x {step:.3f}mm')
     ctx.reset_graph('curve')
 
-    # Forcer expo courte + gain eleve pour la vitesse
-    orig_exp  = cam._config.get('exposure', 20000)
-    orig_gain = cam._config.get('gain', 1.0)
-    fast_exp  = min(orig_exp, 5000)
-    fast_gain = max(orig_gain, 8.0)
-    try:
-        picam.set_controls({'ExposureTime': fast_exp, 'AnalogueGain': fast_gain})
-        # Jeter les premieres frames le temps que les settings soient appliques
-        for _ in range(5):
-            picam.capture_array("main")
-        time.sleep(0.1)
-    except Exception:
-        pass
-
     stage.move_absolute(stage.position['X'], stage.position['Y'], z_start, feedrate=3000)
     stage.finish_moves()
     time.sleep(0.05)
@@ -106,12 +92,7 @@ def run(ctx, params):
             stage.finish_moves()
             time.sleep(0.05)
     finally:
-        # Toujours restaurer expo/gain originaux
-        try:
-            picam.set_controls({'ExposureTime': orig_exp, 'AnalogueGain': orig_gain,
-                                'FrameDurationLimits': (100, max(100000, orig_exp + 100000))})
-        except Exception:
-            pass
+        pass
 
     stage.move_absolute(stage.position['X'], stage.position['Y'], best_z, feedrate=3000)
     stage.finish_moves()
