@@ -430,11 +430,14 @@ def register_routes(app):
         t.start()
         return jsonify({'success': True, 'async': True})
 
-    # Restaurer les plugins actifs au démarrage
+    # Restauration des plugins différée — appeler plugin_engine.restore_active() après tous les register_routes
+    app.register_blueprint(bp)
+
+
+def restore_active():
+    """Restaurer les plugins actifs — appeler après tous les register_routes."""
     for pid in _load_active():
         try:
             activate(pid)
         except Exception as e:
             print(f"  [WARN] Auto-restore plugin {pid} failed: {e}")
-
-    app.register_blueprint(bp)

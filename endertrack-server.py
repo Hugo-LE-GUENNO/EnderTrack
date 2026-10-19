@@ -127,6 +127,9 @@ if __name__ == '__main__':
     from server import event_stream
     event_stream.register_routes(app)
 
+    # Restaurer les plugins Python apres tous les register_routes
+    plugin_engine.restore_active()
+
     import logging
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
     try:
