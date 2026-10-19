@@ -27,12 +27,10 @@ window.resetLimitsToPlateauSize = function() {
     
     
     // Appliquer les plages de coordonnées comme limites de sécurité
-    document.getElementById('xLimitMin').value = xMin;
-    document.getElementById('xLimitMax').value = xMax;
-    document.getElementById('yLimitMin').value = yMin;
-    document.getElementById('yLimitMax').value = yMax;
-    document.getElementById('zLimitMin').value = zMin;
-    document.getElementById('zLimitMax').value = zMax;
+    const _set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    _set('xLimitMin', xMin); _set('xLimitMax', xMax);
+    _set('yLimitMin', yMin); _set('yLimitMax', yMax);
+    _set('zLimitMin', zMin); _set('zLimitMax', zMax);
     
     // Déclencher les événements 'input' pour activer les event listeners
     ['xLimitMin', 'xLimitMax', 'yLimitMin', 'yLimitMax', 'zLimitMin', 'zLimitMax'].forEach(id => {
