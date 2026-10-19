@@ -1,4 +1,4 @@
-# EnderTrack — imaging v1.3.3
+# EnderTrack — imaging v1.3.4
 
 <p align="center">
   <img src="assets/icons/endertrack-logo_header.svg" alt="EnderTrack" height="64">
