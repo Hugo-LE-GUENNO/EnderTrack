@@ -37,14 +37,18 @@ SCENARIO_ACTIONS = [
 ]
 
 
-def _score(picam, n_frames=3):
+def _score(picam, n_frames=2):
     scores = []
     for _ in range(n_frames):
         arr  = picam.capture_array("main")
         gray = (0.299 * arr[:,:,0] + 0.587 * arr[:,:,1] + 0.114 * arr[:,:,2]).astype(np.float32)
+        mean = gray.mean()
+        if mean < 1.0:
+            scores.append(0.0)
+            continue
         lap  = (-4*gray[1:-1,1:-1] + gray[:-2,1:-1] + gray[2:,1:-1]
                 + gray[1:-1,:-2] + gray[1:-1,2:])
-        scores.append(float(lap.var()))
+        scores.append(float(lap.var()) / (mean ** 2))
     return float(np.median(scores))
 
 
