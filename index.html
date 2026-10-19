@@ -1222,18 +1222,18 @@
     
     // Si min change, ajuster max pour maintenir |min| + max = dimension
       if (event.target === minInput) {
-        if (min < -dimension) { min = -dimension; minInput.value = min; }
-        if (axis !== 'z' && min > 0) { min = 0; minInput.value = 0; }
-        if (axis === 'z' && min > 0) { min = 0; minInput.value = 0; }
-        maxInput.value = dimension - Math.abs(min);
+        let v = parseFloat(minInput.value);
+        if (v < -dimension) { v = -dimension; minInput.value = v; }
+        if (v > 0) { v = 0; minInput.value = 0; }
+        maxInput.value = dimension - Math.abs(v);
       }
       
       // Si max change, ajuster min pour maintenir |min| + max = dimension
       if (event.target === maxInput) {
-        if (max > dimension) { max = dimension; maxInput.value = max; }
-        if (axis !== 'z' && max < 0) { max = 0; maxInput.value = 0; }
-        if (axis === 'z' && max < 0) { max = 0; maxInput.value = 0; }
-        minInput.value = -(dimension - max);
+        let v = parseFloat(maxInput.value);
+        if (v > dimension) { v = dimension; maxInput.value = v; }
+        if (v < 0) { v = 0; maxInput.value = 0; }
+        minInput.value = -(dimension - v);
       }
       
       // Sauvegarder les nouvelles valeurs dans l'état
