@@ -217,6 +217,23 @@ class PluginContext:
             'value': value
         })
 
+    def update_graph(self, output_id, x, y):
+        """Ajoute un point [x, y] sur un output de type graph."""
+        self.bus.publish('plugin:output', {
+            'plugin_id': self.plugin_id,
+            'id': output_id,
+            'value': [x, y]
+        })
+
+    def reset_graph(self, output_id):
+        """Efface le graph."""
+        self.bus.publish('plugin:output', {
+            'plugin_id': self.plugin_id,
+            'id': output_id,
+            'value': None,
+            'reset': True
+        })
+
     def append_table_row(self, output_id, row):
         """Ajoute une ligne dans un output de type table. row = liste de valeurs."""
         self.bus.publish('plugin:output', {

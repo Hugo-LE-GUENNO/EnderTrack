@@ -284,6 +284,18 @@ class PyPluginUI {
       wrap.appendChild(lbl);
     }
 
+    if (item.type === 'graph') {
+      const canvas = document.createElement('canvas');
+      canvas.id = `pyplugin-out-${plugin_id}-${item.id}`;
+      canvas.width = 220; canvas.height = 100;
+      canvas.style.cssText = 'width:100%; height:100px; background:#111; border-radius:4px; display:block;';
+      canvas.dataset.points = '[]';
+      canvas.dataset.xlabel = item.xlabel || 'X';
+      canvas.dataset.ylabel = item.ylabel || 'Y';
+      wrap.appendChild(canvas);
+      return wrap;
+    }
+
     if (item.type === 'table') {
       const container = document.createElement('div');
       container.style.cssText = 'max-height:160px; overflow-y:auto; background:var(--app-bg); border-radius:var(--radius-sm);';
@@ -336,7 +348,17 @@ class PyPluginUI {
     const els = document.querySelectorAll(`[id="pyplugin-out-${data.plugin_id}-${data.id}"]`);
     if (!els.length) return;
     els.forEach(el => {
-      if (el.tagName === 'TABLE') {
+      if (el.tagName === 'CANVAS' && el.dataset.points !== undefined) {
+        // graph
+        let points = JSON.parse(el.dataset.points || '[]');
+        if (data.reset) points = [];
+        if (data.value !== null && data.value !== undefined) {
+          if (Array.isArray(data.value[0])) points = data.value;  // array complet
+          else points.push(data.value);                           // point unique [x, y]
+        }
+        el.dataset.points = JSON.stringify(points);
+        this._drawGraph(el, points);
+      } else if (el.tagName === 'TABLE') {
         const tbody = el.tBodies[0];
         if (!tbody) return;
         const tr = tbody.insertRow();
@@ -350,6 +372,74 @@ class PyPluginUI {
         el.textContent = data.value;
       }
     });
+  }
+
+  _drawGraph(canvas, points) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const PAD = { l: 32, r: 8, t: 8, b: 20 };
+    const gW = W - PAD.l - PAD.r, gH = H - PAD.t - PAD.b;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, W, H);
+
+    // axes
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD.l, PAD.t); ctx.lineTo(PAD.l, PAD.t + gH);
+    ctx.lineTo(PAD.l + gW, PAD.t + gH);
+    ctx.stroke();
+
+    if (!points.length) return;
+
+    const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+    let xMin = Math.min(...xs), xMax = Math.max(...xs);
+    let yMin = Math.min(...ys), yMax = Math.max(...ys);
+    if (xMin === xMax) xMax = xMin + 1;
+    if (yMin === yMax) yMax = yMin + 1;
+
+    const px = x => PAD.l + (x - xMin) / (xMax - xMin) * gW;
+    const py = y => PAD.t + gH - (y - yMin) / (yMax - yMin) * gH;
+
+    // grid + labels Y (3 ticks)
+    ctx.fillStyle = '#555'; ctx.font = '8px monospace'; ctx.textAlign = 'right';
+    for (let i = 0; i <= 2; i++) {
+      const v = yMin + (yMax - yMin) * i / 2;
+      const y = py(v);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(PAD.l + 1, y, gW, 1);
+      ctx.fillStyle = '#666';
+      ctx.fillText(v.toFixed(1), PAD.l - 3, y + 3);
+    }
+    // labels X (3 ticks)
+    ctx.textAlign = 'center';
+    for (let i = 0; i <= 2; i++) {
+      const v = xMin + (xMax - xMin) * i / 2;
+      ctx.fillStyle = '#666';
+      ctx.fillText(v.toFixed(2), px(v), PAD.t + gH + 12);
+    }
+    // axis labels
+    ctx.fillStyle = '#888'; ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(canvas.dataset.xlabel || 'X', PAD.l + gW / 2, H - 2);
+    ctx.save(); ctx.translate(8, PAD.t + gH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText(canvas.dataset.ylabel || 'Y', 0, 0); ctx.restore();
+
+    // curve
+    ctx.strokeStyle = '#ffc107'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    points.forEach(([x, y], i) => {
+      i === 0 ? ctx.moveTo(px(x), py(y)) : ctx.lineTo(px(x), py(y));
+    });
+    ctx.stroke();
+
+    // peak dot
+    const maxIdx = ys.indexOf(Math.max(...ys));
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath();
+    ctx.arc(px(xs[maxIdx]), py(ys[maxIdx]), 3, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   _appendLog(data) {
