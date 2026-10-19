@@ -257,7 +257,7 @@ def register_routes(app):
             exp = int(data['exposure'])
             _config['exposure'] = exp
             controls['ExposureTime'] = exp
-            controls['FrameDurationLimits'] = (100, max(100000, exp + 100000))
+            controls['FrameDurationLimits'] = (33333, max(100000, exp + 100000))
         if 'gain' in data:
             g = float(data['gain'])
             _config['gain'] = g
