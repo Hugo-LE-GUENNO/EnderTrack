@@ -79,8 +79,16 @@ def _get_picam():
         )
         _picam.configure(cfg)
         _stream_output = StreamingOutput()
+        import os, sys
+        # Suppress libcamera startup noise (embedded buffer parsing errors on IMX477)
+        devnull = open(os.devnull, 'w')
+        old_stderr = os.dup(2)
+        os.dup2(devnull.fileno(), 2)
         _picam.start_recording(MJPEGEncoder(), FileOutput(_stream_output))
-        time.sleep(0.5)
+        time.sleep(1.0)  # wait for sensor to stabilize
+        os.dup2(old_stderr, 2)
+        os.close(old_stderr)
+        devnull.close()
         # Apply saved controls
         controls = {
             'ExposureTime': int(_config['exposure']),
