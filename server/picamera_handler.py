@@ -85,7 +85,6 @@ def _get_picam():
         controls = {
             'ExposureTime': int(_config['exposure']),
             'AnalogueGain': float(_config['gain']),
-            'FrameDurationLimits': (int(_config['exposure']), max(int(_config['exposure']) + 100000, 1000000))
         }
         _picam.set_controls(controls)
         print(f"   Picamera2: {res[0]}×{res[1]} exp={_config['exposure']} gain={_config['gain']}")
@@ -257,7 +256,6 @@ def register_routes(app):
             exp = int(data['exposure'])
             _config['exposure'] = exp
             controls['ExposureTime'] = exp
-            controls['FrameDurationLimits'] = (exp, max(exp + 100000, 1000000))
         if 'gain' in data:
             g = float(data['gain'])
             _config['gain'] = g
