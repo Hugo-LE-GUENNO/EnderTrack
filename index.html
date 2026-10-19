@@ -1220,14 +1220,20 @@
       return;
     }
     
-    // Si min change
+    // Si min change, ajuster max pour maintenir |min| + max = dimension
       if (event.target === minInput) {
-        if (min >= max) { minInput.value = max - 1; }
+        if (min < -dimension) { min = -dimension; minInput.value = min; }
+        if (axis !== 'z' && min > 0) { min = 0; minInput.value = 0; }
+        if (axis === 'z' && min > 0) { min = 0; minInput.value = 0; }
+        maxInput.value = dimension - Math.abs(min);
       }
       
-      // Si max change
+      // Si max change, ajuster min pour maintenir |min| + max = dimension
       if (event.target === maxInput) {
-        if (max <= min) { maxInput.value = min + 1; }
+        if (max > dimension) { max = dimension; maxInput.value = max; }
+        if (axis !== 'z' && max < 0) { max = 0; maxInput.value = 0; }
+        if (axis === 'z' && max < 0) { max = 0; maxInput.value = 0; }
+        minInput.value = -(dimension - max);
       }
       
       // Sauvegarder les nouvelles valeurs dans l'état
