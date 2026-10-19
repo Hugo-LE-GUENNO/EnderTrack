@@ -85,7 +85,7 @@ def _get_picam():
         controls = {
             'ExposureTime': int(_config['exposure']),
             'AnalogueGain': float(_config['gain']),
-            'FrameDurationLimits': (100, max(100000, int(_config['exposure']) + 100000))
+            'FrameDurationLimits': (33333, max(100000, int(_config['exposure']) + 100000))
         }
         _picam.set_controls(controls)
         print(f"   Picamera2: {res[0]}×{res[1]} exp={_config['exposure']} gain={_config['gain']}")

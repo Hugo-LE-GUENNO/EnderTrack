@@ -38,12 +38,15 @@ SCENARIO_ACTIONS = [
 ]
 
 
-def _score(picam):
-    arr  = picam.capture_array("main")
-    gray = (0.299 * arr[:,:,0] + 0.587 * arr[:,:,1] + 0.114 * arr[:,:,2]).astype(np.float32)
-    lap  = (-4*gray[1:-1,1:-1] + gray[:-2,1:-1] + gray[2:,1:-1]
-            + gray[1:-1,:-2] + gray[1:-1,2:])
-    return float(lap.var())
+def _score(picam, n_frames=3):
+    scores = []
+    for _ in range(n_frames):
+        arr  = picam.capture_array("main")
+        gray = (0.299 * arr[:,:,0] + 0.587 * arr[:,:,1] + 0.114 * arr[:,:,2]).astype(np.float32)
+        lap  = (-4*gray[1:-1,1:-1] + gray[:-2,1:-1] + gray[2:,1:-1]
+                + gray[1:-1,:-2] + gray[1:-1,2:])
+        scores.append(float(lap.var()))
+    return float(np.median(scores))
 
 
 def run(ctx, params):
