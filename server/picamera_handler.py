@@ -79,20 +79,13 @@ def _get_picam():
         )
         _picam.configure(cfg)
         _stream_output = StreamingOutput()
-        import os, sys
-        # Suppress libcamera startup noise (embedded buffer parsing errors on IMX477)
-        devnull = open(os.devnull, 'w')
-        old_stderr = os.dup(2)
-        os.dup2(devnull.fileno(), 2)
         _picam.start_recording(MJPEGEncoder(), FileOutput(_stream_output))
-        time.sleep(1.0)  # wait for sensor to stabilize
-        os.dup2(old_stderr, 2)
-        os.close(old_stderr)
-        devnull.close()
+        time.sleep(0.5)
         # Apply saved controls
         controls = {
             'ExposureTime': int(_config['exposure']),
             'AnalogueGain': float(_config['gain']),
+            'FrameDurationLimits': (33333, max(100000, int(_config['exposure']) + 100000))
         }
         _picam.set_controls(controls)
         print(f"   Picamera2: {res[0]}×{res[1]} exp={_config['exposure']} gain={_config['gain']}")
@@ -264,6 +257,7 @@ def register_routes(app):
             exp = int(data['exposure'])
             _config['exposure'] = exp
             controls['ExposureTime'] = exp
+            controls['FrameDurationLimits'] = (33333, max(100000, exp + 100000))
         if 'gain' in data:
             g = float(data['gain'])
             _config['gain'] = g
