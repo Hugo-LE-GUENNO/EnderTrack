@@ -1199,7 +1199,7 @@
           // Appeler resetLimitsToPlateauSize
           if (typeof resetLimitsToPlateauSize === 'function') {
             resetLimitsToPlateauSize();
-          fetch((window.ENDERTRACK_SERVER||'http://localhost:5000') + '/api/sync/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ plateauDimensions: newPlateauDimensions, coordinateBounds: newCoordinateBounds }) }).catch(()=>{});
+          fetch((window.ENDERTRACK_SERVER||'http://localhost:5000') + '/api/sync/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ plateauDimensions: newPlateauDimensions, coordinateBounds: newCoordinateBounds, _from: window.EnderTrack?.Movement?._clientId }) }).catch(()=>{});
           }
         }
         
@@ -1268,7 +1268,7 @@
         // Mettre à jour automatiquement les limites de sécurité
         if (typeof resetLimitsToPlateauSize === 'function') {
           resetLimitsToPlateauSize();
-          fetch((window.ENDERTRACK_SERVER||'http://localhost:5000') + '/api/sync/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ plateauDimensions: newPlateauDimensions, coordinateBounds: newCoordinateBounds }) }).catch(()=>{});
+          fetch((window.ENDERTRACK_SERVER||'http://localhost:5000') + '/api/sync/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ plateauDimensions: newPlateauDimensions, coordinateBounds: newCoordinateBounds, _from: window.EnderTrack?.Movement?._clientId }) }).catch(()=>{});
         }
       }
       

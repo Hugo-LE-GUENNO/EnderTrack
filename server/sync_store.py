@@ -130,12 +130,12 @@ def register_routes(app):
     @app.route('/api/sync/config', methods=['POST'])
     def _set_config():
         data = request.get_json()
-        # Merge with existing (don't overwrite everything)
+        from_id = data.pop('_from', None)
         existing = _read('config') or {}
         existing.update(data)
         _write('config', existing)
-        _broadcast('sync:config', existing)
-
+        broadcast_data = {**existing, '_from': from_id} if from_id else existing
+        _broadcast('sync:config', broadcast_data)
         return jsonify({'success': True})
 
     # --- Tracks ---
@@ -327,64 +327,6 @@ def register_routes(app):
         _write('scenarios', data)
         return jsonify({'success': True})
 
-    # --- Gallery ---
-
-    @app.route('/api/gallery', methods=['GET'])
-    def _gallery_list():
-        import os, glob
-        capture_dir = os.path.join(os.getcwd(), 'captures')
-        if not os.path.isdir(capture_dir):
-            return jsonify({'files': []})
-        files = []
-        for ext in ['*.png', '*.jpg', '*.jpeg', '*.tiff', '*.tif']:
-            for f in glob.glob(os.path.join(capture_dir, '**', ext), recursive=True):
-                stat = os.stat(f)
-                files.append({
-                    'path': os.path.relpath(f, os.getcwd()),
-                    'name': os.path.basename(f),
-                    'size': stat.st_size,
-                    'mtime': stat.st_mtime
-                })
-        files.sort(key=lambda x: x['mtime'], reverse=True)
-        return jsonify({'files': files})
-
-    @app.route('/api/gallery/thumb/<path:filepath>', methods=['GET'])
-    def _gallery_thumb(filepath):
-        import os
-        from flask import send_file
-        full = os.path.join(os.getcwd(), filepath)
-        if os.path.isfile(full):
-            return send_file(full, mimetype='image/png')
-        return '', 404
-
-    @app.route('/api/gallery/settings', methods=['GET'])
-    def _gallery_settings_get():
-        """Load per-image display settings."""
-        import json
-        settings_file = os.path.join(os.getcwd(), '.gallery_settings.json')
-        try:
-            if os.path.isfile(settings_file):
-                with open(settings_file, 'r') as f:
-                    return jsonify(json.load(f))
-        except:
-            pass
-        return jsonify({})
-
-    @app.route('/api/gallery/settings', methods=['POST'])
-    def _gallery_settings_save():
-        """Save per-image display settings."""
-        import json
-        data = request.get_json()
-        if data is None:
-            return jsonify({'error': 'No data'}), 400
-        settings_file = os.path.join(os.getcwd(), '.gallery_settings.json')
-        try:
-            with open(settings_file, 'w') as f:
-                json.dump(data, f, indent=2)
-            return jsonify({'success': True})
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-
     @app.route('/api/live/settings', methods=['GET'])
     def _live_settings_get():
         """Load live renderer display settings."""
@@ -413,30 +355,4 @@ def register_routes(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/mosaic/zip', methods=['POST'])
-    def _mosaic_zip():
-        """Create a ZIP from mosaic tiles (base64 PNGs)."""
-        import zipfile
-        import base64
-        from io import BytesIO
-        from flask import Response as FlaskResponse
 
-        data = request.get_json()
-        tiles = data.get('tiles', [])
-        if not tiles:
-            return jsonify({'error': 'No tiles'}), 400
-
-        buf = BytesIO()
-        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for tile in tiles:
-                name = tile.get('name', 'tile.png')
-                img_data = base64.b64decode(tile.get('data', ''))
-                zf.writestr(name, img_data)
-            csv = 'filename,x_mm,y_mm\n'
-            for tile in tiles:
-                csv += f"{tile.get('name','')},{tile.get('x',0)},{tile.get('y',0)}\n"
-            zf.writestr('positions.csv', csv)
-
-        buf.seek(0)
-        return FlaskResponse(buf.getvalue(), mimetype='application/zip',
-                        headers={'Content-Disposition': 'attachment; filename=mosaic.zip'})
