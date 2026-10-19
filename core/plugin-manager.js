@@ -316,10 +316,20 @@ class PluginManager {
   static async togglePyPlugin(id) {
     const isActive = this._pyPlugins?.active?.includes(id);
     const action = isActive ? 'deactivate' : 'activate';
-    await fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/pyplugins/' + action, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plugin_id: id })
-    });
+    try {
+      const r = await fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/pyplugins/' + action, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plugin_id: id })
+      });
+      const data = await r.json();
+      if (data.success === false) {
+        this._notify(`❌ ${id}: ${data.error || 'error'}`, 'error');
+      } else {
+        this._notify(isActive ? `Plugin ${id} deactivated` : `✅ Plugin ${id} activated`, isActive ? 'info' : 'success');
+      }
+    } catch (e) {
+      this._notify(`❌ ${id}: ${e.message}`, 'error');
+    }
     await this.renderPluginList();
   }
 

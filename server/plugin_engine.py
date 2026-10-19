@@ -380,7 +380,7 @@ def register_routes(app):
         if not plugin_id:
             return jsonify({'success': False, 'error': 'plugin_id required'})
         ok = activate(plugin_id)
-        return jsonify({'success': ok, 'plugin_id': plugin_id})
+        return jsonify({'success': ok, 'plugin_id': plugin_id} if ok else {'success': False, 'error': f'Failed to activate {plugin_id} — check server logs'})
 
     @bp.route('/api/pyplugins/deactivate', methods=['POST'])
     def _pe_deactivate():
