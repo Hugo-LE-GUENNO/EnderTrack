@@ -80,9 +80,8 @@ def run(ctx, params):
     fast_exp  = min(orig_exp, 5000)
     fast_gain = max(orig_gain, 8.0)
     try:
-        picam.set_controls({'ExposureTime': fast_exp, 'AnalogueGain': fast_gain,
-                            'FrameDurationLimits': (100, 20000)})
-        time.sleep(0.3)  # laisser l'AE converger
+        picam.set_controls({'ExposureTime': fast_exp, 'AnalogueGain': fast_gain})
+        time.sleep(0.3)
     except Exception:
         pass
 
