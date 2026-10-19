@@ -277,12 +277,13 @@ def activate(plugin_id):
         mod = _load_module(plugin_id)
         ctx = PluginContext(plugin_id)
 
+        _active_plugins[plugin_id] = {'module': mod, 'ctx': ctx}
+        _save_active()
+
         # Appel on_load si défini
         if hasattr(mod, 'on_load'):
             mod.on_load(ctx)
 
-        _active_plugins[plugin_id] = {'module': mod, 'ctx': ctx}
-        _save_active()
         print(f"  [PLUGIN] Python plugin activated: {plugin_id}")
 
         # Publier l'UI via SSE

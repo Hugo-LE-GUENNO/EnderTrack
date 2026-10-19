@@ -251,6 +251,7 @@ class PyPluginUI {
         wrap.appendChild(row);
         break;
       }
+      case 'dropdown': {
         const row = document.createElement('div');
         row.className = 'input-group';
         const lbl = document.createElement('label');
