@@ -81,7 +81,10 @@ def run(ctx, params):
     fast_gain = max(orig_gain, 8.0)
     try:
         picam.set_controls({'ExposureTime': fast_exp, 'AnalogueGain': fast_gain})
-        time.sleep(0.3)
+        # Jeter les premieres frames le temps que les settings soient appliques
+        for _ in range(5):
+            picam.capture_array("main")
+        time.sleep(0.1)
     except Exception:
         pass
 
@@ -101,6 +104,7 @@ def run(ctx, params):
             z = round(z + step, 4)
             stage.move_absolute(stage.position['X'], stage.position['Y'], z, feedrate=3000)
             stage.finish_moves()
+            time.sleep(0.05)
     finally:
         # Toujours restaurer expo/gain originaux
         try:
