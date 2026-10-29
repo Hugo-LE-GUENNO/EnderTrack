@@ -19,8 +19,6 @@ cd EnderTrack
 python3 endertrack-server.py
 ```
 
-Open http://localhost:5000 — zero setup, dependencies included in `vendor/`.
-
 Update: `git pull`
 
 ### Network access
@@ -52,22 +50,20 @@ sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
 > sudo python3 endertrack-server.py
 > ```
 
-Open http://localhost:5000 from any browser on the same network — zero setup, dependencies included in `vendor/`.
-
 ## Extensions
-
-### JS plugins
-
-Drop a folder into `plugins/` and enable it from the Plugins tab. No restart needed.
-
-👉 [Create a JS plugin](docs/advanced-plugins.md)  
-👉 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
 
 ### Python plugins
 
 Run Python code server-side — access stage, camera, LEDs, lists and the event bus from a `.py` file.
 
 👉 [Python plugin tutorial](docs/python-plugins.md)  
+👉 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
+
+### Advanced plugins
+
+Drop a folder into `plugins/` and enable it from the Plugins tab. No restart needed.
+
+👉 [Create an Advanced plugin](docs/advanced-plugins.md)  
 👉 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
 
 ## More
