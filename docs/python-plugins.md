@@ -210,16 +210,37 @@ ctx.lists.get('My List')   # positions of a specific list
 
 ### Config
 
+Read-only snapshot of EnderTrack settings.
+
 ```python
 cfg = ctx.config
+
+# Stage
 cfg['position']            # {'x': 10.0, 'y': 20.0, 'z': 5.0}  (last saved state)
-cfg['coordinateBounds']    # {'x': {'min': 0, 'max': 220}, 'y': ..., 'z': ...}
+cfg['coordinateBounds']    # {'x': {'min': -27, 'max': 193}, 'y': ..., 'z': ...}
 cfg['plateauDimensions']   # {'x': 220, 'y': 220, 'z': 250}
 cfg['feedrate']            # current XY feedrate (mm/min)
-cfg['zSpeed']              # current Z speed (mm/s)
+cfg['maxFeedrate']         # firmware max XY feedrate (mm/min)
+cfg['maxZSpeed']           # firmware max Z speed (mm/s)
+cfg['axisOrientation']     # axis orientation config
+
+# Camera
+cfg['camera']['resolution']  # [1280, 720]
+cfg['camera']['exposure']    # µs
+cfg['camera']['gain']        # analogue gain
+cfg['camera']['pixel_size']  # µm/px (at ref resolution)
+cfg['camera']['rotation']    # 0 | 90 | 180 | 270
+cfg['camera']['flip_h']      # bool
+cfg['camera']['flip_v']      # bool
+cfg['camera']['color_mode']  # 'gray' | 'rgb' | 'bgr'
+cfg['camera']['sensor']      # e.g. 'imx708_wide'
+
+# Hardware
+cfg['cameras']             # list of configured cameras
+cfg['lights']              # list of configured lights
 ```
 
-For live position prefer `stage.position` — `ctx.config['position']` is the last saved state.
+For live position prefer `stage.position` — `cfg['position']` is the last saved state.
 
 ### Logging
 
@@ -446,12 +467,16 @@ ctx.lists.add(x, y, z, name='Point A')
 ctx.lists.clear()
 
 ### Config
-cfg = ctx.config
+cfg = ctx.config               # read-only
 cfg['position']                # {'x': float, 'y': float, 'z': float} (last saved state)
 cfg['coordinateBounds']        # {'x': {'min': 0, 'max': 220}, 'y': ..., 'z': ...}
 cfg['plateauDimensions']       # {'x': 220, 'y': 220, 'z': 250}
 cfg['feedrate']                # XY feedrate (mm/min)
-cfg['zSpeed']                  # Z speed (mm/s)
+cfg['maxFeedrate']             # firmware max XY feedrate (mm/min)
+cfg['camera']['resolution']    # [w, h]
+cfg['camera']['exposure']      # µs
+cfg['camera']['pixel_size']    # µm/px
+cfg['lights']                  # list of configured lights
 
 ### Logging
 ctx.log('message')

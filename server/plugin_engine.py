@@ -256,7 +256,7 @@ class PluginContext:
 
     @property
     def config(self):
-        """Merge data/config.json + state.json + limites firmware stage."""
+        """Merge data/config.json + state.json + live stage limits + camera config. Read-only."""
         try:
             from server.state_store import load_state
             from server.sync_store import _read
@@ -279,6 +279,23 @@ class PluginContext:
                         'y': l['y'][1] - l['y'][0],
                         'z': l['z'][1] - l['z'][0],
                     }
+            except Exception:
+                pass
+            # Inject live camera config
+            try:
+                from server import picamera_handler
+                c = picamera_handler._config
+                cfg['camera'] = {
+                    'resolution':  c.get('resolution'),
+                    'exposure':    c.get('exposure'),
+                    'gain':        c.get('gain'),
+                    'pixel_size':  c.get('pixel_size'),
+                    'rotation':    c.get('rotation'),
+                    'flip_h':      c.get('flip_h'),
+                    'flip_v':      c.get('flip_v'),
+                    'color_mode':  c.get('color_mode'),
+                    'sensor':      c.get('sensor'),
+                }
             except Exception:
                 pass
             return cfg
