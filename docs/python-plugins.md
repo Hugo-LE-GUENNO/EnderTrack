@@ -55,10 +55,10 @@ All values are passed to your function via `params`:
 
 ```python
 def run(ctx, params):
-    speed  = float(params.get('speed', 5))
-    name   = params.get('name', 'img')
-    outdir = params.get('outdir', './captures')
-    mode   = params.get('mode', 'fast')
+    speed  = float(params['speed'])
+    name   = params['name']
+    outdir = params['outdir']
+    mode   = params['mode']
 ```
 
 ---
@@ -347,9 +347,9 @@ def run(ctx, params):
         ctx.update_output('status', 'Camera not available')
         return {'success': False}
 
-    rng    = float(params.get('range', 1.0))
-    step   = float(params.get('step', 0.2))
-    prefix = params.get('prefix', 'stack')
+    rng    = float(params['range'])
+    step   = float(params['step'])
+    prefix = params['prefix']
 
     x0, y0, z0 = stage.position['X'], stage.position['Y'], stage.position['Z']
     z_start = round(z0 - rng / 2, 4)
