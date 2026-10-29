@@ -277,6 +277,8 @@ def run(ctx, params):
     dryrun = params['dryrun']
 ```
 
+Param types: `number`, `text`, `select` (with `options`), `checkbox`.
+
 The `id` must match the function name (`def run`, `def my_action`, etc.).  
 Multiple actions per plugin are supported — one `id`/function pair each.
 
