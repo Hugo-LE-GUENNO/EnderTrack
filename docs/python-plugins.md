@@ -290,12 +290,6 @@ Load a JS file in the browser when the plugin is activated:
 EXTRA_JS = ['plugins/my-plugin/my-extra.js']
 ```
 
-Publish events from Python that your JS can listen to:
-
-```python
-ctx.bus.publish('my:event', {'key': 'value'})
-```
-
 ---
 
 ## Full example — Z stack with stage, camera and light
