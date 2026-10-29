@@ -351,7 +351,7 @@ def run(ctx, params):
     # --- Acquire ---
     i, z = 0, z_start
     while z <= z_end + 1e-6:
-        ctx.update_output('status', f'z={z:.3f} mm ({i+1} frames)')
+        ctx.update_output('status', f'z={z} mm ({i+1} frames)')
         cam.capture(f'./captures/{prefix}_{i:03d}.tiff')
         i += 1
         z = round(z + step, 4)
