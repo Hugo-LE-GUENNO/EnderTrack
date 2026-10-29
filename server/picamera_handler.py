@@ -322,8 +322,10 @@ def register_routes(app):
                         f.write(f"bit_depth: {arr.dtype}\n")
                         f.write(f"color_mode: {color_mode}\n")
                         f.write(f"format: {fmt}\n")
-                        if stage:
+                        if stage and isinstance(stage, dict):
                             f.write(f"stage:\n  x: {stage.get('x')}\n  y: {stage.get('y')}\n  z: {stage.get('z')}\n")
+                        elif stage == 'not connected':
+                            f.write("stage: not connected\n")
                         if meta:
                             f.write("custom:\n")
                             for k, v in meta.items():

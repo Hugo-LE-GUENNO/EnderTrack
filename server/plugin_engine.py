@@ -78,6 +78,10 @@ class PluginContext:
                 Retourne {'success': True, 'path': ..., 'width': ..., 'height': ...}
                 """
                 import urllib.request
+                from server import stage_connection
+                s = stage_connection.stage
+                if stage is None:
+                    stage = {'x': s.position['X'], 'y': s.position['Y'], 'z': s.position['Z']} if s else 'not connected'
                 body = {'path': path, 'apply_rotation': apply_rotation, 'save_metadata': save_metadata}
                 if fmt:        body['format']     = fmt
                 if resolution: body['resolution'] = resolution

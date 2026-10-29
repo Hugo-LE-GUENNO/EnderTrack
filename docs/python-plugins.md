@@ -131,9 +131,9 @@ if cam:
         apply_rotation=True,
         save_metadata=True,      # saves a .yaml alongside the image
         metadata={'well': 'A1'},
-        stage={'x': 10.0, 'y': 20.0, 'z': 5.0},
     )
     # returns {'success': True, 'path': ..., 'width': ..., 'height': ...}
+    # stage position is automatically injected in the .yaml if connected
 ```
 
 ### Light
@@ -377,8 +377,7 @@ def run(ctx, params):
     i, z = 0, z_start
     while z <= z_end + 1e-6:
         ctx.update_output('status', f'z={z:.3f} mm ({i+1} frames)')
-        cam.capture(f'./captures/{prefix}_{i:03d}.tiff',
-                    stage={'x': x0, 'y': y0, 'z': z})
+        cam.capture(f'./captures/{prefix}_{i:03d}.tiff')
         i += 1
         z = round(z + step, 4)
         stage.move_absolute(x0, y0, z, feedrate=1000)
@@ -457,7 +456,7 @@ cam = ctx.cam                  # None if not available
 if cam:
     cam.capture(path, fmt='tiff', resolution=None, exposure=None, gain=None,
                 color_mode='gray', apply_rotation=True, save_metadata=True,
-                metadata=None, stage=None)
+                metadata=None)
     # returns {'success': True, 'path': ..., 'width': ..., 'height': ...}
 
 ### Light
