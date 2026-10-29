@@ -247,18 +247,9 @@ ctx.log('Warning!', level='warn')
 ctx.log('Error!',   level='error')
 ```
 
-### Event bus
-
-```python
-ctx.bus.publish('my:event', {'key': 'value'})
-```
-
 ---
 
 ## Scenario action
-
-Expose your plugin as an action in the scenario builder.  
-`label` is the name that appears in the **Plugin** category of the palette.
 
 ```python
 SCENARIO_ACTIONS = [
@@ -297,6 +288,12 @@ Load a JS file in the browser when the plugin is activated:
 
 ```python
 EXTRA_JS = ['plugins/my-plugin/my-extra.js']
+```
+
+Publish events from Python that your JS can listen to:
+
+```python
+ctx.bus.publish('my:event', {'key': 'value'})
 ```
 
 ---
