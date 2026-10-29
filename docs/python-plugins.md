@@ -224,7 +224,7 @@ cfg['maxFeedrate']         # firmware max XY feedrate (mm/min)
 cfg['maxZSpeed']           # firmware max Z speed (mm/s)
 cfg['axisOrientation']     # axis orientation config
 
-# Camera
+# Camera (active camera live config)
 cfg['camera']['resolution']  # [1280, 720]
 cfg['camera']['exposure']    # µs
 cfg['camera']['gain']        # analogue gain
@@ -236,7 +236,7 @@ cfg['camera']['color_mode']  # 'gray' | 'rgb' | 'bgr'
 cfg['camera']['sensor']      # e.g. 'imx708_wide'
 
 # Hardware
-cfg['cameras']             # list of configured cameras
+cfg['cameras']             # list of all configured cameras
 cfg['lights']              # list of configured lights
 ```
 
