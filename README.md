@@ -26,7 +26,7 @@ python3 endertrack-server.py --lan
 # → displays the address to open from any device on the same network
 ```
 
-👉 [Network, hotspot, RPi setup](docs/network.md)
+[Network, hotspot, RPi setup](docs/network.md)
 
 ## Raspberry Pi setup
 
@@ -54,20 +54,20 @@ sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
 
 Run Python code server-side — access stage, camera, LEDs, lists and the event bus from a `.py` file.
 
-👉 [Python plugin tutorial](docs/python-plugins.md)  
-👉 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
+[Python plugin tutorial](docs/python-plugins.md)  
+[Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
 
 ### Advanced plugins
 
 Drop a folder into `plugins/` and enable it from the Plugins tab. No restart needed.
 
-👉 [Create an Advanced plugin](docs/advanced-plugins.md)  
-👉 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
+[Create an Advanced plugin](docs/advanced-plugins.md)  
+[Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
 
 ## More
 
-👉 [Full documentation, editions](https://github.com/Hugo-LE-GUENNO/EnderTrack)  
-👉 [Changelog](docs/changelog.md)
+[Full documentation, editions](https://github.com/Hugo-LE-GUENNO/EnderTrack)  
+[Changelog](docs/changelog.md)
 
 ## License
 

@@ -82,6 +82,8 @@ def run(ctx, params):
 ```python
 {"type": "text",  "id": "status",  "label": "Status"}
 {"type": "table", "id": "results", "label": "Results", "columns": ["X", "Y", "Score"]}
+{"type": "graph", "id": "curve",   "label": "Focus curve"}
+{"type": "image", "id": "preview", "label": "Preview"}
 ```
 
 Update from Python:
@@ -89,6 +91,10 @@ Update from Python:
 ```python
 ctx.update_output('status', 'Done')
 ctx.update_output('results', [[1.0, 2.0, 42.5], [3.0, 4.0, 38.1]])
+ctx.append_table_row('results', [5.0, 6.0, 39.2])  # add one row
+ctx.update_graph('curve', x=1.0, y=42.5)            # add one point
+ctx.reset_graph('curve')                             # clear graph
+ctx.update_image('preview', numpy_array_hwc)         # numpy (H,W,3) -> JPEG
 ```
 
 ---
@@ -121,6 +127,17 @@ if cam:
     cam.capture('./captures/img.png', fmt='png')
 ```
 
+#### Image/stage coordinate helpers
+
+```python
+# Convert a pixel offset from image center to stage delta (mm)
+# Accounts for pixel_size, resolution, rotation and flip
+dx_mm, dy_mm = ctx.image_to_stage(px_offset_x, px_offset_y)
+
+# Current field of view in mm
+fov_x, fov_y = ctx.fov_mm()
+```
+
 ### Light
 
 ```python
@@ -135,7 +152,16 @@ has_light = bool(st.get('lights'))
 
 ```python
 ctx.lists.add(x=10, y=20, z=5, name='Point A')
+ctx.lists.add(x=10, y=20, z=5, name='Point A', list='My List')
+ctx.lists.remove(index=2)
 ctx.lists.clear()
+
+ctx.lists.new_list('My List', color='#4a90e2', pinned=False)
+ctx.lists.rename_list('My List', 'New Name')
+ctx.lists.delete_list('My List')
+
+ctx.lists.all              # all groups with positions
+ctx.lists.get('My List')   # positions of a specific list
 ```
 
 ### Config
@@ -155,8 +181,40 @@ For live position prefer `stage.position` — `ctx.config['position']` is the la
 
 ```python
 ctx.log('Starting scan...')
-ctx.log('Done', level='ok')
+ctx.log('Done',     level='ok')
 ctx.log('Warning!', level='warn')
+ctx.log('Error!',   level='error')
+```
+
+### Viewports
+
+Create a custom panel displaying a live image (e.g. processed camera feed):
+
+```python
+def on_load(ctx):
+    ctx.create_viewport('processed', 'Processed view')
+
+def run(ctx, params):
+    ctx.update_viewport('processed', numpy_array_hwc)  # numpy (H,W,3)
+```
+
+### Custom devices
+
+Register hardware drivers (e.g. Arduino pump) — accessible across functions, cleaned up on deactivation:
+
+```python
+def on_load(ctx):
+    import serial
+    ctx.register_device('pump', serial.Serial('/dev/ttyUSB0', 9600))
+
+def run(ctx, params):
+    ctx.devices['pump'].write(b'GO\n')
+```
+
+### Event bus
+
+```python
+ctx.bus.publish('my:event', {'key': 'value'})
 ```
 
 ---
@@ -180,6 +238,30 @@ SCENARIO_ACTIONS = [
 ```
 
 The `id` must match the function name in your plugin (`def run`, `def my_action`, etc.).
+
+---
+
+## Lifecycle hooks
+
+```python
+def on_load(ctx):
+    """Called when the plugin is activated."""
+    pass
+
+def on_unload(ctx):
+    """Called when the plugin is deactivated. Clean up resources here."""
+    pass
+```
+
+---
+
+## Extra browser-side JS
+
+Load a JS file in the browser when the plugin is activated:
+
+```python
+EXTRA_JS = ['plugins/my-plugin/my-extra.js']
+```
 
 ---
 
