@@ -312,7 +312,7 @@ SECTIONS = {
         "inputs": [
             {"type": "slider", "id": "range",  "label": "Range (mm)", "min": 0.1, "max": 5.0,  "default": 1.0,  "step": 0.1},
             {"type": "slider", "id": "step",   "label": "Step (mm)",  "min": 0.05, "max": 1.0, "default": 0.2,  "step": 0.05},
-            {"type": "text",   "id": "prefix", "label": "Prefix",     "default": "stack"},
+            {"type": "text",   "id": "prefixName", "label": "Prefix",     "default": "stack"},
             {"type": "button", "label": "Acquire", "action": "run", "style": "primary"},
         ],
         "outputs": [{"type": "text", "id": "status", "label": "Status"}]
@@ -324,7 +324,7 @@ SCENARIO_ACTIONS = [{
     'params': [
         {'id': 'range',  'label': 'Range (mm)', 'type': 'number', 'default': 1.0},
         {'id': 'step',   'label': 'Step (mm)',  'type': 'number', 'default': 0.2},
-        {'id': 'prefix', 'label': 'Prefix',     'type': 'text',   'default': 'stack'},
+        {'id': 'prefixName', 'label': 'Prefix',     'type': 'text',   'default': 'stack'},
     ]
 }]
 
@@ -337,7 +337,7 @@ def run(ctx, params):
     # --- Params ---
     rng    = float(params['range'])
     step   = float(params['step'])
-    prefix = params['prefix']
+    prefixName = params['prefixName']
 
     # --- Setup ---
     x0, y0, z0 = stage.position['X'], stage.position['Y'], stage.position['Z']
@@ -352,7 +352,7 @@ def run(ctx, params):
     i, z = 0, z_start
     while z <= z_end + 1e-6:
         ctx.update_output('status', f'z={z} mm ({i+1} frames)')
-        cam.capture(f'./captures/{prefix}_{i}.tiff')
+        cam.capture(f'./captures/{prefixName}_{i}.tiff')
         i += 1
         z = round(z + step, 4)
         stage.move_absolute(x0, y0, z, feedrate=1000)
