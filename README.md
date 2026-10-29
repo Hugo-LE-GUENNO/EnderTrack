@@ -60,7 +60,7 @@ Open http://localhost:5000 from any browser on the same network — zero setup, 
 
 Drop a folder into `plugins/` and enable it from the Plugins tab. No restart needed.
 
-👉 [Create a JS plugin](docs/js-plugins.md)  
+👉 [Create a JS plugin](docs/advanced-plugins.md)  
 👉 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
 
 ### Python plugins
