@@ -107,7 +107,7 @@ class PluginContext:
     def image_to_stage(self, px_offset_x, px_offset_y):
         """
         Convertit un offset pixel (depuis le centre image) en delta mm stage.
-        Applique pixel_size effectif, rotation et flip — identique au mosaic tile JS.
+        Applique pixel_size effectif et rotation — identique au mosaic tile JS.
         px_offset_x, px_offset_y : pixels depuis le centre (droite/bas positif)
         Retourne (dx_mm, dy_mm) dans le repère stage.
         """
@@ -122,14 +122,10 @@ class PluginContext:
         cur_res = cfg.get('resolution', [640, 480])
         eff_ps  = ps * (ref_res[0] / cur_res[0])  # µm/px effectif
         rotation = cfg.get('rotation', 0)
-        flip_h   = cfg.get('flip_h', False)
-        flip_v   = cfg.get('flip_v', False)
 
         dx =  px_offset_x * eff_ps / 1000.0  # mm, image X → stage X
         dy = -px_offset_y * eff_ps / 1000.0  # image Y↓ → stage Y↑
 
-        if flip_h: dx = -dx
-        if flip_v: dy = -dy
         if   rotation == 90:  dx, dy =  dy, -dx
         elif rotation == 180: dx, dy = -dx, -dy
         elif rotation == 270: dx, dy = -dy,  dx
@@ -291,8 +287,6 @@ class PluginContext:
                     'gain':        c.get('gain'),
                     'pixel_size':  c.get('pixel_size'),
                     'rotation':    c.get('rotation'),
-                    'flip_h':      c.get('flip_h'),
-                    'flip_v':      c.get('flip_v'),
                     'color_mode':  c.get('color_mode'),
                     'sensor':      c.get('sensor'),
                 }

@@ -42,8 +42,6 @@ _config = {
     'pixel_size': 1.0,
     'pixel_size_ref_res': [640, 480],
     'rotation': 0,
-    'flip_h': False,
-    'flip_v': False,
     'format': 'tiff',
     'color_mode': 'gray',
     'stream_format': 'RGB888'  # RGB888 | BGR888
@@ -150,10 +148,6 @@ def capture(path, fmt=None):
         rot = _config.get('rotation', 0)
         if rot:
             img = img.rotate(-rot, expand=True)
-        if _config.get('flip_h'):
-            img = img.transpose(Image.FLIP_LEFT_RIGHT)
-        if _config.get('flip_v'):
-            img = img.transpose(Image.FLIP_TOP_BOTTOM)
         if fmt in ('tiff', 'tif'):
             img = img.convert('L')
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
@@ -278,10 +272,6 @@ def register_routes(app):
                     rot = _config.get('rotation', 0)
                     if rot:
                         img = img.rotate(-rot, expand=True)
-                    if _config.get('flip_h'):
-                        img = img.transpose(Image.FLIP_LEFT_RIGHT)
-                    if _config.get('flip_v'):
-                        img = img.transpose(Image.FLIP_TOP_BOTTOM)
                 color_mode = data.get('color_mode') or _config.get('color_mode', 'gray')
                 if color_mode == 'gray':
                     img = img.convert('L')
@@ -403,7 +393,7 @@ def register_routes(app):
             restart_needed = True
 
         # Update config values
-        for key in ('pixel_size', 'pixel_size_ref_res', 'rotation', 'flip_h', 'flip_v', 'format', 'color_mode', 'stream_format'):
+        for key in ('pixel_size', 'pixel_size_ref_res', 'rotation', 'format', 'color_mode', 'stream_format'):
             if key in data:
                 _config[key] = data[key]
 

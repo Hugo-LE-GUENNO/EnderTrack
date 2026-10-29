@@ -230,8 +230,6 @@ cfg['camera']['exposure']    # µs
 cfg['camera']['gain']        # analogue gain
 cfg['camera']['pixel_size']  # µm/px (at ref resolution)
 cfg['camera']['rotation']    # 0 | 90 | 180 | 270
-cfg['camera']['flip_h']      # bool
-cfg['camera']['flip_v']      # bool
 cfg['camera']['color_mode']  # 'gray' | 'rgb' | 'bgr'
 cfg['camera']['sensor']      # e.g. 'imx708_wide'
 
