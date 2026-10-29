@@ -87,7 +87,9 @@ ctx.update_image('preview', numpy_array_hwc)         # numpy (H,W,3) -> JPEG
 
 ## Context API (`ctx`)
 
-### Stage
+### Devices
+
+**Stage**
 
 ```python
 stage = ctx.stage
@@ -104,7 +106,7 @@ if stage:
     stage.send_gcode('M300', wait_ok=True)     # raw G-code access
 ```
 
-### Camera
+**Camera**
 
 ```python
 cam = ctx.cam
@@ -124,7 +126,7 @@ if cam:
     # stage position is automatically injected in the .yaml if connected
 ```
 
-### Light
+**Light**
 
 ```python
 light = ctx.light
@@ -139,6 +141,55 @@ light.intensity(0.5)
 # Multiple lights — use id= to target a specific one
 light.on(r=255, g=0, b=0, id=1)
 light.off(id=2)
+```
+
+**Image/stage coordinate helpers**
+
+```python
+# Convert a pixel offset from image center to stage delta (mm)
+# Accounts for pixel_size, resolution, rotation and flip
+dx_mm, dy_mm = ctx.image_to_stage(px_offset_x, px_offset_y)
+
+# Current field of view in mm
+fov_x, fov_y = ctx.fov_mm()
+```
+
+Example — move stage to center a detected object:
+
+```python
+import numpy as np
+
+def center_object(ctx, params):
+    cam = ctx.cam
+    stage = ctx.stage
+    if not cam or not stage:
+        return {'success': False}
+
+    cam.capture('/tmp/snap.tiff')
+    img = cv2.imread('/tmp/snap.tiff')
+    h, w = img.shape[:2]
+
+    obj_px_x, obj_px_y = w // 2 + 50, h // 2 - 30   # replace with real detection
+    offset_x = obj_px_x - w // 2
+    offset_y = obj_px_y - h // 2
+
+    dx_mm, dy_mm = ctx.image_to_stage(offset_x, offset_y)
+    stage.move_relative(dx=dx_mm, dy=dy_mm)
+    stage.finish_moves()
+    return {'success': True}
+```
+
+**Custom devices**
+
+Register hardware drivers (e.g. Arduino pump) — accessible across functions, cleaned up on deactivation:
+
+```python
+def on_load(ctx):
+    import serial
+    ctx.register_device('pump', serial.Serial('/dev/ttyUSB0', 9600))
+
+def run(ctx, params):
+    ctx.devices['pump'].write(b'GO\n')
 ```
 
 ### Lists (waypoints)
@@ -179,74 +230,10 @@ ctx.log('Warning!', level='warn')
 ctx.log('Error!',   level='error')
 ```
 
-### Viewports
-
-Create a custom panel displaying a live image (e.g. processed camera feed):
-
-```python
-def on_load(ctx):
-    ctx.create_viewport('processed', 'Processed view')
-
-def run(ctx, params):
-    ctx.update_viewport('processed', numpy_array_hwc)  # numpy (H,W,3)
-```
-
-### Custom devices
-
-Register hardware drivers (e.g. Arduino pump) — accessible across functions, cleaned up on deactivation:
-
-```python
-def on_load(ctx):
-    import serial
-    ctx.register_device('pump', serial.Serial('/dev/ttyUSB0', 9600))
-
-def run(ctx, params):
-    ctx.devices['pump'].write(b'GO\n')
-```
-
 ### Event bus
 
 ```python
 ctx.bus.publish('my:event', {'key': 'value'})
-```
-
-### Image/stage coordinate helpers
-
-```python
-# Convert a pixel offset from image center to stage delta (mm)
-# Accounts for pixel_size, resolution, rotation and flip
-dx_mm, dy_mm = ctx.image_to_stage(px_offset_x, px_offset_y)
-
-# Current field of view in mm
-fov_x, fov_y = ctx.fov_mm()
-```
-
-Example — move stage to center a detected object:
-
-```python
-import numpy as np
-
-def center_object(ctx, params):
-    cam = ctx.cam
-    stage = ctx.stage
-    if not cam or not stage:
-        return {'success': False}
-
-    cam.capture('/tmp/snap.tiff')
-    img = cv2.imread('/tmp/snap.tiff')
-    h, w = img.shape[:2]
-
-    # detected object center in pixels (example: image center + offset)
-    obj_px_x, obj_px_y = w // 2 + 50, h // 2 - 30   # replace with real detection
-
-    # pixel offset from image center
-    offset_x = obj_px_x - w // 2
-    offset_y = obj_px_y - h // 2
-
-    dx_mm, dy_mm = ctx.image_to_stage(offset_x, offset_y)
-    stage.move_relative(dx=dx_mm, dy=dy_mm)
-    stage.finish_moves()
-    return {'success': True}
 ```
 
 ---
