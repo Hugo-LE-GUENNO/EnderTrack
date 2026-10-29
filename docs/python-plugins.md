@@ -35,14 +35,7 @@ def run(ctx, params):
 
 ## Sections
 
-A plugin can inject UI into 4 panels:
-
-| Key          | Location                   |
-|--------------|----------------------------|
-| `settings`   | Settings panel             |
-| `navigation` | Navigation panel           |
-| `waypoints`  | Waypoints/Lists panel      |
-| `automation` | Automation/Scenario panel  |
+A plugin can inject UI into 4 panels: `settings`, `navigation`, `waypoints`, `automation`.
 
 Each section accepts `inputs` (controls) and `outputs` (display).
 
