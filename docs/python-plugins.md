@@ -128,16 +128,17 @@ if cam:
 
 ```python
 light = ctx.light
+if not light.status().get('lights'):
+    return {'success': False}
+
 light.on(r=255, g=200, b=0, intensity=0.8)
 light.off()
-st = light.status()               # {'lights': [...], 'connected': True}
-has_light = bool(st.get('lights'))
+light.color(r=0, g=255, b=0)
+light.intensity(0.5)
 
 # Multiple lights — use id= to target a specific one
 light.on(r=255, g=0, b=0, id=1)
 light.off(id=2)
-light.color(r=0, g=255, b=0, id=1)
-light.intensity(0.5, id=2)
 ```
 
 ### Lists (waypoints)
@@ -355,7 +356,7 @@ def run(ctx, params):
     z_start = round(z0 - rng / 2, 4)
     z_end   = round(z0 + rng / 2, 4)
 
-    has_light = bool(light.status().get('lights'))
+    has_light = light.status().get('lights')
     if has_light:
         light.on(r=255, g=255, b=255, intensity=1.0)
 
