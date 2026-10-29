@@ -52,50 +52,53 @@ class PluginContext:
 
     @property
     def cam(self):
-        """Retourne le handler picamera2 si disponible."""
+        """Retourne un wrapper caméra, ou None si non disponible."""
         try:
-            from server import picamera_handler
-            return picamera_handler
+            from server import picamera_handler as _ph
+            if not _ph.HAS_PICAMERA2:
+                return None
         except:
             return None
 
-    def capture(self, path, fmt=None, resolution=None, exposure=None, gain=None,
-                color_mode=None, apply_rotation=True, save_metadata=True,
-                metadata=None, stage=None):
-        """
-        Capture complète via /api/camera/picam/capture.
-        path        : chemin de sauvegarde (ex: './captures/img.tiff')
-        fmt         : 'tiff' | 'png' | 'jpg'  (défaut: config caméra)
-        resolution  : [w, h] pour capturer à une résolution différente du stream
-        exposure    : temps d'exposition en µs
-        gain        : gain analogique
-        color_mode  : 'gray' | 'rgb' | 'bgr'
-        apply_rotation : applique rotation/flip de la config caméra
-        save_metadata  : sauvegarde un .yaml à côté de l'image
-        metadata    : dict de métadonnées custom
-        stage       : {'x': float, 'y': float, 'z': float} — injecté dans le .yaml
-        Retourne {'success': True, 'path': ..., 'width': ..., 'height': ...} ou {'success': False, 'error': ...}
-        """
-        import urllib.request
-        body = {'path': path, 'apply_rotation': apply_rotation, 'save_metadata': save_metadata}
-        if fmt:           body['format']     = fmt
-        if resolution:    body['resolution'] = resolution
-        if exposure:      body['exposure']   = int(exposure)
-        if gain:          body['gain']       = float(gain)
-        if color_mode:    body['color_mode'] = color_mode
-        if metadata:      body['metadata']   = metadata
-        if stage:         body['stage']      = stage
-        try:
-            req = urllib.request.Request(
-                'http://localhost:5000/api/camera/picam/capture',
-                data=json.dumps(body).encode(),
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
-            with urllib.request.urlopen(req, timeout=60) as r:
-                return json.loads(r.read())
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+        class _Cam:
+            def capture(self, path, fmt=None, resolution=None, exposure=None, gain=None,
+                        color_mode=None, apply_rotation=True, save_metadata=True,
+                        metadata=None, stage=None):
+                """
+                Capture via /api/camera/picam/capture.
+                fmt         : 'tiff' | 'png' | 'jpg'
+                resolution  : [w, h] — capture à une résolution différente du stream
+                exposure    : µs
+                gain        : gain analogique
+                color_mode  : 'gray' | 'rgb' | 'bgr'
+                apply_rotation : applique rotation/flip de la config
+                save_metadata  : sauvegarde un .yaml à côté
+                metadata    : dict de métadonnées custom
+                stage       : {'x': float, 'y': float, 'z': float} — injecté dans le .yaml
+                Retourne {'success': True, 'path': ..., 'width': ..., 'height': ...}
+                """
+                import urllib.request
+                body = {'path': path, 'apply_rotation': apply_rotation, 'save_metadata': save_metadata}
+                if fmt:        body['format']     = fmt
+                if resolution: body['resolution'] = resolution
+                if exposure:   body['exposure']   = int(exposure)
+                if gain:       body['gain']       = float(gain)
+                if color_mode: body['color_mode'] = color_mode
+                if metadata:   body['metadata']   = metadata
+                if stage:      body['stage']      = stage
+                try:
+                    req = urllib.request.Request(
+                        'http://localhost:5000/api/camera/picam/capture',
+                        data=json.dumps(body).encode(),
+                        headers={'Content-Type': 'application/json'},
+                        method='POST'
+                    )
+                    with urllib.request.urlopen(req, timeout=60) as r:
+                        return json.loads(r.read())
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+        return _Cam()
 
     def image_to_stage(self, px_offset_x, px_offset_y):
         """
