@@ -23,6 +23,15 @@ Open http://localhost:5000 — zero setup, dependencies included in `vendor/`.
 
 Update: `git pull`
 
+### Network access
+
+```bash
+python3 endertrack-server.py --lan
+# → displays the address to open from any device on the same network
+```
+
+👉 [Network, hotspot, RPi setup](docs/network.md)
+
 ## Raspberry Pi setup
 
 On a **Raspberry Pi with PiCamera**, install system dependencies once:
@@ -43,70 +52,28 @@ sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
 > sudo python3 endertrack-server.py
 > ```
 
-## Features
+Open http://localhost:5000 from any browser on the same network — zero setup, dependencies included in `vendor/`.
 
-Everything in [`basic`](../../tree/basic), plus:
+## Extensions
 
-- **Camera control** — live view, exposure, gain, white balance
-- **Image acquisition** — triggered capture, save to server or browser download
-- **Lighting** — LED control per channel
-- **Image gallery** — browse and manage captured images
-- **Histogram** — real-time RGB or grayscale histogram with LUT and contrast stretch
-- **Scenario builder** — automate acquisition sequences across position lists, with loops, waits, autofocus and capture actions
-- **Fast Explore** — draw a region on the canvas → auto-generate a grid of positions → run a full acquisition scenario (move + wait + capture) with configurable sweep pattern
+### JS plugins
 
-## Network access
+Drop a folder into `plugins/` and enable it from the Plugins tab. No restart needed.
 
-```bash
-python3 endertrack-server.py --lan
-# → displays the address to open from any device on the same network
-```
+👉 [Create a JS plugin](docs/js-plugins.md)  
+👉 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
 
-👉 [Network, hotspot, RPi setup](docs/network.md)
+### Python plugins
 
-## Changelog
+Run Python code server-side — access stage, camera, LEDs, lists and the event bus from a `.py` file.
 
-### v1.3.3
-- **Python plugins** — full API: `ctx.stage`, `ctx.cam`, `ctx.light`, `ctx.lists`, `ctx.bus`
-- **Light GPIO** — NeoPixel control from navigation, scenario builder and Python plugins
-- **Scenario builder** — `capture` action restores exposure/gain after capture; `led` action fixed (serverId, zero-value RGB)
-- **Histogram** — Auto mode applies contrast stretch to live preview in real-time
-- **Plugin extra JS** — `EXTRA_JS` list in plugin loads browser-side JS on activation
-- **Web Audio** — SSE `plugin:sound` event plays synthesized melodies via Web Audio API (no file, no dependency)
-- **Disco plugin** — random moves + light choreography, available as scenario action
-- **Anniversary plugin** — 🎂 Happy Birthday EnderTrack! Light + movement + music synchronized
-- **Docs** — [Python plugin tutorial](docs/python-plugins.md)
-
-### v1.3.2
-- Performance: removed M114 position polling after every move — dead-reckoning only, M114 only on initial connect
-- Performance: canvas render loop decoupled from state events during animation — direct `render()` call from movement RAF
-- Performance: track recording and mosaic tiles disabled by default, opt-in toggles in Settings
-- Stage settings: movement animation now synced to real hardware duration (server returns actual M400 time)
-- Camera: mosaic tile appears instantly on canvas (added to tile array only after image decode)
-- Camera: connection status text colored green/red matching XYZ Stage style
-- Camera: double-click on any viewport → fullscreen
-- Camera: "No device" label replaced by real device label from `enumerateDevices()`
-- Settings: removed all emoji icons from section headers and Home button
-- Track/history points hidden on canvas when "Record track" is unchecked
-- Tiles: `navigatorMode` controlled by tiles toggle
-- Fixed `_trackingEnabled` key mismatch between localStorage and state.js
-
-### v1.3.1
-- Fast Explore: creates a dedicated scenario in the scenario builder (move → wait → capture), with configurable sweep patterns (snake, spiral-in, spiral-out, reverse, random, row by row)
-- Fast Explore: optional capture per position, auto-computed wait delay from exposure time
-- Live renderer: fixed RGB→grayscale conversion (per-channel stretch, no luminance override)
-- Histogram: fixed LUT rendering for RGB mode, fixed redraw on empty data
-- Capture button: browser download + parallel server save, flash notification, right-click menu for filename prefix and server path
-- Scenario builder: fixed `_updateRunUI` missing method
-
-### v1.3.0
-- Scenario builder — major update: tree-based scenario editor, loop types, action registry, variable manager
+👉 [Python plugin tutorial](docs/python-plugins.md)  
+👉 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
 
 ## More
 
-👉 [Full documentation, editions, plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack)
-
-👉 [Python plugin tutorial](docs/python-plugins.md)
+👉 [Full documentation, editions](https://github.com/Hugo-LE-GUENNO/EnderTrack)  
+👉 [Changelog](docs/changelog.md)
 
 ## License
 
