@@ -298,7 +298,7 @@ def on_unload(ctx):
 
 ---
 
-## AI prompt## Full example — Z stack with stage, camera and light
+## Full example — Z stack with stage, camera and light
 
 ```python
 import time
@@ -329,32 +329,40 @@ SCENARIO_ACTIONS = [{
 }]
 
 def run(ctx, params):
+    # --- Init ---
     stage  = ctx.stage
+    cam    = ctx.cam
+    light  = ctx.light
+
+    # --- Params ---
     rng    = float(params['range'])
     step   = float(params['step'])
     prefix = params['prefix']
 
+    # --- Setup ---
     x0, y0, z0 = stage.position['X'], stage.position['Y'], stage.position['Z']
     z_start = round(z0 - rng / 2, 4)
     z_end   = round(z0 + rng / 2, 4)
 
-    ctx.light.on(r=255, g=255, b=255, intensity=1.0)
+    light.on(r=255, g=255, b=255, intensity=1.0)
     stage.move_absolute(x0, y0, z_start, feedrate=3000)
     stage.finish_moves()
 
+    # --- Acquire ---
     i, z = 0, z_start
     while z <= z_end + 1e-6:
         ctx.update_output('status', f'z={z:.3f} mm ({i+1} frames)')
-        ctx.cam.capture(f'./captures/{prefix}_{i:03d}.tiff')
+        cam.capture(f'./captures/{prefix}_{i:03d}.tiff')
         i += 1
         z = round(z + step, 4)
         stage.move_absolute(x0, y0, z, feedrate=1000)
         stage.finish_moves()
         time.sleep(0.05)
 
+    # --- Cleanup ---
     stage.move_absolute(x0, y0, z0, feedrate=3000)
     stage.finish_moves()
-    ctx.light.off()
+    light.off()
 
     ctx.log(f'Z stack done: {i} frames', level='ok')
     ctx.update_output('status', f'{i} frames captured')
