@@ -48,7 +48,7 @@ Each section accepts `inputs` (controls) and `outputs` (display).
 {"type": "slider",   "id": "speed",  "label": "Speed",  "min": 1, "max": 10, "default": 5, "step": 1}
 {"type": "input",    "id": "name",   "label": "Name",   "default": "img"}
 {"type": "folder",   "id": "outdir", "label": "Output folder", "directory": True}
-{"type": "dropdown", "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
+{"type": "select",   "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
 ```
 
 All values are passed to your function via `params`:
@@ -399,7 +399,7 @@ SECTIONS = {
 {"type": "slider",   "id": "speed",  "label": "Speed",  "min": 1, "max": 10, "default": 5, "step": 1}
 {"type": "input",    "id": "name",   "label": "Name",   "default": "img"}
 {"type": "folder",   "id": "outdir", "label": "Output folder", "directory": True}
-{"type": "dropdown", "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
+{"type": "select",   "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
 
 ## Output types
 {"type": "text",  "id": "status",  "label": "Status"}
@@ -427,11 +427,10 @@ stage.send_gcode('M300', wait_ok=True)  # raw G-code access
 
 ### Camera
 cam = ctx.cam                  # None if not available
-if cam:
-    cam.capture(path, fmt='tiff', resolution=None, exposure=None, gain=None,
-                color_mode='gray', apply_rotation=True, save_metadata=True,
-                metadata=None)
-    # returns {'success': True, 'path': ..., 'width': ..., 'height': ...}
+cam.capture(path, fmt='tiff', resolution=None, exposure=None, gain=None,
+            color_mode='gray', apply_rotation=True, save_metadata=True,
+            metadata=None)
+# returns {'success': True, 'path': ..., 'width': ..., 'height': ...}
 
 ### Light
 light = ctx.light
@@ -440,6 +439,8 @@ light.off()
 light.status()                 # {'lights': [...], 'connected': bool}
 
 ### Lists (waypoints)
+ctx.lists.all              # all groups with positions
+ctx.lists.get('My List')   # positions of a specific list
 ctx.lists.add(x, y, z, name='Point A')
 ctx.lists.clear()
 
@@ -464,7 +465,7 @@ SCENARIO_ACTIONS = [
     {
         'id': 'run',              # must match function name
         'label': 'My Action',    # name shown in scenario builder palette (Plugin category)
-        'timeout_ms': 30000,
+        'timeout_ms': 30000,     # max execution time before scenario considers it failed
         'params': [
             {'id': 'speed', 'label': 'Speed', 'type': 'number', 'default': 5, 'min': 1, 'max': 10},
         ]
@@ -472,7 +473,6 @@ SCENARIO_ACTIONS = [
 ]
 
 ## Rules
-- Always check ctx.stage / ctx.cam / ctx.light for None before use
 - run() is blocking; use time.sleep() between moves
 - Do not use emoji in labels (rendering issues on RPi)
 - Return {'success': True} or {'success': False} from every function
