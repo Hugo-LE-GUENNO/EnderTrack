@@ -119,10 +119,26 @@ if stage:
 ### Camera
 
 ```python
+# Simple capture (uses current camera settings)
+ctx.capture('./captures/img.tiff')
+
+# Full capture — all options
+ctx.capture(
+    path='./captures/img.tiff',
+    fmt='tiff',              # 'tiff' | 'png' | 'jpg'
+    resolution=[4056, 3040], # capture at full sensor resolution
+    exposure=50000,          # µs — overrides live setting for this capture
+    gain=1.5,                # analogue gain
+    color_mode='gray',       # 'gray' | 'rgb' | 'bgr'
+    apply_rotation=True,     # apply rotation/flip from camera config
+    save_metadata=True,      # save a .yaml alongside the image
+    metadata={'well': 'A1', 'cycle': 3},
+    stage={'x': 10.0, 'y': 20.0, 'z': 5.0},  # injected in .yaml
+)
+# returns {'success': True, 'path': ..., 'width': ..., 'height': ...}
+
+# ctx.cam gives direct access to picamera_handler (advanced use)
 cam = ctx.cam
-if cam:
-    cam.capture('./captures/img.tiff')
-    cam.capture('./captures/img.png', fmt='png')
 ```
 
 ### Light
@@ -330,14 +346,10 @@ SCENARIO_ACTIONS = [
 
 def run(ctx, params):
     stage  = ctx.stage
-    cam    = ctx.cam
     light  = ctx.light
 
     if not stage:
         ctx.update_output('status', 'Stage not connected')
-        return {'success': False}
-    if not cam:
-        ctx.update_output('status', 'Camera not available')
         return {'success': False}
 
     rng    = float(params.get('range', 1.0))
@@ -358,7 +370,8 @@ def run(ctx, params):
     i, z = 0, z_start
     while z <= z_end + 1e-6:
         ctx.update_output('status', f'z={z:.3f} mm ({i+1} frames)')
-        cam.capture(f'./captures/{prefix}_{i:03d}.tiff')
+        ctx.capture(f'./captures/{prefix}_{i:03d}.tiff',
+                    stage={'x': x0, 'y': y0, 'z': z})
         i += 1
         z = round(z + step, 4)
         stage.move_absolute(x0, y0, z, feedrate=1000)
@@ -433,9 +446,11 @@ stage.get_position()           # query M114, returns (x, y, z)
 stage.send_gcode('M300', wait_ok=True)  # raw G-code access
 
 ### Camera
-cam = ctx.cam                  # None if not available
-cam.capture('./captures/img.tiff')
-cam.capture('./captures/img.png', fmt='png')
+cam = ctx.cam                  # None if not available (direct picamera_handler access)
+ctx.capture(path, fmt='tiff', resolution=None, exposure=None, gain=None,
+            color_mode='gray', apply_rotation=True, save_metadata=True,
+            metadata=None, stage=None)
+# returns {'success': True, 'path': ..., 'width': ..., 'height': ...}
 
 ### Light
 light = ctx.light
