@@ -31,8 +31,6 @@ def run(ctx, params):
     return {'success': True}
 ```
 
-Activate it in **Settings -> Plugins**, it appears in the Navigation panel.
-
 ---
 
 ## Sections
@@ -127,17 +125,6 @@ if cam:
     cam.capture('./captures/img.png', fmt='png')
 ```
 
-#### Image/stage coordinate helpers
-
-```python
-# Convert a pixel offset from image center to stage delta (mm)
-# Accounts for pixel_size, resolution, rotation and flip
-dx_mm, dy_mm = ctx.image_to_stage(px_offset_x, px_offset_y)
-
-# Current field of view in mm
-fov_x, fov_y = ctx.fov_mm()
-```
-
 ### Light
 
 ```python
@@ -215,6 +202,45 @@ def run(ctx, params):
 
 ```python
 ctx.bus.publish('my:event', {'key': 'value'})
+```
+
+### Image/stage coordinate helpers
+
+```python
+# Convert a pixel offset from image center to stage delta (mm)
+# Accounts for pixel_size, resolution, rotation and flip
+dx_mm, dy_mm = ctx.image_to_stage(px_offset_x, px_offset_y)
+
+# Current field of view in mm
+fov_x, fov_y = ctx.fov_mm()
+```
+
+Example — move stage to center a detected object:
+
+```python
+import numpy as np
+
+def center_object(ctx, params):
+    cam = ctx.cam
+    stage = ctx.stage
+    if not cam or not stage:
+        return {'success': False}
+
+    cam.capture('/tmp/snap.tiff')
+    img = cv2.imread('/tmp/snap.tiff')
+    h, w = img.shape[:2]
+
+    # detected object center in pixels (example: image center + offset)
+    obj_px_x, obj_px_y = w // 2 + 50, h // 2 - 30   # replace with real detection
+
+    # pixel offset from image center
+    offset_x = obj_px_x - w // 2
+    offset_y = obj_px_y - h // 2
+
+    dx_mm, dy_mm = ctx.image_to_stage(offset_x, offset_y)
+    stage.move_relative(dx=dx_mm, dy=dy_mm)
+    stage.finish_moves()
+    return {'success': True}
 ```
 
 ---
