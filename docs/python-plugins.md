@@ -258,7 +258,7 @@ SCENARIO_ACTIONS = [
     {
         'id': 'run',
         'label': 'My Action',
-        'timeout_ms': 30000,
+        'timeout_ms': 30000,       # max execution time before scenario considers it failed
         'params': [
             {'id': 'speed',  'label': 'Speed',  'type': 'number', 'default': 5, 'min': 1, 'max': 10},
             {'id': 'mode',   'label': 'Mode',   'type': 'select', 'options': [
