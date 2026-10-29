@@ -257,17 +257,24 @@ Expose your plugin as a step in the scenario builder.
 SCENARIO_ACTIONS = [
     {
         'id': 'run',
-        'label': 'My Action',      # name shown in scenario builder palette
-        'timeout_ms': 30000,       # max execution time in ms
+        'label': 'My Action',
+        'timeout_ms': 30000,
         'params': [
-            {'id': 'speed', 'label': 'Speed', 'type': 'number', 'default': 5, 'min': 1, 'max': 10},
+            {'id': 'speed',  'label': 'Speed',  'type': 'number', 'default': 5, 'min': 1, 'max': 10},
+            {'id': 'mode',   'label': 'Mode',   'type': 'select', 'options': [
+                {'value': 'fast', 'label': 'Fast'},
+                {'value': 'slow', 'label': 'Slow'},
+            ], 'default': 'fast'},
+            {'id': 'label',  'label': 'Label',  'type': 'text',     'default': 'scan'},
+            {'id': 'dryrun', 'label': 'Dry run','type': 'checkbox', 'default': False},
         ]
     }
 ]
 
 def run(ctx, params):
-    speed = params['speed']        # value set by user in scenario builder
-    ctx.log(f'Running at speed {speed}')
+    speed  = params['speed']
+    mode   = params['mode']    # 'fast' or 'slow'
+    dryrun = params['dryrun']
 ```
 
 The `id` must match the function name (`def run`, `def my_action`, etc.).  
