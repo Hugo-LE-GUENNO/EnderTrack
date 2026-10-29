@@ -144,6 +144,12 @@ light.on(r=255, g=200, b=0, intensity=0.8)
 light.off()
 st = light.status()               # {'lights': [...], 'connected': True}
 has_light = bool(st.get('lights'))
+
+# Multiple lights — use id= to target a specific one
+light.on(r=255, g=0, b=0, id=1)
+light.off(id=2)
+light.color(r=0, g=255, b=0, id=1)
+light.intensity(0.5, id=2)
 ```
 
 ### Lists (waypoints)
