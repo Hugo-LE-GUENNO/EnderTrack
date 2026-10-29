@@ -51,19 +51,14 @@ Each section accepts `inputs` (controls) and `outputs` (display).
 {"type": "dropdown", "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
 ```
 
-For `folder`, the selected path is passed to your function via `params`:
+All values are passed to your function via `params`:
 
 ```python
 def run(ctx, params):
-    out = params.get('outdir', './captures')
-```
-
-Slider and text values are passed to your function via `params`:
-
-```python
-def run(ctx, params):
-    speed = float(params.get('speed', 5))
-    name  = params.get('name', 'img')
+    speed  = float(params.get('speed', 5))
+    name   = params.get('name', 'img')
+    outdir = params.get('outdir', './captures')
+    mode   = params.get('mode', 'fast')
 ```
 
 ---
