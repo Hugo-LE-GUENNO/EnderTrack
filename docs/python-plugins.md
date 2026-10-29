@@ -102,7 +102,7 @@ if stage:
     stage.move_relative(dx=0, dy=0, dz=1.0, feedrate=1000)
     stage.finish_moves()                       # blocking wait (M400)
     stage.home()                               # G28 + reads real position
-    stage.get_position()                       # query M114, returns (x, y, z)
+    stage.get_position()                       # query M114, returns (x, y, z) — only if you need guaranteed firmware position
     stage.send_gcode('M300', wait_ok=True)     # raw G-code access
 ```
 
@@ -432,7 +432,7 @@ stage.move_absolute(x, y, z, feedrate=3000)
 stage.move_relative(dx=0, dy=0, dz=0, feedrate=1000)
 stage.finish_moves()           # blocking wait (M400)
 stage.home()                   # G28 + reads real position
-stage.get_position()           # query M114, returns (x, y, z)
+stage.get_position()           # query M114, returns (x, y, z) — only if you need guaranteed firmware position
 stage.send_gcode('M300', wait_ok=True)  # raw G-code access
 
 ### Camera
