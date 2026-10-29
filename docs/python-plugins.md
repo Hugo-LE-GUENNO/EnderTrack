@@ -251,6 +251,8 @@ ctx.log('Error!',   level='error')
 
 ## Scenario action
 
+Expose your plugin as a step in the scenario builder.
+
 ```python
 SCENARIO_ACTIONS = [
     {
@@ -262,9 +264,14 @@ SCENARIO_ACTIONS = [
         ]
     }
 ]
+
+def run(ctx, params):
+    speed = params['speed']        # value set by user in scenario builder
+    ctx.log(f'Running at speed {speed}')
 ```
 
-The `id` must match the function name in your plugin (`def run`, `def my_action`, etc.).
+The `id` must match the function name (`def run`, `def my_action`, etc.).  
+Multiple actions per plugin are supported — one `id`/function pair each.
 
 ---
 
