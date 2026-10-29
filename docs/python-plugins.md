@@ -216,7 +216,6 @@ Read-only snapshot of EnderTrack settings.
 cfg = ctx.config
 
 # Stage
-cfg['position']            # {'x': 10.0, 'y': 20.0, 'z': 5.0}  (last saved state)
 cfg['coordinateBounds']    # {'x': {'min': -27, 'max': 193}, 'y': ..., 'z': ...}
 cfg['plateauDimensions']   # {'x': 220, 'y': 220, 'z': 250}
 cfg['feedrate']            # current XY feedrate (mm/min)
@@ -238,7 +237,6 @@ cfg['cameras']             # list of all configured cameras
 cfg['lights']              # list of configured lights
 ```
 
-For live position prefer `stage.position` — `cfg['position']` is the last saved state.
 
 ### Logging
 
@@ -466,7 +464,6 @@ ctx.lists.clear()
 
 ### Config
 cfg = ctx.config               # read-only
-cfg['position']                # {'x': float, 'y': float, 'z': float} (last saved state)
 cfg['coordinateBounds']        # {'x': {'min': 0, 'max': 220}, 'y': ..., 'z': ...}
 cfg['plateauDimensions']       # {'x': 220, 'y': 220, 'z': 250}
 cfg['feedrate']                # XY feedrate (mm/min)

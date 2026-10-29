@@ -252,13 +252,10 @@ class PluginContext:
 
     @property
     def config(self):
-        """Merge data/config.json + state.json + live stage limits + camera config. Read-only."""
+        """Merge data/config.json + live stage limits + camera config. Read-only."""
         try:
-            from server.state_store import load_state
             from server.sync_store import _read
             cfg = _read('config') or {}
-            state = load_state()
-            cfg['position'] = state.get('position', {'x': 0, 'y': 0, 'z': 0})
             # Inject live stage limits if connected
             try:
                 from server import stage_connection
