@@ -19,8 +19,6 @@ cd EnderTrack
 python3 endertrack-server.py
 ```
 
-Update: `git pull`
-
 ### Network access
 
 ```bash
