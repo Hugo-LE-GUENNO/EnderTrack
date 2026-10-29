@@ -352,7 +352,7 @@ def run(ctx, params):
     i, z = 0, z_start
     while z <= z_end + 1e-6:
         ctx.update_output('status', f'z={z} mm ({i+1} frames)')
-        cam.capture(f'./captures/{prefix}_{i:03d}.tiff')
+        cam.capture(f'./captures/{prefix}_{i}.tiff')
         i += 1
         z = round(z + step, 4)
         stage.move_absolute(x0, y0, z, feedrate=1000)
