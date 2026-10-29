@@ -147,6 +147,7 @@ class PyPluginUI {
           min:     p.min,
           max:     p.max,
           step:    p.step,
+          options: p.options,
         })),
         execute: async (params) => {
           const resp = await fetch(`${baseUrl}/api/pyplugins/${plugin_id}/action/${action.id}`, {
@@ -251,6 +252,24 @@ class PyPluginUI {
         wrap.appendChild(row);
         break;
       }
+      case 'textarea': {
+        const row = document.createElement('div');
+        row.className = 'input-group';
+        if (item.label) {
+          const lbl = document.createElement('label');
+          lbl.textContent = item.label;
+          row.appendChild(lbl);
+        }
+        const ta = document.createElement('textarea');
+        ta.id = `pyplugin-in-${plugin_id}-${item.id}`;
+        ta.value = item.default ?? '';
+        ta.placeholder = item.placeholder ?? '';
+        ta.rows = item.rows ?? 6;
+        ta.style.cssText = 'width:100%; font-family:monospace; font-size:11px; resize:vertical; background:var(--app-bg); color:var(--coordinates-color); border:1px solid var(--border); border-radius:var(--radius-sm); padding:4px 6px; box-sizing:border-box;';
+        row.appendChild(ta);
+        wrap.appendChild(row);
+        break;
+      }
       case 'dropdown': {
         const row = document.createElement('div');
         row.className = 'input-group';
@@ -282,6 +301,36 @@ class PyPluginUI {
       lbl.textContent = item.label;
       lbl.style.cssText = 'font-size:9px; color:var(--text-general); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.5px;';
       wrap.appendChild(lbl);
+    }
+
+    if (item.type === 'image' || item.type === 'image_click') {
+      const img = document.createElement('img');
+      img.id = `pyplugin-out-${plugin_id}-${item.id}`;
+      img.style.cssText = 'width:100%; border-radius:4px; display:block; background:#111; min-height:60px;';
+      if (item.type === 'image_click') {
+        img.style.cursor = 'crosshair';
+        img.addEventListener('click', (e) => {
+          const rect = img.getBoundingClientRect();
+          // Normalized coordinates [0,1] relative to the image
+          const nx = (e.clientX - rect.left)  / rect.width;
+          const ny = (e.clientY - rect.top)   / rect.height;
+          // Store in hidden inputs so _callAction picks them up
+          ['click_x', 'click_y'].forEach(k => {
+            let inp = document.getElementById(`pyplugin-in-${plugin_id}-${k}`);
+            if (!inp) {
+              inp = document.createElement('input');
+              inp.type = 'hidden';
+              inp.id = `pyplugin-in-${plugin_id}-${k}`;
+              document.body.appendChild(inp);
+            }
+            inp.value = k === 'click_x' ? nx : ny;
+          });
+          // Trigger the click action
+          this._callAction(plugin_id, item.action || 'on_click');
+        });
+      }
+      wrap.appendChild(img);
+      return wrap;
     }
 
     if (item.type === 'graph') {
@@ -348,7 +397,9 @@ class PyPluginUI {
     const els = document.querySelectorAll(`[id="pyplugin-out-${data.plugin_id}-${data.id}"]`);
     if (!els.length) return;
     els.forEach(el => {
-      if (el.tagName === 'CANVAS' && el.dataset.points !== undefined) {
+      if (el.tagName === 'IMG') {
+        el.src = 'data:image/jpeg;base64,' + data.value;
+      } else if (el.tagName === 'CANVAS' && el.dataset.points !== undefined) {
         // graph
         let points = JSON.parse(el.dataset.points || '[]');
         if (data.reset) points = [];

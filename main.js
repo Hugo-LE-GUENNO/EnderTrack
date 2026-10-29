@@ -976,84 +976,85 @@ window._openPluginCatalog = async function() {
   if (!el) return;
   if (el.style.display !== 'none') { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">\u23f3 Loading...</div>';
+  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">Loading...</div>';
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  const CATALOG_URL = 'https://raw.githubusercontent.com/Hugo-LE-GUENNO/EnderTrack-plugins-community/main/plugins-advanced/catalog.json';
   let catalog = null, offline = false;
   try {
-    const resp = await fetch(serverUrl + '/api/plugins/catalog', { signal: AbortSignal.timeout(10000) });
-    const data = await resp.json();
-    if (data.success && data.catalog.length) {
-      catalog = data.catalog;
-      try { localStorage.setItem('endertrack_catalog_cache', JSON.stringify(catalog)); } catch {}
-    }
+    const resp = await fetch(CATALOG_URL, { signal: AbortSignal.timeout(10000) });
+    catalog = await resp.json();
+    try {
+      const installed = await fetch(serverUrl + '/api/plugins/list').then(r => r.json());
+      catalog.forEach(p => p._installed = installed.includes(p.folder));
+    } catch { catalog.forEach(p => p._installed = false); }
+    try { localStorage.setItem('endertrack_catalog_cache', JSON.stringify(catalog)); } catch {}
   } catch {
     try { catalog = JSON.parse(localStorage.getItem('endertrack_catalog_cache')); offline = true; } catch {}
   }
-  if (!catalog || !catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">None plugin disponible</div>'; return; }
-  const header = offline ? '<div style="padding:4px 8px; font-size:10px; color:var(--coordinates-color); margin-bottom:4px;">\ud83d\udce1 Hors-ligne — cache local</div>' : '';
+  if (!catalog || !catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">No plugin available</div>'; return; }
+  const header = offline ? '<div style="padding:4px 8px; font-size:10px; color:var(--coordinates-color); margin-bottom:4px;">Offline — local cache</div>' : '';
   el.innerHTML = header +
     '<div id="catalogLog" style="display:none; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px; font-size:10px; font-family:monospace; color:var(--coordinates-color); max-height:80px; overflow-y:auto;"></div>' +
-    catalog.sort((a, b) => (a.name || a._folder).localeCompare(b.name || b._folder)).map(p => {
-    const installed = p._installed;
-    const name = p.name || p._folder;
-    const icon = p.icon || '\ud83d\udd0c';
-    const desc = p.description || '';
-    const statusDot = installed ? '\ud83d\udfe2' : '\u26ab';
-    const btn = installed
-      ? '<button id="catBtn_' + p._folder + '" onclick="window._uninstallPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Delete</button>'
-      : '<button id="catBtn_' + p._folder + '" onclick="window._installPlugin(\'' + p._folder + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Installer</button>';
-    return '<div id="catRow_' + p._folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
-      '<div style="display:flex; align-items:center; gap:6px;"><span style="font-size:8px;">' + statusDot + '</span><div><span style="font-size:12px;">' + icon + ' ' + name + '</span>' +
-      (desc ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6;">' + desc + '</div>' : '') +
-      '</div></div>' + btn + '</div>';
-  }).join('');
-};
-
-window._catalogLog = function(msg, type) {
-  const log = document.getElementById('catalogLog');
-  if (!log) return;
-  log.style.display = 'block';
-  const color = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : 'var(--coordinates-color)';
-  log.innerHTML += '<div style="color:' + color + ';">' + msg + '</div>';
-  log.scrollTop = log.scrollHeight;
+    catalog.sort((a, b) => (a.name || a.folder).localeCompare(b.name || b.folder)).map(p => {
+      const installed = p._installed;
+      const dot = '<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:' + (installed ? '#22c55e' : '#555') + '; margin-right:6px; vertical-align:middle;"></span>';
+      const btn = installed
+        ? '<button id="catBtn_' + p.folder + '" onclick="window._uninstallPlugin(\'' + p.folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Delete</button>'
+        : '<button id="catBtn_' + p.folder + '" onclick="window._installPlugin(\'' + p.folder + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Install</button>';
+      return '<div id="catRow_' + p.folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
+        '<div><div style="font-size:12px;">' + dot + (p.name || p.folder) + '</div>' +
+        (p.description ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6; margin-left:12px;">' + p.description + '</div>' : '') +
+        '</div>' + btn + '</div>';
+    }).join('');
 };
 
 window._installPlugin = async function(folder) {
   const btn = document.getElementById('catBtn_' + folder);
-  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
-  window._catalogLog('📦 Installation de ' + folder + '...');
+  if (btn) { btn.disabled = true; btn.textContent = 'Installing...'; }
+  const log = document.getElementById('catalogLog');
+  if (log) { log.style.display = 'block'; log.innerHTML += '<div>Installing ' + folder + '...</div>'; }
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
   try {
+    const CATALOG_URL = 'https://raw.githubusercontent.com/Hugo-LE-GUENNO/EnderTrack-plugins-community/main/plugins-advanced/catalog.json';
+    const catalogData = await fetch('https://api.github.com/repos/Hugo-LE-GUENNO/EnderTrack-plugins-community/contents/plugins-advanced/catalog.json', {cache: 'no-store', headers: {'Accept': 'application/vnd.github.raw+json'}}).then(r => r.json());
+    const pluginMeta = catalogData.find(p => p.folder === folder);
+    const files = pluginMeta?.files;
+    if (!files || !files.length) throw new Error('No files list in catalog for ' + folder);
+    const baseUrl = 'https://raw.githubusercontent.com/Hugo-LE-GUENNO/EnderTrack-plugins-community/main/plugins-advanced/' + folder + '/';
+    const fileContents = {};
+    for (const f of files) {
+      const r = await fetch(baseUrl + f);
+      if (!r.ok) throw new Error('Failed to fetch ' + f);
+      fileContents[f] = await r.text();
+    }
     const resp = await fetch(serverUrl + '/api/plugins/install', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ folder })
+      body: JSON.stringify({ folder, files: fileContents })
     });
     const data = await resp.json();
     if (data.success) {
-      window._catalogLog('✅ ' + folder + ' installed (' + data.files.length + ' files: ' + data.files.join(', ') + ')', 'success');
-      // Update row visually
-      const row = document.getElementById('catRow_' + folder);
-      if (row) {
-        row.querySelector('span[style*="font-size:8px"]').textContent = '🟢';
-      }
+      if (log) log.innerHTML += '<div style="color:#22c55e;">' + folder + ' installed</div>';
+      const dotEl = document.querySelector('#catRow_' + folder + ' span');
+      if (dotEl) dotEl.style.background = '#22c55e';
       if (btn) { btn.textContent = 'Delete'; btn.style.background = '#ef4444'; btn.style.color = '#fff'; btn.disabled = false; btn.onclick = function() { window._uninstallPlugin(folder); }; }
-      // Refresh local plugin list
       if (EnderTrack.PluginManager?.renderPluginList) await EnderTrack.PluginManager.renderPluginList();
+      setTimeout(() => { if (log) log.style.display = 'none'; }, 2000);
     } else {
-      window._catalogLog('❌ Error: ' + data.error, 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'Installer'; }
+      if (log) log.innerHTML += '<div style="color:#ef4444;">Error: ' + data.error + '</div>';
+      if (btn) { btn.disabled = false; btn.textContent = 'Install'; }
     }
   } catch(e) {
-    window._catalogLog('❌ ' + e.message, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Installer'; }
+    if (log) log.innerHTML += '<div style="color:#ef4444;">Error: ' + e.message + '</div>';
+    if (btn) { btn.disabled = false; btn.textContent = 'Install'; }
   }
 };
 
 window._uninstallPlugin = async function(folder) {
-  if (!confirm('Delete le plugin ' + folder + ' ?')) return;
+  if (!confirm('Delete plugin ' + folder + '?\nNote: the page will reload to unload the plugin scripts.')) return;
   const btn = document.getElementById('catBtn_' + folder);
-  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
-  window._catalogLog('🗑️ Suppression de ' + folder + '...');
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting...'; }
+  const log = document.getElementById('catalogLog');
+  if (log) { log.style.display = 'block'; log.innerHTML += '<div>Deleting ' + folder + '...</div>'; }
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
   try {
     const resp = await fetch(serverUrl + '/api/plugins/uninstall', {
@@ -1062,17 +1063,119 @@ window._uninstallPlugin = async function(folder) {
     });
     const data = await resp.json();
     if (data.success) {
-      window._catalogLog('✅ ' + folder + ' deleted', 'success');
-      const row = document.getElementById('catRow_' + folder);
-      if (row) {
-        row.querySelector('span[style*="font-size:8px"]').textContent = '⚫';
-      }
-      if (btn) { btn.textContent = 'Installer'; btn.style.background = '#22c55e'; btn.style.color = '#000'; btn.disabled = false; btn.onclick = function() { window._installPlugin(folder); }; }
-      // Refresh local plugin list
+      if (log) log.innerHTML += '<div style="color:#22c55e;">' + folder + ' uninstalled</div>';
+      const dotEl = document.querySelector('#catRow_' + folder + ' span');
+      if (dotEl) dotEl.style.background = '#555';
+      if (btn) { btn.textContent = 'Install'; btn.style.background = '#22c55e'; btn.style.color = '#000'; btn.disabled = false; btn.onclick = function() { window._installPlugin(folder); }; }
       if (EnderTrack.PluginManager?.renderPluginList) await EnderTrack.PluginManager.renderPluginList();
+      if (log) { log.style.display = 'block'; log.innerHTML += '<div style="color:#f59e0b;">Plugin uninstalled — reloading page...</div>'; } setTimeout(() => { location.reload(); }, 1500);
+    } else {
+      if (log) log.innerHTML += '<div style="color:#ef4444;">Error: ' + data.error + '</div>';
+      if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
     }
   } catch(e) {
-    window._catalogLog('❌ ' + e.message, 'error');
+    if (log) log.innerHTML += '<div style="color:#ef4444;">Error: ' + e.message + '</div>';
+    if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
+  }
+};
+
+
+
+// Python Plugin Catalog
+window._openPyPluginCatalog = async function() {
+  const el = document.getElementById('pyPluginCatalog');
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<div style="text-align:center; padding:12px; font-size:11px; color:var(--text-general);">Loading...</div>';
+  const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  const CATALOG_URL = 'https://raw.githubusercontent.com/Hugo-LE-GUENNO/EnderTrack-plugins-community/main/plugins-python/catalog.json';
+  let catalog = null, offline = false;
+  try {
+    const resp = await fetch(CATALOG_URL, { signal: AbortSignal.timeout(10000) });
+    catalog = await resp.json();
+    // Check installed status via server
+    try {
+      const installed = await fetch(serverUrl + '/api/pyplugins/list').then(r => r.json());
+      const av = installed.available || [];
+      catalog.forEach(p => p._installed = av.includes(p.folder));
+    } catch { catalog.forEach(p => p._installed = false); }
+    try { localStorage.setItem('endertrack_pycatalog_cache', JSON.stringify(catalog)); } catch {}
+  } catch {
+    try { catalog = JSON.parse(localStorage.getItem('endertrack_pycatalog_cache')); offline = true; } catch {}
+  }
+  if (!catalog || !catalog.length) { el.innerHTML = '<div style="padding:8px; font-size:11px; color:var(--text-general); opacity:0.5;">No plugin available</div>'; return; }
+  const header = offline ? '<div style="padding:4px 8px; font-size:10px; color:var(--coordinates-color); margin-bottom:4px;">Offline — local cache</div>' : '';
+  el.innerHTML = header +
+    '<div id="pyCatalogLog" style="display:none; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border-radius:4px; font-size:10px; font-family:monospace; color:var(--coordinates-color); max-height:80px; overflow-y:auto;"></div>' +
+    catalog.map(p => {
+      const installed = p._installed;
+      const dot = '<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:' + (installed ? '#22c55e' : '#555') + '; margin-right:6px; vertical-align:middle;"></span>';
+      const btn = installed
+        ? '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._uninstallPyPlugin(\'' + p.folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Delete</button>'
+        : '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._installPyPlugin(\'' + p.folder + '\',\'' + p.main + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Install</button>';
+      return '<div id="pyCatRow_' + p.folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
+        '<div><div style="font-size:12px;">' + dot + p.name + '</div>' +
+        (p.description ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6; margin-left:12px;">' + p.description + '</div>' : '') +
+        '</div>' + btn + '</div>';
+    }).join('');
+};
+
+window._installPyPlugin = async function(folder, main) {
+  const btn = document.getElementById('pyCatBtn_' + folder);
+  if (btn) { btn.disabled = true; btn.textContent = 'Installing...'; }
+  const log = document.getElementById('pyCatalogLog');
+  if (log) { log.style.display = 'block'; log.innerHTML += '<div>Installing ' + folder + '...</div>'; }
+  const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  try {
+    // Fetch plugin file from GitHub (browser has internet)
+    const fileUrl = 'https://raw.githubusercontent.com/Hugo-LE-GUENNO/EnderTrack-plugins-community/main/plugins-python/' + folder + '/' + main;
+    const fileResp = await fetch(fileUrl);
+    if (!fileResp.ok) throw new Error('GitHub fetch failed: ' + fileResp.status);
+    const fileContent = await fileResp.text();
+    const resp = await fetch(serverUrl + '/api/pyplugins/install', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ folder, main, content: fileContent })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      if (log) { log.style.display = 'block'; log.innerHTML += '<div style="color:#22c55e;">' + folder + ' installed</div>'; }
+      const dotEl = document.querySelector('#pyCatRow_' + folder + ' span');
+      if (dotEl) dotEl.style.background = '#22c55e';
+      if (btn) { btn.textContent = 'Delete'; btn.style.background = '#ef4444'; btn.style.color = '#fff'; btn.disabled = false; btn.onclick = function() { window._uninstallPyPlugin(folder); }; }
+      await EnderTrack.PluginManager.renderPluginList();
+      setTimeout(() => { if (log) log.style.display = 'none'; }, 2000);
+    } else {
+      if (log) log.innerHTML += '<div style="color:#ef4444;">Error: ' + data.error + '</div>';
+      if (btn) { btn.disabled = false; btn.textContent = 'Install'; }
+    }
+  } catch(e) {
+    if (log) log.innerHTML += '<div style="color:#ef4444;">Error: ' + e.message + '</div>';
+    if (btn) { btn.disabled = false; btn.textContent = 'Install'; }
+  }
+};
+
+window._uninstallPyPlugin = async function(folder) {
+  if (!confirm('Delete plugin ' + folder + '?')) return;
+  const btn = document.getElementById('pyCatBtn_' + folder);
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting...'; }
+  const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  try {
+    const resp = await fetch(serverUrl + '/api/pyplugins/uninstall', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ folder })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      const log = document.getElementById('pyCatalogLog');
+      if (log) { log.style.display = 'block'; log.innerHTML += '<div style="color:#22c55e;">' + folder + ' uninstalled</div>'; }
+      const dotEl2 = document.querySelector('#pyCatRow_' + folder + ' span');
+      if (dotEl2) dotEl2.style.background = '#555';
+      if (btn) { btn.textContent = 'Install'; btn.style.background = '#22c55e'; btn.style.color = '#000'; btn.disabled = false; btn.onclick = function() { window._installPyPlugin(folder, btn.dataset.main); }; }
+      await EnderTrack.PluginManager.renderPluginList();
+      setTimeout(() => { if (log) log.style.display = 'none'; }, 2000);
+    }
+  } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
   }
 };

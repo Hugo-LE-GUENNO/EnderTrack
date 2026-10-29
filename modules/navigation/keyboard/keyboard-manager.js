@@ -17,11 +17,30 @@ class KeyboardManager {
         this.handleKeyboardInput(e);
       }
     });
-    
+
     document.addEventListener('keyup', (e) => {
       if (this.isActive) {
         this.handleKeyboardRelease(e);
       }
+    });
+
+    // Z sensitivity — always active: hold Z + press + or -
+    document.addEventListener('keydown', (e) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      if (!this.pressedKeys.has('KeyZ') && e.code !== 'KeyZ') return;
+      if (e.code === 'KeyZ') { this.pressedKeys.add('KeyZ'); return; }
+      if (this.pressedKeys.has('KeyZ') && (e.code === 'Equal' || e.code === 'NumpadAdd')) {
+        e.preventDefault();
+        const s = EnderTrack.State.get().sensitivityZ || 1;
+        EnderTrack.Navigation.setSensitivity('z', Math.min(50, +(s * 2).toFixed(3)));
+      } else if (this.pressedKeys.has('KeyZ') && (e.code === 'Minus' || e.code === 'NumpadSubtract')) {
+        e.preventDefault();
+        const s = EnderTrack.State.get().sensitivityZ || 1;
+        EnderTrack.Navigation.setSensitivity('z', Math.max(0.01, +(s / 2).toFixed(3)));
+      }
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.code === 'KeyZ') this.pressedKeys.delete('KeyZ');
     });
   }
 

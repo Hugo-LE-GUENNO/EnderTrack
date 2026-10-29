@@ -392,7 +392,8 @@ class ScenarioExecutor {
     }
 
     try {
-      const result = await actionDef.execute(actionNode.params, this.context);
+      const promise = actionDef.execute(actionNode.params, this.context);
+      const result = actionNode.wait !== false ? await promise : null;
       this._doneActions++;
       window.EnderTrack?.Scenario?._updateGlobalBar?.(this._doneActions, this._totalActions);
       if (actionNode.actionId === 'move') this.updateTrackProgress();

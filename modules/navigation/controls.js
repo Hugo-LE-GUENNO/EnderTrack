@@ -462,8 +462,8 @@ class NavigationControls {
       el.value = Math.max(min, aMin + pct * (aMax - aMin)).toFixed(3);
     };
 
-    const maxXY = Math.max(min, viewXY), minXY = Math.max(min, viewXY / 100);
-    const maxZ = Math.max(min, viewZ), minZ = Math.max(min, viewZ / 100);
+    const maxXY = Math.max(min, viewXY), minXY = min;
+    const maxZ = Math.max(min, viewZ), minZ = min;
 
     ['sensitivityXY', 'sensitivityX', 'sensitivityY'].forEach(id => {
       rescale(document.getElementById(id), minXY, maxXY);

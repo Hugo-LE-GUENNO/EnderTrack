@@ -36,14 +36,13 @@ class CameraHistogram {
     this.el.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
         <span style="font-size:11px; color:var(--text-selected); font-weight:500;">Histogram</span>
-        <span style="font-size:8px; color:var(--text-general); opacity:0.6; margin-left:4px;">RAW</span>
         <div style="display:flex; gap:2px; align-items:center;">
           <span id="enderpicam-hist-info"
             onclick="EnderTrack.Camera.histogram.showValueInput()"
-            style="font-family:var(--font-mono); font-size:9px; color:var(--text-general); cursor:pointer; padding:1px 4px; border-radius:3px;"
+            style="font-family:var(--font-mono); font-size:11px; color:var(--text-general); cursor:pointer; padding:1px 4px; border-radius:3px;"
             title="Click to edit values">—</span>
           <button id="enderpicam-hist-auto" onclick="EnderTrack.Camera.histogram.toggleAuto()"
-            style="font-size:9px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">Auto ●</button>
+            style="font-size:11px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; background:var(--active-element); color:var(--text-selected);">Auto</button>
         </div>
       </div>
       <canvas id="enderpicam-hist-canvas" width="220" height="80"
@@ -53,6 +52,8 @@ class CameraHistogram {
     this.canvas = document.getElementById('enderpicam-hist-canvas');
     this.ctx = this.canvas.getContext('2d');
     this._setupEvents();
+    // Apply auto mode style on init
+    this.setMode(this.mode);
   }
 
   _setupEvents() {
@@ -185,7 +186,8 @@ class CameraHistogram {
   _showOptionsMenu(x, y) {
     document.getElementById('enderpicam-options-menu')?.remove();
     const luts = window.CameraLUTs || {};
-    const currentLut = window.EnderpicamPlugin?.ui?.lutId || 'gray';
+    const currentLut = window.EnderTrack?.Camera?._liveLutId ?? null;
+    console.log('[histogram menu] currentLut=', currentLut);
 
     const menu = document.createElement('div');
     menu.id = 'enderpicam-options-menu';
@@ -199,24 +201,49 @@ class CameraHistogram {
     logRow.innerHTML = `<span style="width:14px; text-align:center;">${this.logScale ? '✓' : ''}</span>Log scale`;
     logRow.addEventListener('mouseenter', () => logRow.style.background = 'var(--app-bg)');
     logRow.addEventListener('mouseleave', () => logRow.style.background = '');
-    logRow.addEventListener('click', () => {
-      this.logScale = !this.logScale;
-      this._redraw();
-      menu.remove();
-    });
+    logRow.addEventListener('click', () => { this.logScale = !this.logScale; this._redraw(); menu.remove(); });
     menu.appendChild(logRow);
 
-    // Separator
     const sep = document.createElement('div');
     sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
     menu.appendChild(sep);
 
+    // RGB (no LUT)
+    const rgbRow = document.createElement('div');
+    const rgbActive = !currentLut;
+    rgbRow.style.cssText = `padding:4px 10px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;
+      color:${rgbActive ? 'var(--text-selected)' : 'var(--text-general)'};
+      background:${rgbActive ? 'var(--active-element)' : 'transparent'};`;
+    rgbRow.innerHTML = `<span style="width:14px; text-align:center;">${rgbActive ? '✓' : ''}</span>RGB`;
+    rgbRow.addEventListener('mouseenter', () => { if (!rgbActive) rgbRow.style.background = 'var(--app-bg)'; });
+    rgbRow.addEventListener('mouseleave', () => { if (!rgbActive) rgbRow.style.background = ''; });
+    rgbRow.addEventListener('click', () => {
+      const cam = window.EnderTrack?.Camera;
+      const renderer = window.EnderTrack?.LiveRenderer;
+      if (cam) cam._liveLutId = null;
+      if (renderer) { renderer.enabled = false; renderer._lutTable = null; }
+      this._grayscale = false;
+      cam?._saveLiveSettings?.();
+      this._redraw();
+      menu.remove();
+    });
+    menu.appendChild(rgbRow);
+
+    const sep2 = document.createElement('div');
+    sep2.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
+    menu.appendChild(sep2);
+
     // LUT options
     for (const [id, def] of Object.entries(luts)) {
+      if (id === 'gray') continue;
+      const active = id === currentLut;
       const row = document.createElement('div');
       row.style.cssText = `padding:4px 10px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;
-        color:${id === currentLut ? 'var(--text-selected)' : 'var(--text-general)'};
-        background:${id === currentLut ? 'var(--active-element)' : 'transparent'};`;
+        color:${active ? 'var(--text-selected)' : 'var(--text-general)'};
+        background:${active ? 'var(--active-element)' : 'transparent'};`;
+      const check = document.createElement('span');
+      check.style.cssText = 'width:14px; text-align:center; flex-shrink:0;';
+      check.textContent = active ? '✓' : '';
       const swatch = document.createElement('canvas');
       swatch.width = 20; swatch.height = 8;
       swatch.style.cssText = 'border-radius:2px; flex-shrink:0;';
@@ -227,15 +254,18 @@ class CameraHistogram {
         sCtx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
         sCtx.fillRect(i, 0, 1, 8);
       }
+      row.appendChild(check);
       row.appendChild(swatch);
       row.appendChild(document.createTextNode(def.name));
-      row.addEventListener('mouseenter', () => { if (id !== currentLut) row.style.background = 'var(--app-bg)'; });
-      row.addEventListener('mouseleave', () => { if (id !== currentLut) row.style.background = ''; });
+      row.addEventListener('mouseenter', () => { if (!active) row.style.background = 'var(--app-bg)'; });
+      row.addEventListener('mouseleave', () => { if (!active) row.style.background = ''; });
       row.addEventListener('click', () => {
         const cam = window.EnderTrack?.Camera;
         const renderer = window.EnderTrack?.LiveRenderer;
         if (cam) cam._liveLutId = id;
         if (renderer) { renderer.setLut(id); renderer.enabled = true; }
+        this._grayscale = true;
+        cam?._saveLiveSettings?.();
         this._redraw();
         menu.remove();
       });
@@ -253,7 +283,6 @@ class CameraHistogram {
 
   // Value input popup
   showValueInput() {
-    if (this.mode === 'auto') return;
     document.getElementById('enderpicam-hist-input')?.remove();
     const info = document.getElementById('enderpicam-hist-info');
     if (!info) return;
@@ -295,8 +324,12 @@ class CameraHistogram {
     if (minEl && maxEl) {
       let mn = Math.max(0, Math.min(254, parseInt(minEl.value) || 0));
       let mx = Math.max(mn + 1, Math.min(255, parseInt(maxEl.value) || 255));
-      this.manualMin = mn;
-      this.manualMax = mx;
+      const range = this.getContrastRange();
+      if (mn !== range.min || mx !== range.max) {
+        this.manualMin = mn;
+        this.manualMax = mx;
+        this.setMode('manual');
+      }
       this._redraw();
     }
     document.getElementById('enderpicam-hist-input')?.remove();
@@ -327,10 +360,10 @@ class CameraHistogram {
     const style = isAuto
       ? 'background:var(--active-element); color:var(--text-selected); outline: 1px solid var(--text-selected);'
       : 'background:var(--app-bg); color:var(--text-general); outline:none;';
-    const label = isAuto ? 'Auto ●' : 'Auto ○';
+    const label = isAuto ? 'Auto' : 'Auto';
     for (const id of ['enderpicam-hist-auto', 'gallery-hist-auto']) {
       const btn = document.getElementById(id);
-      if (btn) { btn.style.cssText = `font-size:9px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; ${style}`; btn.textContent = label; }
+      if (btn) { btn.style.cssText = `font-size:11px; padding:2px 6px; border:none; border-radius:3px; cursor:pointer; ${style}`; btn.textContent = label; }
     }
     if (this.canvas) this.canvas.style.cursor = mode === 'manual' ? 'crosshair' : 'default';
     this._redraw();

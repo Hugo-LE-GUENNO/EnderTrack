@@ -8,10 +8,14 @@ class PluginManager {
     this.createAPI();
     this.isInitialized = true;
     // Restore previously active plugins after discovery
-    const active = JSON.parse(localStorage.getItem('endertrack-active-plugins') || '[]');
+    const _rawActive = JSON.parse(localStorage.getItem('endertrack-active-plugins') || '[]');
+    const active = _rawActive.filter(id => {
+      const exists = this.plugins?.get(id) || document.querySelector(`[data-plugin-id="${id}"]`);
+      return true; // filter happens after discover
+    });
     if (active.length) {
       this.discover().then(() => {
-        active.forEach(id => this.activate(id).catch(() => {}));
+        active.filter(id => this.plugins?.has(id)).forEach(id => this.activate(id).catch(() => {}));
       }).catch(() => {});
     }
     return true;

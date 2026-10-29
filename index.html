@@ -384,6 +384,13 @@
                                             ${window._picamDevices.length ? window._picamDevices.map(d=>`<option value="${d.id}">${d.name}</option>`).join('') : '<option value="">No device found</option>'}
                                           </select>
                                         </div>
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                          <label style="width:80px;font-size:10px;color:var(--text-general);">Pixel order</label>
+                                          <select id="acPixelOrder" style="flex:1;padding:4px;background:var(--app-bg);border:1px solid #444;border-radius:3px;color:var(--text-selected);font-size:10px;">
+                                            <option value="RGB888">RGB888</option>
+                                            <option value="BGR888">BGR888</option>
+                                          </select>
+                                        </div>
                                       </div>
                                     </div>
                                     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
@@ -415,8 +422,9 @@
                                 if (type === 'picamera2') {
                                   const deviceId = document.getElementById('acDevice')?.value || '0';
                                   const sensor = window._picamDevices.find(d=>String(d.id)===String(deviceId))?.name || '';
+                                  const pixelOrder = document.getElementById('acPixelOrder')?.value || 'RGB888';
                                   document.getElementById('addCameraModal')?.remove();
-                                  window._cameras.push({ type, label, sensor, id: Date.now(), deviceId, resolution: [640,480], preview_resolution: [640,480], pixel_size: 1.0, rotation: 0 });
+                                  window._cameras.push({ type, label, sensor, id: Date.now(), deviceId, resolution: [640,480], preview_resolution: [640,480], pixel_size: 1.0, rotation: 0, stream_format: pixelOrder });
                                   window._renderCameras(); window._savePeripherals();
                                   await EnderTrack.Camera._connectPicam(deviceId, [640,480]);
                                 } else {
@@ -801,20 +809,22 @@
                     <div style="font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#666; padding:10px 0 4px; border-bottom:1px solid #333; margin-bottom:4px;">Extensions</div>
                     <!-- Extensions (toujours en dernier) -->
                     <details>
-                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">JS Plugins</summary>
-                        <div style="padding:8px;">
-                            <input type="text" id="pluginSearchAll" placeholder="🔍 Search..." oninput="window._filterAllPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
-                            <div id="pluginsList"></div>
-                            <button id="catalogToggleBtn" onclick="window._openPluginCatalog()" style="width:100%; margin-top:8px; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">📦 Online catalog</button>
-                            <div id="pluginCatalog" style="display:none; margin-top:8px;"></div>
-                        </div>
-                    </details>
-
-                    <details>
                         <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">Python Plugins</summary>
                         <div style="padding:8px;">
                             <input type="text" id="pyPluginSearch" placeholder="🔍 Search..." oninput="EnderTrack.PluginManager._filterPyPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
                             <div id="pyPluginsCards"></div>
+                            <button onclick="window._openPyPluginCatalog()" style="width:100%; margin-top:8px; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">Online catalog</button>
+                            <div id="pyPluginCatalog" style="display:none; margin-top:8px;"></div>
+                        </div>
+                    </details>
+
+                    <details>
+                        <summary style="font-size:12px; color:var(--text-selected); cursor:pointer; padding:6px 0;">Advanced Plugins</summary>
+                        <div style="padding:8px;">
+                            <input type="text" id="pluginSearchAll" placeholder="🔍 Search..." oninput="window._filterAllPlugins(this.value)" style="width:100%; padding:6px 8px; margin-bottom:6px; background:var(--app-bg); border:1px solid #444; border-radius:4px; color:var(--text-selected); font-size:11px; box-sizing:border-box;">
+                            <div id="pluginsList"></div>
+                            <button id="catalogToggleBtn" onclick="window._openPluginCatalog()" style="width:100%; margin-top:8px; padding:8px; border:none; border-radius:4px; cursor:pointer; font-size:11px; background:var(--active-element); color:var(--text-selected); transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter=''">Online catalog</button>
+                            <div id="pluginCatalog" style="display:none; margin-top:8px;"></div>
                         </div>
                     </details>
 

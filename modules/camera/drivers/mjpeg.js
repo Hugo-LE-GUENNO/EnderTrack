@@ -86,6 +86,12 @@ class MjpegCameraDriver {
   }
 
   async capture(params) {
+    // Wait for a fresh frame after any config change (up to 3s)
+    const ts = this._frameTs || 0;
+    const deadline = Date.now() + 3000;
+    while (this._frameTs === ts && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 50));
+    }
     const frame = this._grabFrame();
     if (!frame) return { success: false, error: 'No frame available' };
     return { success: true, frame: frame.frame, width: frame.width, height: frame.height, path: params.path, format: params.format || 'jpeg' };

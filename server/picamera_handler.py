@@ -34,6 +34,7 @@ class StreamingOutput(io.BufferedIOBase):
 
 _picam = None
 _stream_output = None
+_camera_lock = threading.RLock()
 _config = {
     'resolution': [1280, 720],
     'exposure': 100000,
@@ -43,7 +44,9 @@ _config = {
     'rotation': 0,
     'flip_h': False,
     'flip_v': False,
-    'format': 'tiff'
+    'format': 'tiff',
+    'color_mode': 'gray',
+    'stream_format': 'RGB888'  # RGB888 | BGR888
 }
 _CONFIG_FILE = os.path.join(os.getcwd(), '.picam_config.json')
 
@@ -54,6 +57,8 @@ def _load_config():
         try:
             with open(_CONFIG_FILE, 'r') as f:
                 saved = json.load(f)
+                if not saved.get('exposure'): saved.pop('exposure', None)  # ignore exposure=0
+                saved.pop('gain', None)  # always start at minimum gain
                 _config.update(saved)
         except:
             pass
@@ -69,41 +74,65 @@ def _save_config():
 
 def _get_picam():
     global _picam, _stream_output
-    if _picam is None and HAS_PICAMERA2:
-        _load_config()
-        _picam = Picamera2()
-        res = tuple(_config['resolution'])
-        cfg = _picam.create_video_configuration(
-            main={'format': 'RGB888', 'size': res},
-            lores={'size': (min(640, res[0]), min(480, res[1])), 'format': 'YUV420'}
-        )
-        _picam.configure(cfg)
-        _stream_output = StreamingOutput()
-        _picam.start_recording(MJPEGEncoder(), FileOutput(_stream_output))
-        time.sleep(0.5)
-        # Apply saved controls
-        controls = {
-            'ExposureTime': int(_config['exposure']),
-            'AnalogueGain': float(_config['gain']),
-            'FrameDurationLimits': (33333, max(100000, int(_config['exposure']) + 100000))
-        }
-        _picam.set_controls(controls)
-        print(f"   Picamera2: {res[0]}×{res[1]} exp={_config['exposure']} gain={_config['gain']}")
-    return _picam, _stream_output
+    with _camera_lock:
+        if _picam is None and HAS_PICAMERA2:
+            _load_config()
+            _picam = Picamera2()
+            res = tuple(_config['resolution'])
+            cfg = _picam.create_video_configuration(
+                main={'format': _config.get('stream_format', 'RGB888'), 'size': res},
+                lores={'size': (min(640, res[0]), min(480, res[1])), 'format': 'YUV420'}
+            )
+            _picam.configure(cfg)
+            _stream_output = StreamingOutput()
+            _picam.start_recording(MJPEGEncoder(), FileOutput(_stream_output))
+            time.sleep(0.5)
+            try:
+                _config['sensor'] = _picam.camera_properties.get('Model', '')
+            except: pass
+            controls = {
+                'ExposureTime': int(_config['exposure']),
+                'AnalogueGain': float(_config['gain']),
+            }
+            _picam.set_controls(controls)
+            print(f"   Picamera2: {res[0]}×{res[1]} exp={_config['exposure']} gain={_config['gain']}")
+        return _picam, _stream_output
 
 
-def _restart_camera(new_res):
-    """Restart camera with new resolution."""
+def _restart_camera(new_res=None):
+    """Restart camera with new resolution/format."""
     global _picam, _stream_output
-    if _picam:
-        _picam.stop_recording()
-        _picam.stop()
-        _picam.close()
-        _picam = None
-        _stream_output = None
-    _config['resolution'] = list(new_res)
-    _save_config()
-    _get_picam()
+    with _camera_lock:
+        if _picam:
+            try: _picam.stop_recording()
+            except: pass
+            try: _picam.stop()
+            except: pass
+            try: _picam.close()
+            except: pass
+            _picam = None
+            _stream_output = None
+        if new_res:
+            _config['resolution'] = list(new_res)
+        _save_config()
+        time.sleep(0.5)
+        if HAS_PICAMERA2:
+            _load_config()
+            _picam = Picamera2()
+            res = tuple(_config['resolution'])
+            cfg = _picam.create_video_configuration(
+                main={'format': _config.get('stream_format', 'RGB888'), 'size': res},
+                lores={'size': (min(640, res[0]), min(480, res[1])), 'format': 'YUV420'}
+            )
+            _picam.configure(cfg)
+            _stream_output = StreamingOutput()
+            _picam.start_recording(MJPEGEncoder(), FileOutput(_stream_output))
+            time.sleep(0.5)
+            _picam.set_controls({
+                'ExposureTime': int(_config['exposure']),
+                'AnalogueGain': float(_config['gain']),
+            })
+            print(f"   Picamera2 restart: {res[0]}x{res[1]}")
 
 
 def capture(path, fmt=None):
@@ -186,51 +215,173 @@ def register_routes(app):
         """Capture a full-resolution frame and save."""
         import numpy as np
         import base64
+        import traceback
 
         picam, _ = _get_picam()
         if not picam:
             return jsonify({'error': 'No camera'}), 503
 
-        data = request.get_json() or {}
-        path = data.get('path', '')
-        fmt = data.get('format', _config.get('format', 'tiff'))
+        try:
+            data = request.get_json() or {}
+            path = data.get('path', '')
+            fmt = data.get('format', _config.get('format', 'tiff'))
+            cap_exp = data.get('exposure')
+            cap_gain = data.get('gain')
+            cap_res = data.get('resolution')  # e.g. [4056, 3040]
 
-        # Capture raw array
-        arr = picam.capture_array("main")
+            # Save live settings
+            live_exp = _config.get('exposure', 0)
+            live_gain = _config.get('gain', 1.0)
+            live_res = list(_config.get('resolution', [1280, 720]))
 
-        if path:
+            # Restart camera at capture resolution if different
+            if cap_res and list(cap_res) != live_res:
+                with _camera_lock:
+                    try: picam.stop_recording()
+                    except: pass
+                    try: picam.stop()
+                    except: pass
+                    cfg = picam.create_still_configuration(
+                        main={'format': _config.get('stream_format', 'RGB888'), 'size': tuple(cap_res)}
+                    )
+                    picam.configure(cfg)
+                    picam.start()
+                    time.sleep(0.5)
+
+            # Apply capture settings if provided
+            cap_controls = {}
+            if cap_exp and int(cap_exp) > 0:
+                cap_controls['ExposureTime'] = int(cap_exp)
+            if cap_gain and float(cap_gain) > 0:
+                cap_controls['AnalogueGain'] = float(cap_gain)
+            if cap_controls:
+                picam.set_controls(cap_controls)
+
+            # Wait for exposure to complete (exposure time + 2 frames margin)
+            eff_exp = cap_controls.get('ExposureTime', live_exp)
+            if eff_exp > 0:
+                time.sleep(eff_exp / 1_000_000 + 0.2)
+
+            # Capture
+            arr = picam.capture_array("main")
+
+            # Restore live settings
+            if cap_res and list(cap_res) != live_res:
+                _restart_camera(tuple(live_res))
+                picam, _ = _get_picam()
+            else:
+                picam.set_controls({'ExposureTime': live_exp, 'AnalogueGain': live_gain})
+            if path:
+                from PIL import Image
+                img = Image.fromarray(arr)
+                if data.get('apply_rotation') is True:
+                    rot = _config.get('rotation', 0)
+                    if rot:
+                        img = img.rotate(-rot, expand=True)
+                    if _config.get('flip_h'):
+                        img = img.transpose(Image.FLIP_LEFT_RIGHT)
+                    if _config.get('flip_v'):
+                        img = img.transpose(Image.FLIP_TOP_BOTTOM)
+                color_mode = data.get('color_mode') or _config.get('color_mode', 'gray')
+                if color_mode == 'gray':
+                    img = img.convert('L')
+                elif color_mode == 'bgr':
+                    r, g, b = img.split()
+                    img = Image.merge('RGB', (b, g, r))
+                # rgb: keep as-is
+                os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+                import datetime
+                meta = data.get('metadata', {})
+                pixel_size = data.get('pixel_size') or _config.get('pixel_size')
+                save_metadata = data.get('save_metadata', True)
+
+                if fmt in ('tiff', 'tif'):
+                    tiffinfo = {}
+                    if pixel_size and float(pixel_size) > 0:
+                        ps = float(pixel_size)
+                        tiffinfo[270] = f'ImageJ=1.54p\nunit=micron\nspacing={ps}\n'
+                        tiffinfo[282] = 1.0 / ps
+                        tiffinfo[283] = 1.0 / ps
+                        tiffinfo[296] = 1
+                    img.save(path, compression='tiff_deflate', tiffinfo=tiffinfo)
+                else:
+                    img.save(path)
+
+                if save_metadata:
+                    stage = data.get('stage')
+                    yaml_path = os.path.splitext(path)[0] + '.yaml'
+                    with open(yaml_path, 'w') as f:
+                        f.write(f"image: {os.path.basename(path)}\n")
+                        f.write(f"date: {datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')}\n")
+                        f.write(f"pixel_size_um: {float(pixel_size) if pixel_size else 'null'}\n")
+                        f.write(f"sensor: {_config.get('sensor', '')}\n")
+                        f.write(f"exposure_us: {cap_controls.get('ExposureTime', live_exp)}\n")
+                        f.write(f"gain: {round(cap_controls.get('AnalogueGain', live_gain), 3)}\n")
+                        f.write(f"width: {img.size[0]}\n")
+                        f.write(f"height: {img.size[1]}\n")
+                        f.write(f"bit_depth: {arr.dtype}\n")
+                        f.write(f"color_mode: {color_mode}\n")
+                        f.write(f"format: {fmt}\n")
+                        if stage:
+                            f.write(f"stage:\n  x: {stage.get('x')}\n  y: {stage.get('y')}\n  z: {stage.get('z')}\n")
+                        if meta:
+                            f.write("custom:\n")
+                            for k, v in meta.items():
+                                f.write(f"  {k}: {v}\n")
+                print(f"   Capture: {path} ({img.size[0]}x{img.size[1]}) {color_mode}")
+                return jsonify({'success': True, 'path': path, 'width': img.size[0], 'height': img.size[1]})
+
+            # Return as base64 JPEG for live preview
             from PIL import Image
             img = Image.fromarray(arr)
-            # Apply rotation
-            rot = _config.get('rotation', 0)
-            if rot:
-                img = img.rotate(-rot, expand=True)
-            # Apply flip
-            if _config.get('flip_h'):
-                img = img.transpose(Image.FLIP_LEFT_RIGHT)
-            if _config.get('flip_v'):
-                img = img.transpose(Image.FLIP_TOP_BOTTOM)
-            # Convert to grayscale for TIFF
-            if fmt in ('tiff', 'tif'):
-                img = img.convert('L')
+            buf = io.BytesIO()
+            img.save(buf, format='JPEG', quality=80)
+            b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+            return jsonify({'success': True, 'frame': b64, 'width': arr.shape[1], 'height': arr.shape[0]})
 
-            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-            img.save(path, compression='tiff_deflate' if fmt in ('tiff', 'tif') else None)
-            print(f"   Capture: {path} ({img.size[0]}×{img.size[1]})")
-            return jsonify({'success': True, 'path': path, 'width': img.size[0], 'height': img.size[1]})
-
-        # Return as base64 JPEG for live preview
-        from PIL import Image
-        img = Image.fromarray(arr)
-        buf = io.BytesIO()
-        img.save(buf, format='JPEG', quality=80)
-        b64 = base64.b64encode(buf.getvalue()).decode('ascii')
-        return jsonify({'success': True, 'frame': b64, 'width': arr.shape[1], 'height': arr.shape[0]})
+        except Exception as e:
+            tb = traceback.format_exc()
+            print(f"[capture] ERROR: {e}\n{tb}")
+            return jsonify({'error': str(e), 'traceback': tb}), 500
 
     @app.route('/api/camera/picam/config', methods=['GET'])
     def _picam_config_get():
         """Get current camera config."""
-        return jsonify(_config)
+        result = dict(_config)
+        picam, _ = _get_picam()
+        if picam:
+            try:
+                cc = picam.camera_controls
+                if 'ExposureTime' in cc:
+                    lim = cc['ExposureTime']
+                    if lim[0] > 0 and lim[1] > lim[0]:
+                        result['exposure_limits'] = [int(lim[0]), int(lim[1])]
+                if 'AnalogueGain' in cc:
+                    lim = cc['AnalogueGain']
+                    print(f'[picam] AnalogueGain raw limits: {lim}')
+                    if lim[0] >= 0 and lim[1] > lim[0]:
+                        result['gain_limits'] = [float(lim[0]), float(lim[1])]
+                        print(f'[picam] gain_limits sent: {result["gain_limits"]}')
+                    else:
+                        print(f'[picam] gain_limits REJECTED')
+            except:
+                pass
+            try:
+                props = picam.camera_properties
+                full = props.get('PixelArraySize')
+                if full:
+                    w, h = int(full[0]), int(full[1])
+                    seen, resolutions = set(), []
+                    for div in [1, 2, 4, 8]:
+                        rw, rh = w // div, h // div
+                        if (rw, rh) not in seen and rw >= 320:
+                            seen.add((rw, rh))
+                            resolutions.append([rw, rh])
+                    result['available_resolutions'] = resolutions
+                    print(f'[picam] PixelArraySize={full} -> resolutions={resolutions}')
+            except Exception as e:
+                print(f'[picam] available_resolutions error: {e}')
+        return jsonify(result)
 
     @app.route('/api/camera/picam/config', methods=['POST'])
     def _picam_config_set():
@@ -239,15 +390,18 @@ def register_routes(app):
         data = request.get_json() or {}
         restart_needed = False
 
-        # Resolution change requires restart
+        # Resolution or stream_format change requires restart
         if 'resolution' in data:
             new_res = data['resolution']
             if new_res != _config['resolution']:
                 restart_needed = True
                 _config['resolution'] = new_res
 
+        if 'stream_format' in data and data['stream_format'] != _config.get('stream_format', 'RGB888'):
+            restart_needed = True
+
         # Update config values
-        for key in ('pixel_size', 'pixel_size_ref_res', 'rotation', 'flip_h', 'flip_v', 'format'):
+        for key in ('pixel_size', 'pixel_size_ref_res', 'rotation', 'flip_h', 'flip_v', 'format', 'color_mode', 'stream_format'):
             if key in data:
                 _config[key] = data[key]
 
@@ -255,21 +409,21 @@ def register_routes(app):
         controls = {}
         if 'exposure' in data:
             exp = int(data['exposure'])
-            _config['exposure'] = exp
-            controls['ExposureTime'] = exp
-            controls['FrameDurationLimits'] = (33333, max(100000, exp + 100000))
+            if exp > 0:
+                _config['exposure'] = exp
+                controls['ExposureTime'] = exp
         if 'gain' in data:
             g = float(data['gain'])
             _config['gain'] = g
             controls['AnalogueGain'] = g
 
         if restart_needed:
-            _restart_camera(tuple(_config['resolution']))
+            _restart_camera(tuple(_config['resolution']) if 'resolution' in data else None)
         elif controls and picam:
             try:
                 picam.set_controls(controls)
             except Exception as e:
-                print(f"  ️ set_controls: {e}")
+                print(f"  set_controls: {e}")
 
         _save_config()
         return jsonify({'success': True, 'config': _config})

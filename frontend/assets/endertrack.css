@@ -706,6 +706,20 @@ details > div {
   opacity: 0.5;
 }
 
+#zControl {
+  transition: background 0.15s;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+}
+
+#zControl:hover {
+  background: var(--active-element);
+}
+
+#zControl:hover .axis-label {
+  color: var(--text-selected);
+}
+
 .axis-control.locked .preset-mini-btn {
   opacity: 0.5;
   cursor: not-allowed;

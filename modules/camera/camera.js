@@ -19,7 +19,7 @@ class CameraModule {
     this.lutId = 'gray';
     this._lutTable = null;
     this.histogram = null;
-    this._liveLutId = 'gray';
+    this._liveLutId = null;  // null = RGB native (no processing)
     this._liveSettings = null;
     this._loadLiveSettings();
     // Picam config
@@ -31,7 +31,6 @@ class CameraModule {
     this.showMosaic = true;
     this.saveTilesToDisk = localStorage.getItem('endertrack_tiles_save') === 'true';
     this.fastExplore = null;
-    this._loadPicamConfig();
     this.tiles = [];
     // Register scenario action early (even without driver)
     setTimeout(() => this._registerScenarioAction(), 100);
@@ -88,8 +87,8 @@ class CameraModule {
           const renderer = window.EnderTrack?.LiveRenderer;
           if (renderer) {
             renderer.setContrast(r.min, r.max);
-            renderer.setLut(this._liveLutId || 'gray');
-            renderer.enabled = (r.min > 0 || r.max < 255 || (this._liveLutId && this._liveLutId !== 'gray'));
+            renderer.setLut(this._liveLutId || 'none');
+            renderer.enabled = !!(this._liveLutId) || (r.min > 0 || r.max < 255);
           }
           this._saveLiveSettings();
         };
@@ -109,6 +108,7 @@ class CameraModule {
         this._startLiveHistogram();
         this._hookMosaic();
         this._loadLiveSettings();
+        await this._loadPicamConfig();
       }
       this._renderCameraConfig();
     }
@@ -204,12 +204,18 @@ class CameraModule {
     menu.appendChild(logRow);
     // RGB toggle
     const renderer = window.EnderTrack?.LiveRenderer;
+    const rgbActive = !this._liveLutId;
     const rgbRow = document.createElement('div');
     rgbRow.style.cssText = 'padding:4px 10px; font-size:11px; cursor:pointer; color:var(--text-general);';
-    rgbRow.innerHTML = `<span style="width:14px; display:inline-block;">${!renderer?.enabled ? '\u2713' : ''}</span>RGB (no LUT)`;
-    rgbRow.onmouseenter = () => rgbRow.style.background = 'var(--app-bg)';
-    rgbRow.onmouseleave = () => rgbRow.style.background = '';
-    rgbRow.onclick = () => { if (renderer) { renderer.enabled = false; renderer.lutId = 'gray'; renderer._lutTable = null; } this._liveLutId = 'gray'; this._saveLiveSettings(); this.tiles.forEach(t => { t._processed = null; }); EnderTrack.Canvas?.requestRender?.(); menu.remove(); };
+    rgbRow.innerHTML = `<span style="width:14px; display:inline-block;">${rgbActive ? '\u2713' : ''}</span>RGB`;
+    rgbRow.onmouseenter = () => { if (!rgbActive) rgbRow.style.background = 'var(--app-bg)'; };
+    rgbRow.onmouseleave = () => { if (!rgbActive) rgbRow.style.background = ''; };
+    rgbRow.onclick = () => {
+      if (renderer) { renderer.enabled = false; renderer.lutId = null; renderer._lutTable = null; }
+      this._liveLutId = null;
+      if (this.histogram) this.histogram._grayscale = false;
+      this._saveLiveSettings(); this.tiles.forEach(t => { t._processed = null; }); EnderTrack.Canvas?.requestRender?.(); menu.remove();
+    };
     menu.appendChild(rgbRow);
     const sep = document.createElement('div');
     sep.style.cssText = 'height:1px; background:#444; margin:4px 8px;';
@@ -218,11 +224,17 @@ class CameraModule {
     for (const [id, def] of Object.entries(luts)) {
       const active = id === this._liveLutId;
       const row = document.createElement('div');
-      row.style.cssText = `padding:4px 10px; font-size:11px; cursor:pointer; color:${active ? 'var(--text-selected)' : 'var(--text-general)'}; background:${active ? 'var(--active-element)' : 'transparent'};`;
-      row.textContent = def.name;
-      row.onmouseenter = () => { if (!active) row.style.background = 'var(--app-bg)'; };
-      row.onmouseleave = () => { if (!active) row.style.background = ''; };
-      row.onclick = () => { this._liveLutId = id; const renderer = window.EnderTrack?.LiveRenderer; if (renderer) { renderer.setLut(id); renderer.enabled = true; }; this.histogram?._redraw?.(); this._saveLiveSettings(); this.tiles.forEach(t => { t._processed = null; }); EnderTrack.Canvas?.requestRender?.(); menu.remove(); };
+      row.style.cssText = 'padding:4px 10px; font-size:11px; cursor:pointer; color:var(--text-general);';
+      row.innerHTML = `<span style="width:14px; display:inline-block;">${active ? '\u2713' : ''}</span>${def.name}`;
+      row.onmouseenter = () => row.style.background = 'var(--app-bg)';
+      row.onmouseleave = () => row.style.background = '';
+      row.onclick = () => {
+        this._liveLutId = id;
+        const renderer = window.EnderTrack?.LiveRenderer;
+        if (renderer) { renderer.setLut(id); renderer.enabled = true; }
+        if (this.histogram) this.histogram._grayscale = true;
+        this.histogram?._redraw?.(); this._saveLiveSettings(); this.tiles.forEach(t => { t._processed = null; }); EnderTrack.Canvas?.requestRender?.(); menu.remove();
+      };
       menu.appendChild(row);
     }
     document.body.appendChild(menu);
@@ -243,7 +255,21 @@ class CameraModule {
       zone.appendChild(this._navEl);
     }
     const exp = this.picamConfig.exposure || 100000;
-    const gain = this.picamConfig.gain || 1.0;
+    const expLimits = this.picamConfig.exposure_limits || [114, 10000000];
+    const gainLimits = this.picamConfig.gain_limits || [1, 16];
+    const expMinUs = expLimits[0];
+    const expMaxUs = expLimits[1];
+    const expLogPos = Math.round(Math.log(Math.max(expMinUs, Math.min(expMaxUs, exp)) / expMinUs) / Math.log(expMaxUs / expMinUs) * 1000);
+    const gain = gainLimits[0];
+    window._camPosToUs = (pos) => {
+      const lim = EnderTrack.Camera?.picamConfig?.exposure_limits || [114, 10000000];
+      const us = Math.round(lim[0] * Math.pow(lim[1] / lim[0], pos / 1000));
+      return us;
+    };
+    window._camExpToPos = (us) => {
+      const lim = EnderTrack.Camera?.picamConfig?.exposure_limits || [114, 10000000];
+      return Math.round(Math.log(Math.max(lim[0], Math.min(lim[1], us)) / lim[0]) / Math.log(lim[1] / lim[0]) * 1000);
+    };
     this._navEl.innerHTML = `
       <style>
         #camera-nav .cam-btn { padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:11px; flex:1; min-width:0; background:var(--app-bg); color:var(--text-general); transition:background 0.15s; font-weight:500; }
@@ -268,48 +294,53 @@ class CameraModule {
           <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
             <div class="axis-control">
               <label class="axis-label">Expo</label>
-              <input type="range" class="et-slider" id="nav-exp-${i}" min="1000" max="1000000" value="${exp}" step="1000" ${dis}
-                oninput="document.getElementById('nav-exp-val-${i}').value=Math.round(this.value/1000)"
-                onchange="EnderTrack.Camera.setPicamConfig({exposure:parseInt(this.value)})">
-              <input type="number" id="nav-exp-val-${i}" value="${Math.round(exp/1000)}" min="1" max="1000" step="1" ${dis}
+              <input type="range" class="et-slider" id="nav-exp-${i}" min="0" max="1000" value="${expLogPos}" step="1" ${dis}
+                oninput="const us=window._camPosToUs(this.value);document.getElementById('nav-exp-val-${i}').value=(us/1000).toFixed(3);clearTimeout(this._t);this._t=setTimeout(()=>EnderTrack.Camera.setPicamConfig({exposure:us}),200)">
+              <input type="number" id="nav-exp-val-${i}" value="${(exp/1000).toFixed(3)}" step="0.001" ${dis}
                 style="-moz-appearance:textfield;"
-                onchange="const v=Math.max(1,Math.min(1000,parseInt(this.value)||1));this.value=v;document.getElementById('nav-exp-${i}').value=v*1000;EnderTrack.Camera.setPicamConfig({exposure:v*1000})">
+                onchange="const us=Math.max(${expMinUs},Math.min(${expMaxUs},Math.round(parseFloat(this.value)*1000)||${expMinUs}));document.getElementById('nav-exp-${i}').value=window._camExpToPos(us);EnderTrack.Camera.setPicamConfig({exposure:us})">
+              <span style="font-size:9px;color:var(--text-general);flex-shrink:0;">ms</span>
             </div>
             <div class="axis-control">
               <label class="axis-label">Gain</label>
-              <input type="range" class="et-slider" id="nav-gain-${i}" min="1" max="16" value="${gain}" step="0.5" ${dis}
+              <input type="range" class="et-slider" id="nav-gain-${i}" min="${gainLimits[0].toFixed(1)}" max="${gainLimits[1].toFixed(1)}" value="${gain}" step="0.5" ${dis}
                 oninput="document.getElementById('nav-gain-val-${i}').value=parseFloat(this.value).toFixed(1)"
                 onchange="EnderTrack.Camera.setPicamConfig({gain:parseFloat(this.value)})">
-              <input type="number" id="nav-gain-val-${i}" value="${gain.toFixed(1)}" min="1" max="16" step="0.5" ${dis}
+              <input type="number" id="nav-gain-val-${i}" value="${gain.toFixed(1)}" min="${gainLimits[0].toFixed(1)}" max="${gainLimits[1].toFixed(1)}" step="0.5" ${dis}
                 style="-moz-appearance:textfield;"
-                onchange="const v=Math.max(1,Math.min(16,parseFloat(this.value)||1));this.value=v.toFixed(1);document.getElementById('nav-gain-${i}').value=v;EnderTrack.Camera.setPicamConfig({gain:v})">
+                onchange="const v=Math.max(${gainLimits[0]},Math.min(${gainLimits[1]},parseFloat(this.value)||${gainLimits[0]}));this.value=v.toFixed(1);document.getElementById('nav-gain-${i}').value=v;EnderTrack.Camera.setPicamConfig({gain:v})">
             </div>
           </div>` : ''}
         </div>`;
       }).join('')}
     `;
-    // Wheel on expo/gain sliders
-    (window._cameras || []).forEach((cam, i) => {
-      if (cam.type !== 'picamera2') return;
-      const expSlider = document.getElementById('nav-exp-' + i);
-      const expInput  = document.getElementById('nav-exp-val-' + i);
-      const gainSlider = document.getElementById('nav-gain-' + i);
-      const gainInput  = document.getElementById('nav-gain-val-' + i);
-      if (expSlider) expSlider.parentElement.addEventListener('wheel', (e) => {
+    // Wheel — attach once on stable _navEl, delegate by target id
+    if (!this._navEl._wheelBound) {
+      this._navEl._wheelBound = true;
+      this._navEl.addEventListener('wheel', (e) => {
+        const el = e.target;
+        if (!el.id) return;
         e.preventDefault();
-        const step = e.shiftKey ? 100 : 10;
-        const v = Math.max(1, Math.min(1000, parseInt(expInput.value) + (e.deltaY < 0 ? step : -step)));
-        expInput.value = v; expSlider.value = v * 1000;
-        EnderTrack.Camera.setPicamConfig({ exposure: v * 1000 });
+        if (el.id.startsWith('nav-exp-') && !el.id.includes('val')) {
+          const i = el.id.replace('nav-exp-', '');
+          const step = e.shiftKey ? 10 : 1;
+          const pos = Math.max(0, Math.min(1000, parseInt(el.value) + (e.deltaY < 0 ? step : -step)));
+          const us = window._camPosToUs(pos);
+          el.value = pos;
+          const inp = document.getElementById('nav-exp-val-' + i);
+          if (inp) inp.value = (us / 1000).toFixed(3);
+          EnderTrack.Camera.setPicamConfig({ exposure: us });
+        } else if (el.id.startsWith('nav-gain-') && !el.id.includes('val')) {
+          const i = el.id.replace('nav-gain-', '');
+          const step = e.shiftKey ? 1 : 0.5;
+          const v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), Math.round((parseFloat(el.value) + (e.deltaY < 0 ? step : -step)) * 10) / 10));
+          el.value = v;
+          const inp = document.getElementById('nav-gain-val-' + i);
+          if (inp) inp.value = v.toFixed(1);
+          EnderTrack.Camera.setPicamConfig({ gain: v });
+        }
       }, { passive: false });
-      if (gainSlider) gainSlider.parentElement.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const step = e.shiftKey ? 1 : 0.5;
-        const v = Math.max(1, Math.min(16, Math.round((parseFloat(gainInput.value) + (e.deltaY < 0 ? step : -step)) * 10) / 10));
-        gainInput.value = v.toFixed(1); gainSlider.value = v;
-        EnderTrack.Camera.setPicamConfig({ gain: v });
-      }, { passive: false });
-    });
+    }
   }
 
   _afContextMenu(e) {
@@ -785,14 +816,19 @@ class CameraModule {
   // Live histogram: periodically grab frame and update histogram
   _startLiveHistogram() {
     if (this._liveHistTimer) return;
+    this._histFrameCount = 0;
     this._liveHistTimer = setInterval(() => {
       if (!this.live || !this.histogram) return;
-      // Read pixels directly from video via LiveRenderer canvas (fastest path)
       const renderer = window.EnderTrack?.LiveRenderer;
       const data = renderer?.getFrameData?.();
       if (data) {
-        const isRgb = !renderer.enabled || !renderer._lutTable;
-        this.histogram.updateFromImageData(data, !isRgb);
+        const isGrayscale = this._liveLutId && this._liveLutId !== 'none';
+        this.histogram.updateFromImageData(data, isGrayscale);
+        if (this._histFrameCount < 5) {
+          this._histFrameCount++;
+          if (this._histFrameCount === 5 && this.histogram.mode !== 'manual')
+            this.histogram.setMode('auto');
+        }
       } else {
         // Fallback: grab frame
         this.getFrame().then(f => {
@@ -824,7 +860,7 @@ class CameraModule {
     if (!vp) return;
 
     if (liveRenderer && vp.source?.startsWith('camera')) {
-      this._liveSettings = { min: liveRenderer.min, max: liveRenderer.max, lutId: this._liveLutId || 'gray' };
+      this._liveSettings = { min: liveRenderer.min, max: liveRenderer.max, lutId: this._liveLutId, autoContrast: this.histogram?.mode !== 'manual' };
     }
 
     if (tabId === 'navigation') {
@@ -837,12 +873,12 @@ class CameraModule {
         liveRenderer.min = this._liveSettings.min;
         liveRenderer.max = this._liveSettings.max;
         liveRenderer.lutId = this._liveSettings.lutId;
-        liveRenderer.enabled = this._liveSettings.lutId !== 'gray';
-        this._liveLutId = this._liveSettings.lutId;
-        const def = window.CameraLUTs?.[this._liveSettings.lutId];
+        liveRenderer.enabled = !!(this._liveSettings.lutId);
+        this._liveLutId = this._liveSettings.lutId || null;
+        const def = this._liveSettings.lutId ? window.CameraLUTs?.[this._liveSettings.lutId] : null;
         liveRenderer._lutTable = def ? def.generate() : null;
         if (this.histogram) {
-          this.histogram.mode = this._liveSettings.autoContrast ? 'auto' : 'manual';
+          this.histogram.setMode(this._liveSettings.autoContrast ? 'auto' : 'manual');
           this.histogram.manualMin = Math.round((this._liveSettings.min / 255) * 255);
           this.histogram.manualMax = Math.round((this._liveSettings.max / 255) * 255);
           this.histogram._redraw();
@@ -912,7 +948,15 @@ class CameraModule {
         this.camFlipV = data.flip_v || false;
         this.config.resolution = data.resolution || [1280, 720];
         this.config.exposure = data.exposure || 100000;
-        this.config.gain = data.gain || 1.0;
+        const gainMin = (data.gain_limits && data.gain_limits[0]) || 1.0;
+        this.config.gain = gainMin;
+        this.picamConfig.gain = gainMin;
+        this.picamConfig.color_mode = data.color_mode || 'gray';
+        this.picamConfig.stream_format = data.stream_format || 'RGB888';
+        if (data.available_resolutions) {
+          const cam = (window._cameras || []).find(c => c.type === 'picamera2');
+          if (cam) { cam.available_resolutions = data.available_resolutions; window._savePeripherals(); }
+        }
         this._renderCameraConfig();
       }
     } catch {}
@@ -932,16 +976,19 @@ class CameraModule {
       });
       const data = await res.json();
       if (data.config) {
-        this.picamConfig = data.config;
+        const limits = { exposure_limits: this.picamConfig.exposure_limits, gain_limits: this.picamConfig.gain_limits };
+        this.picamConfig = { ...data.config, ...limits };
         this.camRotation = data.config.rotation || 0;
         this.camFlipH = data.config.flip_h || false;
         this.camFlipV = data.config.flip_v || false;
         this.config.resolution = data.config.resolution || [1280, 720];
         this.config.exposure = data.config.exposure || 100000;
         this.config.gain = data.config.gain || 1.0;
+        this.picamConfig.color_mode = data.config.color_mode || 'gray';
+        this.picamConfig.stream_format = data.config.stream_format || 'RGB888';
         if (params.pixel_size !== undefined) this._recalcTiles();
       }
-    } catch {}
+    } catch(e) { console.error('[setPicamConfig] error', e); }
   }
 
   getEffectivePixelSize() {
@@ -966,8 +1013,37 @@ class CameraModule {
     const ps = cam.pixel_size || 1.0;
     const rot = cam.rotation || 0;
     const prevRes = cam.preview_resolution || cam.resolution || [1280, 720];
-    const RESOLUTIONS = [[4056,3040],[2028,1520],[1280,720],[640,480]];
-    const resOptions = RESOLUTIONS.map(r => `<option value="${r}" ${r[0]===prevRes[0]&&r[1]===prevRes[1]?'selected':''}>${r[0]}×${r[1]}</option>`).join('');
+    const allRes = cam.available_resolutions || [[2304,1296],[1280,720],[640,480]];
+    const maxRes = allRes[0] || [4608,2592];
+    const liveRes = allRes.filter(r => r[0] <= 2304);
+    if (!liveRes.length) liveRes.push(allRes[allRes.length-1]);
+    const isCustom = !liveRes.some(r => r[0]===prevRes[0]&&r[1]===prevRes[1]);
+    const resOptions = liveRes.map(r => `<option value="${r}" ${r[0]===prevRes[0]&&r[1]===prevRes[1]?'selected':''}>${r[0]}×${r[1]}</option>`).join('')
+      + `<option value="custom" ${isCustom?'selected':''}>Custom…</option>`;
+    const customStyle = `display:${isCustom?'flex':'none'};gap:4px;align-items:center;`;
+    const _applyRes = `(function(sel){
+      var cam=window._cameras[${idx}];
+      if(sel.value==='custom'){document.getElementById('res-custom-${idx}').style.display='flex';return;}
+      document.getElementById('res-custom-${idx}').style.display='none';
+      var oldW=(cam.preview_resolution||cam.resolution||[640,480])[0];
+      var newRes=sel.value.split(',').map(Number);
+      cam.pixel_size=parseFloat((cam.pixel_size*(oldW/newRes[0])).toFixed(4));
+      cam.preview_resolution=newRes;window._savePeripherals();
+      EnderTrack.Camera.setPicamConfig({resolution:newRes});
+      EnderTrack.Camera._renderCamCard(${idx});
+    })(this)`;
+    const _applyCustom = `(function(){
+      var cam=window._cameras[${idx}];
+      var w=parseInt(document.getElementById('res-cw-${idx}').value)||640;
+      var h=parseInt(document.getElementById('res-ch-${idx}').value)||480;
+      var maxW=${maxRes[0]},maxH=${maxRes[1]};
+      w=Math.min(w,maxW);h=Math.min(h,maxH);
+      var oldW=(cam.preview_resolution||cam.resolution||[640,480])[0];
+      cam.pixel_size=parseFloat((cam.pixel_size*(oldW/w)).toFixed(4));
+      cam.preview_resolution=[w,h];window._savePeripherals();
+      EnderTrack.Camera.setPicamConfig({resolution:[w,h]});
+      EnderTrack.Camera._renderCamCard(${idx});
+    })()`;
     const infoLine = isPicam
       ? `<span style="color:var(--text-selected);">${cam.label}</span>`
       : `<span>${cam.label || cam.deviceId?.slice(0,16) || cam.type}</span>`;
@@ -980,10 +1056,21 @@ class CameraModule {
         ${isPicam ? `
         <div style="display:flex;gap:8px;align-items:center;">
           <label style="width:60px;flex-shrink:0;color:var(--text-general);">Preview res.</label>
-          <select onchange="(function(sel){var cam=window._cameras[${idx}];var oldW=(cam.preview_resolution||cam.resolution||[640,480])[0];var newRes=sel.value.split(',').map(Number);cam.pixel_size=parseFloat((cam.pixel_size*(oldW/newRes[0])).toFixed(4));cam.preview_resolution=newRes;window._savePeripherals();EnderTrack.Camera.setPicamConfig({resolution:newRes});EnderTrack.Camera._renderCamCard(${idx});})(this)"
-            style="flex:1;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;">
-            ${resOptions}
-          </select>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+            <select onchange="${_applyRes}"
+              style="width:100%;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;">
+              ${resOptions}
+            </select>
+            <div id="res-custom-${idx}" style="${customStyle}">
+              <input id="res-cw-${idx}" type="number" value="${prevRes[0]}" min="64" max="${maxRes[0]}" step="2"
+                style="width:52px;padding:2px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
+              <span style="color:var(--text-general);">×</span>
+              <input id="res-ch-${idx}" type="number" value="${prevRes[1]}" min="64" max="${maxRes[1]}" step="2"
+                style="width:52px;padding:2px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
+              <button onclick="${_applyCustom}"
+                style="padding:2px 7px;border:1px solid #444;border-radius:var(--radius-small);background:var(--app-bg);color:var(--text-general);font-size:11px;cursor:pointer;">OK</button>
+            </div>
+          </div>
         </div>` : ''}
         <div style="display:flex;gap:6px;align-items:center;">
           <label style="width:60px;flex-shrink:0;color:var(--text-general);">Pixel size</label>
@@ -1005,6 +1092,7 @@ class CameraModule {
             onchange="window._cameras[${idx}].rotation=parseFloat(this.value);window._savePeripherals();${isPicam ? `EnderTrack.Camera.setPicamConfig({rotation:parseFloat(this.value)})` : `EnderTrack.Camera._applyWebcamMeta(${idx})`}"
             style="width:45px;padding:3px 4px;background:var(--app-bg);border:1px solid #444;border-radius:var(--radius-small);color:var(--coordinates-color);font-size:11px;text-align:center;font-family:monospace;">
         </div>
+
       </div>
     `;
   }
@@ -1135,8 +1223,10 @@ class CameraModule {
   async _connectPicam(deviceId, resolution, format) {
     if (deviceId === undefined) return;
     this._picamDeviceId = deviceId;
-    if (resolution || format) {
-      await this.setPicamConfig({ ...(resolution ? {resolution} : {}), ...(format ? {format} : {}) });
+    const cam = (window._cameras || []).find(c => c.type === 'picamera2');
+    const streamFormat = cam?.stream_format || 'RGB888';
+    if (resolution || format || streamFormat) {
+      await this.setPicamConfig({ ...(resolution ? {resolution} : {}), ...(format ? {format} : {}), stream_format: streamFormat });
     }
     const url = (window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/camera/picam/stream';
     let ok = await this.setDriver('mjpeg', { url });
@@ -1161,20 +1251,23 @@ class CameraModule {
       const base = window.ENDERTRACK_SERVER || 'http://localhost:5000';
       const res = await fetch(base + '/api/live/settings');
       const data = await res.json();
-      if (data && data.lutId) {
+      if (data && data.lutId !== undefined) {
         this._liveSettings = data;
-        this._liveLutId = data.lutId;
+        this._liveLutId = data.lutId || null;
         const renderer = window.EnderTrack?.LiveRenderer;
         if (renderer) {
           renderer.setContrast(data.min ?? 0, data.max ?? 255);
-          renderer.setLut(data.lutId);
-          renderer.enabled = (data.min > 0 || data.max < 255 || (data.lutId && data.lutId !== 'gray'));
+          if (data.lutId) { renderer.setLut(data.lutId); renderer.enabled = true; }
+          else { renderer.enabled = false; renderer._lutTable = null; }
         }
         if (this.histogram) {
-          if (data.autoContrast) this.histogram.mode = 'auto';
-          else { this.histogram.mode = 'manual'; this.histogram.manualMin = data.min ?? 0; this.histogram.manualMax = data.max ?? 255; }
+          this.histogram._grayscale = !!data.lutId;
+          this.histogram.setMode('auto');  // always start in auto on page load
           this.histogram._redraw?.();
         }
+      } else if (this.histogram) {
+        this.histogram._grayscale = false;
+        this.histogram.setMode('auto');
       }
     } catch {}
   }
@@ -1184,7 +1277,7 @@ class CameraModule {
     if (!renderer) return;
     this._liveSettings = {
       min: renderer.min, max: renderer.max,
-      lutId: this._liveLutId || 'gray',
+      lutId: this._liveLutId || null,
       autoContrast: this.histogram?.mode === 'auto'
     };
     clearTimeout(this._liveSettingsTimer);

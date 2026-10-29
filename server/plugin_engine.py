@@ -15,6 +15,7 @@ from server import basic_functions
 
 # { plugin_id: { 'module': mod, 'ctx': ctx } }
 _active_plugins = {}
+_plugin_viewports = {}  # { "plugin_id:viewport_id": label }
 
 
 def _persistence_path():
@@ -57,6 +58,51 @@ class PluginContext:
             return picamera_handler
         except:
             return None
+
+    def image_to_stage(self, px_offset_x, px_offset_y):
+        """
+        Convertit un offset pixel (depuis le centre image) en delta mm stage.
+        Applique pixel_size effectif, rotation et flip — identique au mosaic tile JS.
+        px_offset_x, px_offset_y : pixels depuis le centre (droite/bas positif)
+        Retourne (dx_mm, dy_mm) dans le repère stage.
+        """
+        try:
+            from server import picamera_handler
+            cfg = picamera_handler._config
+        except:
+            return (px_offset_x / 1000.0, px_offset_y / 1000.0)
+
+        ps      = cfg.get('pixel_size', 1.0)
+        ref_res = cfg.get('pixel_size_ref_res', [640, 480])
+        cur_res = cfg.get('resolution', [640, 480])
+        eff_ps  = ps * (ref_res[0] / cur_res[0])  # µm/px effectif
+        rotation = cfg.get('rotation', 0)
+        flip_h   = cfg.get('flip_h', False)
+        flip_v   = cfg.get('flip_v', False)
+
+        dx =  px_offset_x * eff_ps / 1000.0  # mm, image X → stage X
+        dy = -px_offset_y * eff_ps / 1000.0  # image Y↓ → stage Y↑
+
+        if flip_h: dx = -dx
+        if flip_v: dy = -dy
+        if   rotation == 90:  dx, dy =  dy, -dx
+        elif rotation == 180: dx, dy = -dx, -dy
+        elif rotation == 270: dx, dy = -dy,  dx
+
+        return (dx, dy)
+
+    def fov_mm(self):
+        """Retourne (fov_x_mm, fov_y_mm) du champ de vue courant."""
+        try:
+            from server import picamera_handler
+            cfg = picamera_handler._config
+        except:
+            return (1.0, 1.0)
+        ps      = cfg.get('pixel_size', 1.0)
+        ref_res = cfg.get('pixel_size_ref_res', [640, 480])
+        cur_res = cfg.get('resolution', [640, 480])
+        eff_ps  = ps * (ref_res[0] / cur_res[0])
+        return (cur_res[0] * eff_ps / 1000.0, cur_res[1] * eff_ps / 1000.0)
 
     @property
     def light(self):
@@ -217,6 +263,43 @@ class PluginContext:
             'value': value
         })
 
+    def update_image(self, output_id, arr):
+        """Envoie un numpy array (H,W,3) comme image JPEG base64 vers un output type 'image'."""
+        import io, base64
+        from PIL import Image
+        img = Image.fromarray(arr[:,:,:3].astype('uint8'))
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=70)
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        self.bus.publish('plugin:output', {
+            'plugin_id': self.plugin_id,
+            'id': output_id,
+            'value': b64
+        })
+
+    def create_viewport(self, viewport_id, label):
+        """Enregistre un viewport custom visible dans le menu clic-droit des panels."""
+        _plugin_viewports[f"{self.plugin_id}:{viewport_id}"] = label
+        self.bus.publish('plugin:viewport', {
+            'plugin_id': self.plugin_id,
+            'id': viewport_id,
+            'label': label
+        })
+
+    def update_viewport(self, viewport_id, arr):
+        """Envoie un numpy array (H,W,3) vers un viewport plugin."""
+        import io, base64
+        from PIL import Image
+        img = Image.fromarray(arr[:,:,:3].astype('uint8'))
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=70)
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        self.bus.publish('plugin:output', {
+            'plugin_id': self.plugin_id,
+            'id': viewport_id,
+            'value': b64
+        })
+
     def update_graph(self, output_id, x, y):
         """Ajoute un point [x, y] sur un output de type graph."""
         self.bus.publish('plugin:output', {
@@ -340,6 +423,9 @@ def deactivate(plugin_id):
             except:
                 pass
     _save_active()
+    # Nettoyer les viewports du plugin
+    for k in [k for k in _plugin_viewports if k.startswith(plugin_id + ':')]:
+        del _plugin_viewports[k]
     from server.event_stream import bus
     bus.publish('plugin:removed', {'plugin_id': plugin_id})
     print(f"  [OFF] Python plugin deactivated: {plugin_id}")
@@ -386,6 +472,11 @@ def register_routes(app):
     from flask import Blueprint, request, jsonify
     bp = Blueprint('plugin_engine', __name__)
 
+    @bp.route('/api/pyplugins/viewports', methods=['GET'])
+    def _pe_viewports():
+        return jsonify([{'plugin_id': k.split(':')[0], 'id': k.split(':',1)[1], 'label': v}
+                        for k, v in _plugin_viewports.items()])
+
     @bp.route('/api/pyplugins/scan', methods=['GET'])
     def _pe_scan():
         return jsonify({'plugins': scan_plugins()})
@@ -426,9 +517,45 @@ def register_routes(app):
     @bp.route('/api/pyplugins/<plugin_id>/action/<action_name>', methods=['POST'])
     def _pe_action(plugin_id, action_name):
         params = request.get_json(silent=True) or {}
+        mod = _active_plugins.get(plugin_id, {}).get('module')
+        action_def = next((a for a in getattr(mod, 'SCENARIO_ACTIONS', []) if a['id'] == action_name), {})
+        timeout_s = (action_def.get('timeout_ms', 60000)) / 1000
         t = threading.Thread(target=run_action, args=(plugin_id, action_name, params), daemon=True)
         t.start()
-        return jsonify({'success': True, 'async': True})
+        t.join(timeout=timeout_s)
+        return jsonify({'success': not t.is_alive()})
+
+    @bp.route('/api/pyplugins/install', methods=['POST'])
+    def _pe_install():
+        data = request.get_json() or {}
+        folder = data.get('folder')
+        main_file = data.get('main')
+        content = data.get('content')
+        if not folder or not main_file or content is None:
+            return jsonify({'success': False, 'error': 'folder, main and content required'})
+        try:
+            dest = os.path.join(get_plugins_dir(), folder)
+            os.makedirs(dest, exist_ok=True)
+            with open(os.path.join(dest, main_file), 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f'  [PKG] Python plugin installed: {folder}/{main_file}')
+            return jsonify({'success': True, 'folder': folder})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)})
+
+    @bp.route('/api/pyplugins/uninstall', methods=['POST'])
+    def _pe_uninstall():
+        import shutil
+        data = request.get_json() or {}
+        folder = data.get('folder')
+        if not folder:
+            return jsonify({'success': False, 'error': 'folder required'})
+        dest = os.path.join(get_plugins_dir(), folder)
+        if not os.path.isdir(dest):
+            return jsonify({'success': False, 'error': 'Plugin not found'})
+        shutil.rmtree(dest)
+        print(f'  [DEL] Python plugin deleted: {folder}')
+        return jsonify({'success': True})
 
     # Restauration des plugins différée — appeler plugin_engine.restore_active() après tous les register_routes
     app.register_blueprint(bp)

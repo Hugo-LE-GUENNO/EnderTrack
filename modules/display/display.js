@@ -323,14 +323,6 @@ class DisplayModule {
       return;
     }
 
-    // Gallery source
-    if (source === 'gallery') {
-      const ph = cell.querySelector(".viewport-placeholder");
-      if (ph) ph.style.display = 'none';
-      window.EnderTrack?.ImageManager?.renderInViewport?.(cell);
-      return;
-    }
-
     // Stack source
     if (source === 'stack') {
       const ph = cell.querySelector(".viewport-placeholder");
@@ -356,7 +348,6 @@ class DisplayModule {
     (window._cameras || []).forEach((c, i) => {
       sources.push({ id: 'camera:' + i, label: c.label });
     });
-    sources.push({ id: 'gallery', label: 'Gallery' });
 
     const vp = this.viewports.find(v => v.id === viewportId);
     sources.forEach(s => {

@@ -29,7 +29,7 @@ class LiveRenderer {
   setLut(lutId) {
     this.lutId = lutId;
     const def = window.CameraLUTs?.[lutId];
-    this._lutTable = (def && lutId !== 'gray') ? def.generate() : null;
+    this._lutTable = def ? def.generate() : null;
   }
 
   start() {

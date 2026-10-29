@@ -183,34 +183,20 @@ def register_routes(app):
 
     @app.route('/api/plugins/install', methods=['POST'])
     def _install():
-        """Download a plugin from GitHub and install it."""
-        import urllib.request, json as _json
+        """Install a plugin from file contents sent by the browser."""
         data = request.get_json() or {}
         folder = data.get('folder')
-        if not folder:
-            return jsonify({'success': False, 'error': 'folder required'})
-        repo = 'Hugo-LE-GUENNO/EnderTrack'
-        branch = 'plugins'
-        dest = os.path.join(get_plugins_dir(), folder)
-        os.makedirs(dest, exist_ok=True)
-        # List files in the plugin folder
-        url = f'https://api.github.com/repos/{repo}/contents/plugins/{folder}?ref={branch}'
+        files = data.get('files', {})
+        if not folder or not files:
+            return jsonify({'success': False, 'error': 'folder and files required'})
         try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'EnderTrack'})
-            resp = urllib.request.urlopen(req, timeout=10)
-            items = _json.loads(resp.read())
-            installed = []
-            for item in items:
-                if item['type'] != 'file':
-                    continue
-                file_url = item['download_url']
-                file_resp = urllib.request.urlopen(urllib.request.Request(file_url, headers={'User-Agent': 'EnderTrack'}), timeout=10)
-                file_path = os.path.join(dest, item['name'])
-                with open(file_path, 'wb') as f:
-                    f.write(file_resp.read())
-                installed.append(item['name'])
-            print(f"  [PKG] Plugin installed: {folder} ({len(installed)} files)")
-            return jsonify({'success': True, 'folder': folder, 'files': installed})
+            dest = os.path.join(get_plugins_dir(), folder)
+            os.makedirs(dest, exist_ok=True)
+            for filename, content in files.items():
+                with open(os.path.join(dest, filename), 'w', encoding='utf-8') as f:
+                    f.write(content)
+            print(f"  [PKG] Plugin installed: {folder} ({len(files)} files)")
+            return jsonify({'success': True, 'folder': folder, 'files': list(files.keys())})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)})
 

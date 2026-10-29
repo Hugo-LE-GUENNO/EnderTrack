@@ -155,7 +155,7 @@ class ScenarioBuilder {
     const actionDef = EnderTrack.ActionRegistry?.get(actionId);
     if (!actionDef) return;
     const node = { type: 'action', actionId, params: {} };
-    if (actionDef.params) actionDef.params.forEach(p => { node.params[p.id || p.name] = p.default; });
+    if (actionDef.params) actionDef.params.forEach(p => { node.params[p.id || p.name] = typeof p.default === 'function' ? p.default() : p.default; });
     // Auto-set listIndex and listId from closest loop
     if (actionId === 'move') {
       const loopListId = this._getClosestLoopListId(this.selectedPath);
@@ -1520,7 +1520,7 @@ class ScenarioBuilder {
     const actionDef = EnderTrack.ActionRegistry?.get(actionId);
     if (!actionDef) return;
     const node = { type: 'action', actionId, params: {} };
-    if (actionDef.params) actionDef.params.forEach(p => { node.params[p.id || p.name] = p.default; });
+    if (actionDef.params) actionDef.params.forEach(p => { node.params[p.id || p.name] = typeof p.default === 'function' ? p.default() : p.default; });
     // Auto-set listIndex and listId from closest loop
     if (actionId === 'move') {
       const loopListId = this._getClosestLoopListId(this.selectedPath);
@@ -3082,6 +3082,8 @@ class ScenarioBuilder {
     EnderTrack.Scenario?.manager?.save?.();
   }
 
+  _setNodeWait(path, val) { this._setNodeProp(path, 'wait', val); }
+
   _setNodeLabel(path, val) {
     const node = EnderTrack.TreeUtils.getNodeByPath(this.scenario.tree, path);
     if (!node) return;
@@ -3364,7 +3366,7 @@ class ScenarioBuilder {
     const inLoop = this._isInsideLoop(pathStr);
     return paramDefs.map(p => {
       const name = p.id || p.name;
-      const val = values?.[name] ?? p.default ?? '';
+      const val = values?.[name] ?? (typeof p.default === 'function' ? p.default() : p.default) ?? '';
 
       // If inside a macro, lock params that are not exposed
       let forcedReadonly = false;
@@ -3379,6 +3381,10 @@ class ScenarioBuilder {
         const visible = p.showIf.split(',').every(cond => {
           cond = cond.trim();
           if (cond === 'inLoop') return inLoop;
+          if (cond.startsWith('!') && cond.includes('=')) {
+            const [k, v] = cond.slice(1).split('=');
+            return String(values?.[k] ?? '') !== v;
+          }
           if (cond.startsWith('!')) return !values?.[cond.slice(1)];
           if (cond.includes('=')) {
             const [k, v] = cond.split('=');
@@ -3404,8 +3410,17 @@ class ScenarioBuilder {
         const opts = (typeof p.options === 'function' ? p.options() : p.options || []).map(o =>
           `<option value="${o.value}" ${String(val) === String(o.value) ? 'selected' : ''}>${o.label}</option>`
         ).join('');
+        window._sbOnchange = window._sbOnchange || {};
+        window._sbValues = window._sbValues || {};
+        let ocSelectFull = ocSelect;
+        if (p.onchange) {
+          const key = `${pathStr}__${name}`;
+          window._sbOnchange[key] = p.onchange;
+          window._sbValues[pathStr] = values;
+          ocSelectFull = `${ocSelect}; window._sbOnchange['${key}']?.(this.value, window._sbValues['${pathStr}'] || {}, '${pathStr}')`;
+        }
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
-          <select ${forcedReadonly ? 'disabled style="opacity:0.4;"' : `onchange="${ocSelect}"`} class="sb-input">${opts}</select></div>`;
+          <select ${forcedReadonly ? 'disabled style="opacity:0.4;"' : `onchange="${ocSelectFull}"`} class="sb-input">${opts}</select></div>`;
       }
       if (p.type === 'list-select') {
         const lists = EnderTrack.Lists?.manager?.getAllLists?.() || [];
@@ -3502,12 +3517,21 @@ class ScenarioBuilder {
         const ocNum = forcedReadonly ? '' : (parentMacro
           ? `EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',this.value); EnderTrack.ScenarioBuilder._syncExposedToMacro('${parentMacro.macroPath}','${pathStr}','${name}')`
           : oc);
+        const liveBtn = (!forcedReadonly && p.getLive) ? `<button onclick="(function(){var v=(${p.getLive})();if(v!=null){var inp=this.previousElementSibling;inp.value=v;EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',v);}}).call(this)" style="padding:1px 5px;border:1px solid #444;border-radius:var(--radius-small);background:var(--app-bg);color:var(--text-general);font-size:10px;cursor:pointer;flex-shrink:0;" title="Get current value">↺</button>` : '';
+        const note = typeof p.note === 'function' ? p.note(values) : p.note;
         return `<div class="sb-param"><label class="sb-param-label" style="${forcedReadonly?'opacity:0.4;':''}">${this._escapeHtml(p.label)}</label>
-          <input type="text" value="${this._escapeAttr(val)}" placeholder="${p.default ?? 0}" ${forcedReadonly ? 'readonly style="opacity:0.4; pointer-events:none;"' : `onchange="${ocNum}" oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))"`} class="sb-input sb-input-num${isVar ? ' sb-var' : ''}"></div>`;
+          <div style="display:flex;gap:3px;align-items:center;flex:1;">
+          <input type="text" value="${this._escapeAttr(val)}" placeholder="${p.default ?? 0}" ${forcedReadonly ? 'readonly style="opacity:0.4; pointer-events:none;"' : `onchange="${ocNum}" oninput="this.classList.toggle('sb-var',this.value.startsWith('$'))"`} class="sb-input sb-input-num${isVar ? ' sb-var' : ''}" style="flex:1;${note ? 'border-color:#f59e0b;' : ''}">
+          ${liveBtn}</div>${note ? `<span style="font-size:10px;color:#f59e0b;line-height:1.3;">${note}</span>` : ''}</div>`;
       }
       if (p.readonly) {
         return `<div class="sb-param"><label class="sb-param-label">${this._escapeHtml(p.label)}</label>
           <input type="text" value="${this._escapeAttr(val)}" class="sb-input sb-var" readonly style="opacity:0.8;"></div>`;
+      }
+      if (p.type === 'textarea') {
+        const ocTA = forcedReadonly ? '' : `EnderTrack.ScenarioBuilder.updateParam('${pathStr}','${name}',this.value)`;
+        return `<div class="sb-param" style="flex-direction:column;align-items:stretch;"><label class="sb-param-label" style="${forcedReadonly?'opacity:0.4;':''}">${this._escapeHtml(p.label)}</label>
+          <textarea rows="${p.rows||5}" placeholder="${this._escapeAttr(p.placeholder||'')}" ${forcedReadonly?'readonly style="opacity:0.4;"':`onchange="${ocTA}"`} class="sb-input" style="font-family:monospace;font-size:10px;resize:vertical;width:100%;box-sizing:border-box;">${this._escapeHtml(val)}</textarea></div>`;
       }
       const isVarText = String(val).startsWith('$');
       const ocText = forcedReadonly ? '' : (parentMacro
@@ -3830,6 +3854,9 @@ class ScenarioBuilder {
         html += `<div class="sb-props-section-label">${this._escapeHtml(actionDef.label)}</div>`;
         html += this._renderParams(actionDef.params, node.params, this.selectedPath, parentMacro);
       }
+      html += `<label class="sb-param sb-param-check">
+        <input type="checkbox" ${node.wait !== false ? 'checked' : ''} onchange="EnderTrack.ScenarioBuilder._setNodeWait('${this.selectedPath}', this.checked)" style="accent-color:var(--coordinates-color);">
+        Wait for completion</label>`;
     } else if (node.type === 'condition') {
       html += this._renderConditionProps(node);
       html += `<label class="sb-param sb-param-check">
