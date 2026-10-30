@@ -11,50 +11,16 @@
 
 ---
 
-## Installation
-
-```bash
-git clone -b basic https://github.com/Hugo-LE-GUENNO/EnderTrack.git
-cd EnderTrack
-python3 endertrack-server.py
-```
-
-Open http://localhost:5000 — zero setup, dependencies included.
-
-Update: `git pull`
-
-Network access: `python3 endertrack-server.py --lan` · 👉 **[Network, hotspot, RPi](docs/network.md)**
-
 ## Editions
 
-Each edition is a **branch** with its own feature set.
+| Edition | Features |
+|---------|----------|
+| [**imaging**](https://github.com/Hugo-LE-GUENNO/EnderTrack/tree/imaging) ← recommended | Stage control + camera, lighting, plugins, scenario builder |
+| [basic](https://github.com/Hugo-LE-GUENNO/EnderTrack/tree/basic) | Stage control only — lightweight |
 
-| Edition | Features | Version |
-|---------|---------|---------|
-| [`basic`](../../tree/basic) | XYZ stage navigation, position lists | v2.4.1 |
-| [`imaging`](../../tree/imaging) | basic + image acquisition, camera control, lighting, image gallery, scenario builder, fast explore | v1.3.1 |
-| [`plotter`](../../tree/plotter) | basic + pen plotter (image → XY path) | v1.0.0 |
+## Getting started
 
-For another edition: `git clone -b <edition> https://github.com/Hugo-LE-GUENNO/EnderTrack.git`
-
-## Plugins
-
-Plugins are compatible with all editions. Browse and install from the [`plugins`](../../tree/plugins) branch, or via the UI: Settings → Extensions → Catalogue.
-
-## Extending
-
-| | |
-|-|-|
-| Create a plugin | Add buttons, controls or hardware support — [plugins.md](docs/plugins.md) |
-| Advanced plugin | Python backend, real-time sync, multi-client — [plugins-advanced.md](docs/plugins-advanced.md) |
-| Create an edition | Fork `basic` and add a new tab or module — [modules.md](docs/modules.md) |
-| API reference | All available functions for plugins — [api.md](docs/api.md) |
-| AI prompt | Generate a plugin with any AI assistant — [plugin-prompt.txt](docs/plugin-prompt.txt) |
-
-## Contributing
-
-Found a bug or have an idea? Open an [issue](../../issues).
-Want to contribute code? Fork the repo and open a PR.
+See the [imaging edition](https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/imaging/README.md).
 
 ## About
 
@@ -63,13 +29,6 @@ EnderTrack started as a control interface for [EnderScope](https://github.com/Pi
 In practice, EnderTrack drives any G-code-compatible XYZ stage — 3D printers, microscope stages, CNC machines, or any USB serial device.
 
 Project initiated at CNRS following the [MIFOBIO](https://mifobio.fr) 2025 microscopy school. More resources at [diy.microscopie.org](https://diy.microscopie.org/explore.html).
-
-### Acknowledgements
-
-- [EnderScope](https://github.com/Pickering-Lab/EnderScope) — Pickering Lab (original project)
-- Jérôme, Erwan and Aliénor — EnderTeam
-- Wassim Jaziri — logo design
-- CNRS / RTmfm ("PPP" Working Group)
 
 ## License
 
