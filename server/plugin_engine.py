@@ -61,6 +61,10 @@ class PluginContext:
             return None
 
         class _Cam:
+            def _get_picam(self):
+                from server import picamera_handler as _ph
+                return _ph._get_picam()
+
             def capture(self, path, fmt=None, resolution=None, exposure=None, gain=None,
                         color_mode=None, apply_rotation=True, save_metadata=True,
                         metadata=None, stage=None):
