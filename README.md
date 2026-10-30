@@ -16,7 +16,7 @@
 ```bash
 git clone -b imaging https://github.com/Hugo-LE-GUENNO/EnderTrack.git
 cd EnderTrack
-python3 endertrack-server.py
+sudo python3 endertrack-server.py
 ```
 
 ### Network access
@@ -28,25 +28,7 @@ python3 endertrack-server.py --lan
 
 [Network, hotspot, RPi setup](docs/network.md)
 
-## Raspberry Pi setup
-
-On a **Raspberry Pi with PiCamera**, install system dependencies once:
-
-```bash
-# Camera (Picamera2)
-sudo apt install -y python3-picamera2
-
-# NeoPixel LEDs on GPIO
-sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
-```
-
-> ⚠️ **Run with `sudo`** on Raspberry Pi if you use:
-> - **GPIO NeoPixel LEDs** — requires root for hardware PWM
-> - **Saving images to a specific folder** — may require root depending on permissions
->
-> ```bash
-> sudo python3 endertrack-server.py
-> ```
+[Raspberry Pi setup](docs/rpi.md)
 
 ## Extensions
 
