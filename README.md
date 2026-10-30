@@ -28,7 +28,7 @@ python3 endertrack-server.py --lan
 
 [Network, hotspot, RPi setup](https://github.com/Hugo-LE-GUENNO/EnderTrack/blob/main/docs/network.md)
 
-[Raspberry Pi setup](docs/rpi.md)
+[Raspberry Pi optional dependencies](docs/rpi-optional-dependencies.md)
 
 ## Extensions
 
