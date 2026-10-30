@@ -239,7 +239,7 @@ class EnderscopeConnection {
     if (!this.isConnected) return;
 
     try {
-      const response = await fetch(`${this.serverUrl}/api/home`, { method: 'POST' });
+      const response = await fetch(`${this.serverUrl}/api/home`, { method: 'POST', signal: AbortSignal.timeout(120000) });
       const result = await response.json();
       
       if (result.success) {
@@ -372,7 +372,8 @@ class EnderscopeConnection {
       const response = await fetch(`${this.serverUrl}/api/move/absolute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x, y, z, feedrate: fr })
+        body: JSON.stringify({ x, y, z, feedrate: fr }),
+        signal: AbortSignal.timeout(120000)
       });
       const result = await response.json();
       if (result.success) { return true; }
@@ -387,7 +388,8 @@ class EnderscopeConnection {
       const response = await fetch(`${this.serverUrl}/api/move/relative`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dx, dy, dz, feedrate: fr })
+        body: JSON.stringify({ dx, dy, dz, feedrate: fr }),
+        signal: AbortSignal.timeout(120000)
       });
       const result = await response.json();
       if (result.success) { return true; }
@@ -560,7 +562,8 @@ class EnderscopeConnection {
       const response = await fetch(`${this.serverUrl}/api/move/absolute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x, y, z, feedrate })
+        body: JSON.stringify({ x, y, z, feedrate }),
+        signal: AbortSignal.timeout(120000)
       });
       const result = await response.json();
       if (result.success) return { duration: result.duration };
@@ -575,7 +578,8 @@ class EnderscopeConnection {
       const response = await fetch(`${this.serverUrl}/api/move/relative`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dx, dy, dz, feedrate })
+        body: JSON.stringify({ dx, dy, dz, feedrate }),
+        signal: AbortSignal.timeout(120000)
       });
       const result = await response.json();
       if (result.success) return { duration: result.duration };
@@ -592,7 +596,8 @@ class EnderscopeConnection {
     
     try {
       const response = await fetch(`${this.serverUrl}/api/home`, {
-        method: 'POST'
+        method: 'POST',
+        signal: AbortSignal.timeout(120000)
       });
 
       const result = await response.json();
@@ -685,7 +690,8 @@ async function sendGcode() {
     const response = await fetch((window.ENDERTRACK_SERVER || 'http://localhost:5000') + '/api/gcode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command })
+      body: JSON.stringify({ command }),
+      signal: AbortSignal.timeout(120000)
     });
     
     const result = await response.json();
