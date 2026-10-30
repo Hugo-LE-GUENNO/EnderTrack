@@ -32,7 +32,8 @@ plugins/my-plugin/
     └── my-tool.py
 ```
 
-Drop the folder into `plugins/` and enable it from the Plugins tab. No restart needed.
+Drop the folder into `plugins/` and enable it from the Plugins tab. No restart needed.  
+Or install from the [community repository](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community).
 
 ---
 
