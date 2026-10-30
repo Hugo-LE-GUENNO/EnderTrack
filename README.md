@@ -50,20 +50,21 @@ sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
 
 ## Extensions
 
+EnderTrack supports two types of plugins. A public community repository is available — browse, install, or contribute your own.
+
+[Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
+
 ### Python plugins
 
-Write a `.py` file and drop it into `plugins/` — no restart needed. Your plugin runs server-side and gets full access to the stage, camera, LEDs and waypoint lists through a simple Python API.
+A single `.py` file dropped into `plugins/` — full access to stage, camera, LEDs and waypoint lists through a simple Python API. The easiest way to automate and extend EnderTrack.
 
-[Python plugin tutorial](docs/python-plugins.md)  
-[Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)  
-[Contribute a plugin](docs/community-plugins.md)
+[Python plugin tutorial](docs/python-plugins.md)
 
 ### Advanced plugins
 
-Build richer integrations with a JS + optional Python plugin: inject custom UI anywhere in the app, create new tabs, open modals, draw on the canvas, and react to live events.
+A JS + optional Python plugin — inject custom UI anywhere in the app, create new tabs, open modals, draw on the canvas, and react to live events. More powerful, more flexible.
 
-[Advanced plugin tutorial](docs/advanced-plugins.md)  
-[Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
+[Advanced plugin tutorial](docs/advanced-plugins.md)
 
 ## More
 
