@@ -56,3 +56,10 @@ A JS + optional Python plugin — inject custom UI anywhere in the app, create n
 ## License
 
 GPLv3 — Hugo Le Guenno, 2025
+
+## Acknowledgements
+
+- [EnderScope](https://github.com/Pickering-Lab/EnderScope) — Pickering Lab (original project)
+- Jérôme, Erwan and Aliénor — EnderTeam
+- Wassim Jaziri — logo design
+- CNRS / RTmfm ("PPP" Working Group)
