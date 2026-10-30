@@ -52,7 +52,7 @@ sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
 
 ### Python plugins
 
-Run Python code server-side — access stage, camera, LEDs, lists and the event bus from a `.py` file.
+Write a `.py` file and drop it into `plugins/` — no restart needed. Your plugin runs server-side and gets full access to the stage, camera, LEDs and waypoint lists through a simple Python API.
 
 [Python plugin tutorial](docs/python-plugins.md)  
 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)  
@@ -60,9 +60,9 @@ Run Python code server-side — access stage, camera, LEDs, lists and the event 
 
 ### Advanced plugins
 
-Drop a folder into `plugins/` and enable it from the Plugins tab. No restart needed.
+Build richer integrations with a JS + optional Python plugin: inject custom UI anywhere in the app, create new tabs, open modals, draw on the canvas, and react to live events.
 
-[Create an Advanced plugin](docs/advanced-plugins.md)  
+[Advanced plugin tutorial](docs/advanced-plugins.md)  
 [Community plugins](https://github.com/Hugo-LE-GUENNO/EnderTrack-plugins-community)
 
 ## More
