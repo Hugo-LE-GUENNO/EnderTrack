@@ -60,6 +60,6 @@ GPLv3 — Hugo Le Guenno, 2025
 ## Acknowledgements
 
 - [EnderScope](https://github.com/Pickering-Lab/EnderScope) — Pickering Lab (original project)
-- Jérôme, Erwan and Aliénor — EnderTeam
+- Jérôme, Erwan, Brice and Aliénor — EnderTeam
 - Wassim Jaziri — logo design
 - CNRS / RTmfm ("PPP" Working Group)
