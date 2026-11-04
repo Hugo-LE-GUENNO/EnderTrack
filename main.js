@@ -1140,10 +1140,11 @@ window._installPyPlugin = async function(folder, main) {
         } else {
           const r = await fetch(item.download_url);
           const buf = await r.arrayBuffer();
-          const bytes = new Uint8Array(buf);
-          let b64 = '';
-          for (let i = 0; i < bytes.length; i += 8192)
-            b64 += btoa(String.fromCharCode(...bytes.subarray(i, i + 8192)));
+          const b64 = await new Promise(res => {
+            const reader = new FileReader();
+            reader.onload = () => res(reader.result.split(',')[1]);
+            reader.readAsDataURL(new Blob([buf]));
+          });
           result[relpath] = { data: b64, binary: true };
         }
       }
