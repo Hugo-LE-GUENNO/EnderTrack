@@ -217,34 +217,6 @@ class PyPluginUI {
         wrap.appendChild(row);
         break;
       }
-      case 'folder': {
-        const row = document.createElement('div');
-        row.className = 'input-group';
-        const lbl = document.createElement('label');
-        lbl.textContent = item.label;
-        const hidden = document.createElement('input');
-        hidden.type = 'text';
-        hidden.id = `pyplugin-in-${plugin_id}-${item.id}`;
-        hidden.value = item.default ?? '';
-        hidden.style.display = 'none';
-        const display = document.createElement('div');
-        display.style.cssText = 'font-size:10px; color:var(--coordinates-color); font-family:monospace; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
-        display.textContent = hidden.value || '—';
-        const btn = document.createElement('button');
-        btn.textContent = '📂';
-        btn.className = 'action-btn';
-        btn.style.cssText = 'padding:2px 6px; font-size:11px; flex-shrink:0;';
-        btn.onclick = async () => {
-          const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-          const data = await fetch(serverUrl + '/api/browse').then(r => r.json());
-          if (!data.path) return;
-          hidden.value = data.path;
-          display.textContent = data.path;
-        };
-        row.append(lbl, display, btn, hidden);
-        wrap.appendChild(row);
-        break;
-      }
       case 'textarea': {
         const row = document.createElement('div');
         row.className = 'input-group';

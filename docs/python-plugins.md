@@ -47,9 +47,11 @@ Each section accepts `inputs` (controls) and `outputs` (display).
 {"type": "button",   "label": "Run",    "action": "run",  "style": "primary"}
 {"type": "slider",   "id": "speed",  "label": "Speed",  "min": 1, "max": 10, "default": 5, "step": 1}
 {"type": "input",    "id": "name",   "label": "Name",   "default": "img"}
-{"type": "folder",   "id": "outdir", "label": "Output folder", "directory": True}
+{"type": "input",    "id": "outdir", "label": "Output folder", "default": "/home/pi/models"}
 {"type": "select",   "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
 ```
+
+Note: there is no `folder` picker — RPi runs headless, no display for a native dialog. Use `input` with a default path instead.
 
 All values are passed to your function via `params`:
 
@@ -398,7 +400,7 @@ SECTIONS = {
 {"type": "button",   "label": "Run",    "action": "run",  "style": "primary"}
 {"type": "slider",   "id": "speed",  "label": "Speed",  "min": 1, "max": 10, "default": 5, "step": 1}
 {"type": "input",    "id": "name",   "label": "Name",   "default": "img"}
-{"type": "folder",   "id": "outdir", "label": "Output folder", "directory": True}
+{"type": "input",    "id": "outdir", "label": "Output folder", "default": "/home/pi/models"}
 {"type": "select",   "id": "mode",   "label": "Mode",   "options": ["fast", "slow"], "default": "fast"}
 
 ## Output types
