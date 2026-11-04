@@ -1139,7 +1139,9 @@ window._installPyPlugin = async function(folder, main) {
           Object.assign(result, await fetchDir(item.url, relpath));
         } else {
           const r = await fetch(item.download_url);
-          result[relpath] = await r.text();
+          const buf = await r.arrayBuffer();
+          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+          result[relpath] = { data: b64, binary: true };
         }
       }
       return result;

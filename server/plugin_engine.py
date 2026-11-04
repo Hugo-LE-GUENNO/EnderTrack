@@ -595,17 +595,6 @@ def register_routes(app):
         t.join(timeout=timeout_s)
         return jsonify({'success': not t.is_alive()})
 
-    @bp.route('/api/browse', methods=['GET'])
-    def _pe_browse():
-        import tkinter as tk
-        from tkinter import filedialog
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes('-topmost', True)
-        path = filedialog.askdirectory()
-        root.destroy()
-        return jsonify({'path': path or ''})
-
     @bp.route('/api/pyplugins/install', methods=['POST'])
     def _pe_install():
         data = request.get_json() or {}
@@ -622,8 +611,13 @@ def register_routes(app):
                 for relpath, filecontent in files.items():
                     fpath = os.path.join(dest, relpath.replace('/', os.sep))
                     os.makedirs(os.path.dirname(fpath), exist_ok=True)
-                    with open(fpath, 'w', encoding='utf-8') as f:
-                        f.write(filecontent)
+                    if isinstance(filecontent, dict) and filecontent.get('binary'):
+                        import base64
+                        with open(fpath, 'wb') as f:
+                            f.write(base64.b64decode(filecontent['data']))
+                    else:
+                        with open(fpath, 'w', encoding='utf-8') as f:
+                            f.write(filecontent)
             elif main_file and content is not None:
                 with open(os.path.join(dest, main_file), 'w', encoding='utf-8') as f:
                     f.write(content)
