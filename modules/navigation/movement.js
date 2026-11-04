@@ -177,7 +177,10 @@ class MovementEngine {
     this._cancelAnim();
     this.isMoving = false;
     const pos = { x: data.x, y: data.y, z: data.z };
-    EnderTrack.State.update({ pos, isMoving: false });
+    const state = EnderTrack.State.get();
+    const track = [...(state.continuousTrack || []), [pos.x, pos.y, pos.z]];
+    const history = [...(state.positionHistory || []), { x: pos.x, y: pos.y, z: pos.z }];
+    EnderTrack.State.update({ pos, isMoving: false, continuousTrack: track, positionHistory: history });
     EnderTrack.Events.notifyListeners('position:changed', pos);
     const ix = document.getElementById('inputX');
     const iy = document.getElementById('inputY');
