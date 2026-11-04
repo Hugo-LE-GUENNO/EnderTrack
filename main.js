@@ -1113,7 +1113,7 @@ window._openPyPluginCatalog = async function() {
       const dot = '<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:' + (installed ? '#22c55e' : '#555') + '; margin-right:6px; vertical-align:middle;"></span>';
       const btn = installed
         ? '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._uninstallPyPlugin(\'' + p.folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Delete</button>'
-        : '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._installPyPlugin(\'' + p.folder + '\',\'' + p.main + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Install</button>';
+        : '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._installPyPlugin(\'' + p.folder + '\',\'' + p.main + '\',' + JSON.stringify(p.files || []) + ')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Install</button>';
       return '<div id="pyCatRow_' + p.folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
         '<div><div style="font-size:12px;">' + dot + p.name + '</div>' +
         (p.description ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6; margin-left:12px;">' + p.description + '</div>' : '') +
@@ -1121,21 +1121,24 @@ window._openPyPluginCatalog = async function() {
     }).join('');
 };
 
-window._installPyPlugin = async function(folder, main) {
+window._installPyPlugin = async function(folder, main, extraFiles) {
   const btn = document.getElementById('pyCatBtn_' + folder);
   if (btn) { btn.disabled = true; btn.textContent = 'Installing...'; }
   const log = document.getElementById('pyCatalogLog');
   if (log) { log.style.display = 'block'; log.innerHTML += '<div>Installing ' + folder + '...</div>'; }
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+  const baseUrl = 'https://raw.githubusercontent.com/Hugo-LE-GUENNO/EnderTrack-plugins-community/main/plugins-python/' + folder + '/';
   try {
-    // Fetch plugin file from GitHub (browser has internet)
-    const fileUrl = 'https://raw.githubusercontent.com/Hugo-LE-GUENNO/EnderTrack-plugins-community/main/plugins-python/' + folder + '/' + main;
-    const fileResp = await fetch(fileUrl);
-    if (!fileResp.ok) throw new Error('GitHub fetch failed: ' + fileResp.status);
-    const fileContent = await fileResp.text();
+    const filesToFetch = extraFiles && extraFiles.length ? extraFiles : [main];
+    const files = {};
+    for (const f of filesToFetch) {
+      const r = await fetch(baseUrl + f);
+      if (!r.ok) throw new Error('GitHub fetch failed: ' + f + ' (' + r.status + ')');
+      files[f] = await r.text();
+    }
     const resp = await fetch(serverUrl + '/api/pyplugins/install', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ folder, main, content: fileContent })
+      body: JSON.stringify({ folder, main, files })
     });
     const data = await resp.json();
     if (data.success) {

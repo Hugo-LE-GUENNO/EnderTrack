@@ -593,14 +593,24 @@ def register_routes(app):
         folder = data.get('folder')
         main_file = data.get('main')
         content = data.get('content')
-        if not folder or not main_file or content is None:
-            return jsonify({'success': False, 'error': 'folder, main and content required'})
+        files = data.get('files')  # dict {relpath: content}
+        if not folder:
+            return jsonify({'success': False, 'error': 'folder required'})
         try:
             dest = os.path.join(get_plugins_dir(), folder)
             os.makedirs(dest, exist_ok=True)
-            with open(os.path.join(dest, main_file), 'w', encoding='utf-8') as f:
-                f.write(content)
-            print(f'  [PKG] Python plugin installed: {folder}/{main_file}')
+            if files:
+                for relpath, filecontent in files.items():
+                    fpath = os.path.join(dest, relpath.replace('/', os.sep))
+                    os.makedirs(os.path.dirname(fpath), exist_ok=True)
+                    with open(fpath, 'w', encoding='utf-8') as f:
+                        f.write(filecontent)
+            elif main_file and content is not None:
+                with open(os.path.join(dest, main_file), 'w', encoding='utf-8') as f:
+                    f.write(content)
+            else:
+                return jsonify({'success': False, 'error': 'files or main+content required'})
+            print(f'  [PKG] Python plugin installed: {folder}')
             return jsonify({'success': True, 'folder': folder})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)})
