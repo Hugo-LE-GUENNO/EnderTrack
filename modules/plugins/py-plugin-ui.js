@@ -422,11 +422,11 @@ class PyPluginUI {
     const el = document.getElementById(`pyplugin-in-${data.plugin_id}-${data.id}`);
     if (!el) return;
     el.value = data.value;
-    // update display div for folder type
     const display = el.previousElementSibling;
     if (display && display.tagName !== 'LABEL') display.textContent = data.value || '—';
   }
 
+  _drawGraph(canvas, points) {
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     const PAD = { l: 32, r: 8, t: 8, b: 20 };
