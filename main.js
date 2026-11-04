@@ -1140,7 +1140,10 @@ window._installPyPlugin = async function(folder, main) {
         } else {
           const r = await fetch(item.download_url);
           const buf = await r.arrayBuffer();
-          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+          const bytes = new Uint8Array(buf);
+          let b64 = '';
+          for (let i = 0; i < bytes.length; i += 8192)
+            b64 += btoa(String.fromCharCode(...bytes.subarray(i, i + 8192)));
           result[relpath] = { data: b64, binary: true };
         }
       }
