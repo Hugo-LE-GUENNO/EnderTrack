@@ -393,9 +393,18 @@ class PyPluginUI {
   _updateInput(data) {
     const el = document.getElementById(`pyplugin-in-${data.plugin_id}-${data.id}`);
     if (!el) return;
-    el.value = data.value;
-    const display = el.previousElementSibling;
-    if (display && display.tagName !== 'LABEL') display.textContent = data.value || '—';
+    if (el.tagName === 'SELECT' && Array.isArray(data.value)) {
+      const cur = el.value;
+      el.innerHTML = '';
+      data.value.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        el.appendChild(o);
+      });
+      el.value = data.value.includes(cur) ? cur : data.value[0];
+    } else {
+      el.value = data.value;
+    }
   }
 
   _drawGraph(canvas, points) {
