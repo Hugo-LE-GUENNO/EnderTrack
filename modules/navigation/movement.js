@@ -178,7 +178,18 @@ class MovementEngine {
     this.isMoving = false;
     const pos = { x: data.x, y: data.y, z: data.z };
     EnderTrack.State.update({ pos, isMoving: false });
-    this._updatePos(pos);
+    // Always update track on remote moves (plugin/stage)
+    const now = Date.now();
+    if (!this._lastTrailTime || now - this._lastTrailTime > 50) {
+      this._lastTrailTime = now;
+      const track = EnderTrack.State.state.continuousTrack;
+      const last = track[track.length - 1];
+      if (!last || Math.abs(last.x - pos.x) > 0.05 || Math.abs(last.y - pos.y) > 0.05) {
+        track.push({ x: pos.x, y: pos.y, z: pos.z });
+        const max = EnderTrack.State.state.maxContinuousTrackPoints || 2000;
+        if (track.length > max) track.shift();
+      }
+    }
     EnderTrack.Events.notifyListeners('position:changed', pos);
     const ix = document.getElementById('inputX');
     const iy = document.getElementById('inputY');
