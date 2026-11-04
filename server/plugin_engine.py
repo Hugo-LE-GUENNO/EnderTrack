@@ -589,17 +589,14 @@ def register_routes(app):
 
     @bp.route('/api/browse', methods=['GET'])
     def _pe_browse():
-        path = request.args.get('path', os.path.expanduser('~'))
-        path = os.path.abspath(path)
-        if not os.path.isdir(path):
-            path = os.path.dirname(path)
-        try:
-            entries = sorted(os.scandir(path), key=lambda e: (not e.is_dir(), e.name.lower()))
-            items = [{'name': e.name, 'path': e.path, 'is_dir': e.is_dir()} for e in entries if not e.name.startswith('.')]
-        except PermissionError:
-            items = []
-        parent = os.path.dirname(path) if path != os.path.dirname(path) else None
-        return jsonify({'path': path, 'parent': parent, 'items': items})
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        path = filedialog.askdirectory()
+        root.destroy()
+        return jsonify({'path': path or ''})
 
     @bp.route('/api/pyplugins/install', methods=['POST'])
     def _pe_install():

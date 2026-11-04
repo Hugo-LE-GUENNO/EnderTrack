@@ -233,56 +233,12 @@ class PyPluginUI {
         btn.textContent = '📂';
         btn.className = 'action-btn';
         btn.style.cssText = 'padding:2px 6px; font-size:11px; flex-shrink:0;';
-        btn.onclick = () => {
+        btn.onclick = async () => {
           const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
-          let currentPath = hidden.value || null;
-          // Build modal
-          const overlay = document.createElement('div');
-          overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10002;display:flex;align-items:center;justify-content:center;';
-          const box = document.createElement('div');
-          box.style.cssText = 'background:var(--container-bg);border:1px solid #555;border-radius:8px;padding:16px;width:420px;max-height:60vh;display:flex;flex-direction:column;gap:8px;';
-          const pathLabel = document.createElement('div');
-          pathLabel.style.cssText = 'font-size:10px;font-family:monospace;color:var(--coordinates-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-          const list = document.createElement('div');
-          list.style.cssText = 'overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:2px;';
-          const actions = document.createElement('div');
-          actions.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;';
-          const cancelBtn = document.createElement('button');
-          cancelBtn.textContent = 'Cancel'; cancelBtn.className = 'action-btn';
-          cancelBtn.onclick = () => overlay.remove();
-          const selectBtn = document.createElement('button');
-          selectBtn.textContent = 'Select this folder'; selectBtn.className = 'action-btn';
-          selectBtn.style.background = 'var(--active-element)';
-          selectBtn.onclick = () => { hidden.value = currentPath; display.textContent = currentPath; overlay.remove(); };
-          actions.append(cancelBtn, selectBtn);
-          box.append(pathLabel, list, actions);
-          overlay.appendChild(box);
-          document.body.appendChild(overlay);
-          async function browse(path) {
-            const data = await fetch(serverUrl + '/api/browse' + (path ? '?path=' + encodeURIComponent(path) : '')).then(r => r.json());
-            currentPath = data.path;
-            pathLabel.textContent = data.path;
-            list.innerHTML = '';
-            if (data.parent) {
-              const up = document.createElement('div');
-              up.textContent = '.. (up)';
-              up.style.cssText = 'padding:4px 8px;cursor:pointer;font-size:11px;color:var(--text-general);border-radius:3px;';
-              up.onmouseenter = () => up.style.background = 'var(--active-element)';
-              up.onmouseleave = () => up.style.background = '';
-              up.onclick = () => browse(data.parent);
-              list.appendChild(up);
-            }
-            data.items.filter(i => i.is_dir).forEach(i => {
-              const row = document.createElement('div');
-              row.textContent = '📁 ' + i.name;
-              row.style.cssText = 'padding:4px 8px;cursor:pointer;font-size:11px;color:var(--text-selected);border-radius:3px;';
-              row.onmouseenter = () => row.style.background = 'var(--active-element)';
-              row.onmouseleave = () => row.style.background = '';
-              row.onclick = () => browse(i.path);
-              list.appendChild(row);
-            });
-          }
-          browse(hidden.value || null);
+          const data = await fetch(serverUrl + '/api/browse').then(r => r.json());
+          if (!data.path) return;
+          hidden.value = data.path;
+          display.textContent = data.path;
         };
         row.append(lbl, display, btn, hidden);
         wrap.appendChild(row);
