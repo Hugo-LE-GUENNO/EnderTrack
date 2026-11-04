@@ -325,6 +325,14 @@ class PluginContext:
             'value': value
         })
 
+    def update_input(self, input_id, value):
+        """Met à jour un input dans l'UI du plugin."""
+        self.bus.publish('plugin:input', {
+            'plugin_id': self.plugin_id,
+            'id': input_id,
+            'value': value
+        })
+
     def update_image(self, output_id, arr):
         """Envoie un numpy array (H,W,3) comme image JPEG base64 vers un output type 'image'."""
         import io, base64

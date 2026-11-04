@@ -10,6 +10,7 @@ class PyPluginUI {
     window.EnderTrack?.Events?.on?.('pyplugin:ui',               (data) => this._mount(data));
     window.EnderTrack?.Events?.on?.('pyplugin:removed',          (data) => this._unmount(data.plugin_id));
     window.EnderTrack?.Events?.on?.('pyplugin:output',           (data) => this._updateOutput(data));
+    window.EnderTrack?.Events?.on?.('pyplugin:input',            (data) => this._updateInput(data));
     window.EnderTrack?.Events?.on?.('pyplugin:log',              (data) => this._appendLog(data));
     window.EnderTrack?.Events?.on?.('pyplugin:scenario_actions', (data) => this._registerScenarioActions(data));
 
@@ -417,7 +418,15 @@ class PyPluginUI {
     });
   }
 
-  _drawGraph(canvas, points) {
+  _updateInput(data) {
+    const el = document.getElementById(`pyplugin-in-${data.plugin_id}-${data.id}`);
+    if (!el) return;
+    el.value = data.value;
+    // update display div for folder type
+    const display = el.previousElementSibling;
+    if (display && display.tagName !== 'LABEL') display.textContent = data.value || '—';
+  }
+
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     const PAD = { l: 32, r: 8, t: 8, b: 20 };

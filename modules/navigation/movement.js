@@ -49,6 +49,8 @@ class MovementEngine {
             window.EnderTrack?.Events?.notifyListeners?.('pyplugin:removed', evt.data);
           } else if (evt.type === 'plugin:output') {
             window.EnderTrack?.Events?.notifyListeners?.('pyplugin:output', evt.data);
+          } else if (evt.type === 'plugin:input') {
+            window.EnderTrack?.Events?.notifyListeners?.('pyplugin:input', evt.data);
           } else if (evt.type === 'plugin:log') {
             window.EnderTrack?.Events?.notifyListeners?.('pyplugin:log', evt.data);
           } else if (evt.type === 'plugin:scenario_actions') {
