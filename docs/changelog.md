@@ -1,5 +1,10 @@
 # Changelog — EnderTrack imaging
 
+### v1.3.6
+- **Python plugin install** — multi-file install with subdirectory support (models/, assets/)
+- **Version** — hardcoded in server, no longer depends on package.json
+- **Cleanup** — removed duplicate files (CHANGELOG, python-plugins.md, core/index.html, server/endertrack-server.py, package.json)
+
 ### v1.3.5
 - **Plugin catalog** — install/uninstall JS and Python plugins from the browser (community repo)
 - **Gamepad Advanced** — replaces `external-controller`, available in the community catalog

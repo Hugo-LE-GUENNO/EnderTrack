@@ -50,14 +50,8 @@ def get_clients():
     return {'clients': sorted(_known_clients), 'count': len(_known_clients)}
 
 # Version
-import json as _json
-_pkg = os.path.join(PROJECT_ROOT, 'package.json')
-try:
-    with open(_pkg) as _f:
-        _pkgdata = _json.load(_f)
-        VERSION = _pkgdata['version']
-        EDITION = _pkgdata.get('edition', '')
-except: VERSION = '?'; EDITION = ''
+VERSION = '1.3.6'
+EDITION = 'imaging'
 
 _known_clients = set()
 
