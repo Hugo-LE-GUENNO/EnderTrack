@@ -52,8 +52,27 @@ class CameraHistogram {
     this.canvas = document.getElementById('enderpicam-hist-canvas');
     this.ctx = this.canvas.getContext('2d');
     this._setupEvents();
+    this._setupResize();
     // Apply auto mode style on init
     this.setMode(this.mode);
+  }
+
+  _setupResize() {
+    if (!this.canvas || !window.ResizeObserver) return;
+    const dpr = window.devicePixelRatio || 1;
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) {
+        const { width, height } = e.contentRect;
+        if (width < 10 || height < 10) continue;
+        this.canvas.width = Math.round(width * dpr);
+        this.canvas.height = Math.round(height * dpr);
+        this.ctx = this.canvas.getContext('2d');
+        this.ctx.scale(dpr, dpr);
+        this._redraw();
+      }
+    });
+    ro.observe(this.canvas);
+    this._resizeObserver = ro;
   }
 
   _setupEvents() {
@@ -431,8 +450,9 @@ class CameraHistogram {
 
   _draw(histR, histG, histB, histL) {
     const ctx = this.ctx;
-    const W = this.canvas.width;
-    const H = this.canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const W = this.canvas.width / dpr;
+    const H = this.canvas.height / dpr;
     const lutBarH = 5;
     const graphH = H - lutBarH;
     ctx.clearRect(0, 0, W, H);
