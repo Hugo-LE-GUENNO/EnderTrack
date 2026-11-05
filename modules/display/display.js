@@ -158,29 +158,18 @@ class DisplayModule {
     if (timer) { cancelAnimationFrame(timer); clearInterval(timer); this._timers.delete(id); }
 
     if (cell) {
-      // Restore moved plugin elements back to their original position
-      cell.querySelectorAll('[id^="pyplugin-out-"]').forEach(el => {
+      // Restore any moved elements back to their original position
+      cell.querySelectorAll('*').forEach(el => {
         if (el._movedToViewport) {
-          el.style.width = '';
-          el.style.height = '';
-          if (el._originalParent) {
-            el._originalParent.insertBefore(el, el._originalNextSibling || null);
-          }
-          delete el._movedToViewport;
-          delete el._originalParent;
-          delete el._originalNextSibling;
+          el.style.width = ''; el.style.height = ''; el.style.margin = ''; el.style.boxSizing = '';
+          if (el._originalParent) el._originalParent.insertBefore(el, el._originalNextSibling || null);
+          delete el._movedToViewport; delete el._originalParent; delete el._originalNextSibling;
         }
       });
 
-      // Clean up plugin image listeners + remove plugin imgs
+      // Remove MJPEG liveImg (not mainCanvas)
       cell.querySelectorAll('img').forEach(img => {
-        if (img._pluginHandler) window.removeEventListener('display:plugin-image', img._pluginHandler);
-        if (img._pluginSource) img.remove();
-      });
-
-      // Remove MJPEG liveImg (not plugin, not mainCanvas)
-      cell.querySelectorAll('img').forEach(img => {
-        if (!img._pluginSource && img !== document.querySelector('.main-canvas')) img.remove();
+        if (img !== document.querySelector('.main-canvas')) img.remove();
       });
 
       // Stop LiveRenderer only if this cell owns the liveCanvas
@@ -346,49 +335,17 @@ class DisplayModule {
       return;
     }
 
-    // Plugin source: 'plugin:<plugin_id>:<output_id>'
-    if (source && source.startsWith('plugin:')) {
-      const [, pluginId, outputId] = source.split(':');
+    // Generic moveable source: 'plugin:<pid>:<oid>', 'live:histogram', 'status'
+    const moveableEl = this._getMoveableEl(source);
+    if (source && source !== 'stage' && !source.startsWith('camera') && !source.startsWith('stack')) {
       const ph = cell.querySelector('.viewport-placeholder');
-
-      // Check output type
-      const plugins = window.EnderTrack?.PyPluginUI?._plugins || {};
-      const entry = plugins[pluginId];
-      let outDef = null;
-      for (const [, def] of Object.entries(entry?.ui?.sections || {})) {
-        outDef = (def.outputs || []).find(o => o.id === outputId) || outDef;
-      }
-      const isImage = !outDef || outDef.type === 'image' || outDef.type === 'image_click';
-
-      if (isImage) {
-        // Image: create <img> in viewport
-        const img = document.createElement('img');
-        img.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
-        img.ondblclick = () => {
-          if (document.fullscreenElement) document.exitFullscreen();
-          else cell.requestFullscreen?.();
-        };
-        cell.appendChild(img);
+      if (moveableEl) {
+        moveableEl._originalParent = moveableEl.parentNode;
+        moveableEl._originalNextSibling = moveableEl.nextSibling;
+        moveableEl._movedToViewport = source;
+        moveableEl.style.cssText += '; width:100%; height:100%; object-fit:contain; border-radius:0; margin:0; box-sizing:border-box;';
+        cell.appendChild(moveableEl);
         if (ph) ph.style.display = 'none';
-        const handler = (e) => {
-          if (e.detail?.plugin_id === pluginId && e.detail?.id === outputId)
-            img.src = 'data:image/jpeg;base64,' + e.detail.value;
-        };
-        window.addEventListener('display:plugin-image', handler);
-        img._pluginHandler = handler;
-        img._pluginSource = source;
-      } else {
-        // Non-image: move existing DOM element into viewport
-        const el = document.getElementById(`pyplugin-out-${pluginId}-${outputId}`);
-        if (el) {
-          el._originalParent = el.parentNode;
-          el._originalNextSibling = el.nextSibling;
-          el._movedToViewport = source;
-          el.style.width = '100%';
-          el.style.height = outDef.type === 'graph' ? '100%' : '';
-          cell.appendChild(el);
-          if (ph) ph.style.display = 'none';
-        }
       }
       return;
     }
@@ -406,6 +363,19 @@ class DisplayModule {
     if (ph) ph.style.display = '';
   }
 
+  // === MOVEABLE ELEMENTS ===
+
+  _getMoveableEl(source) {
+    if (!source) return null;
+    if (source.startsWith('plugin:')) {
+      const [, pluginId, outputId] = source.split(':');
+      return document.getElementById(`pyplugin-out-${pluginId}-${outputId}`);
+    }
+    if (source === 'live:histogram') return document.getElementById('enderpicam-histogram');
+    if (source === 'status') return document.querySelector('.status-widget');
+    return null;
+  }
+
   // === CONTEXT MENUS ===
 
   _showSourceMenu(x, y, viewportId) {
@@ -418,6 +388,10 @@ class DisplayModule {
     (window._cameras || []).forEach((c, i) => {
       sources.push({ id: 'camera:' + i, label: c.label });
     });
+    if (document.getElementById('enderpicam-histogram'))
+      sources.push({ id: 'live:histogram', label: 'Live — Histogram' });
+    if (document.querySelector('.status-widget'))
+      sources.push({ id: 'status', label: 'Status' });
     // Plugin outputs (all types)
     const plugins = window.EnderTrack?.PyPluginUI?._plugins || {};
     for (const [pid, entry] of Object.entries(plugins)) {
