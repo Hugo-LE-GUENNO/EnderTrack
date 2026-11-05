@@ -24,7 +24,8 @@ class DisplayModule {
     this._stageWrap.style.cssText = 'display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%; background:#111;';
     mainCanvas.parentNode.insertBefore(this._stageWrap, mainCanvas);
     this._stageWrap.appendChild(mainCanvas);
-    // zPanel reste dans mainCanvas, pas dans stageWrap
+    if (zPanel) this._stageWrap.appendChild(zPanel);
+    // Les deux sont maintenant dans _stageWrap ensemble
 
     this._stageWrap.addEventListener('contextmenu', (e) => {
       e.preventDefault();
@@ -90,10 +91,8 @@ class DisplayModule {
 
     for (let i = 1; i < n; i++) {
       this._buildCell(i);
-      // Si viewport vide et caméra dispo, l'assigner par défaut
-      const vp = this.viewports[i];
-      if (!vp.sources.length && window.EnderTrack?.Camera?.driver)
-        vp.sources.push('camera:0');
+    // Si viewport vide et caméra dispo, l'assigner par défaut
+      // Ne pas le faire ici — _updateCameraLayout s'en charge via assignSource
       this._renderSources(i);
     }
     this._renderSources(0);
@@ -159,7 +158,16 @@ class DisplayModule {
     }
 
     if (source === 'stage') {
-      // stage stays in cell, nothing to restore
+      // Quand on retire stage d'un viewport non-0, remettre mainCanvas+zPanel dans canvas-content
+      if (viewportId !== 0) {
+        const canvasContent = document.querySelector('.canvas-content');
+        const mainCanvas = document.querySelector('.main-canvas');
+        const zPanel = document.getElementById('zVisualizationPanel');
+        if (canvasContent && mainCanvas) {
+          canvasContent.appendChild(mainCanvas);
+          if (zPanel) canvasContent.appendChild(zPanel);
+        }
+      }
       return;
     }
 
@@ -283,10 +291,12 @@ class DisplayModule {
 
     if (source === 'stage') {
       const mainCanvas = document.querySelector('.main-canvas');
+      const zPanel = document.getElementById('zVisualizationPanel');
       if (mainCanvas) {
         cell.appendChild(mainCanvas);
         mainCanvas.style.display = '';
-        // zPanel vit DANS mainCanvas, pas besoin de le déplacer
+        // zPanel est frère de mainCanvas — le déplacer aussi dans le cell
+        if (zPanel && zPanel.parentNode !== cell) cell.appendChild(zPanel);
       }
       setTimeout(() => { window.dispatchEvent(new Event('resize')); EnderTrack.Canvas?.requestRender?.(); }, 50);
       return;
