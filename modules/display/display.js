@@ -166,6 +166,7 @@ class DisplayModule {
           delete el._movedToViewport; delete el._originalParent; delete el._originalNextSibling;
         }
       });
+      this._autoCollapseRightPanel();
 
       // Remove MJPEG liveImg (not mainCanvas)
       cell.querySelectorAll('img').forEach(img => {
@@ -201,6 +202,7 @@ class DisplayModule {
     vp.source = source;
     this._killSource(viewportId);
     this._renderSource(viewportId, source);
+    this._autoCollapseRightPanel();
   }
 
   _renderSource(viewportId, source) {
@@ -374,6 +376,48 @@ class DisplayModule {
     if (source === 'live:histogram') return document.getElementById('enderpicam-histogram');
     if (source === 'status') return document.querySelector('.status-widget');
     return null;
+  }
+
+  // === RIGHT PANEL COLLAPSE ===
+
+  toggleRightPanel(force) {
+    const panel = document.querySelector('.right-panel');
+    if (!panel) return;
+    const collapsed = force !== undefined ? !force : !panel.classList.contains('collapsed');
+    panel.classList.toggle('collapsed', collapsed);
+    const btn = document.getElementById('rightPanelCollapseBtn');
+    if (btn) btn.textContent = collapsed ? '\u2039' : '\u203a';
+    setTimeout(() => { window.dispatchEvent(new Event('resize')); window.EnderTrack?.Canvas?.requestRender?.(); }, 220);
+  }
+
+  _autoCollapseRightPanel() {
+    const panel = document.querySelector('.right-panel');
+    if (!panel) return;
+    // Find active right plugin zone
+    const activeZone = panel.querySelector('.right-plugin-zone:not([style*="display:none"]):not([style*="display: none"])');
+    if (!activeZone) return;
+    const children = [...activeZone.children];
+    if (!children.length) return;
+    // All children moved to viewport?
+    const allMoved = children.every(child => child.querySelector('[id^="pyplugin-out-"]')
+      ? [...child.querySelectorAll('[id^="pyplugin-out-"]')].every(el => el._movedToViewport)
+      : false
+    );
+    // Also check status-widget
+    const statusWidget = panel.querySelector('.status-widget');
+    const statusMoved = statusWidget?._movedToViewport;
+    const histEl = document.getElementById('enderpicam-histogram');
+    const histMoved = histEl?._movedToViewport;
+
+    if (allMoved && (statusMoved || !statusWidget) && (histMoved || !histEl)) {
+      if (!panel.classList.contains('collapsed')) {
+        panel._autoCollapsed = true;
+        this.toggleRightPanel(false);
+      }
+    } else if (panel._autoCollapsed) {
+      panel._autoCollapsed = false;
+      this.toggleRightPanel(true);
+    }
   }
 
   // === CONTEXT MENUS ===

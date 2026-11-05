@@ -111,6 +111,22 @@
   gap: var(--gap-xl);
   padding: var(--spacing-xl);
   overflow-y: auto;
+  position: relative;
+  transition: padding 0.2s, min-width 0.2s;
+}
+
+.right-panel.collapsed {
+  overflow: hidden;
+  padding: 0;
+  min-width: 0;
+}
+
+.right-panel.collapsed > *:not(#rightPanelCollapseBtn) {
+  display: none !important;
+}
+
+.app-container:has(.right-panel.collapsed) {
+  grid-template-columns: 300px 1fr 18px;
 }
 
 .right-panel h4 {
