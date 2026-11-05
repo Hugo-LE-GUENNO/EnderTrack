@@ -2,7 +2,7 @@
 
 class DisplayModule {
   constructor() {
-    this.viewports = [{ id: 0, source: 'stage' }];
+    this.viewports = [{ id: 0, sources: ['stage'] }];
     this._container = null;
     this._stageWrap = null;
     this._cells = new Map(); // id → DOM element
@@ -21,7 +21,7 @@ class DisplayModule {
     this._stageWrap = document.createElement('div');
     this._stageWrap.className = 'viewport-cell stage-viewport';
     this._stageWrap.dataset.viewportId = '0';
-    this._stageWrap.style.cssText = 'display:flex; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%; background:#111;';
+    this._stageWrap.style.cssText = 'display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%; background:#111;';
     mainCanvas.parentNode.insertBefore(this._stageWrap, mainCanvas);
     this._stageWrap.appendChild(mainCanvas);
     if (zPanel) this._stageWrap.appendChild(zPanel);
@@ -40,11 +40,8 @@ class DisplayModule {
 
   setLayout(panelCount) {
     const n = Math.max(1, Math.min(8, parseInt(panelCount) || 1));
-
-    // Adjust viewports array
-    while (this.viewports.length < n) {
-      this.viewports.push({ id: this.viewports.length, source: null });
-    }
+    while (this.viewports.length < n)
+      this.viewports.push({ id: this.viewports.length, sources: [] });
     while (this.viewports.length > n) {
       const removed = this.viewports.pop();
       this._destroyCell(removed.id);
@@ -56,12 +53,8 @@ class DisplayModule {
     if (!this._container) return;
     const n = this.viewports.length;
 
-    // Destroy all non-stage cells
-    for (const [id] of this._cells) {
-      this._destroyCell(id);
-    }
+    for (const [id] of this._cells) this._destroyCell(id);
 
-    // Reset container
     if (n <= 1) {
       this._container.style.display = 'flex';
       this._container.style.gridTemplateColumns = '';
@@ -72,13 +65,11 @@ class DisplayModule {
         this._stageWrap.style.gridRow = '';
         this._stageWrap.style.gridColumn = '';
       }
-      // Ensure stage is back in viewport 0
-      this.viewports[0].source = 'stage';
-      this._renderSource(0, 'stage');
+      this.viewports[0].sources = ['stage'];
+      this._renderSources(0);
       return;
     }
 
-    // Grid: 2 columns, rows adapt
     const rows = Math.ceil(n / 2);
     this._container.style.display = 'grid';
     this._container.style.gridTemplateColumns = '1fr 1fr';
@@ -96,18 +87,12 @@ class DisplayModule {
       }
     }
 
-    // Other cells
     for (let i = 1; i < n; i++) {
       this._buildCell(i);
-      const vp = this.viewports[i];
-      if (vp.source) this._renderSource(i, vp.source);
+      this._renderSources(i);
     }
+    this._renderSources(0);
 
-    // Always ensure viewport 0 has its source rendered
-    const vp0 = this.viewports[0];
-    if (vp0?.source) this._renderSource(0, vp0.source);
-
-    // Trigger canvas resize after layout change
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
       window.EnderTrack?.Canvas?.requestRender?.();
@@ -118,7 +103,7 @@ class DisplayModule {
     const cell = document.createElement('div');
     cell.className = 'viewport-cell';
     cell.dataset.viewportId = id;
-    cell.style.cssText = 'position:relative; background:#111; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid #333; min-width:0; min-height:0;';
+    cell.style.cssText = 'position:relative; background:#111; display:flex; flex-direction:column; overflow:hidden; border:1px solid #333; min-width:0; min-height:0;';
 
     const ph = document.createElement('div');
     ph.className = 'viewport-placeholder';
@@ -141,75 +126,152 @@ class DisplayModule {
   }
 
   _destroyCell(id) {
-    // Kill video/timer
-    this._killSource(id);
-    // Remove DOM
+    this._killSources(id);
     const cell = this._cells.get(id);
     if (cell) { cell.remove(); this._cells.delete(id); }
   }
 
-  _killSource(id) {
-    const cell = id === 0 ? this._stageWrap : this._cells.get(id);
+  // === SOURCE KILL ===
 
-    // Remove video
-    const video = this._videos.get(id);
-    if (video) { video.srcObject = null; video.remove(); this._videos.delete(id); }
-    const timer = this._timers.get(id);
-    if (timer) { cancelAnimationFrame(timer); clearInterval(timer); this._timers.delete(id); }
+  // Kill a single source from a viewport (restore its element)
+  _killSource(viewportId, source) {
+    const cell = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId);
+    if (!cell) return;
 
+    if (source.startsWith('camera')) {
+      const video = this._videos.get(viewportId);
+      if (video) { video.srcObject = null; video.remove(); this._videos.delete(viewportId); }
+      const timer = this._timers.get(viewportId);
+      if (timer) { cancelAnimationFrame(timer); clearInterval(timer); this._timers.delete(viewportId); }
+      const liveCanvas = cell.querySelector('#liveDisplayCanvas');
+      if (liveCanvas) { window.EnderTrack?.LiveRenderer?.stop?.(); liveCanvas.remove(); }
+      cell.querySelector('#liveOverlayBadge')?.remove();
+      return;
+    }
+
+    if (source === 'stage') {
+      // stage stays in cell, nothing to restore
+      return;
+    }
+
+    if (source === 'stack') {
+      cell.querySelector('.stack-viewport-wrap')?.remove();
+      return;
+    }
+
+    // Moveable element — restore to original position
+    const el = this._getMoveableEl(source);
+    if (el?._movedToViewport === source) {
+      el.style.width = ''; el.style.height = ''; el.style.flex = '';
+      el.style.margin = ''; el.style.boxSizing = ''; el.style.borderRadius = '';
+      if (el._originalParent) el._originalParent.insertBefore(el, el._originalNextSibling || null);
+      delete el._movedToViewport; delete el._originalParent; delete el._originalNextSibling;
+    }
+  }
+
+  // Kill all sources from a viewport
+  _killSources(viewportId) {
+    const vp = this.viewports.find(v => v.id === viewportId);
+    const sources = vp ? [...vp.sources] : [];
+    for (const s of sources) this._killSource(viewportId, s);
+
+    // Fallback: restore any remaining moved elements
+    const cell = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId);
     if (cell) {
-      // Restore any moved elements back to their original position
       cell.querySelectorAll('*').forEach(el => {
         if (el._movedToViewport) {
-          el.style.width = ''; el.style.height = ''; el.style.margin = ''; el.style.boxSizing = '';
+          el.style.width = ''; el.style.height = ''; el.style.flex = '';
+          el.style.margin = ''; el.style.boxSizing = '';
           if (el._originalParent) el._originalParent.insertBefore(el, el._originalNextSibling || null);
           delete el._movedToViewport; delete el._originalParent; delete el._originalNextSibling;
         }
       });
-      this._autoCollapseRightPanel();
-
-      // Remove MJPEG liveImg (not mainCanvas)
       cell.querySelectorAll('img').forEach(img => {
         if (img !== document.querySelector('.main-canvas')) img.remove();
       });
-
-      // Stop LiveRenderer only if this cell owns the liveCanvas
-      const liveCanvas = cell.querySelector('#liveDisplayCanvas');
-      if (liveCanvas) { window.EnderTrack?.LiveRenderer?.stop?.(); liveCanvas.remove(); }
-      const liveOverlay = cell.querySelector('#liveOverlayBadge');
-      if (liveOverlay) liveOverlay.remove();
       cell.querySelector('.gallery-viewport-wrap')?.remove();
       cell.querySelector('.stack-viewport-wrap')?.remove();
     }
-  }
-
-  // === SOURCE ASSIGNMENT ===
-
-  assignSource(viewportId, source) {
-    const vp = this.viewports.find(v => v.id === viewportId);
-    if (!vp) return;
-    if (vp.source === source) return;
-
-    // Swap if source already used elsewhere
-    const other = this.viewports.find(v => v.id !== viewportId && v.source === source);
-    if (other) {
-      const oldSource = vp.source;
-      other.source = oldSource;
-      this._killSource(other.id);
-      this._renderSource(other.id, oldSource);
-    }
-
-    vp.source = source;
-    this._killSource(viewportId);
-    this._renderSource(viewportId, source);
     this._autoCollapseRightPanel();
   }
 
-  _renderSource(viewportId, source) {
+  // === SOURCE TOGGLE ===
+
+  toggleSource(viewportId, source) {
+    const vp = this.viewports.find(v => v.id === viewportId);
+    if (!vp) return;
+
+    const idx = vp.sources.indexOf(source);
+    if (idx !== -1) {
+      // Remove
+      this._killSource(viewportId, source);
+      vp.sources.splice(idx, 1);
+    } else {
+      // If source is already in another viewport, remove it from there
+      for (const other of this.viewports) {
+        if (other.id !== viewportId && other.sources.includes(source)) {
+          this._killSource(other.id, source);
+          other.sources.splice(other.sources.indexOf(source), 1);
+          this._applyLayout(other.id);
+        }
+      }
+      vp.sources.push(source);
+    }
+    this._applyLayout(viewportId);
+    this._autoCollapseRightPanel();
+  }
+
+  // === RENDER ===
+
+  _renderSources(viewportId) {
+    const vp = this.viewports.find(v => v.id === viewportId);
+    if (!vp) return;
+    for (const s of vp.sources) this._renderOneSource(viewportId, s);
+    this._applyLayout(viewportId);
+  }
+
+  // Apply flex layout to cell based on current sources
+  _applyLayout(viewportId) {
+    const cell = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId);
+    const vp = this.viewports.find(v => v.id === viewportId);
+    if (!cell || !vp) return;
+
+    const ph = cell.querySelector('.viewport-placeholder');
+    if (!vp.sources.length) {
+      if (ph) ph.style.display = '';
+      return;
+    }
+    if (ph) ph.style.display = 'none';
+
+    // Classify sources
+    const isExpanding = s => s === 'stage' || s.startsWith('camera') || s === 'stack';
+
+    vp.sources.forEach(source => {
+      const el = this._getRenderedEl(cell, source);
+      if (!el) return;
+      if (isExpanding(source)) {
+        el.style.flex = '1 1 0';
+        el.style.minHeight = '0';
+        el.style.width = '100%';
+      } else {
+        el.style.flex = '0 0 auto';
+        el.style.width = '100%';
+      }
+    });
+  }
+
+  // Get the rendered DOM element for a source inside a cell
+  _getRenderedEl(cell, source) {
+    if (source === 'stage') return cell.querySelector('.main-canvas');
+    if (source.startsWith('camera')) return cell.querySelector('#liveDisplayCanvas') || cell.querySelector('video') || cell.querySelector('img:not([id])');
+    if (source === 'stack') return cell.querySelector('.stack-viewport-wrap');
+    return this._getMoveableEl(source);
+  }
+
+  _renderOneSource(viewportId, source) {
     const cell = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId);
     if (!cell) return;
 
-    // Stage source: move main-canvas + z-panel into this cell
     if (source === 'stage') {
       const mainCanvas = document.querySelector('.main-canvas');
       const zPanel = document.getElementById('zVisualizationPanel');
@@ -218,151 +280,85 @@ class DisplayModule {
         mainCanvas.style.display = '';
         if (zPanel) cell.appendChild(zPanel);
       }
-      const ph = cell.querySelector('.viewport-placeholder');
-      if (ph) ph.style.display = 'none';
       setTimeout(() => { window.dispatchEvent(new Event('resize')); EnderTrack.Canvas?.requestRender?.(); }, 50);
       return;
     }
 
-    // Camera source: video + processed canvas (LUT/contrast via LiveRenderer)
     if (source && source.startsWith('camera')) {
       const camera = window.EnderTrack?.Camera;
-      const camIdx = parseInt(source.split(':')[1]) || 0;
-      const camConfig = (window._cameras || [])[camIdx];
 
       const _createLiveView = () => {
         const isMjpeg = camera?.driverName === 'mjpeg';
-        const hasStream = camera?.driver?._stream;
-        const hasImg = camera?.driver?._img;
-        if (!hasStream && !hasImg) return;
+        if (!camera?.driver?._stream && !camera?.driver?._img) return;
 
-        // LIVE / REC overlay
         const overlay = document.createElement('div');
         overlay.id = 'liveOverlayBadge';
         overlay.style.cssText = 'position:absolute; top:8px; left:8px; z-index:20; display:flex; gap:6px; pointer-events:none;';
         overlay.innerHTML = '<span id="liveBadge" style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(34,197,94,0.85); color:#000;">LIVE</span>';
         cell.appendChild(overlay);
-        this._liveOverlay = overlay;
 
         if (isMjpeg) {
-          // MJPEG: display img directly in viewport (reliable live update)
           const liveImg = camera.driver._img;
-          liveImg.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
+          liveImg.style.cssText = 'width:100%; object-fit:contain; background:#000;';
+          liveImg.ondblclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else cell.requestFullscreen?.(); };
           cell.appendChild(liveImg);
-          // Double-click fullscreen
-          liveImg.ondblclick = () => {
-            if (document.fullscreenElement) document.exitFullscreen();
-            else cell.requestFullscreen?.();
-          };
-          // Also create a hidden canvas for LiveRenderer (LUT/contrast processing)
           const canvas = document.createElement('canvas');
           canvas.id = 'liveDisplayCanvas';
-          canvas.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000; image-rendering:pixelated; display:none;';
+          canvas.style.cssText = 'width:100%; object-fit:contain; background:#000; image-rendering:pixelated; display:none;';
           cell.appendChild(canvas);
-          // LiveRenderer: when enabled (LUT active), switch to canvas mode
-          const liveRenderer = window.EnderTrack?.LiveRenderer;
-          if (liveRenderer) {
-            liveRenderer.setVideo(null);
-            liveRenderer.setImage(liveImg);
-            liveRenderer.setCanvas(canvas);
-            liveRenderer._liveImg = liveImg; // ref for toggling
-            liveRenderer.start();
-            liveRenderer._renderFrame = () => {
-              if (liveRenderer.enabled) {
-                liveImg.style.display = 'none';
-                canvas.style.display = '';
-                liveRenderer._nativeRenderFrame();
-              } else {
-                canvas.style.display = 'none';
-                liveImg.style.display = '';
-              }
+          const lr = window.EnderTrack?.LiveRenderer;
+          if (lr) {
+            lr.setVideo(null); lr.setImage(liveImg); lr.setCanvas(canvas); lr._liveImg = liveImg; lr.start();
+            lr._renderFrame = () => {
+              if (lr.enabled) { liveImg.style.display = 'none'; canvas.style.display = ''; lr._nativeRenderFrame(); }
+              else { canvas.style.display = 'none'; liveImg.style.display = ''; }
             };
           }
         } else {
-          // Webcam: video element + canvas overlay for LUT/contrast
           const video = document.createElement('video');
           video.autoplay = true; video.muted = true; video.playsInline = true;
-          video.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000;';
+          video.style.cssText = 'width:100%; object-fit:contain; background:#000;';
           video.srcObject = camera.driver._stream;
+          video.ondblclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else cell.requestFullscreen?.(); };
           cell.appendChild(video);
           video.play().catch(() => {});
-          video.ondblclick = () => {
-            if (document.fullscreenElement) document.exitFullscreen();
-            else cell.requestFullscreen?.();
-          };
           if (camera.driver) camera.driver._grabVideo = video;
           this._videos.set(viewportId, video);
-
           const canvas = document.createElement('canvas');
           canvas.id = 'liveDisplayCanvas';
-          canvas.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; display:none;';
+          canvas.style.cssText = 'width:100%; object-fit:contain; background:#000; display:none;';
           cell.appendChild(canvas);
-
-          const liveRenderer = window.EnderTrack?.LiveRenderer;
-          if (liveRenderer) {
-            liveRenderer.setImage(null);
-            liveRenderer.setVideo(video);
-            liveRenderer.setCanvas(canvas);
-            liveRenderer._videoEl = video;
-            liveRenderer._canvasEl = canvas;
-            liveRenderer.start();
-            liveRenderer._renderFrame = () => {
-              if (liveRenderer.enabled) {
-                video.style.display = 'none';
-                canvas.style.display = 'block';
-                liveRenderer._nativeRenderFrame();
-              } else {
-                canvas.style.display = 'none';
-                video.style.display = '';
-              }
+          const lr = window.EnderTrack?.LiveRenderer;
+          if (lr) {
+            lr.setImage(null); lr.setVideo(video); lr.setCanvas(canvas); lr.start();
+            lr._renderFrame = () => {
+              if (lr.enabled) { video.style.display = 'none'; canvas.style.display = 'block'; lr._nativeRenderFrame(); }
+              else { canvas.style.display = 'none'; video.style.display = ''; }
             };
           }
         }
       };
 
-      const _ensureLive = () => {
-        const isMjpeg = camera?.driverName === 'mjpeg';
-        if (isMjpeg && camera?.driver?._img) {
-          _createLiveView();
-        } else if (camera?.driver?._stream) {
-          _createLiveView();
-        } else if (camera && camera.driver) {
-          camera.startLive().then(() => setTimeout(_createLiveView, 300));
-        }
-      };
-      _ensureLive();
-      // Hide placeholder
-      const ph = cell.querySelector(".viewport-placeholder");
-      if (ph) ph.style.display = 'none';
+      const isMjpeg = camera?.driverName === 'mjpeg';
+      if (isMjpeg && camera?.driver?._img) _createLiveView();
+      else if (camera?.driver?._stream) _createLiveView();
+      else if (camera?.driver) camera.startLive().then(() => setTimeout(_createLiveView, 300));
       return;
     }
 
-    // Generic moveable source: 'plugin:<pid>:<oid>', 'live:histogram', 'status'
-    const moveableEl = this._getMoveableEl(source);
-    if (source && source !== 'stage' && !source.startsWith('camera') && !source.startsWith('stack')) {
-      const ph = cell.querySelector('.viewport-placeholder');
-      if (moveableEl) {
-        moveableEl._originalParent = moveableEl.parentNode;
-        moveableEl._originalNextSibling = moveableEl.nextSibling;
-        moveableEl._movedToViewport = source;
-        moveableEl.style.cssText += '; width:100%; height:100%; object-fit:contain; border-radius:0; margin:0; box-sizing:border-box;';
-        cell.appendChild(moveableEl);
-        if (ph) ph.style.display = 'none';
-      }
-      return;
-    }
-
-    // Stack source
     if (source === 'stack') {
-      const ph = cell.querySelector(".viewport-placeholder");
-      if (ph) ph.style.display = 'none';
       window.EnderTrack?.StackViewer?.renderInViewport?.(cell);
       return;
     }
 
-    // No source — show placeholder
-    const ph = cell.querySelector(".viewport-placeholder");
-    if (ph) ph.style.display = '';
+    // Moveable element
+    const el = this._getMoveableEl(source);
+    if (el) {
+      el._originalParent = el.parentNode;
+      el._originalNextSibling = el.nextSibling;
+      el._movedToViewport = source;
+      cell.appendChild(el);
+    }
   }
 
   // === MOVEABLE ELEMENTS ===
@@ -393,67 +389,61 @@ class DisplayModule {
   _autoCollapseRightPanel() {
     const panel = document.querySelector('.right-panel');
     if (!panel) return;
-    // Find active right plugin zone
     const activeZone = panel.querySelector('.right-plugin-zone:not([style*="display:none"]):not([style*="display: none"])');
     if (!activeZone) return;
     const children = [...activeZone.children];
     if (!children.length) return;
-    // All children moved to viewport?
-    const allMoved = children.every(child => child.querySelector('[id^="pyplugin-out-"]')
-      ? [...child.querySelectorAll('[id^="pyplugin-out-"]')].every(el => el._movedToViewport)
-      : false
+    const allMoved = children.every(child =>
+      [...child.querySelectorAll('[id^="pyplugin-out-"]')].every(el => el._movedToViewport)
     );
-    // Also check status-widget
-    const statusWidget = panel.querySelector('.status-widget');
-    const statusMoved = statusWidget?._movedToViewport;
-    const histEl = document.getElementById('enderpicam-histogram');
-    const histMoved = histEl?._movedToViewport;
+    const statusMoved = panel.querySelector('.status-widget')?._movedToViewport;
+    const histMoved = document.getElementById('enderpicam-histogram')?._movedToViewport;
+    const hasStatus = !!panel.querySelector('.status-widget');
+    const hasHist = !!document.getElementById('enderpicam-histogram');
 
-    if (allMoved && (statusMoved || !statusWidget) && (histMoved || !histEl)) {
-      if (!panel.classList.contains('collapsed')) {
-        panel._autoCollapsed = true;
-        this.toggleRightPanel(false);
-      }
+    if (allMoved && (!hasStatus || statusMoved) && (!hasHist || histMoved)) {
+      if (!panel.classList.contains('collapsed')) { panel._autoCollapsed = true; this.toggleRightPanel(false); }
     } else if (panel._autoCollapsed) {
-      panel._autoCollapsed = false;
-      this.toggleRightPanel(true);
+      panel._autoCollapsed = false; this.toggleRightPanel(true);
     }
   }
 
-  // === CONTEXT MENUS ===
+  // === CONTEXT MENU ===
 
   _showSourceMenu(x, y, viewportId) {
     this._removeMenus();
     const menu = document.createElement('div');
     menu.className = 'viewport-context-menu';
-    menu.style.cssText = `position:fixed; left:${x}px; top:${y}px; z-index:10001; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.5); padding:4px 0; min-width:140px;`;
+    menu.style.cssText = `position:fixed; left:${x}px; top:${y}px; z-index:10001; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.5); padding:4px 0; min-width:160px;`;
 
     const sources = [{ id: 'stage', label: 'Stage XYZ' }];
-    (window._cameras || []).forEach((c, i) => {
-      sources.push({ id: 'camera:' + i, label: c.label });
-    });
+    (window._cameras || []).forEach((c, i) => sources.push({ id: 'camera:' + i, label: c.label }));
     if (document.getElementById('enderpicam-histogram'))
-      sources.push({ id: 'live:histogram', label: 'Live — Histogram' });
+      sources.push({ id: 'live:histogram', label: 'Live \u2014 Histogram' });
     if (document.querySelector('.status-widget'))
       sources.push({ id: 'status', label: 'Status' });
-    // Plugin outputs (all types)
     const plugins = window.EnderTrack?.PyPluginUI?._plugins || {};
-    for (const [pid, entry] of Object.entries(plugins)) {
-      for (const [, def] of Object.entries(entry.ui?.sections || {})) {
+    for (const [pid, entry] of Object.entries(plugins))
+      for (const [, def] of Object.entries(entry.ui?.sections || {}))
         for (const out of (def.outputs || []))
-          sources.push({ id: `plugin:${pid}:${out.id}`, label: `${entry.ui.name} — ${out.label || out.id}` });
-      }
-    }
+          sources.push({ id: `plugin:${pid}:${out.id}`, label: `${entry.ui.name} \u2014 ${out.label || out.id}` });
 
     const vp = this.viewports.find(v => v.id === viewportId);
     sources.forEach(s => {
-      const active = vp?.source === s.id;
+      const active = vp?.sources.includes(s.id);
       const row = document.createElement('div');
       row.textContent = (active ? '\u2713 ' : '  ') + s.label;
       row.style.cssText = `padding:6px 12px; font-size:11px; cursor:pointer; color:${active ? 'var(--text-selected)' : 'var(--text-general)'}; white-space:nowrap;`;
       row.addEventListener('mouseenter', () => row.style.background = 'var(--app-bg)');
       row.addEventListener('mouseleave', () => row.style.background = '');
-      row.addEventListener('click', () => { this.assignSource(viewportId, s.id); this._removeMenus(); });
+      row.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSource(viewportId, s.id);
+        // Update checkmark in place
+        const nowActive = this.viewports.find(v => v.id === viewportId)?.sources.includes(s.id);
+        row.textContent = (nowActive ? '\u2713 ' : '  ') + s.label;
+        row.style.color = nowActive ? 'var(--text-selected)' : 'var(--text-general)';
+      });
       menu.appendChild(row);
     });
 
