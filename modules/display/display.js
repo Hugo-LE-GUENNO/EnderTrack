@@ -25,7 +25,13 @@ class DisplayModule {
     this._stageWrap = document.createElement('div');
     this._stageWrap.className = 'viewport-cell stage-viewport';
     this._stageWrap.dataset.viewportId = '0';
-    this._stageWrap.style.cssText = 'display:flex; flex:1; min-width:0; min-height:0; overflow:hidden; position:relative; background:#111;';
+    this._stageWrap.style.cssText = 'display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; overflow:hidden; position:relative; background:#111; border:1px solid #333;';
+
+    const ph0 = document.createElement('div');
+    ph0.className = 'viewport-placeholder';
+    ph0.style.cssText = 'position:absolute; inset:0; display:none; align-items:center; justify-content:center; color:#555; font-size:11px; pointer-events:none;';
+    ph0.textContent = 'Right-click \u2192 source';
+    this._stageWrap.appendChild(ph0);
     this._stageWrap.appendChild(this._container);
     this._gridWrap.appendChild(this._stageWrap);
 
