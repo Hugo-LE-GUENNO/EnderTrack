@@ -359,7 +359,7 @@ class PyPluginUI {
   // ── SSE updates ────────────────────────────────────────────────────────────
 
   _updateOutput(data) {
-    const els = document.querySelectorAll(`[id="pyplugin-out-${data.plugin_id}-${data.id}"]`);
+    const els = Array.from(document.querySelectorAll(`[id="pyplugin-out-${data.plugin_id}-${data.id}"]`));
     if (!els.length) return;
     els.forEach(el => {
       if (el.tagName === 'IMG') {
