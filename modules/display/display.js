@@ -89,6 +89,10 @@ class DisplayModule {
 
     for (let i = 1; i < n; i++) {
       this._buildCell(i);
+      // Si viewport vide et caméra dispo, l'assigner par défaut
+      const vp = this.viewports[i];
+      if (!vp.sources.length && window.EnderTrack?.Camera?.driver)
+        vp.sources.push('camera:0');
       this._renderSources(i);
     }
     this._renderSources(0);
@@ -419,7 +423,12 @@ class DisplayModule {
     menu.className = 'viewport-context-menu';
     menu.style.cssText = `position:fixed; left:${x}px; top:${y}px; z-index:10001; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.5); padding:4px 0; min-width:160px;`;
 
-    const sources = [{ id: 'stage', label: 'Stage XYZ' }];
+    // Header label
+    const header = document.createElement('div');
+    header.textContent = `Panel ${viewportId}`;
+    header.style.cssText = 'padding:4px 12px 6px; font-size:10px; color:var(--text-general); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid #444; margin-bottom:2px;';
+    menu.appendChild(header);
+
     (window._cameras || []).forEach((c, i) => sources.push({ id: 'camera:' + i, label: c.label }));
     if (document.getElementById('enderpicam-histogram'))
       sources.push({ id: 'live:histogram', label: 'Live \u2014 Histogram' });
@@ -492,8 +501,12 @@ class DisplayModule {
     if (!vp) return;
     this._killSources(viewportId);
     vp.sources = [];
-    vp.sources.push(source);
-    this._renderSources(viewportId);
+    if (source) {
+      vp.sources.push(source);
+      this._renderSources(viewportId);
+    } else {
+      this._applyLayout(viewportId); // show placeholder
+    }
     this._autoCollapseRightPanel();
   }
 
