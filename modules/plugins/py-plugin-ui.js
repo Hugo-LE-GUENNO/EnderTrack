@@ -378,13 +378,15 @@ class PyPluginUI {
       } else if (el.tagName === 'TABLE') {
         const tbody = el.tBodies[0];
         if (!tbody) return;
+        if (data.reset) { tbody.innerHTML = ''; return; }
         const tr = tbody.insertRow();
         (data.value || []).forEach(cell => {
           const td = tr.insertCell();
           td.textContent = cell;
           td.style.cssText = 'padding:2px 4px; border-bottom:1px solid #222;';
         });
-        tr.scrollIntoView({ block: 'nearest' });
+        const container = el.closest('div[style*="overflow-y"]');
+        if (container) container.scrollTop = container.scrollHeight;
       } else {
         el.textContent = data.value;
       }
