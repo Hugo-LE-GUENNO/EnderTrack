@@ -364,6 +364,7 @@ class PyPluginUI {
     els.forEach(el => {
       if (el.tagName === 'IMG') {
         el.src = 'data:image/jpeg;base64,' + data.value;
+        window.dispatchEvent(new CustomEvent('display:plugin-image', { detail: data }));
       } else if (el.tagName === 'CANVAS' && el.dataset.points !== undefined) {
         // graph
         let points = JSON.parse(el.dataset.points || '[]');

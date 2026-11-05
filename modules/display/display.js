@@ -158,6 +158,12 @@ class DisplayModule {
     // Remove live canvas
     const cell = id === 0 ? this._stageWrap : this._cells.get(id);
     if (cell) {
+      // Clean up plugin image listener
+      const pluginImg = cell.querySelector('img[data-plugin-source]');
+      if (pluginImg?._pluginHandler) window.removeEventListener('display:plugin-image', pluginImg._pluginHandler);
+      cell.querySelectorAll('img').forEach(img => {
+        if (img._pluginHandler) window.removeEventListener('display:plugin-image', img._pluginHandler);
+      });
       const liveCanvas = cell.querySelector('#liveDisplayCanvas');
       if (liveCanvas) liveCanvas.remove();
       const liveOverlay = cell.querySelector('#liveOverlayBadge');
@@ -323,6 +329,29 @@ class DisplayModule {
       return;
     }
 
+    // Plugin image source: 'plugin:<plugin_id>:<output_id>'
+    if (source && source.startsWith('plugin:')) {
+      const [, pluginId, outputId] = source.split(':');
+      const img = document.createElement('img');
+      img.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
+      img.ondblclick = () => {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else cell.requestFullscreen?.();
+      };
+      cell.appendChild(img);
+      const ph = cell.querySelector('.viewport-placeholder');
+      if (ph) ph.style.display = 'none';
+
+      const handler = (e) => {
+        if (e.detail?.plugin_id === pluginId && e.detail?.id === outputId)
+          img.src = 'data:image/jpeg;base64,' + e.detail.value;
+      };
+      window.addEventListener('display:plugin-image', handler);
+      img._pluginHandler = handler;
+      img._pluginSource = source;
+      return;
+    }
+
     // Stack source
     if (source === 'stack') {
       const ph = cell.querySelector(".viewport-placeholder");
@@ -348,6 +377,16 @@ class DisplayModule {
     (window._cameras || []).forEach((c, i) => {
       sources.push({ id: 'camera:' + i, label: c.label });
     });
+    // Plugin image outputs
+    const plugins = window.EnderTrack?.PyPluginUI?._plugins || {};
+    for (const [pid, entry] of Object.entries(plugins)) {
+      for (const [section, def] of Object.entries(entry.ui?.sections || {})) {
+        for (const out of (def.outputs || [])) {
+          if (out.type === 'image' || out.type === 'image_click')
+            sources.push({ id: `plugin:${pid}:${out.id}`, label: `${entry.ui.name} — ${out.label || out.id}` });
+        }
+      }
+    }
 
     const vp = this.viewports.find(v => v.id === viewportId);
     sources.forEach(s => {
