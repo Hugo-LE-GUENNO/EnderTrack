@@ -3,27 +3,31 @@
 class DisplayModule {
   constructor() {
     this.viewports = [{ id: 0, sources: ['stage'] }];
-    this._container = null;
-    this._stageWrap = null;
-    this._cells = new Map(); // id → DOM element
-    this._videos = new Map(); // id → video element
-    this._timers = new Map(); // id → interval
+    this._gridWrap = null;   // container des viewports (remplace canvas-content comme parent de grille)
+    this._stageWrap = null;  // viewport 0
+    this._container = null;  // canvas-content (XY+Z) — jamais restructuré
+    this._cells = new Map(); // id → DOM element (viewports 1+)
+    this._videos = new Map();
+    this._timers = new Map();
   }
 
   init() {
     this._container = document.querySelector('.canvas-content');
     if (!this._container) return;
 
-    const mainCanvas = document.querySelector('.main-canvas');
-    if (!mainCanvas) return;
+    // _gridWrap remplace canvas-content dans le flux DOM
+    this._gridWrap = document.createElement('div');
+    this._gridWrap.className = 'viewport-grid';
+    this._gridWrap.style.cssText = 'display:flex; width:100%; height:100%; min-width:0; min-height:0; overflow:hidden;';
+    this._container.parentNode.insertBefore(this._gridWrap, this._container);
 
-    // _stageWrap englobe canvas-content entier (mainCanvas + zPanel ensemble)
+    // _stageWrap = viewport 0, contient canvas-content
     this._stageWrap = document.createElement('div');
     this._stageWrap.className = 'viewport-cell stage-viewport';
     this._stageWrap.dataset.viewportId = '0';
-    this._stageWrap.style.cssText = 'display:flex; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%; background:#111;';
-    this._container.parentNode.insertBefore(this._stageWrap, this._container);
+    this._stageWrap.style.cssText = 'display:flex; flex:1; min-width:0; min-height:0; overflow:hidden; position:relative; background:#111;';
     this._stageWrap.appendChild(this._container);
+    this._gridWrap.appendChild(this._stageWrap);
 
     this._stageWrap.addEventListener('contextmenu', (e) => {
       e.preventDefault();
@@ -50,47 +54,43 @@ class DisplayModule {
   }
 
   _rebuildGrid() {
-    if (!this._container) return;
+    if (!this._gridWrap) return;
     const n = this.viewports.length;
 
+    // Destroy all secondary cells
     for (const [id] of this._cells) this._destroyCell(id);
 
     if (n <= 1) {
-      this._container.style.display = 'flex';
-      this._container.style.gridTemplateColumns = '';
-      this._container.style.gridTemplateRows = '';
-      this._container.style.height = '';
-      if (this._stageWrap) {
-        this._stageWrap.style.flex = '1';
-        this._stageWrap.style.gridRow = '';
-        this._stageWrap.style.gridColumn = '';
+      this._gridWrap.style.display = 'flex';
+      this._gridWrap.style.gridTemplateColumns = '';
+      this._gridWrap.style.gridTemplateRows = '';
+      this._stageWrap.style.flex = '1';
+      this._stageWrap.style.gridColumn = '';
+      this._stageWrap.style.gridRow = '';
+      // Ensure stage source is active
+      if (!this.viewports[0].sources.includes('stage')) {
+        this.viewports[0].sources = ['stage'];
+        this._renderSources(0);
       }
-      this.viewports[0].sources = ['stage'];
-      this._renderSources(0);
       return;
     }
 
     const rows = Math.ceil(n / 2);
-    this._container.style.display = 'grid';
-    this._container.style.gridTemplateColumns = '1fr 1fr';
-    this._container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-    this._container.style.height = '100%';
+    this._gridWrap.style.display = 'grid';
+    this._gridWrap.style.gridTemplateColumns = '1fr 1fr';
+    this._gridWrap.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
-    if (this._stageWrap) {
-      this._stageWrap.style.flex = '';
-      if (n % 2 === 1) {
-        this._stageWrap.style.gridColumn = '1';
-        this._stageWrap.style.gridRow = `1 / ${rows + 1}`;
-      } else {
-        this._stageWrap.style.gridColumn = '';
-        this._stageWrap.style.gridRow = '';
-      }
+    this._stageWrap.style.flex = '';
+    if (n % 2 === 1) {
+      this._stageWrap.style.gridColumn = '1';
+      this._stageWrap.style.gridRow = `1 / ${rows + 1}`;
+    } else {
+      this._stageWrap.style.gridColumn = '';
+      this._stageWrap.style.gridRow = '';
     }
 
     for (let i = 1; i < n; i++) {
       this._buildCell(i);
-    // Si viewport vide et caméra dispo, l'assigner par défaut
-      // Ne pas le faire ici — _updateCameraLayout s'en charge via assignSource
       this._renderSources(i);
     }
     this._renderSources(0);
@@ -117,13 +117,13 @@ class DisplayModule {
       e.preventDefault();
       e.stopPropagation();
       this._showSourceMenu(e.clientX, e.clientY, id);
-    }, true); // capture phase — intercept avant les enfants
+    }, true);
     cell.addEventListener('dblclick', () => {
       if (document.fullscreenElement) document.exitFullscreen();
       else cell.requestFullscreen?.();
     });
 
-    this._container.appendChild(cell);
+    this._gridWrap.appendChild(cell);
     this._cells.set(id, cell);
   }
 
@@ -135,10 +135,15 @@ class DisplayModule {
 
   // === SOURCE KILL ===
 
-  // Kill a single source from a viewport (restore its element)
   _killSource(viewportId, source) {
     const cell = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId);
     if (!cell) return;
+
+    if (source === 'stage') {
+      // Masquer canvas-content sans le déplacer
+      this._container.style.display = 'none';
+      return;
+    }
 
     if (source.startsWith('camera')) {
       const video = this._videos.get(viewportId);
@@ -148,16 +153,8 @@ class DisplayModule {
       window.EnderTrack?.LiveRenderer?.stop?.();
       cell.querySelector('#liveDisplayCanvas')?.remove();
       cell.querySelector('#liveOverlayBadge')?.remove();
-      // Détacher liveImg sans le supprimer (appartient au driver)
-      const camera = window.EnderTrack?.Camera;
-      const liveImg = camera?.driver?._img;
+      const liveImg = window.EnderTrack?.Camera?.driver?._img;
       if (liveImg && cell.contains(liveImg)) liveImg.remove();
-      return;
-    }
-
-    if (source === 'stage') {
-      // Masquer canvas-content (hide, ne pas déplacer)
-      this._container.style.display = 'none';
       return;
     }
 
@@ -176,13 +173,10 @@ class DisplayModule {
     }
   }
 
-  // Kill all sources from a viewport
   _killSources(viewportId) {
     const vp = this.viewports.find(v => v.id === viewportId);
-    const sources = vp ? [...vp.sources] : [];
-    for (const s of sources) this._killSource(viewportId, s);
+    for (const s of (vp ? [...vp.sources] : [])) this._killSource(viewportId, s);
 
-    // Fallback: restore any remaining moved elements
     const cell = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId);
     if (cell) {
       cell.querySelectorAll('*').forEach(el => {
@@ -194,7 +188,8 @@ class DisplayModule {
         }
       });
       cell.querySelectorAll('img').forEach(img => {
-        if (img !== document.querySelector('.main-canvas')) img.remove();
+        const liveImg = window.EnderTrack?.Camera?.driver?._img;
+        if (img !== liveImg) img.remove();
       });
       cell.querySelector('.gallery-viewport-wrap')?.remove();
       cell.querySelector('.stack-viewport-wrap')?.remove();
@@ -222,7 +217,7 @@ class DisplayModule {
         }
       }
       vp.sources.push(source);
-      this._renderOneSource(viewportId, source); // ← manquait
+      this._renderOneSource(viewportId, source);
     }
     this._applyLayout(viewportId);
     this._autoCollapseRightPanel();
@@ -237,7 +232,6 @@ class DisplayModule {
     this._applyLayout(viewportId);
   }
 
-  // Apply flex layout to cell based on current sources
   _applyLayout(viewportId) {
     const cell = viewportId === 0 ? this._stageWrap : this._cells.get(viewportId);
     const vp = this.viewports.find(v => v.id === viewportId);
@@ -250,9 +244,7 @@ class DisplayModule {
     }
     if (ph) ph.style.display = 'none';
 
-    // Classify sources
     const isExpanding = s => s === 'stage' || s.startsWith('camera') || s === 'stack';
-
     vp.sources.forEach(source => {
       const el = this._getRenderedEl(cell, source);
       if (!el) return;
@@ -267,9 +259,8 @@ class DisplayModule {
     });
   }
 
-  // Get the rendered DOM element for a source inside a cell
   _getRenderedEl(cell, source) {
-    if (source === 'stage') return cell.querySelector('.main-canvas');
+    if (source === 'stage') return this._container; // canvas-content entier
     if (source.startsWith('camera')) return cell.querySelector('#liveDisplayCanvas') || cell.querySelector('video') || cell.querySelector('img:not([id])');
     if (source === 'stack') return cell.querySelector('.stack-viewport-wrap');
     return this._getMoveableEl(source);
@@ -280,14 +271,15 @@ class DisplayModule {
     if (!cell) return;
 
     if (source === 'stage') {
-      // Déplacer canvas-content entier dans le cell
-      if (!cell.contains(this._container)) cell.appendChild(this._container);
+      // canvas-content vit toujours dans _stageWrap — juste le réafficher
+      if (!this._stageWrap.contains(this._container))
+        this._stageWrap.appendChild(this._container);
       this._container.style.display = '';
       setTimeout(() => { window.dispatchEvent(new Event('resize')); EnderTrack.Canvas?.requestRender?.(); }, 50);
       return;
     }
 
-    if (source && source.startsWith('camera')) {
+    if (source.startsWith('camera')) {
       const camera = window.EnderTrack?.Camera;
 
       const _createLiveView = () => {
@@ -297,7 +289,7 @@ class DisplayModule {
         const overlay = document.createElement('div');
         overlay.id = 'liveOverlayBadge';
         overlay.style.cssText = 'position:absolute; top:8px; left:8px; z-index:20; display:flex; gap:6px; pointer-events:none;';
-        overlay.innerHTML = '<span id="liveBadge" style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(34,197,94,0.85); color:#000;">LIVE</span>';
+        overlay.innerHTML = '<span style="padding:2px 6px; border-radius:3px; font-size:9px; font-weight:600; background:rgba(34,197,94,0.85); color:#000;">LIVE</span>';
         cell.appendChild(overlay);
 
         if (isMjpeg) {
@@ -399,10 +391,10 @@ class DisplayModule {
     const allMoved = children.every(child =>
       [...child.querySelectorAll('[id^="pyplugin-out-"]')].every(el => el._movedToViewport)
     );
-    const statusMoved = panel.querySelector('.status-widget')?._movedToViewport;
-    const histMoved = document.getElementById('enderpicam-histogram')?._movedToViewport;
     const hasStatus = !!panel.querySelector('.status-widget');
     const hasHist = !!document.getElementById('enderpicam-histogram');
+    const statusMoved = panel.querySelector('.status-widget')?._movedToViewport;
+    const histMoved = document.getElementById('enderpicam-histogram')?._movedToViewport;
 
     if (allMoved && (!hasStatus || statusMoved) && (!hasHist || histMoved)) {
       if (!panel.classList.contains('collapsed')) { panel._autoCollapsed = true; this.toggleRightPanel(false); }
@@ -419,7 +411,6 @@ class DisplayModule {
     menu.className = 'viewport-context-menu';
     menu.style.cssText = `position:fixed; left:${x}px; top:${y}px; z-index:10001; background:var(--container-bg); border:1px solid #555; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.5); padding:4px 0; min-width:160px;`;
 
-    // Header label
     const header = document.createElement('div');
     header.textContent = `Panel ${viewportId}`;
     header.style.cssText = 'padding:4px 12px 6px; font-size:10px; color:var(--text-general); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid #444; margin-bottom:2px;';
@@ -448,7 +439,6 @@ class DisplayModule {
       row.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleSource(viewportId, s.id);
-        // Update checkmark in place
         const nowActive = this.viewports.find(v => v.id === viewportId)?.sources.includes(s.id);
         row.textContent = (nowActive ? '\u2713 ' : '  ') + s.label;
         row.style.color = nowActive ? 'var(--text-selected)' : 'var(--text-general)';
@@ -502,7 +492,7 @@ class DisplayModule {
       vp.sources.push(source);
       this._renderSources(viewportId);
     } else {
-      this._applyLayout(viewportId); // show placeholder
+      this._applyLayout(viewportId);
     }
     this._autoCollapseRightPanel();
   }
