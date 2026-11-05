@@ -15,23 +15,21 @@ class DisplayModule {
     if (!this._container) return;
 
     const mainCanvas = document.querySelector('.main-canvas');
-    const zPanel = document.getElementById('zVisualizationPanel');
     if (!mainCanvas) return;
 
+    // _stageWrap englobe canvas-content entier (mainCanvas + zPanel ensemble)
     this._stageWrap = document.createElement('div');
     this._stageWrap.className = 'viewport-cell stage-viewport';
     this._stageWrap.dataset.viewportId = '0';
-    this._stageWrap.style.cssText = 'display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%; background:#111;';
-    mainCanvas.parentNode.insertBefore(this._stageWrap, mainCanvas);
-    this._stageWrap.appendChild(mainCanvas);
-    if (zPanel) this._stageWrap.appendChild(zPanel);
-    // Les deux sont maintenant dans _stageWrap ensemble
+    this._stageWrap.style.cssText = 'display:flex; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%; background:#111;';
+    this._container.parentNode.insertBefore(this._stageWrap, this._container);
+    this._stageWrap.appendChild(this._container);
 
     this._stageWrap.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this._showSourceMenu(e.clientX, e.clientY, 0);
-    }, true); // capture phase
+    }, true);
     this._stageWrap.addEventListener('dblclick', () => {
       if (document.fullscreenElement) document.exitFullscreen();
       else this._stageWrap.requestFullscreen?.();
@@ -158,16 +156,8 @@ class DisplayModule {
     }
 
     if (source === 'stage') {
-      // Quand on retire stage d'un viewport non-0, remettre mainCanvas+zPanel dans canvas-content
-      if (viewportId !== 0) {
-        const canvasContent = document.querySelector('.canvas-content');
-        const mainCanvas = document.querySelector('.main-canvas');
-        const zPanel = document.getElementById('zVisualizationPanel');
-        if (canvasContent && mainCanvas) {
-          canvasContent.appendChild(mainCanvas);
-          if (zPanel) canvasContent.appendChild(zPanel);
-        }
-      }
+      // Masquer canvas-content (hide, ne pas déplacer)
+      this._container.style.display = 'none';
       return;
     }
 
@@ -290,14 +280,9 @@ class DisplayModule {
     if (!cell) return;
 
     if (source === 'stage') {
-      const mainCanvas = document.querySelector('.main-canvas');
-      const zPanel = document.getElementById('zVisualizationPanel');
-      if (mainCanvas) {
-        cell.appendChild(mainCanvas);
-        mainCanvas.style.display = '';
-        // zPanel est frère de mainCanvas — le déplacer aussi dans le cell
-        if (zPanel && zPanel.parentNode !== cell) cell.appendChild(zPanel);
-      }
+      // Déplacer canvas-content entier dans le cell
+      if (!cell.contains(this._container)) cell.appendChild(this._container);
+      this._container.style.display = '';
       setTimeout(() => { window.dispatchEvent(new Event('resize')); EnderTrack.Canvas?.requestRender?.(); }, 50);
       return;
     }
