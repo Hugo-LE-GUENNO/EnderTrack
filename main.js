@@ -1099,6 +1099,13 @@ window._openPyPluginCatalog = async function() {
       const installed = await fetch(serverUrl + '/api/pyplugins/list').then(r => r.json());
       const av = installed.available || [];
       catalog.forEach(p => p._installed = av.includes(p.folder));
+      // Fetch local versions for installed plugins
+      await Promise.all(catalog.filter(p => p._installed).map(async p => {
+        try {
+          const ui = await fetch(serverUrl + '/api/pyplugins/' + p.folder + '/ui').then(r => r.json());
+          p._localVersion = ui.version || null;
+        } catch { p._localVersion = null; }
+      }));
     } catch { catalog.forEach(p => p._installed = false); }
     try { localStorage.setItem('endertrack_pycatalog_cache', JSON.stringify(catalog)); } catch {}
   } catch {
@@ -1116,7 +1123,13 @@ window._openPyPluginCatalog = async function() {
         : '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._installPyPlugin(\'' + p.folder + '\',\'' + p.main + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Install</button>';
       return '<div id="pyCatRow_' + p.folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
         '<div><div style="font-size:12px;">' + dot + p.name + '</div>' +
-        (p.description ? '<div style="font-size:10px; color:var(--text-general); opacity:0.6; margin-left:12px;">' + p.description + '</div>' : '') +
+        '<div style="font-size:10px; color:var(--text-general); opacity:0.6; margin-left:12px;">' +
+          (p.description ? p.description + ' — ' : '') +
+          '<span style="opacity:0.8;">v' + p.version + '</span>' +
+          (p._installed && p._localVersion && p._localVersion !== p.version
+            ? ' <span style="color:#f97316; font-weight:600;">↑ update (local v' + p._localVersion + ')</span>'
+            : (p._installed && p._localVersion === p.version ? ' <span style="color:#22c55e;">✓ up to date</span>' : '')) +
+        '</div>' +
         '</div>' + btn + '</div>';
     }).join('');
 };

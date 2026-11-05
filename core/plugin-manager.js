@@ -301,16 +301,23 @@ class PluginManager {
     const q = query.toLowerCase().trim();
     const filtered = q ? available.filter(id => id.toLowerCase().includes(q)) : available;
     if (!filtered.length) { container.innerHTML = ''; return; }
-    container.innerHTML = filtered.map(id => {
-      const isActive = active.includes(id);
-      return `<div style="display:flex; align-items:center; gap:6px; padding:4px 0; font-size:10px;">
-        <span style="color:var(--text-general);">${id}</span>
-        <span style="flex:1;"></span>
-        <button style="padding:2px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;
-          background:${isActive ? 'var(--active-element)' : 'var(--app-bg)'}; color:${isActive ? 'var(--text-selected)' : 'var(--text-general)'};"
-          onclick="EnderTrack.PluginManager.togglePyPlugin('${id}')">${isActive ? 'Active' : 'Enable'}</button>
-      </div>`;
-    }).join('');
+    // Fetch versions in parallel
+    const server = window.ENDERTRACK_SERVER || 'http://localhost:5000';
+    Promise.all(filtered.map(id =>
+      fetch(`${server}/api/pyplugins/${id}/ui`).then(r => r.json()).catch(() => null)
+    )).then(uis => {
+      container.innerHTML = filtered.map((id, i) => {
+        const isActive = active.includes(id);
+        const version = uis[i]?.version ? `<span style="font-size:9px; color:var(--text-general); opacity:0.6; margin-left:4px;">v${uis[i].version}</span>` : '';
+        return `<div style="display:flex; align-items:center; gap:6px; padding:4px 0; font-size:10px;">
+          <span style="color:var(--text-general);">${id}</span>${version}
+          <span style="flex:1;"></span>
+          <button style="padding:2px 8px; border:none; border-radius:3px; cursor:pointer; font-size:10px;
+            background:${isActive ? 'var(--active-element)' : 'var(--app-bg)'}; color:${isActive ? 'var(--text-selected)' : 'var(--text-general)'};"
+            onclick="EnderTrack.PluginManager.togglePyPlugin('${id}')">${isActive ? 'Active' : 'Enable'}</button>
+        </div>`;
+      }).join('');
+    });
   }
 
   static _filterPyPlugins(query) {
