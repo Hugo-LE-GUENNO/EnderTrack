@@ -24,7 +24,7 @@ class DisplayModule {
     this._stageWrap.style.cssText = 'display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; position:relative; width:100%; height:100%; background:#111;';
     mainCanvas.parentNode.insertBefore(this._stageWrap, mainCanvas);
     this._stageWrap.appendChild(mainCanvas);
-    if (zPanel) this._stageWrap.appendChild(zPanel);
+    // zPanel reste dans mainCanvas, pas dans stageWrap
 
     this._stageWrap.addEventListener('contextmenu', (e) => {
       e.preventDefault();
@@ -143,9 +143,13 @@ class DisplayModule {
       if (video) { video.srcObject = null; video.remove(); this._videos.delete(viewportId); }
       const timer = this._timers.get(viewportId);
       if (timer) { cancelAnimationFrame(timer); clearInterval(timer); this._timers.delete(viewportId); }
-      const liveCanvas = cell.querySelector('#liveDisplayCanvas');
-      if (liveCanvas) { window.EnderTrack?.LiveRenderer?.stop?.(); liveCanvas.remove(); }
+      window.EnderTrack?.LiveRenderer?.stop?.();
+      cell.querySelector('#liveDisplayCanvas')?.remove();
       cell.querySelector('#liveOverlayBadge')?.remove();
+      // Détacher liveImg sans le supprimer (appartient au driver)
+      const camera = window.EnderTrack?.Camera;
+      const liveImg = camera?.driver?._img;
+      if (liveImg && cell.contains(liveImg)) liveImg.remove();
       return;
     }
 
@@ -203,11 +207,10 @@ class DisplayModule {
 
     const idx = vp.sources.indexOf(source);
     if (idx !== -1) {
-      // Remove
       this._killSource(viewportId, source);
       vp.sources.splice(idx, 1);
     } else {
-      // If source is already in another viewport, remove it from there
+      // Remove from another viewport if already used
       for (const other of this.viewports) {
         if (other.id !== viewportId && other.sources.includes(source)) {
           this._killSource(other.id, source);
@@ -216,6 +219,7 @@ class DisplayModule {
         }
       }
       vp.sources.push(source);
+      this._renderOneSource(viewportId, source); // ← manquait
     }
     this._applyLayout(viewportId);
     this._autoCollapseRightPanel();
@@ -274,11 +278,10 @@ class DisplayModule {
 
     if (source === 'stage') {
       const mainCanvas = document.querySelector('.main-canvas');
-      const zPanel = document.getElementById('zVisualizationPanel');
       if (mainCanvas) {
         cell.appendChild(mainCanvas);
         mainCanvas.style.display = '';
-        if (zPanel) cell.appendChild(zPanel);
+        // zPanel vit DANS mainCanvas, pas besoin de le déplacer
       }
       setTimeout(() => { window.dispatchEvent(new Event('resize')); EnderTrack.Canvas?.requestRender?.(); }, 50);
       return;
