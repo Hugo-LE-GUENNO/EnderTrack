@@ -149,29 +149,33 @@ class DisplayModule {
   }
 
   _killSource(id) {
+    const cell = id === 0 ? this._stageWrap : this._cells.get(id);
+
+    // Remove video
     const video = this._videos.get(id);
     if (video) { video.srcObject = null; video.remove(); this._videos.delete(id); }
     const timer = this._timers.get(id);
     if (timer) { cancelAnimationFrame(timer); clearInterval(timer); this._timers.delete(id); }
-    // Stop LiveRenderer
-    window.EnderTrack?.LiveRenderer?.stop?.();
-    // Remove live canvas
-    const cell = id === 0 ? this._stageWrap : this._cells.get(id);
+
     if (cell) {
-      // Clean up plugin image listener
-      const pluginImg = cell.querySelector('img[data-plugin-source]');
-      if (pluginImg?._pluginHandler) window.removeEventListener('display:plugin-image', pluginImg._pluginHandler);
+      // Clean up plugin image listeners + remove plugin imgs
       cell.querySelectorAll('img').forEach(img => {
         if (img._pluginHandler) window.removeEventListener('display:plugin-image', img._pluginHandler);
+        if (img._pluginSource) img.remove();
       });
+
+      // Remove MJPEG liveImg (not plugin, not mainCanvas)
+      cell.querySelectorAll('img').forEach(img => {
+        if (!img._pluginSource && img !== document.querySelector('.main-canvas')) img.remove();
+      });
+
+      // Stop LiveRenderer only if this cell owns the liveCanvas
       const liveCanvas = cell.querySelector('#liveDisplayCanvas');
-      if (liveCanvas) liveCanvas.remove();
+      if (liveCanvas) { window.EnderTrack?.LiveRenderer?.stop?.(); liveCanvas.remove(); }
       const liveOverlay = cell.querySelector('#liveOverlayBadge');
       if (liveOverlay) liveOverlay.remove();
-      const gw = cell.querySelector('.gallery-viewport-wrap');
-      if (gw) gw.remove();
-      const sw = cell.querySelector('.stack-viewport-wrap');
-      if (sw) sw.remove();
+      cell.querySelector('.gallery-viewport-wrap')?.remove();
+      cell.querySelector('.stack-viewport-wrap')?.remove();
     }
   }
 
@@ -209,8 +213,7 @@ class DisplayModule {
         mainCanvas.style.display = '';
         if (zPanel) cell.appendChild(zPanel);
       }
-      // Hide placeholder
-      const ph = cell.querySelector(".viewport-placeholder");
+      const ph = cell.querySelector('.viewport-placeholder');
       if (ph) ph.style.display = 'none';
       setTimeout(() => { window.dispatchEvent(new Event('resize')); EnderTrack.Canvas?.requestRender?.(); }, 50);
       return;
