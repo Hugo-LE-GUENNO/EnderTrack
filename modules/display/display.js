@@ -28,8 +28,9 @@ class DisplayModule {
 
     this._stageWrap.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       this._showSourceMenu(e.clientX, e.clientY, 0);
-    });
+    }, true); // capture phase
     this._stageWrap.addEventListener('dblclick', () => {
       if (document.fullscreenElement) document.exitFullscreen();
       else this._stageWrap.requestFullscreen?.();
@@ -119,7 +120,7 @@ class DisplayModule {
       e.preventDefault();
       e.stopPropagation();
       this._showSourceMenu(e.clientX, e.clientY, id);
-    });
+    }, true); // capture phase — intercept avant les enfants
     cell.addEventListener('dblclick', () => {
       if (document.fullscreenElement) document.exitFullscreen();
       else cell.requestFullscreen?.();
@@ -429,6 +430,7 @@ class DisplayModule {
     header.style.cssText = 'padding:4px 12px 6px; font-size:10px; color:var(--text-general); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid #444; margin-bottom:2px;';
     menu.appendChild(header);
 
+    const sources = [{ id: 'stage', label: 'Stage XYZ' }];
     (window._cameras || []).forEach((c, i) => sources.push({ id: 'camera:' + i, label: c.label }));
     if (document.getElementById('enderpicam-histogram'))
       sources.push({ id: 'live:histogram', label: 'Live \u2014 Histogram' });
