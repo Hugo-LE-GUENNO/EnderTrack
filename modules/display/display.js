@@ -158,6 +158,20 @@ class DisplayModule {
     if (timer) { cancelAnimationFrame(timer); clearInterval(timer); this._timers.delete(id); }
 
     if (cell) {
+      // Restore moved plugin elements back to their original position
+      cell.querySelectorAll('[id^="pyplugin-out-"]').forEach(el => {
+        if (el._movedToViewport) {
+          el.style.width = '';
+          el.style.height = '';
+          if (el._originalParent) {
+            el._originalParent.insertBefore(el, el._originalNextSibling || null);
+          }
+          delete el._movedToViewport;
+          delete el._originalParent;
+          delete el._originalNextSibling;
+        }
+      });
+
       // Clean up plugin image listeners + remove plugin imgs
       cell.querySelectorAll('img').forEach(img => {
         if (img._pluginHandler) window.removeEventListener('display:plugin-image', img._pluginHandler);
@@ -332,26 +346,50 @@ class DisplayModule {
       return;
     }
 
-    // Plugin image source: 'plugin:<plugin_id>:<output_id>'
+    // Plugin source: 'plugin:<plugin_id>:<output_id>'
     if (source && source.startsWith('plugin:')) {
       const [, pluginId, outputId] = source.split(':');
-      const img = document.createElement('img');
-      img.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
-      img.ondblclick = () => {
-        if (document.fullscreenElement) document.exitFullscreen();
-        else cell.requestFullscreen?.();
-      };
-      cell.appendChild(img);
       const ph = cell.querySelector('.viewport-placeholder');
-      if (ph) ph.style.display = 'none';
 
-      const handler = (e) => {
-        if (e.detail?.plugin_id === pluginId && e.detail?.id === outputId)
-          img.src = 'data:image/jpeg;base64,' + e.detail.value;
-      };
-      window.addEventListener('display:plugin-image', handler);
-      img._pluginHandler = handler;
-      img._pluginSource = source;
+      // Check output type
+      const plugins = window.EnderTrack?.PyPluginUI?._plugins || {};
+      const entry = plugins[pluginId];
+      let outDef = null;
+      for (const [, def] of Object.entries(entry?.ui?.sections || {})) {
+        outDef = (def.outputs || []).find(o => o.id === outputId) || outDef;
+      }
+      const isImage = !outDef || outDef.type === 'image' || outDef.type === 'image_click';
+
+      if (isImage) {
+        // Image: create <img> in viewport
+        const img = document.createElement('img');
+        img.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#000;';
+        img.ondblclick = () => {
+          if (document.fullscreenElement) document.exitFullscreen();
+          else cell.requestFullscreen?.();
+        };
+        cell.appendChild(img);
+        if (ph) ph.style.display = 'none';
+        const handler = (e) => {
+          if (e.detail?.plugin_id === pluginId && e.detail?.id === outputId)
+            img.src = 'data:image/jpeg;base64,' + e.detail.value;
+        };
+        window.addEventListener('display:plugin-image', handler);
+        img._pluginHandler = handler;
+        img._pluginSource = source;
+      } else {
+        // Non-image: move existing DOM element into viewport
+        const el = document.getElementById(`pyplugin-out-${pluginId}-${outputId}`);
+        if (el) {
+          el._originalParent = el.parentNode;
+          el._originalNextSibling = el.nextSibling;
+          el._movedToViewport = source;
+          el.style.width = '100%';
+          el.style.height = outDef.type === 'graph' ? '100%' : '';
+          cell.appendChild(el);
+          if (ph) ph.style.display = 'none';
+        }
+      }
       return;
     }
 
@@ -380,14 +418,12 @@ class DisplayModule {
     (window._cameras || []).forEach((c, i) => {
       sources.push({ id: 'camera:' + i, label: c.label });
     });
-    // Plugin image outputs
+    // Plugin outputs (all types)
     const plugins = window.EnderTrack?.PyPluginUI?._plugins || {};
     for (const [pid, entry] of Object.entries(plugins)) {
-      for (const [section, def] of Object.entries(entry.ui?.sections || {})) {
-        for (const out of (def.outputs || [])) {
-          if (out.type === 'image' || out.type === 'image_click')
-            sources.push({ id: `plugin:${pid}:${out.id}`, label: `${entry.ui.name} — ${out.label || out.id}` });
-        }
+      for (const [, def] of Object.entries(entry.ui?.sections || {})) {
+        for (const out of (def.outputs || []))
+          sources.push({ id: `plugin:${pid}:${out.id}`, label: `${entry.ui.name} — ${out.label || out.id}` });
       }
     }
 
