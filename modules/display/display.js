@@ -67,11 +67,7 @@ class DisplayModule {
       this._stageWrap.style.flex = '1';
       this._stageWrap.style.gridColumn = '';
       this._stageWrap.style.gridRow = '';
-      // Ensure stage source is active
-      if (!this.viewports[0].sources.includes('stage')) {
-        this.viewports[0].sources = ['stage'];
-        this._renderSources(0);
-      }
+      this._renderSources(0);
       return;
     }
 
@@ -110,7 +106,7 @@ class DisplayModule {
     const ph = document.createElement('div');
     ph.className = 'viewport-placeholder';
     ph.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#555; font-size:11px; pointer-events:none;';
-    ph.textContent = 'Clic droit \u2192 source';
+    ph.textContent = 'Right-click \u2192 source';
     cell.appendChild(ph);
 
     cell.addEventListener('contextmenu', (e) => {
@@ -140,8 +136,10 @@ class DisplayModule {
     if (!cell) return;
 
     if (source === 'stage') {
-      // Masquer canvas-content sans le déplacer
       this._container.style.display = 'none';
+      // Remettre dans _stageWrap par défaut
+      if (!this._stageWrap.contains(this._container))
+        this._stageWrap.appendChild(this._container);
       return;
     }
 
@@ -271,9 +269,9 @@ class DisplayModule {
     if (!cell) return;
 
     if (source === 'stage') {
-      // canvas-content vit toujours dans _stageWrap — juste le réafficher
-      if (!this._stageWrap.contains(this._container))
-        this._stageWrap.appendChild(this._container);
+      // Déplacer canvas-content dans la bonne cell
+      if (!cell.contains(this._container))
+        cell.appendChild(this._container);
       this._container.style.display = '';
       setTimeout(() => { window.dispatchEvent(new Event('resize')); EnderTrack.Canvas?.requestRender?.(); }, 50);
       return;
