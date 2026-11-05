@@ -859,7 +859,7 @@ class CameraModule {
     const vp = display.viewports[targetVp];
     if (!vp) return;
 
-    if (liveRenderer && vp.source?.startsWith('camera')) {
+    if (liveRenderer && vp.sources?.some(s => s.startsWith('camera'))) {
       this._liveSettings = { min: liveRenderer.min, max: liveRenderer.max, lutId: this._liveLutId, autoContrast: this.histogram?.mode !== 'manual' };
     }
 
@@ -867,7 +867,7 @@ class CameraModule {
       this.showHistogram(hasCamera);
       const metaPanel = document.getElementById('imageMetadataPanel');
       if (metaPanel) metaPanel.style.display = 'none';
-      if (hasCamera && vp.source !== 'camera:0') display.assignSource(targetVp, 'camera:0');
+      if (hasCamera && !vp.sources?.includes('camera:0')) display.assignSource(targetVp, 'camera:0');
       // Restore live histogram settings
       if (liveRenderer && this._liveSettings) {
         liveRenderer.min = this._liveSettings.min;
@@ -886,7 +886,7 @@ class CameraModule {
       }
     } else {
       this.showHistogram(false);
-      if (!multiVp && vp.source !== 'stage') display.assignSource(0, 'stage');
+      if (!multiVp && !vp.sources?.includes('stage')) display.assignSource(0, 'stage');
     }
   }
 

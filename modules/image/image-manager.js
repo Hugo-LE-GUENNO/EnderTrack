@@ -391,7 +391,7 @@ class ImageManager {
     const display = window.EnderTrack?.Display;
     if (!display) return;
     display.viewports.forEach(vp => {
-      if (vp.source === 'gallery') {
+      if (vp.sources?.includes('gallery')) {
         const cell = vp.id === 0 ? display._stageWrap : display._cells.get(vp.id);
         if (!cell) return;
         // Always rebuild — renderInViewport handles TIFF vs PNG

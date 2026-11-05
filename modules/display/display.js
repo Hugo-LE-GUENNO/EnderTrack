@@ -483,6 +483,17 @@ class DisplayModule {
     }, 0);
   }
 
+  // Backward compat — assignSource remplace toutes les sources par une seule
+  assignSource(viewportId, source) {
+    const vp = this.viewports.find(v => v.id === viewportId);
+    if (!vp) return;
+    this._killSources(viewportId);
+    vp.sources = [];
+    vp.sources.push(source);
+    this._renderSources(viewportId);
+    this._autoCollapseRightPanel();
+  }
+
   getStatus() {
     return { panelCount: this.viewports.length, viewports: this.viewports.map(v => ({ ...v })) };
   }

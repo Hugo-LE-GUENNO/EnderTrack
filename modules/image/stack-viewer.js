@@ -678,7 +678,7 @@ class StackViewer {
     const display = window.EnderTrack?.Display;
     if (!display) return;
     display.viewports.forEach(vp => {
-      if (vp.source === 'stack') {
+      if (vp.sources?.includes('stack')) {
         const cell = vp.id === 0 ? display._stageWrap : display._cells.get(vp.id);
         if (cell) this.renderInViewport(cell);
       }
