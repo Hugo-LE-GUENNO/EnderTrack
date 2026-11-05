@@ -1118,8 +1118,12 @@ window._openPyPluginCatalog = async function() {
     catalog.map(p => {
       const installed = p._installed;
       const dot = '<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:' + (installed ? '#22c55e' : '#555') + '; margin-right:6px; vertical-align:middle;"></span>';
-      const btn = installed
-        ? '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._uninstallPyPlugin(\'' + p.folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Delete</button>'
+      const hasUpdate = p._installed && p._localVersion && p._localVersion !== p.version;
+      const btn = p._installed
+        ? '<div style="display:flex;gap:4px;">' +
+          (hasUpdate ? '<button id="pyCatBtnUp_' + p.folder + '" data-main="' + p.main + '" onclick="window._installPyPlugin(\'' + p.folder + '\',\'' + p.main + '\',true)" style="padding:4px 10px; background:#f97316; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Update</button>' : '') +
+          '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._uninstallPyPlugin(\'' + p.folder + '\')" style="padding:4px 10px; background:#ef4444; border:none; border-radius:3px; color:#fff; cursor:pointer; font-size:10px;">Delete</button>' +
+          '</div>'
         : '<button id="pyCatBtn_' + p.folder + '" data-main="' + p.main + '" onclick="window._installPyPlugin(\'' + p.folder + '\',\'' + p.main + '\')" style="padding:4px 10px; background:#22c55e; border:none; border-radius:3px; color:#000; cursor:pointer; font-size:10px;">Install</button>';
       return '<div id="pyCatRow_' + p.folder + '" style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:var(--app-bg); border-radius:4px; margin-bottom:4px;">' +
         '<div><div style="font-size:12px;">' + dot + p.name + '</div>' +
@@ -1134,9 +1138,9 @@ window._openPyPluginCatalog = async function() {
     }).join('');
 };
 
-window._installPyPlugin = async function(folder, main) {
-  const btn = document.getElementById('pyCatBtn_' + folder);
-  if (btn) { btn.disabled = true; btn.textContent = 'Installing...'; }
+window._installPyPlugin = async function(folder, main, update = false) {
+  const btn = document.getElementById(update ? 'pyCatBtnUp_' + folder : 'pyCatBtn_' + folder);
+  if (btn) { btn.disabled = true; btn.textContent = update ? 'Updating...' : 'Installing...'; }
   const log = document.getElementById('pyCatalogLog');
   if (log) { log.style.display = 'block'; log.innerHTML += '<div>Installing ' + folder + '...</div>'; }
   const serverUrl = window.ENDERTRACK_SERVER || 'http://localhost:5000';
@@ -1166,14 +1170,15 @@ window._installPyPlugin = async function(folder, main) {
     const files = await fetchDir(apiBase, '');
     const resp = await fetch(serverUrl + '/api/pyplugins/install', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ folder, main, files })
+      body: JSON.stringify({ folder, main, files, update })
     });
     const data = await resp.json();
     if (data.success) {
-      if (log) { log.style.display = 'block'; log.innerHTML += '<div style="color:#22c55e;">' + folder + ' installed</div>'; }
+      if (log) { log.style.display = 'block'; log.innerHTML += '<div style="color:#22c55e;">' + folder + (update ? ' updated' : ' installed') + '</div>'; }
       const dotEl = document.querySelector('#pyCatRow_' + folder + ' span');
       if (dotEl) dotEl.style.background = '#22c55e';
       if (btn) { btn.textContent = 'Delete'; btn.style.background = '#ef4444'; btn.style.color = '#fff'; btn.disabled = false; btn.onclick = function() { window._uninstallPyPlugin(folder); }; }
+      document.getElementById('pyCatBtnUp_' + folder)?.remove();
       await EnderTrack.PluginManager.renderPluginList();
       setTimeout(() => { if (log) log.style.display = 'none'; }, 2000);
     } else {
